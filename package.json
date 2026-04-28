@@ -1,0 +1,10 @@
+{
+  "name": "workflow-pro-saas",
+  "version": "1.0.0",
+  "private": true,
+  "description": "WorkFlow Pro SaaS demo voor Belgische KMO's met veldpersoneel.",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js && node --check app.js"
+  }
+}
