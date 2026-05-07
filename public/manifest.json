@@ -1,0 +1,18 @@
+{
+  "name": "WorkFlow Pro",
+  "short_name": "WorkFlow Pro",
+  "description": "Planning, werkbonnen en tijdregistratie voor Belgische teams op locatie.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f3f6f9",
+  "theme_color": "#176c5f",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

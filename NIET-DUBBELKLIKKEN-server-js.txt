@@ -1,0 +1,13 @@
+Start de fullstack server niet door src\server.js te dubbelklikken.
+
+Windows opent .js bestanden dan met Windows Script Host en dat geeft:
+Compilatiefout JavaScript / const syntaxisfout.
+
+Gebruik:
+
+Start Fullstack API.bat
+
+Of via PowerShell:
+
+cd "C:\Users\ABMS Consultancy\Documents\New project\WorkFlowPro-fullstack"
+node src\server.js

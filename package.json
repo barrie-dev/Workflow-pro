@@ -1,10 +1,39 @@
 {
-  "name": "workflow-pro-saas",
-  "version": "1.0.0",
+  "name": "workflowpro-fullstack",
+  "version": "0.1.0",
   "private": true,
-  "description": "WorkFlow Pro SaaS demo voor Belgische KMO's met veldpersoneel.",
+  "description": "Production-oriented WorkFlow Pro full-stack foundation.",
   "scripts": {
-    "start": "node server.js",
-    "check": "node --check server.js && node --check app.js"
+    "start": "node src/server.js",
+    "dev": "node src/server.js",
+    "check": "node --check src/server.js && node --check src/lib/config.js && node --check src/lib/store.js && node --check src/lib/data-adapters.js && node --check src/lib/supabase-rest-bridge.js && node --check src/lib/migrations.js && node --check src/lib/auth.js && node --check src/lib/security.js && node --check src/lib/rate-limit.js && node --check src/modules/crud.js && node --check src/modules/golden-path.js && node --check src/modules/billing.js && node --check src/modules/kbo.js && node --check src/modules/mobile.js && node --check src/modules/operations.js && node --check src/modules/integrations.js && node --check src/modules/admin.js && node --check src/modules/notifications.js && node --check src/modules/imports.js && node --check src/modules/portal.js && node --check src/modules/api-keys.js && node --check src/modules/api-key-governance.js && node --check src/modules/audit.js && node --check src/modules/errors.js && node --check src/modules/suggestions.js && node --check src/modules/releases.js && node --check src/modules/support.js && node --check src/modules/pilot.js && node --check src/modules/sales.js && node --check src/modules/go-live.js && node --check scripts/export-json-to-supabase-sql.js && node --check scripts/check-supabase-adapter.js && node --check scripts/check-production-config.js && node --check scripts/check-production-readiness.js && node --check scripts/check-api-key-governance.js && node --check scripts/check-pilot-readiness.js && node --check scripts/generate-pilot-decision-report.js && node --check scripts/check-sales-launch.js && node --check scripts/generate-sales-launch-report.js && node --check scripts/check-go-live.js && node --check scripts/generate-go-live-report.js && node --check scripts/generate-roadmap-checklist.js && node --check scripts/generate-report-index.js && node --check scripts/generate-status-bundle.js",
+    "db:export": "node scripts/export-json-to-supabase-sql.js",
+    "db:supabase:check": "node scripts/check-supabase-adapter.js",
+    "preflight:production": "node scripts/check-production-readiness.js",
+    "preflight:production:json": "node scripts/check-production-readiness.js --json",
+    "preflight:production:strict": "node scripts/check-production-readiness.js --strict",
+    "preflight:production:strict:json": "node scripts/check-production-readiness.js --strict --json",
+    "preflight:config": "node scripts/check-production-config.js",
+    "preflight:config:json": "node scripts/check-production-config.js --json",
+    "preflight:config:strict": "node scripts/check-production-config.js --strict",
+    "preflight:config:strict:json": "node scripts/check-production-config.js --strict --json",
+    "preflight:api-keys": "node scripts/check-api-key-governance.js",
+    "preflight:api-keys:json": "node scripts/check-api-key-governance.js --json",
+    "preflight:api-keys:strict": "node scripts/check-api-key-governance.js --strict",
+    "preflight:pilot": "node scripts/check-pilot-readiness.js",
+    "preflight:pilot:json": "node scripts/check-pilot-readiness.js --json",
+    "pilot:report": "node scripts/generate-pilot-decision-report.js",
+    "preflight:sales": "node scripts/check-sales-launch.js",
+    "preflight:sales:json": "node scripts/check-sales-launch.js --json",
+    "sales:report": "node scripts/generate-sales-launch-report.js",
+    "preflight:go-live": "node scripts/check-go-live.js",
+    "preflight:go-live:json": "node scripts/check-go-live.js --json",
+    "go-live:report": "node scripts/generate-go-live-report.js",
+    "roadmap:checklist": "node scripts/generate-roadmap-checklist.js",
+    "reports:index": "node scripts/generate-report-index.js",
+    "status:bundle": "node scripts/generate-status-bundle.js"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }
