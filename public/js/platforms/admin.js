@@ -1170,10 +1170,11 @@ ${emp ? `
 <div class="adm-card">
   <div class="adm-card-header">
     <h3 class="adm-card-title">Verlof</h3>
-    <div style="display:flex;gap:6px;">
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
       <button class="adm-btn adm-btn-sm ${_leaveTab==="aanvragen"?"adm-btn-primary":"adm-btn-secondary"}" id="admLeaveTabReq">Aanvragen</button>
       <button class="adm-btn adm-btn-sm ${_leaveTab==="kalender"?"adm-btn-primary":"adm-btn-secondary"}" id="admLeaveTabCal">Kalender</button>
       <button class="adm-btn adm-btn-sm ${_leaveTab==="saldi"?"adm-btn-primary":"adm-btn-secondary"}" id="admLeaveTabBal">Saldi</button>
+      <button class="adm-btn adm-btn-primary adm-btn-sm" id="admLeaveNew" style="margin-left:8px;">+ Verlof aanmaken</button>
     </div>
   </div>
   <div class="adm-card-body" id="admLeaveBody" style="padding:0;"></div>
@@ -1182,7 +1183,82 @@ ${emp ? `
     document.getElementById("admLeaveTabReq").addEventListener("click", () => { _leaveTab = "aanvragen"; renderLeaveBody(); });
     document.getElementById("admLeaveTabCal").addEventListener("click", () => { _leaveTab = "kalender"; renderLeaveBody(); });
     document.getElementById("admLeaveTabBal").addEventListener("click", () => { _leaveTab = "saldi"; renderLeaveBody(); });
+    document.getElementById("admLeaveNew").addEventListener("click", () => openCreateLeaveDrawer());
     renderLeaveBody();
+  }
+
+  async function openCreateLeaveDrawer(preselectedUserId = null) {
+    let employees = [];
+    try { const d = await api("GET", "/employees"); employees = d.employees || []; } catch(_){}
+    const today = new Date().toISOString().slice(0, 10);
+    document.getElementById("admDrawerTitle").textContent = "Verlof aanmaken";
+    document.getElementById("admDrawerBody").innerHTML = `
+<form id="createLeaveForm">
+  <div class="adm-form-group">
+    <label>Medewerker *</label>
+    <select name="userId" required>
+      <option value="">— Kies medewerker —</option>
+      ${employees.map(u => `<option value="${esc(u.id)}" ${preselectedUserId===u.id?"selected":""}>${esc(u.name||u.email)}</option>`).join("")}
+    </select>
+  </div>
+  <div class="adm-form-group">
+    <label>Type verlof</label>
+    <select name="type">
+      <option value="vakantie">Vakantie</option>
+      <option value="ziekte">Ziekte</option>
+      <option value="adv">ADV</option>
+      <option value="bijzonder">Bijzonder verlof</option>
+      <option value="onbetaald">Onbetaald verlof</option>
+    </select>
+  </div>
+  <div class="adm-form-row">
+    <div class="adm-form-group">
+      <label>Van *</label>
+      <input name="startDate" type="date" value="${today}" required>
+    </div>
+    <div class="adm-form-group">
+      <label>Tot *</label>
+      <input name="endDate" type="date" value="${today}" required>
+    </div>
+  </div>
+  <div class="adm-form-group">
+    <label>Status</label>
+    <select name="status">
+      <option value="goedgekeurd">Goedgekeurd</option>
+      <option value="aangevraagd">Aangevraagd</option>
+    </select>
+  </div>
+  <div class="adm-form-group">
+    <label>Reden / notitie</label>
+    <textarea name="reason" rows="2" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;" placeholder="Optionele opmerking"></textarea>
+  </div>
+  <div id="createLeaveErr" style="display:none;background:#fef2f2;color:#dc2626;border-radius:8px;padding:8px;font-size:12px;margin-bottom:8px;"></div>
+  <div class="adm-form-actions">
+    <button type="button" class="adm-btn adm-btn-secondary" id="createLeaveCancel">Annuleren</button>
+    <button type="submit" class="adm-btn adm-btn-primary">Aanmaken</button>
+  </div>
+</form>`;
+    openDrawer();
+    document.getElementById("createLeaveCancel").addEventListener("click", closeDrawer);
+    document.getElementById("createLeaveForm").addEventListener("submit", async e => {
+      e.preventDefault();
+      const errEl = document.getElementById("createLeaveErr");
+      const body = Object.fromEntries(new FormData(e.target).entries());
+      // Calculate days
+      if (body.startDate && body.endDate) {
+        const days = Math.round((new Date(body.endDate) - new Date(body.startDate)) / 86400000) + 1;
+        body.days = Math.max(1, days);
+      }
+      try {
+        await api("POST", "/leaves", body);
+        closeDrawer();
+        _leaveTab = "aanvragen";
+        renderLeaves();
+        window.showToast && window.showToast("Verlof aangemaakt ✓", "success");
+      } catch(err) {
+        if (errEl) { errEl.textContent = err.message; errEl.style.display = ""; }
+      }
+    });
   }
 
   async function renderLeaveBody() {
@@ -1415,18 +1491,55 @@ ${emp ? `
     const data = await api("GET", "/expenses");
     const expenses = data.expenses || data || [];
 
+    const pending   = expenses.filter(e => ["pending","ingediend"].includes(e.status));
+    const approved  = expenses.filter(e => ["goedgekeurd","approved"].includes(e.status));
+    const rejected  = expenses.filter(e => e.status === "geweigerd");
+    const totalPend = pending.reduce((s,e) => s+Number(e.amount||0), 0);
+    const totalAppr = approved.reduce((s,e) => s+Number(e.amount||0), 0);
+    const fmtE = n => new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR",maximumFractionDigits:0}).format(n);
+
     const content = document.getElementById("admContent");
     content.innerHTML = `
+<div class="adm-kpis" style="margin-bottom:14px;">
+  <div class="adm-kpi adm-kpi-amber">
+    <div class="adm-kpi-label">In behandeling</div>
+    <div class="adm-kpi-value">${pending.length}</div>
+    <div class="adm-kpi-sub">${fmtE(totalPend)}</div>
+  </div>
+  <div class="adm-kpi adm-kpi-green">
+    <div class="adm-kpi-label">Goedgekeurd</div>
+    <div class="adm-kpi-value">${approved.length}</div>
+    <div class="adm-kpi-sub">${fmtE(totalAppr)}</div>
+  </div>
+  <div class="adm-kpi adm-kpi-red">
+    <div class="adm-kpi-label">Geweigerd</div>
+    <div class="adm-kpi-value">${rejected.length}</div>
+    <div class="adm-kpi-sub">declaraties</div>
+  </div>
+  <div class="adm-kpi adm-kpi-blue">
+    <div class="adm-kpi-label">Totaal ingediend</div>
+    <div class="adm-kpi-value">${expenses.length}</div>
+    <div class="adm-kpi-sub">alle statussen</div>
+  </div>
+</div>
 <div class="adm-card">
   <div class="adm-card-header">
     <h3 class="adm-card-title">Onkostennota's <span style="background:#e0f2fe;color:#0284c7;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${expenses.length}</span></h3>
+    <select id="admExpFilter" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;">
+      <option value="">Alle statussen</option>
+      <option value="ingediend">In behandeling</option>
+      <option value="goedgekeurd">Goedgekeurd</option>
+      <option value="geweigerd">Geweigerd</option>
+    </select>
   </div>
-  <div class="adm-card-body adm-table-wrap">
-    <table class="adm-table">
-      <thead><tr><th>Medewerker</th><th>Datum</th><th>Categorie</th><th>Bedrag</th><th>Omschrijving</th><th>Status</th><th>Acties</th></tr></thead>
-      <tbody>
-        ${expenses.map(e => `
-        <tr>
+  <div class="adm-card-body adm-table-wrap" id="admExpTable"></div>
+</div>`;
+
+    function buildExpRows(rows) {
+      if (!rows.length) return '<div class="adm-empty">Geen onkosten gevonden</div>';
+      return `<table class="adm-table">
+        <thead><tr><th>Medewerker</th><th>Datum</th><th>Categorie</th><th>Bedrag</th><th>Omschrijving</th><th>Status</th><th>Acties</th></tr></thead>
+        <tbody>${rows.map(e => `<tr>
           <td>${esc(e.userName || e.userId)}</td>
           <td>${esc(e.date)}</td>
           <td>${esc(e.category||"—")}</td>
@@ -1440,14 +1553,28 @@ ${emp ? `
             <button class="adm-btn adm-btn-success adm-btn-sm adm-exp-review" data-id="${e.id}" data-dec="goedgekeurd" data-name="${esc(e.userName||e.userId)}" data-amount="${e.amount}" data-cat="${esc(e.category||"")}">✓ Goed</button>
             <button class="adm-btn adm-btn-danger  adm-btn-sm adm-exp-review" data-id="${e.id}" data-dec="geweigerd"  data-name="${esc(e.userName||e.userId)}" data-amount="${e.amount}" data-cat="${esc(e.category||"")}">✗ Weiger</button>
           ` : "—"}</td>
-        </tr>`).join("") || '<tr><td colspan="7" class="adm-empty">Geen onkosten</td></tr>'}
-      </tbody>
-    </table>
-  </div>
-</div>`;
+        </tr>`).join("")}</tbody>
+      </table>`;
+    }
 
-    content.querySelectorAll(".adm-exp-review").forEach(btn => {
-      btn.addEventListener("click", () => openExpenseReviewModal(btn.dataset, renderExpenses));
+    function wireExpBtns() {
+      content.querySelectorAll(".adm-exp-review").forEach(btn => {
+        btn.addEventListener("click", () => openExpenseReviewModal(btn.dataset, () => {
+          const sel = document.getElementById("admExpFilter");
+          const f = sel?.value || "";
+          const rows = f ? expenses.filter(e => e.status === f || (f==="ingediend" && e.status==="pending")) : expenses;
+          const tbl = document.getElementById("admExpTable"); if (tbl) { tbl.innerHTML = buildExpRows(rows); wireExpBtns(); }
+        }));
+      });
+    }
+
+    const tbl = document.getElementById("admExpTable");
+    if (tbl) { tbl.innerHTML = buildExpRows(expenses); wireExpBtns(); }
+
+    document.getElementById("admExpFilter")?.addEventListener("change", e => {
+      const f = e.target.value;
+      const rows = f ? expenses.filter(exp => exp.status === f || (f==="ingediend" && exp.status==="pending")) : expenses;
+      const t = document.getElementById("admExpTable"); if (t) { t.innerHTML = buildExpRows(rows); wireExpBtns(); }
     });
   }
 
