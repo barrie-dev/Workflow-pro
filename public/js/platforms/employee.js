@@ -55,6 +55,19 @@
         <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
         <span class="emp-notif-dot hidden" id="empMsgDot"></span>
       </button>
+      <div style="position:relative">
+        <button class="emp-icon-btn" id="empBellBtn" title="Notificaties">
+          <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+          <span class="emp-notif-dot hidden" id="empBellDot"></span>
+        </button>
+        <div id="empNotifPanel" style="position:fixed;top:64px;right:12px;width:320px;background:#fff;border-radius:14px;border:1px solid #e2e8f0;box-shadow:0 8px 32px rgba(0,0,0,.15);z-index:999;display:none">
+          <div style="padding:12px 16px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px">
+            <span style="font-size:13px;font-weight:700;color:#0f172a;flex:1">Mijn notificaties</span>
+            <button id="empNotifMarkAll" style="background:none;border:none;cursor:pointer;font-size:11px;color:#38bdf8;font-weight:600;padding:3px 6px;border-radius:6px">Alles gelezen</button>
+          </div>
+          <div id="empNotifList" style="max-height:320px;overflow-y:auto"><div style="padding:28px;text-align:center;font-size:13px;color:#94a3b8">Laden…</div></div>
+        </div>
+      </div>
       <button class="emp-icon-btn" id="empLogoutBtn" title="Uitloggen">
         <svg viewBox="0 0 24 24"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
       </button>
@@ -505,6 +518,102 @@
 
     // msg btn
     document.getElementById("empMsgBtn")?.addEventListener("click", () => switchView("messages"));
+
+    // ── Notification bell ──────────────────────────────────────
+    (function() {
+      const bellBtn   = document.getElementById("empBellBtn");
+      const bellDot   = document.getElementById("empBellDot");
+      const panel     = document.getElementById("empNotifPanel");
+      const list      = document.getElementById("empNotifList");
+      let _notifs     = [];
+
+      function fmtTime(iso) {
+        if (!iso) return "";
+        const d = new Date(iso), now = new Date();
+        const diff = Math.floor((now - d) / 60000);
+        if (diff < 1) return "Zonet";
+        if (diff < 60) return `${diff}m geleden`;
+        if (diff < 1440) return `${Math.floor(diff/60)}u geleden`;
+        return d.toLocaleDateString("nl-BE");
+      }
+
+      function renderList() {
+        if (!_notifs.length) {
+          list.innerHTML = `<div style="padding:28px;text-align:center;font-size:13px;color:#94a3b8">Geen notificaties</div>`;
+          return;
+        }
+        list.innerHTML = _notifs.slice(0, 20).map(n => {
+          const unread = n.status !== "read";
+          return `<div class="emp-notif-row" data-nid="${esc(n.id)}" style="padding:10px 16px;border-bottom:1px solid #f8fafc;cursor:pointer;display:flex;gap:10px;background:${unread?"#f0f9ff":"#fff"}">
+            <div style="width:7px;height:7px;border-radius:50%;background:${unread?"#38bdf8":"#cbd5e1"};margin-top:5px;flex-shrink:0"></div>
+            <div style="flex:1">
+              <div style="font-size:12.5px;color:#0f172a;font-weight:${unread?600:400}">${esc(n.title||"Notificatie")}</div>
+              ${n.body ? `<div style="font-size:11.5px;color:#64748b;margin-top:2px">${esc(n.body)}</div>` : ""}
+              <div style="font-size:10.5px;color:#94a3b8;margin-top:2px">${fmtTime(n.createdAt)}</div>
+            </div>
+          </div>`;
+        }).join("");
+        list.querySelectorAll(".emp-notif-row").forEach(row => {
+          row.addEventListener("click", async () => {
+            const nid = row.dataset.nid;
+            const n = _notifs.find(x => x.id === nid);
+            if (!n || n.status === "read") return;
+            n.status = "read";
+            row.style.background = "#fff";
+            row.querySelector("div").style.background = "#cbd5e1";
+            row.querySelector("div + div > div").style.fontWeight = 400;
+            try { await api("POST", `/me/notifications/${nid}/read`, {}); } catch(_){}
+            updateDot();
+          });
+        });
+      }
+
+      function updateDot() {
+        const unread = _notifs.filter(n => n.status !== "read").length;
+        if (bellDot) {
+          bellDot.classList.toggle("hidden", unread === 0);
+          if (unread > 0 && unread <= 9) bellDot.style.setProperty("--count", unread);
+        }
+      }
+
+      async function loadNotifs() {
+        try {
+          const d = await api("GET", "/me/notifications");
+          _notifs = d.rows || [];
+          updateDot();
+          if (panel.style.display !== "none") renderList();
+        } catch(_){}
+      }
+
+      bellBtn?.addEventListener("click", async e => {
+        e.stopPropagation();
+        const isOpen = panel.style.display === "block";
+        panel.style.display = isOpen ? "none" : "block";
+        if (!isOpen) {
+          list.innerHTML = `<div style="padding:28px;text-align:center;font-size:13px;color:#94a3b8">Laden…</div>`;
+          await loadNotifs();
+          renderList();
+        }
+      });
+
+      document.addEventListener("click", e => {
+        if (!bellBtn?.contains(e.target) && !panel?.contains(e.target)) {
+          if (panel) panel.style.display = "none";
+        }
+      });
+
+      document.getElementById("empNotifMarkAll")?.addEventListener("click", async () => {
+        const unread = _notifs.filter(n => n.status !== "read");
+        await Promise.all(unread.map(n => api("POST", `/me/notifications/${n.id}/read`, {}).catch(()=>{})));
+        _notifs.forEach(n => n.status = "read");
+        updateDot();
+        renderList();
+      });
+
+      // Laad bij start en poll elke 30 seconden
+      loadNotifs();
+      setInterval(loadNotifs, 30000);
+    })();
 
     // sheet overlays
     document.getElementById("empSheetOverlay")?.addEventListener("click", closeSheets);

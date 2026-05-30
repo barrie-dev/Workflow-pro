@@ -1721,32 +1721,34 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
         mgrList.innerHTML = `<div style="padding:28px;text-align:center;font-size:13px;color:#94a3b8">🔔 Geen notificaties</div>`;
         return;
       }
-      mgrList.innerHTML = _mgrNotifs.slice(0, 15).map(n => `
-      <div class="mgr-notif-item" data-nid="${esc(n.id)}" style="padding:10px 16px;border-bottom:1px solid #f8fafc;cursor:pointer;display:flex;gap:10px;background:${n.read?"#fff":"#eff6ff"}">
-        <div style="width:7px;height:7px;border-radius:50%;background:${n.read?"#cbd5e1":"#0ea5e9"};margin-top:5px;flex-shrink:0"></div>
-        <div style="flex:1">
-          <div style="font-size:12.5px;color:#374151">${esc(n.title||n.message||"Notificatie")}</div>
-          ${n.body ? `<div style="font-size:11.5px;color:#64748b;margin-top:2px">${esc(n.body)}</div>` : ""}
-          <div style="font-size:10.5px;color:#94a3b8;margin-top:2px">${fmtMgrNotifTime(n.createdAt)}</div>
-        </div>
-      </div>`).join("");
+      mgrList.innerHTML = _mgrNotifs.slice(0, 15).map(n => {
+        const isRead = n.status === "read";
+        return `<div class="mgr-notif-item" data-nid="${esc(n.id)}" style="padding:10px 16px;border-bottom:1px solid #f8fafc;cursor:pointer;display:flex;gap:10px;background:${isRead?"#fff":"#eff6ff"}">
+          <div style="width:7px;height:7px;border-radius:50%;background:${isRead?"#cbd5e1":"#0ea5e9"};margin-top:5px;flex-shrink:0"></div>
+          <div style="flex:1">
+            <div style="font-size:12.5px;color:#374151;font-weight:${isRead?400:600}">${esc(n.title||n.message||"Notificatie")}</div>
+            ${n.body ? `<div style="font-size:11.5px;color:#64748b;margin-top:2px">${esc(n.body)}</div>` : ""}
+            <div style="font-size:10.5px;color:#94a3b8;margin-top:2px">${fmtMgrNotifTime(n.createdAt)}</div>
+          </div>
+        </div>`;
+      }).join("");
 
       mgrList.querySelectorAll(".mgr-notif-item").forEach(item => {
         item.addEventListener("click", async () => {
-          if (item.style.background !== "rgb(239, 246, 255)") return;
+          const nid = item.dataset.nid;
+          const n = _mgrNotifs.find(x => x.id === nid);
+          if (!n || n.status === "read") return;
+          n.status = "read";
           item.style.background = "#fff";
           item.querySelector("div").style.background = "#cbd5e1";
-          const nid = item.dataset.nid;
           try { await api("POST", `/notifications/${nid}/read`, {}); } catch(_){}
-          const n = _mgrNotifs.find(x => x.id === nid);
-          if (n) n.read = true;
           updateMgrDot();
         });
       });
     }
 
     function updateMgrDot() {
-      const unread = _mgrNotifs.filter(n => !n.read).length;
+      const unread = _mgrNotifs.filter(n => n.status !== "read").length;
       if (mgrDot) mgrDot.style.display = unread > 0 ? "" : "none";
     }
 
@@ -1784,14 +1786,15 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     });
 
     document.getElementById("mgrNotifMarkAll")?.addEventListener("click", async () => {
-      const unread = _mgrNotifs.filter(n => !n.read);
+      const unread = _mgrNotifs.filter(n => n.status !== "read");
       await Promise.all(unread.map(n => api("POST", `/notifications/${n.id}/read`, {}).catch(() => {})));
-      _mgrNotifs.forEach(n => n.read = true);
+      _mgrNotifs.forEach(n => n.status = "read");
       updateMgrDot();
       renderMgrNotifList();
     });
 
     loadMgrNotifications();
+    setInterval(loadMgrNotifications, 30000);
 
     switchView("dashboard");
   }

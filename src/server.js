@@ -1255,13 +1255,24 @@ http.createServer(async (req, res) => {
         assertCan(user, "leaves");
         const reviewBody = await readBody(req);
         const leave = reviewLeave(store, tenant, leaveReviewMatch[1], reviewBody, user);
-        // E-mail naar medewerker bij goedkeuring/afwijzing
+        // E-mail + in-app notificatie naar medewerker bij goedkeuring/afwijzing
         if (["goedgekeurd", "geweigerd"].includes(leave?.status)) {
           const employee = store.getUserById(leave.userId);
           if (employee?.email) {
             const tpl = leaveReviewedToEmployee({ employee, leave, reviewer: user, appUrl: config.appUrl });
             sendMail({ to: employee.email, ...tpl });
           }
+          const statusLabel = leave.status === "goedgekeurd" ? "goedgekeurd" : "geweigerd";
+          createNotification(store, tenant, {
+            type: "leave",
+            channel: "in_app",
+            audience: leave.userId,
+            userId: leave.userId,
+            title: leave.status === "goedgekeurd" ? "Verlof goedgekeurd" : "Verlof geweigerd",
+            body: `Jouw verlofaanvraag (${leave.from || ""} – ${leave.to || ""}) werd ${statusLabel}.`,
+            priority: "normal",
+            sourceRef: `leave:${leave.id}:${leave.status}`
+          }, user);
         }
         sendJson(res, 200, { ok: true, leave });
         return;
@@ -1416,6 +1427,26 @@ http.createServer(async (req, res) => {
 
       if (action === "me/messages" && req.method === "GET") {
         sendJson(res, 200, { ok: true, ...getMyMessages(store, tenantId, user.id) });
+        return;
+      }
+
+      // GET /me/notifications — persoonlijke notificaties voor medewerker
+      if (action === "me/notifications" && req.method === "GET") {
+        const all = listNotifications(store, tenantId);
+        const mine = all.filter(n => n.userId === user.id || n.audience === user.id);
+        sendJson(res, 200, { ok: true, rows: mine, unread: mine.filter(n => n.status !== "read").length });
+        return;
+      }
+      // POST /me/notifications/:id/read
+      const meNotifReadMatch = action.match(/^me\/notifications\/([^/]+)\/read$/);
+      if (meNotifReadMatch && req.method === "POST") {
+        const nid = meNotifReadMatch[1];
+        const n = store.get("notifications", nid);
+        if (!n || n.tenantId !== tenantId || (n.userId !== user.id && n.audience !== user.id)) {
+          return sendJson(res, 404, { ok: false, error: "Niet gevonden" });
+        }
+        const updated = store.update("notifications", nid, { status: "read", readAt: new Date().toISOString(), readBy: user.email });
+        sendJson(res, 200, { ok: true, row: updated });
         return;
       }
 
@@ -1752,13 +1783,23 @@ http.createServer(async (req, res) => {
         assertCan(user, "expenses");
         assertApiKeyWriteAllowed(user, req);
         const expense = approveExpense(store, tenant, expenseApprovalMatch[1], user);
-        // E-mail naar medewerker
+        // E-mail + in-app notificatie naar medewerker
         if (expense?.userId) {
           const employee = store.getUserById(expense.userId);
           if (employee?.email) {
             const tpl = expenseReviewedToEmployee({ employee, expense, reviewer: user, appUrl: config.appUrl });
             sendMail({ to: employee.email, ...tpl });
           }
+          createNotification(store, tenant, {
+            type: "expense",
+            channel: "in_app",
+            audience: expense.userId,
+            userId: expense.userId,
+            title: "Onkostennota goedgekeurd",
+            body: `€${expense.amount || ""} (${expense.category || ""}) werd goedgekeurd.`,
+            priority: "normal",
+            sourceRef: `expense:${expense.id}:goedgekeurd`
+          }, user);
         }
         sendJson(res, 200, { ok: true, row: expense });
         return;
@@ -1787,13 +1828,23 @@ http.createServer(async (req, res) => {
         }
         const row = store.update("expenses", expPatchMatch[1], { ...patch, updatedAt: new Date().toISOString() });
         store.audit({ actor: user.email, tenantId, action: `expense_${patch.status||"updated"}`, area: "expenses", detail: `€${row?.amount} — ${row?.category}` });
-        // E-mail naar medewerker bij statuswijziging naar goedgekeurd/geweigerd
+        // E-mail + in-app notificatie naar medewerker bij statuswijziging naar goedgekeurd/geweigerd
         if (["goedgekeurd", "geweigerd"].includes(row?.status) && row?.userId) {
           const employee = store.getUserById(row.userId);
           if (employee?.email) {
             const tpl = expenseReviewedToEmployee({ employee, expense: row, reviewer: user, appUrl: config.appUrl });
             sendMail({ to: employee.email, ...tpl });
           }
+          createNotification(store, tenant, {
+            type: "expense",
+            channel: "in_app",
+            audience: row.userId,
+            userId: row.userId,
+            title: row.status === "goedgekeurd" ? "Onkostennota goedgekeurd" : "Onkostennota geweigerd",
+            body: `€${row.amount || ""} (${row.category || ""}) werd ${row.status}.`,
+            priority: "normal",
+            sourceRef: `expense:${row.id}:${row.status}`
+          }, user);
         }
         sendJson(res, 200, { ok: true, row });
         return;

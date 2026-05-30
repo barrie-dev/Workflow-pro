@@ -2770,15 +2770,17 @@ ${billing.status === "trial" ? `<div style="background:#fffbeb;border:1px solid 
         notifList.innerHTML = `<div class="adm-notif-empty">🔔 Geen notificaties</div>`;
         return;
       }
-      notifList.innerHTML = _notifCache.slice(0, 20).map(n => `
-      <div class="adm-notif-item ${n.read ? "" : "unread"}" data-nid="${esc(n.id)}">
-        <div class="adm-notif-dot ${n.read ? "read" : ""}"></div>
-        <div class="adm-notif-body">
-          <div>${esc(n.title || n.message || "Notificatie")}</div>
-          ${n.body ? `<div style="color:#64748b;margin-top:2px;font-size:11.5px">${esc(n.body)}</div>` : ""}
-          <div class="adm-notif-time">${fmtNotifTime(n.createdAt)}</div>
-        </div>
-      </div>`).join("");
+      notifList.innerHTML = _notifCache.slice(0, 20).map(n => {
+        const isRead = n.status === "read";
+        return `<div class="adm-notif-item ${isRead ? "" : "unread"}" data-nid="${esc(n.id)}">
+          <div class="adm-notif-dot ${isRead ? "read" : ""}"></div>
+          <div class="adm-notif-body">
+            <div>${esc(n.title || n.message || "Notificatie")}</div>
+            ${n.body ? `<div style="color:#64748b;margin-top:2px;font-size:11.5px">${esc(n.body)}</div>` : ""}
+            <div class="adm-notif-time">${fmtNotifTime(n.createdAt)}</div>
+          </div>
+        </div>`;
+      }).join("");
 
       notifList.querySelectorAll(".adm-notif-item").forEach(item => {
         item.addEventListener("click", async () => {
@@ -2787,14 +2789,14 @@ ${billing.status === "trial" ? `<div style="background:#fffbeb;border:1px solid 
           item.classList.remove("unread"); item.querySelector(".adm-notif-dot").classList.add("read");
           try { await api("POST", `/notifications/${nid}/read`, {}); } catch(_){}
           const n = _notifCache.find(x => x.id === nid);
-          if (n) n.read = true;
+          if (n) n.status = "read";
           updateBellDot();
         });
       });
     }
 
     function updateBellDot() {
-      const unread = _notifCache.filter(n => !n.read).length;
+      const unread = _notifCache.filter(n => n.status !== "read").length;
       if (bellDot) bellDot.style.display = unread > 0 ? "" : "none";
     }
 
@@ -2824,15 +2826,16 @@ ${billing.status === "trial" ? `<div style="background:#fffbeb;border:1px solid 
     });
 
     document.getElementById("admNotifMarkAll")?.addEventListener("click", async () => {
-      const unread = _notifCache.filter(n => !n.read);
+      const unread = _notifCache.filter(n => n.status !== "read");
       await Promise.all(unread.map(n => api("POST", `/notifications/${n.id}/read`, {}).catch(() => {})));
-      _notifCache.forEach(n => n.read = true);
+      _notifCache.forEach(n => n.status = "read");
       updateBellDot();
       renderNotifList();
     });
 
-    // Load on startup to show dot if unread notifications exist
+    // Load on startup and poll every 30 seconds
     loadNotifications();
+    setInterval(loadNotifications, 30000);
 
     switchView("dashboard");
   }
