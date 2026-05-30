@@ -16,6 +16,7 @@ function createNotification(store, tenant, payload, actor) {
     type: payload.type || "info",
     channel: payload.channel || "in_app",
     audience: payload.audience || "admins",
+    userId: payload.userId || null,
     title: payload.title || "Nieuwe notificatie",
     body: payload.body || "",
     status: "queued",

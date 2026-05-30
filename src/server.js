@@ -1853,7 +1853,7 @@ http.createServer(async (req, res) => {
         if (store.getUserByEmail(email)) { sendJson(res, 409, { ok: false, error: "Email bestaat al" }); return; }
         const role = ["manager", "employee"].includes(body.role) ? body.role : "employee";
         const permissions = role === "manager" ? MANAGER_PERMISSIONS : EMPLOYEE_PERMISSIONS;
-        const tempPassword = body.password || crypto.randomBytes(12).toString("base64url");
+        const tempPassword = body.password || body.tempPassword || crypto.randomBytes(12).toString("base64url");
         const newUser = store.insert("users", {
           id: `user_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`,
           tenantId,
@@ -2085,9 +2085,16 @@ http.createServer(async (req, res) => {
         assertApiKeyWriteAllowed(user, req);
         const body = await readBody(req);
         if (!String(body.title||"").trim()) return sendJson(res, 400, { ok: false, error: "Titel is verplicht" });
+        // Auto-generate sequential workorder number (WO-YYYY-NNN)
+        const existingWOs = store.list("workorders", tenantId);
+        const year = new Date().getFullYear();
+        const yearWOs = existingWOs.filter(w => (w.number||"").startsWith(`WO-${year}-`));
+        const seq = yearWOs.length + 1;
+        const woNumber = `WO-${year}-${String(seq).padStart(3, "0")}`;
         const row = store.insert("workorders", {
           id: `wo_${Date.now()}_${Math.random().toString(16).slice(2)}`,
           tenantId, ...body,
+          number: woNumber,
           status: body.status || "open",
           createdBy: user.id,
           createdAt: new Date().toISOString()

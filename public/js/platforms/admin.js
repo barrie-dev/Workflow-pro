@@ -825,10 +825,24 @@ ${emp ? `
       delete data.firstName; delete data.lastName;
       if (data.leaveQuota !== undefined) data.leaveQuota = Number(data.leaveQuota) || 20;
       try {
-        if (emp) await api("PATCH", `/employees/${emp.id}`, data);
-        else await api("POST", "/employees", data);
-        closeDrawer();
-        renderEmployees();
+        if (emp) {
+          await api("PATCH", `/employees/${emp.id}`, data);
+          closeDrawer();
+          renderEmployees();
+        } else {
+          const result = await api("POST", "/employees", data);
+          // Toon tijdelijk wachtwoord als er geen wachtwoord ingesteld werd
+          if (result.tempPassword && !data.tempPassword) {
+            document.getElementById("admEmpFormErr").style.cssText = "display:block;background:#d1fae5;color:#065f46;border-radius:8px;padding:8px;font-size:12px;margin-top:8px;";
+            document.getElementById("admEmpFormErr").innerHTML = `✅ Medewerker aangemaakt. Tijdelijk wachtwoord: <strong style="font-family:monospace;">${result.tempPassword}</strong><br><small>Kopieer dit — wordt niet opnieuw getoond.</small>`;
+            e.target.querySelector("[type=submit]").textContent = "Sluiten";
+            e.target.querySelector("[type=submit]").type = "button";
+            e.target.querySelector("[type=submit]").addEventListener("click", () => { closeDrawer(); renderEmployees(); });
+          } else {
+            closeDrawer();
+            renderEmployees();
+          }
+        }
       } catch(err) {
         errEl.textContent = err.message; errEl.style.display = "block";
       }
