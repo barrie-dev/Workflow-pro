@@ -739,6 +739,14 @@ http.createServer(async (req, res) => {
         sendJson(res, 200, { ok: true, ...listReports(tenant.id, { limit: url.searchParams.get("limit") }) });
         return;
       }
+      // POST /reports/log — registreert rapportgeneratie voor pilot-KPI tracking
+      if (action === "reports/log" && req.method === "POST") {
+        assertCan(user, "leaves"); // accessible to tenant admin + manager
+        const body = await readBody(req);
+        store.audit({ actor: user.email, tenantId, action: "report_generated", area: "reports", detail: body.type || "beslissersrapport" });
+        sendJson(res, 200, { ok: true });
+        return;
+      }
       if (action === "reports/generate" && req.method === "POST") {
         assertCan(user, "tenants");
         assertInteractiveUser(user);
@@ -890,7 +898,7 @@ http.createServer(async (req, res) => {
       }
       if (action === "golden-path/demo" && req.method === "POST") {
         if (config.isProduction) return sendJson(res, 403, { ok: false, error: "Demo data is uitgeschakeld in productie" });
-        assertCan(user, "tenants");
+        assertCan(user, "settings");
         assertInteractiveUser(user);
         sendJson(res, 201, { ok: true, result: createDemoGoldenPath(store, tenant, user) });
         return;

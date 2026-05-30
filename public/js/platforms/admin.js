@@ -2517,6 +2517,8 @@ ${emp ? `
       const to   = document.getElementById("repTo").value;
       let tenant = {};
       try { const t = await api("GET", "/settings"); tenant = t.tenant || {}; } catch(_){}
+      // Log for pilot KPI tracking
+      api("POST", "/reports/log", { type: "beslissersrapport" }).catch(()=>{});
       printBeslissersrapport(_repData, tenant, from, to);
     });
 
@@ -3725,9 +3727,15 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
       const phaseIcons = { foundation:"🏗️", core_operations:"⚙️", billing_compliance:"💳", pilot_launch:"🚀", commercial_launch:"🌐" };
 
       content.innerHTML = `
-<div style="margin-bottom:20px;">
-  <div style="font-size:18px;font-weight:700;color:#0f172a;margin-bottom:4px;">Roadmap — ${esc(rm.tenant?.name||"")}</div>
-  <div style="font-size:13px;color:#64748b;">Gegenereerd op ${new Date(rm.generatedAt||Date.now()).toLocaleString("nl-BE")} · ${rm.summary?.go||0}/${rm.summary?.total||0} fasen gereed · ${rm.summary?.openActions||0} open acties</div>
+<div style="margin-bottom:20px;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+  <div>
+    <div style="font-size:18px;font-weight:700;color:#0f172a;margin-bottom:4px;">Roadmap — ${esc(rm.tenant?.name||"")}</div>
+    <div style="font-size:13px;color:#64748b;">Gegenereerd op ${new Date(rm.generatedAt||Date.now()).toLocaleString("nl-BE")} · ${rm.summary?.go||0}/${rm.summary?.total||0} fasen gereed · ${rm.summary?.openActions||0} open acties</div>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <button class="adm-btn adm-btn-secondary adm-btn-sm" id="rmRefresh">🔄 Vernieuwen</button>
+    <button class="adm-btn adm-btn-secondary adm-btn-sm" id="rmDemoData" title="Laad voorbeelddata om pilot-KPIs te halen">🎲 Pilotdata laden</button>
+  </div>
 </div>
 
 ${phases.map(p => {
@@ -3766,6 +3774,17 @@ ${phases.map(p => {
   </div>` : `<div style="padding:10px 18px;font-size:13px;color:#10b981;font-weight:600;">✓ Alle checks geslaagd</div>`}
 </div>`;
 }).join("")}`;
+      document.getElementById("rmRefresh")?.addEventListener("click", () => renderRoadmap());
+      document.getElementById("rmDemoData")?.addEventListener("click", async () => {
+        if (!confirm("Dit laadt voorbeelddata (shifts, werkbonnen, klokregistraties) om de pilot-KPIs te halen. Doorgaan?")) return;
+        const btn = document.getElementById("rmDemoData");
+        btn.disabled = true; btn.textContent = "Laden…";
+        try {
+          await api("POST", "/golden-path/demo");
+          window.showToast && window.showToast("Pilotdata geladen ✓ — roadmap ververst", "success");
+          renderRoadmap();
+        } catch(e) { window.showToast && window.showToast("Fout: "+e.message, "error"); btn.disabled = false; btn.textContent = "🎲 Pilotdata laden"; }
+      });
     } catch(e) { content.innerHTML = `<div style="padding:20px;color:#dc2626">Fout: ${e.message}</div>`; }
   }
 
@@ -3814,6 +3833,50 @@ ${billing.status === "trial" ? `<div style="background:#fffbeb;border:1px solid 
           <td><span class="adm-status ${statusCss[i.status]||"adm-status-pending"}">${esc(i.status||"—")}</span></td>
         </tr>`).join("")}</tbody>
       </table></div>`}
+</div>
+
+<!-- Stripe configuratie -->
+<div class="adm-card" style="margin-top:16px;">
+  <div class="adm-card-header"><h3 class="adm-card-title">💳 Stripe betalingen configureren</h3></div>
+  <div class="adm-card-body">
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div style="background:#fef3c7;border-radius:8px;padding:12px 16px;font-size:13px;color:#92400e;">
+        ⚠️ Stripe is nog niet geconfigureerd. Betalingen zijn uitgeschakeld.
+      </div>
+      <div style="font-size:13px;color:#374151;line-height:1.6;">
+        Om online betalingen te activeren:
+        <ol style="margin:8px 0 0 18px;display:flex;flex-direction:column;gap:4px;">
+          <li>Maak een account aan op <a href="https://dashboard.stripe.com/register" target="_blank" style="color:#4f46e5;font-weight:600;">stripe.com</a></li>
+          <li>Ga naar <strong>Developers → API keys</strong> en kopieer je <code>sk_live_...</code> sleutel</li>
+          <li>Ga naar <strong>Developers → Webhooks</strong> en maak een webhook aan voor <code>/api/webhooks/stripe</code></li>
+          <li>Kopieer het webhook-geheim (<code>whsec_...</code>)</li>
+          <li>Voeg toe aan je Render.com omgevingsvariabelen: <code>STRIPE_SECRET_KEY</code> en <code>STRIPE_WEBHOOK_SECRET</code></li>
+        </ol>
+      </div>
+      <a href="https://dashboard.stripe.com" target="_blank" class="adm-btn adm-btn-secondary" style="width:fit-content;">Stripe Dashboard openen →</a>
+    </div>
+  </div>
+</div>
+
+<!-- Peppol e-facturatie -->
+<div class="adm-card" style="margin-top:16px;">
+  <div class="adm-card-header"><h3 class="adm-card-title">📧 Peppol e-facturatie (Belgium)</h3></div>
+  <div class="adm-card-body">
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div style="background:#f0f9ff;border-radius:8px;padding:12px 16px;font-size:13px;color:#0369a1;">
+        ℹ️ Peppol is verplicht voor B2G-facturatie in België (overheidscontracten). Voor B2B is het optioneel maar aanbevolen.
+      </div>
+      <div style="font-size:13px;color:#374151;line-height:1.6;">
+        Belgische Peppol-providers:
+        <ul style="margin:8px 0 0 18px;display:flex;flex-direction:column;gap:4px;">
+          <li><a href="https://www.billit.eu" target="_blank" style="color:#4f46e5;font-weight:600;">Billit.eu</a> — populair voor KMO's</li>
+          <li><a href="https://www.digiteal.eu" target="_blank" style="color:#4f46e5;font-weight:600;">Digiteal</a> — Belgische aanbieder</li>
+          <li><a href="https://www.unifiedpost.com" target="_blank" style="color:#4f46e5;font-weight:600;">Unifiedpost</a> — enterprise oplossing</li>
+        </ul>
+        <div style="margin-top:8px;">Stel in via Render: <code>PEPPOL_PROVIDER=billit</code> en <code>PEPPOL_API_KEY=jouw_api_sleutel</code></div>
+      </div>
+    </div>
+  </div>
 </div>`;
     } catch(e) { content.innerHTML = `<div style="padding:20px;color:#dc2626">Fout: ${e.message}</div>`; }
   }
