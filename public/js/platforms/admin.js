@@ -1988,10 +1988,20 @@ ${emp ? `
           }
         });
         const hourRows = Object.values(hoursByUser).sort((a,b) => b.hours - a.hours);
+        const maxHours = hourRows[0]?.hours || 1;
+        const BAR_COLORS = ["#6366f1","#0ea5e9","#10b981","#f59e0b","#ef4444","#8b5cf6","#06b6d4","#84cc16"];
         document.getElementById("repClocksTable").innerHTML = hourRows.length
-          ? `<table class="adm-table"><thead><tr><th>Medewerker</th><th>Dagen</th><th>Uren</th><th>Gem/dag</th></tr></thead><tbody>
-             ${hourRows.map(r => `<tr><td>${r.name}</td><td>${r.days.size}</td><td>${r.hours.toFixed(1)}</td><td>${r.days.size ? (r.hours/r.days.size).toFixed(1) : "—"}</td></tr>`).join("")}
-             </tbody></table>`
+          ? `<div style="padding:8px 0;">${hourRows.map((r,i) => `
+            <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #f8fafc;">
+              <div style="width:110px;font-size:12px;font-weight:500;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${r.name}">${r.name}</div>
+              <div style="flex:1;background:#f1f5f9;border-radius:4px;height:18px;overflow:hidden;">
+                <div style="width:${(r.hours/maxHours*100).toFixed(1)}%;background:${BAR_COLORS[i%BAR_COLORS.length]};height:100%;border-radius:4px;transition:width .4s;"></div>
+              </div>
+              <div style="width:52px;font-size:12px;font-weight:600;color:#0f172a;text-align:right;">${r.hours.toFixed(1)} u</div>
+              <div style="width:40px;font-size:11px;color:#94a3b8;text-align:right;">${r.days.size}d</div>
+            </div>`).join("")}
+            </div>
+            <div style="font-size:11px;color:#94a3b8;margin-top:6px;text-align:right">Totaal: ${totalHours.toFixed(1)} u · ${hourRows.length} medewerkers</div>`
           : '<div class="adm-empty">Geen kloktijden in deze periode</div>';
 
         // ── Onkosten ──────────────────────────────────────────
@@ -2011,10 +2021,22 @@ ${emp ? `
         // ── Werkbonnen ────────────────────────────────────────
         const woByStatus = {};
         workorders.forEach(w => { woByStatus[w.status||"Onbekend"] = (woByStatus[w.status||"Onbekend"]||0)+1; });
+        const woStatusColors = { open:"#3b82f6", in_progress:"#f59e0b", Voltooid:"#10b981", Afgewerkt:"#10b981", geannuleerd:"#ef4444" };
+        const woTotal = workorders.length;
         document.getElementById("repWOTable").innerHTML = workorders.length
-          ? `<table class="adm-table"><thead><tr><th>#</th><th>Titel</th><th>Medewerker</th><th>Status</th><th>Datum</th></tr></thead><tbody>
-             ${workorders.map(w => `<tr><td>${w.number||w.id.slice(-4)}</td><td>${w.title||"—"}</td><td>${w.userName||w.userId||"—"}</td><td><span class="adm-status adm-status-${(w.status||"").toLowerCase()}">${w.status||"—"}</span></td><td>${w.scheduledDate||w.createdAt?.slice(0,10)||"—"}</td></tr>`).join("")}
-             </tbody></table>`
+          ? `<div style="padding:8px 0;">
+              <div style="display:flex;height:20px;border-radius:6px;overflow:hidden;margin-bottom:14px;">
+                ${Object.entries(woByStatus).map(([s,n]) => `<div style="flex:${n};background:${woStatusColors[s]||"#94a3b8"};transition:flex .4s;" title="${s}: ${n}"></div>`).join("")}
+              </div>
+              ${Object.entries(woByStatus).map(([s,n]) => `
+              <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f8fafc;">
+                <div style="width:10px;height:10px;border-radius:50%;background:${woStatusColors[s]||"#94a3b8"};flex-shrink:0;"></div>
+                <div style="font-size:13px;color:#374151;flex:1;">${s}</div>
+                <div style="font-size:13px;font-weight:700;color:#0f172a;">${n}</div>
+                <div style="font-size:11px;color:#94a3b8;width:36px;text-align:right;">${(n/woTotal*100).toFixed(0)}%</div>
+              </div>`).join("")}
+              <div style="font-size:11px;color:#94a3b8;margin-top:6px;text-align:right">Totaal: ${woTotal} werkbonnen</div>
+            </div>`
           : '<div class="adm-empty">Geen werkbonnen in deze periode</div>';
 
       } catch (err) {
