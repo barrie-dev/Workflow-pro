@@ -933,35 +933,61 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     const expenses = data.expenses || data || [];
     const content = document.getElementById("mgrContent");
 
+    const pending  = expenses.filter(e => ["pending","ingediend"].includes(e.status));
+    const approved = expenses.filter(e => ["goedgekeurd","approved"].includes(e.status));
+    const fmtE = n => new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR",maximumFractionDigits:0}).format(n);
+
     content.innerHTML = `
+<div class="mgr-kpis" style="margin-bottom:12px;">
+  <div class="mgr-kpi"><div class="mgr-kpi-label">In behandeling</div><div class="mgr-kpi-value" style="color:#f59e0b">${pending.length}</div><div class="mgr-kpi-sub">${fmtE(pending.reduce((s,e)=>s+Number(e.amount||0),0))}</div></div>
+  <div class="mgr-kpi"><div class="mgr-kpi-label">Goedgekeurd</div><div class="mgr-kpi-value" style="color:#10b981">${approved.length}</div><div class="mgr-kpi-sub">${fmtE(approved.reduce((s,e)=>s+Number(e.amount||0),0))}</div></div>
+  <div class="mgr-kpi"><div class="mgr-kpi-label">Totaal ingediend</div><div class="mgr-kpi-value">${expenses.length}</div></div>
+</div>
 <div class="mgr-card">
-  <div class="mgr-card-header"><h3 class="mgr-card-title">Onkostennota's</h3></div>
+  <div class="mgr-card-header">
+    <h3 class="mgr-card-title">Onkostennota's</h3>
+    <select id="mgrExpFilter" style="padding:5px 9px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;">
+      <option value="">Alle</option>
+      <option value="ingediend">In behandeling</option>
+      <option value="goedgekeurd">Goedgekeurd</option>
+      <option value="geweigerd">Geweigerd</option>
+    </select>
+  </div>
   <div class="mgr-card-body mgr-table-wrap">
     <table class="mgr-table">
       <thead><tr><th>Medewerker</th><th>Datum</th><th>Categorie</th><th>Bedrag</th><th>Status</th><th>Acties</th></tr></thead>
-      <tbody>
-        ${expenses.map(e => `
-        <tr>
-          <td>${esc(e.userName||e.userId)}</td>
-          <td>${esc(e.date)}</td>
-          <td>${esc(e.category||"—")}</td>
-          <td style="font-weight:600;">€ ${Number(e.amount||0).toFixed(2)}</td>
-          <td>
-            <span class="mgr-status mgr-status-${e.status}">${esc(e.status)}</span>
-            ${e.reviewNote ? `<div style="font-size:11px;color:#64748b;margin-top:2px;">💬 ${esc(e.reviewNote.slice(0,30))}${e.reviewNote.length>30?"…":""}</div>` : ""}
-          </td>
-          <td style="white-space:nowrap;">${["pending","ingediend"].includes(e.status) ? `
-            <button class="mgr-btn mgr-btn-success mgr-btn-sm mgr-exp-review" data-id="${e.id}" data-dec="goedgekeurd" data-name="${esc(e.userName||e.userId)}" data-amount="${e.amount}" data-cat="${esc(e.category||"")}">✓ Goed</button>
-            <button class="mgr-btn mgr-btn-danger  mgr-btn-sm mgr-exp-review" data-id="${e.id}" data-dec="geweigerd"  data-name="${esc(e.userName||e.userId)}" data-amount="${e.amount}" data-cat="${esc(e.category||"")}">✗ Weiger</button>
-          ` : "—"}</td>
-        </tr>`).join("") || '<tr><td colspan="6" class="mgr-empty">Geen onkosten</td></tr>'}
-      </tbody>
+      <tbody id="mgrExpTbody"></tbody>
     </table>
   </div>
 </div>`;
 
-    content.querySelectorAll(".mgr-exp-review").forEach(btn => {
-      btn.addEventListener("click", () => openExpenseReviewModal(btn.dataset, renderExpenses));
+    function buildExpRows(rows) {
+      return rows.map(e => `<tr>
+        <td>${esc(e.userName||e.userId)}</td>
+        <td>${esc(e.date)}</td>
+        <td>${esc(e.category||"—")}</td>
+        <td style="font-weight:600;">€ ${Number(e.amount||0).toFixed(2)}</td>
+        <td><span class="mgr-status mgr-status-${e.status}">${esc(e.status)}</span>${e.reviewNote?`<div style="font-size:11px;color:#64748b;margin-top:2px;">💬 ${esc(e.reviewNote.slice(0,30))}${e.reviewNote.length>30?"…":""}</div>`:""}</td>
+        <td style="white-space:nowrap;">${["pending","ingediend"].includes(e.status)?`
+          <button class="mgr-btn mgr-btn-success mgr-btn-sm mgr-exp-review" data-id="${e.id}" data-dec="goedgekeurd" data-name="${esc(e.userName||e.userId)}" data-amount="${e.amount}" data-cat="${esc(e.category||"")}">✓ Goed</button>
+          <button class="mgr-btn mgr-btn-danger  mgr-btn-sm mgr-exp-review" data-id="${e.id}" data-dec="geweigerd"  data-name="${esc(e.userName||e.userId)}" data-amount="${e.amount}" data-cat="${esc(e.category||"")}">✗ Weiger</button>
+        `:"—"}</td>
+      </tr>`).join("") || '<tr><td colspan="6" class="mgr-empty">Geen onkosten</td></tr>';
+    }
+
+    const tbInit = document.getElementById("mgrExpTbody");
+    if (tbInit) tbInit.innerHTML = buildExpRows(expenses);
+
+    function wireExpBtns() {
+      content.querySelectorAll(".mgr-exp-review").forEach(btn => {
+        btn.addEventListener("click", () => openExpenseReviewModal(btn.dataset, renderExpenses));
+      });
+    }
+    wireExpBtns();
+    document.getElementById("mgrExpFilter")?.addEventListener("change", e => {
+      const f = e.target.value;
+      const rows = f ? expenses.filter(exp => exp.status === f || (f==="ingediend" && exp.status==="pending")) : expenses;
+      const tb = document.getElementById("mgrExpTbody"); if (tb) { tb.innerHTML = buildExpRows(rows); wireExpBtns(); }
     });
   }
 

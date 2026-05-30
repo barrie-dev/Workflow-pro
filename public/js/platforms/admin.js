@@ -762,8 +762,21 @@ ${emp ? `
     const from = baseWeek.toISOString().slice(0, 10);
     const to = weekEnd.toISOString().slice(0, 10);
 
-    const data = await api("GET", `/manager/planning?from=${from}&to=${to}`);
-    const shifts = Array.isArray(data) ? data : (data.shifts || []);
+    const [planData, leaveData] = await Promise.all([
+      api("GET", `/manager/planning?from=${from}&to=${to}`),
+      api("GET", `/leaves?from=${from}&to=${to}&status=goedgekeurd`).catch(() => ({ leaves: [] }))
+    ]);
+    const shifts = Array.isArray(planData) ? planData : (planData.shifts || []);
+    // Build leave map: userId → Set of dates on leave
+    const leaveMap = {};
+    (leaveData.leaves || []).forEach(l => {
+      if (!l.userId || !l.startDate || !l.endDate) return;
+      for (let d = new Date(l.startDate); d.toISOString().slice(0,10) <= l.endDate; d.setDate(d.getDate()+1)) {
+        const dk = d.toISOString().slice(0,10);
+        if (!leaveMap[l.userId]) leaveMap[l.userId] = {};
+        leaveMap[l.userId][dk] = l.type || "verlof";
+      }
+    });
 
     const days = [];
     for (let d = new Date(baseWeek); d <= weekEnd; d.setDate(d.getDate() + 1)) {
@@ -777,27 +790,53 @@ ${emp ? `
 <div class="adm-card">
   <div class="adm-card-header">
     <h3 class="adm-card-title">Planning</h3>
-    <div style="display:flex;gap:8px;align-items:center;">
-      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admPrevWeek">‹ Vorige</button>
-      <span style="font-size:13px;font-weight:500;min-width:180px;text-align:center;">${weekLabel}</span>
-      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admNextWeek">Volgende ›</button>
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admPrevWeek">‹</button>
+      <span style="font-size:13px;font-weight:500;min-width:160px;text-align:center;">${weekLabel}</span>
+      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admNextWeek">›</button>
       ${_planningWeekOffset !== 0 ? `<button class="adm-btn adm-btn-secondary adm-btn-sm" id="admTodayWeek">Vandaag</button>` : ""}
+      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admCopyWeek" title="Kopieer alle shifts naar volgende week">⧉ Kopieer week</button>
       <button class="adm-btn adm-btn-primary adm-btn-sm" id="admAddShift">+ Shift</button>
     </div>
   </div>
   <div class="adm-card-body adm-table-wrap">
     <table class="adm-table">
-      <thead><tr><th>Medewerker</th>${days.map(d => `<th style="${d===today?"color:#0ea5e9;font-weight:700":""}">${formatDate(d)}</th>`).join("")}</tr></thead>
+      <thead><tr><th>Medewerker</th>${days.map(d => {
+        const dayName = new Date(d).toLocaleDateString("nl-BE",{weekday:"short",day:"numeric",month:"numeric"});
+        return `<th style="${d===today?"color:#0ea5e9;font-weight:700;background:#f0f9ff":""}">${dayName}</th>`;
+      }).join("")}</tr></thead>
       <tbody>
-        ${renderPlanningRows(shifts, days)}
+        ${renderPlanningRows(shifts, days, leaveMap)}
       </tbody>
     </table>
+  </div>
+  <div style="padding:8px 16px;font-size:11px;color:#94a3b8;display:flex;gap:14px;border-top:1px solid #f8fafc;">
+    <span>🟦 Shift</span><span style="color:#d97706">🟧 Verlof (afwezig)</span>
+    <span style="margin-left:auto">${shifts.length} shifts · ${Object.keys(leaveMap).length} personen op verlof</span>
   </div>
 </div>`;
     document.getElementById("admAddShift")?.addEventListener("click", () => openShiftDrawer(from, to, null, shifts));
     document.getElementById("admPrevWeek")?.addEventListener("click", () => { _planningWeekOffset--; renderPlanning(); });
     document.getElementById("admNextWeek")?.addEventListener("click", () => { _planningWeekOffset++; renderPlanning(); });
     document.getElementById("admTodayWeek")?.addEventListener("click", () => { _planningWeekOffset = 0; renderPlanning(); });
+    document.getElementById("admCopyWeek")?.addEventListener("click", async () => {
+      if (!shifts.length) { window.showToast && window.showToast("Geen shifts om te kopiëren", "info"); return; }
+      const btn = document.getElementById("admCopyWeek");
+      btn.disabled = true; btn.textContent = "Bezig…";
+      try {
+        const nextWeekBase = new Date(baseWeek); nextWeekBase.setDate(nextWeekBase.getDate() + 7);
+        let copied = 0;
+        for (const s of shifts) {
+          const oldDate = new Date(s.date);
+          const newDate = new Date(oldDate); newDate.setDate(oldDate.getDate() + 7);
+          await api("POST", "/planning", { userId: s.userId, date: newDate.toISOString().slice(0,10), start: s.start, end: s.end, location: s.location||"", note: s.note||"" });
+          copied++;
+        }
+        window.showToast && window.showToast(`${copied} shifts gekopieerd naar volgende week ✓`, "success");
+        _planningWeekOffset++;
+        renderPlanning();
+      } catch(e) { window.showToast && window.showToast("Fout: "+e.message, "error"); btn.disabled = false; btn.textContent = "⧉ Kopieer week"; }
+    });
     document.querySelectorAll(".adm-shift-pill").forEach(pill => {
       pill.addEventListener("click", () => {
         const shift = shifts.find(s => s.id === pill.dataset.id);
@@ -822,13 +861,20 @@ ${emp ? `
     return _planColorMap[userId];
   }
 
-  function renderPlanningRows(shifts, days) {
+  function renderPlanningRows(shifts, days, leaveMap = {}) {
     const today = new Date().toISOString().slice(0,10);
     const byUser = {};
     shifts.forEach(s => {
       if (!byUser[s.userId]) byUser[s.userId] = { name: s.userName || s.userId, days: {} };
       if (!byUser[s.userId].days[s.date]) byUser[s.userId].days[s.date] = [];
       byUser[s.userId].days[s.date].push(s);
+    });
+    // Also add leave-only users to the grid
+    Object.keys(leaveMap).forEach(uid => {
+      if (!byUser[uid]) {
+        const leaveUser = Object.values(leaveMap[uid] || {});
+        byUser[uid] = { name: uid, days: {}, leaveOnly: true };
+      }
     });
     if (!Object.keys(byUser).length) return `<tr><td colspan="${days.length+1}" class="adm-empty">Geen shifts deze week</td></tr>`;
     return Object.values(byUser).map(u => {
@@ -843,12 +889,19 @@ ${emp ? `
         ${days.map(d => {
           const dayShifts = u.days[d] || [];
           const isToday = d === today;
-          return `<td style="${isToday?"background:#f0f9ff;":""}">${dayShifts.map(s =>
-            `<span class="adm-shift-pill" data-id="${s.id}" title="${esc(s.note||s.location||"")} — klik om te bewerken"
-              style="background:${bg};color:${fg};border:1px solid ${fg}30;border-radius:5px;padding:2px 7px;font-size:11px;font-weight:600;cursor:pointer;display:inline-block;margin-bottom:2px;white-space:nowrap;">
-              ${esc(s.start||"")}${s.end?`–${esc(s.end)}`:""}${s.location?` <span style="opacity:.7;font-weight:400">${esc(s.location.slice(0,8))}</span>`:""}
-            </span>`
-          ).join("<br>")||`<span style="color:#e2e8f0;font-size:12px;">—</span>`}</td>`;
+          const userId = Object.keys(byUser).find(k => byUser[k] === u) || "";
+          const onLeave = leaveMap[userId]?.[d];
+          let cellBg = isToday ? "#f0f9ff" : "";
+          if (onLeave) cellBg = "#fffbeb";
+          return `<td style="${cellBg?"background:"+cellBg+";":""}">
+            ${onLeave && !dayShifts.length ? `<span style="background:#fef3c7;color:#92400e;border-radius:4px;padding:2px 6px;font-size:10px;font-weight:600;display:inline-block;">🟧 ${esc(onLeave)}</span>` : ""}
+            ${dayShifts.map(s =>
+              `<span class="adm-shift-pill" data-id="${s.id}" title="${esc(s.note||s.location||"")} — klik om te bewerken"
+                style="background:${bg};color:${fg};border:1px solid ${fg}30;border-radius:5px;padding:2px 7px;font-size:11px;font-weight:600;cursor:pointer;display:inline-block;margin-bottom:2px;white-space:nowrap;">
+                ${esc(s.start||"")}${s.end?`–${esc(s.end)}`:""}${s.location?` <span style="opacity:.7;font-weight:400">${esc(s.location.slice(0,8))}</span>`:""}
+              </span>`
+            ).join("<br>")||(!onLeave?`<span style="color:#e2e8f0;font-size:12px;">—</span>`:"")}
+          </td>`;
         }).join("")}
       </tr>`;
     }).join("");
