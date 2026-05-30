@@ -1262,14 +1262,13 @@ http.createServer(async (req, res) => {
             const tpl = leaveReviewedToEmployee({ employee, leave, reviewer: user, appUrl: config.appUrl });
             sendMail({ to: employee.email, ...tpl });
           }
-          const statusLabel = leave.status === "goedgekeurd" ? "goedgekeurd" : "geweigerd";
           createNotification(store, tenant, {
             type: "leave",
             channel: "in_app",
             audience: leave.userId,
             userId: leave.userId,
             title: leave.status === "goedgekeurd" ? "Verlof goedgekeurd" : "Verlof geweigerd",
-            body: `Jouw verlofaanvraag (${leave.from || ""} – ${leave.to || ""}) werd ${statusLabel}.`,
+            body: `Jouw verlofaanvraag (${leave.startDate || ""} – ${leave.endDate || ""}) werd ${leave.status}.`,
             priority: "normal",
             sourceRef: `leave:${leave.id}:${leave.status}`
           }, user);
