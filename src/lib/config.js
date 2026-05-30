@@ -47,16 +47,23 @@ function isPlaceholder(value) {
 function assertProductionConfig() {
   if (!config.isProduction) return;
   const missing = [];
+  const warnings = [];
   if (!/^https:\/\//.test(config.appUrl)) missing.push("APP_URL=https://...");
   if (config.storageAdapter !== "postgres") missing.push("STORAGE_ADAPTER=postgres");
   if (!config.supabase.url) missing.push("SUPABASE_URL");
   if (isPlaceholder(config.supabase.serviceRoleKey)) missing.push("SUPABASE_SERVICE_ROLE_KEY");
   if (isPlaceholder(config.jwtSecret) || String(config.jwtSecret).length < 32) missing.push("JWT_SECRET");
   if (isPlaceholder(config.encryptionKey) || String(config.encryptionKey).length < 32) missing.push("ENCRYPTION_KEY");
+  // Stripe en Peppol zijn optioneel tijdens pilot — waarschuwing, geen harde fout
   if (!String(config.stripe.secretKey || "").startsWith("sk_live_") || !String(config.stripe.webhookSecret || "").startsWith("whsec_")) {
-    missing.push("STRIPE_SECRET_KEY/STRIPE_WEBHOOK_SECRET");
+    warnings.push("STRIPE_SECRET_KEY/STRIPE_WEBHOOK_SECRET (niet geconfigureerd — betalingen uitgeschakeld)");
   }
-  if (config.peppol.provider === "mock" || isPlaceholder(config.peppol.apiKey)) missing.push("PEPPOL_PROVIDER/PEPPOL_API_KEY");
+  if (config.peppol.provider === "mock") {
+    warnings.push("PEPPOL_PROVIDER=mock (e-facturatie uitgeschakeld)");
+  }
+  if (warnings.length) {
+    console.warn(`[config] Productie waarschuwingen: ${warnings.join(", ")}`);
+  }
   if (missing.length) {
     throw new Error(`Production config blokkeert start: ${missing.join(", ")}`);
   }
