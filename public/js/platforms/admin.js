@@ -436,11 +436,12 @@ table.adm-table { width:100%; border-collapse:collapse; font-size:13px; }
 
   // ── Dashboard ──────────────────────────────────────────────
   async function renderDashboard() {
-    const [dash, pending, factData, expData] = await Promise.all([
+    const [dash, pending, factData, expData, gpData] = await Promise.all([
       api("GET", "/manager/dashboard"),
       api("GET", "/leaves?status=aangevraagd"),
       api("GET", "/facturen").catch(() => ({ invoices: [] })),
-      api("GET", "/expenses").catch(() => ({ expenses: [] }))
+      api("GET", "/expenses").catch(() => ({ expenses: [] })),
+      api("GET", "/golden-path").catch(() => null)
     ]);
 
     const content = document.getElementById("admContent");
@@ -553,6 +554,40 @@ ${(() => {
       el.addEventListener("mouseenter", () => el.style.background = "#f8fafc");
       el.addEventListener("mouseleave", () => el.style.background = "");
     });
+
+    // Golden path widget injection
+    if (gpData?.readiness) {
+      const gp = gpData.readiness;
+      const pct = gp.percent || 0;
+      const steps = gp.steps || [];
+      const doneCount = steps.filter(s=>s.done).length;
+      const gpEl = document.getElementById("admContent");
+      if (gpEl) {
+        const gpDiv = document.createElement("div");
+        gpDiv.className = "adm-card";
+        gpDiv.style.marginTop = "16px";
+        gpDiv.innerHTML = `
+<div class="adm-card-header" style="cursor:pointer;" id="admGpHeader">
+  <h3 class="adm-card-title">🎯 Pilot voortgang <span style="font-size:12px;font-weight:400;color:#64748b;">${doneCount}/${steps.length} stappen</span></h3>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <div style="font-size:18px;font-weight:700;color:${pct===100?"#10b981":pct>50?"#f59e0b":"#6366f1"};">${pct}%</div>
+    <button class="adm-btn adm-btn-secondary adm-btn-sm" onclick="event.stopPropagation();document.getElementById('admGpSteps').classList.toggle('hidden')">Details</button>
+    <button class="adm-btn adm-btn-secondary adm-btn-sm" onclick="event.stopPropagation();" id="admGpRoadmap">Roadmap →</button>
+  </div>
+</div>
+<div style="height:8px;background:#f1f5f9;border-radius:4px;overflow:hidden;margin:-8px 20px 0;">
+  <div style="height:100%;width:${pct}%;background:${pct===100?"#10b981":pct>50?"#f59e0b":"#6366f1"};transition:width .6s;border-radius:4px;"></div>
+</div>
+<div class="hidden" id="admGpSteps" style="padding:12px 20px 4px;">
+  ${steps.map(s=>`<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px;">
+    <span style="color:${s.done?"#10b981":"#94a3b8"};font-size:16px;">${s.done?"✅":"⭕"}</span>
+    <span style="color:${s.done?"#374151":"#94a3b8"}">${esc(s.key||"")}</span>
+  </div>`).join("")}
+</div>`;
+        gpEl.appendChild(gpDiv);
+        document.getElementById("admGpRoadmap")?.addEventListener("click", () => switchView("roadmap"));
+      }
+    }
 
     const pendingLeaves = pending.leaves || pending || [];
     document.querySelectorAll(".adm-dash-lv-ok").forEach(btn => {
@@ -2191,11 +2226,12 @@ ${emp ? `
 <div class="adm-card" style="margin-bottom:16px;">
   <div class="adm-card-header">
     <h3 class="adm-card-title">Rapportages</h3>
-    <div style="display:flex;gap:8px;align-items:center;">
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
       <input type="date" id="repFrom" value="${firstOfMonth}" style="padding:6px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;">
       <span style="font-size:13px;color:#94a3b8;">t/m</span>
       <input type="date" id="repTo" value="${lastOfMonth}" style="padding:6px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;">
       <button class="adm-btn adm-btn-primary adm-btn-sm" id="repLoad">Laden</button>
+      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="repBeslissers" title="Printbaar beslissersrapport genereren">📊 Beslissersrapport</button>
     </div>
   </div>
 </div>
@@ -2475,8 +2511,79 @@ ${emp ? `
       csvDownload(`loonlijst-${from}-${to}.csv`, rows, ["Medewerker","Gewerkte dagen","Gewerkte uren","Gem uur/dag","Verlof (d)","Onkosten (EUR)"]);
     });
 
+    // Beslissersrapport
+    document.getElementById("repBeslissers")?.addEventListener("click", async () => {
+      const from = document.getElementById("repFrom").value;
+      const to   = document.getElementById("repTo").value;
+      let tenant = {};
+      try { const t = await api("GET", "/settings"); tenant = t.tenant || {}; } catch(_){}
+      printBeslissersrapport(_repData, tenant, from, to);
+    });
+
     // Direct laden
     loadReportData();
+  }
+
+  function printBeslissersrapport(data, tenant, from, to) {
+    const fE = n => new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR",maximumFractionDigits:0}).format(Number(n||0));
+    const clocks = data.clocks||[], expenses=data.expenses||[], leaves=data.leaves||[], workorders=data.workorders||[], payroll=data.payroll||[];
+    const totalH = clocks.reduce((s,c)=>s+(c.clockedOut?(new Date(c.clockedOut)-new Date(c.clockedIn))/3600000:0),0);
+    const approvedExp = expenses.filter(e=>["goedgekeurd","approved"].includes(e.status));
+    const totalExp = approvedExp.reduce((s,e)=>s+Number(e.amount||0),0);
+    const doneWO = workorders.filter(w=>["Voltooid","Afgewerkt","done"].includes(w.status)).length;
+    const completionRate = workorders.length ? Math.round(doneWO/workorders.length*100) : 0;
+    const approvedLeaves = leaves.filter(l=>l.status==="goedgekeurd").length;
+    const win = window.open("","_blank");
+    win.document.write(`<!DOCTYPE html><html lang="nl"><head><meta charset="UTF-8"><title>Beslissersrapport</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#1e293b;background:#fff;padding:32px 40px}
+.page{max-width:800px;margin:0 auto}.header{border-bottom:3px solid #4f46e5;padding-bottom:16px;margin-bottom:28px;display:flex;justify-content:space-between;align-items:flex-end}
+.title{font-size:24px;font-weight:700;color:#4f46e5}.subtitle{font-size:13px;color:#64748b;margin-top:4px}.period{font-size:13px;color:#64748b}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px}
+.kpi{background:#f8fafc;border-radius:10px;padding:16px;text-align:center;border:1px solid #e2e8f0}
+.kpi-val{font-size:26px;font-weight:700;color:#0f172a;margin-bottom:4px}.kpi-lbl{font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px}
+.section-title{font-size:15px;font-weight:700;color:#0f172a;margin:20px 0 10px;padding-bottom:6px;border-bottom:1px solid #e2e8f0}
+table{width:100%;border-collapse:collapse;margin-bottom:20px}
+th{background:#f1f5f9;padding:7px 10px;text-align:left;font-size:11px;font-weight:700;color:#374151;border-bottom:2px solid #e2e8f0}
+td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
+.green{color:#10b981;font-weight:600}.amber{color:#f59e0b;font-weight:600}.red{color:#ef4444;font-weight:600}
+.recommendation{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:16px;margin-top:24px}
+.rec-title{font-size:15px;font-weight:700;color:#1d4ed8;margin-bottom:8px}
+.footer{margin-top:32px;text-align:center;font-size:11px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:12px}
+@media print{body{padding:0}@page{margin:15mm}}
+</style></head><body><div class="page">
+<div class="header">
+  <div><div class="title">Beslissersrapport</div><div class="subtitle">${esc(tenant.name||"WorkFlow Pro")} · ${esc(tenant.vatNumber||"")}</div></div>
+  <div class="period">Periode: ${from} t/m ${to}<br>Gegenereerd: ${new Date().toLocaleDateString("nl-BE")}</div>
+</div>
+<div class="kpis">
+  <div class="kpi"><div class="kpi-val">${totalH.toFixed(0)}</div><div class="kpi-lbl">Uren geregistreerd</div></div>
+  <div class="kpi"><div class="kpi-val">${workorders.length}</div><div class="kpi-lbl">Werkbonnen totaal</div></div>
+  <div class="kpi"><div class="kpi-val ${completionRate>=80?"green":completionRate>=50?"amber":"red"}">${completionRate}%</div><div class="kpi-lbl">Afwerkingsrate</div></div>
+  <div class="kpi"><div class="kpi-val">${fE(totalExp)}</div><div class="kpi-lbl">Onkosten goedgekeurd</div></div>
+</div>
+<div class="section-title">Personeelsinzet</div>
+<table><thead><tr><th>Medewerker</th><th>Gewerkte dagen</th><th>Totaal uren</th><th>Gem. uur/dag</th><th>Verlof (d)</th><th>Onkosten</th></tr></thead>
+<tbody>${payroll.map(r=>`<tr><td>${esc(r.name)}</td><td>${r.days.size}</td><td class="${r.hours>0?"green":"red"}">${r.hours.toFixed(1)} u</td><td>${r.days.size?(r.hours/r.days.size).toFixed(1):"—"}</td><td>${r.leaveDays||0}</td><td>${fE(r.expAmt)}</td></tr>`).join("")||"<tr><td colspan='6'>Geen data</td></tr>"}</tbody>
+<tfoot><tr style="font-weight:700;background:#f8fafc"><td>Totaal</td><td>—</td><td>${totalH.toFixed(1)} u</td><td>—</td><td>${payroll.reduce((s,r)=>s+r.leaveDays,0)}</td><td>${fE(totalExp)}</td></tr></tfoot>
+</table>
+<div class="section-title">Werkbonnenstatus</div>
+<table><thead><tr><th>Status</th><th>Aantal</th><th>%</th></tr></thead>
+<tbody>${Object.entries(workorders.reduce((a,w)=>{a[w.status||"?"]=(a[w.status||"?"]||0)+1;return a},{})).map(([s,n])=>`<tr><td>${esc(s)}</td><td>${n}</td><td>${workorders.length?(n/workorders.length*100).toFixed(0):0}%</td></tr>`).join("")||"<tr><td colspan='3'>Geen werkbonnen</td></tr>"}</tbody>
+</table>
+<div class="recommendation">
+  <div class="rec-title">🎯 Pilotevaluatie</div>
+  <p style="font-size:13px;color:#1e40af;line-height:1.6;">
+    In de periode ${from} t/m ${to} werden <strong>${workorders.length} werkbonnen</strong> aangemaakt met een afwerkingsrate van <strong>${completionRate}%</strong>.
+    Het team presteerde <strong>${totalH.toFixed(0)} uur</strong> op ${payroll.length} medewerkers.
+    ${completionRate >= 70 ? `De pilot toont <strong>positieve resultaten</strong>: hoge afwerkingsrate en actief gebruik van het systeem.` :
+      `Er is ruimte voor verbetering in de afwerkingsrate. Overweeg begeleiding bij de workflow.`}
+    De goedgekeurde onkosten bedragen ${fE(totalExp)}.
+  </p>
+</div>
+<div class="footer">${esc(tenant.name||"")} · Gegenereerd met WorkFlow Pro · ${new Date().toLocaleString("nl-BE")}</div>
+</div><script>window.onload=()=>{window.print()}</script></body></html>`);
+    win.document.close();
   }
 
   // ── Audit trail ────────────────────────────────────────────

@@ -361,9 +361,13 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
       days.push(d.toISOString().slice(0,10));
     }
 
+    const MGR_COLORS = [["#dbeafe","#1d4ed8"],["#dcfce7","#15803d"],["#fef3c7","#92400e"],["#fce7f3","#9d174d"],["#f3e8ff","#6b21a8"],["#cffafe","#0e7490"],["#fee2e2","#991b1b"],["#e0f2fe","#0369a1"]];
+    const mgrColorMap = {}; let mgrColorIdx = 0;
+    const getMgrColor = uid => { if (!mgrColorMap[uid]) { mgrColorMap[uid]=MGR_COLORS[mgrColorIdx%MGR_COLORS.length]; mgrColorIdx++; } return mgrColorMap[uid]; };
+
     const byUser = {};
     shifts.forEach(s => {
-      if (!byUser[s.userId]) byUser[s.userId] = { name: s.userName||s.userId, days: {} };
+      if (!byUser[s.userId]) byUser[s.userId] = { name: s.userName||s.userId, uid: s.userId, days: {} };
       if (!byUser[s.userId].days[s.date]) byUser[s.userId].days[s.date] = [];
       byUser[s.userId].days[s.date].push(s);
     });
@@ -388,19 +392,29 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
       <thead>
         <tr>
           <th>Medewerker</th>
-          ${days.map(d => { const dd = new Date(d); return `<th style="${d===todayStr?"color:#0ea5e9;font-weight:700":""}">${dd.toLocaleDateString("nl-BE",{weekday:"short",day:"numeric"})}</th>`; }).join("")}
+          ${days.map(d => { const dd = new Date(d); return `<th style="${d===todayStr?"color:#0ea5e9;font-weight:700;background:#f0f9ff":""}">${dd.toLocaleDateString("nl-BE",{weekday:"short",day:"numeric",month:"numeric"})}</th>`; }).join("")}
         </tr>
       </thead>
       <tbody>
-        ${Object.values(byUser).map(u => `
-        <tr>
-          <td><strong>${esc(u.name)}</strong></td>
-          ${days.map(d => `<td>${(u.days[d]||[]).map(s =>
-            `<div class="mgr-shift-pill" data-id="${s.id}" title="Klik om te bewerken"
-              style="background:#e0f2fe;color:#0284c7;border-radius:4px;padding:2px 6px;font-size:11px;margin-bottom:2px;cursor:pointer;">
-              ${esc(s.start||"")}${s.end?`–${esc(s.end)}`:""}</div>`
-          ).join("")||"—"}</td>`).join("")}
-        </tr>`).join("") || `<tr><td colspan="${days.length+1}" class="mgr-empty">Geen shifts</td></tr>`}
+        ${Object.values(byUser).map(u => {
+          const [bg,fg] = getMgrColor(u.uid);
+          const totalShifts = Object.values(u.days).reduce((s,d)=>s+d.length,0);
+          return `<tr>
+          <td style="font-weight:500;white-space:nowrap;">
+            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${fg};margin-right:5px;vertical-align:middle;"></span>
+            ${esc(u.name)} <span style="font-size:10px;color:#94a3b8;">${totalShifts}×</span>
+          </td>
+          ${days.map(d => {
+            const ds = u.days[d]||[];
+            const isToday = d === todayStr;
+            return `<td style="${isToday?"background:#f0f9ff;":""}">
+              ${ds.map(s=>`<div class="mgr-shift-pill" data-id="${s.id}"
+                style="background:${bg};color:${fg};border:1px solid ${fg}30;border-radius:5px;padding:2px 7px;font-size:11px;font-weight:600;margin-bottom:2px;cursor:pointer;white-space:nowrap;">
+                ${esc(s.start||"")}${s.end?`–${esc(s.end)}`:""}
+              </div>`).join("")||`<span style="color:#e2e8f0;font-size:11px;">—</span>`}
+            </td>`;
+          }).join("")}
+        </tr>`;}).join("") || `<tr><td colspan="${days.length+1}" class="mgr-empty">Geen shifts</td></tr>`}
       </tbody>
     </table>
   </div>
