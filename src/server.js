@@ -1658,6 +1658,99 @@ http.createServer(async (req, res) => {
         return;
       }
 
+      // ── Facturen (klantfacturen) ──────────────────────────────────────────────
+      if (action === "facturen" && req.method === "GET") {
+        assertCan(user, "billing");
+        const rows = store.list("invoices", tenantId);
+        // Mark overdue: open invoices past due date
+        const today = new Date().toISOString().slice(0, 10);
+        const enriched = rows.map(inv => {
+          if (inv.status === "open" && inv.dueDate && inv.dueDate < today) {
+            return { ...inv, status: "overdue" };
+          }
+          return inv;
+        });
+        sendJson(res, 200, { ok: true, invoices: enriched });
+        return;
+      }
+      if (action === "facturen" && req.method === "POST") {
+        assertCan(user, "billing");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        if (!body.customerName && !body.customerId) return sendJson(res, 400, { ok: false, error: "Klant is verplicht" });
+        if (!Array.isArray(body.lines) || !body.lines.length) return sendJson(res, 400, { ok: false, error: "Minimaal 1 factuurregel vereist" });
+        // Auto-generate invoice number
+        const existing = store.list("invoices", tenantId);
+        const year = new Date().getFullYear();
+        const seq = existing.filter(i => String(i.number||"").startsWith(String(year))).length + 1;
+        const number = `${year}-${String(seq).padStart(3, "0")}`;
+        // Calculate totals from lines
+        const lines = body.lines.map(l => {
+          const qty = Number(l.qty || 1);
+          const unitPrice = Number(l.unitPrice || 0);
+          const vatRate = Number(l.vatRate ?? 21);
+          const lineSubtotal = qty * unitPrice;
+          const lineVat = lineSubtotal * vatRate / 100;
+          return { description: l.description || "", qty, unitPrice, vatRate, lineSubtotal, lineVat, lineTotal: lineSubtotal + lineVat };
+        });
+        const subtotal = lines.reduce((s, l) => s + l.lineSubtotal, 0);
+        const vatAmount = lines.reduce((s, l) => s + l.lineVat, 0);
+        const total = subtotal + vatAmount;
+        const invoice = store.insert("invoices", {
+          id: `inv_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+          tenantId,
+          number,
+          customerId: body.customerId || null,
+          customerName: body.customerName || "",
+          customerAddress: body.customerAddress || "",
+          customerVatNumber: body.customerVatNumber || "",
+          status: "open",
+          invoiceDate: body.invoiceDate || new Date().toISOString().slice(0, 10),
+          dueDate: body.dueDate || new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
+          lines,
+          subtotal,
+          vatAmount,
+          total,
+          notes: body.notes || "",
+          workorderId: body.workorderId || null,
+          paidAt: null,
+          sentAt: null,
+          createdBy: user.email,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+        store.audit({ actor: user.email, tenantId, action: "invoice_created", area: "facturen", detail: `${number} — €${total.toFixed(2)}` });
+        sendJson(res, 201, { ok: true, invoice });
+        return;
+      }
+      const invoiceItemMatch = action.match(/^facturen\/([^/]+)$/);
+      if (invoiceItemMatch && req.method === "PATCH") {
+        assertCan(user, "billing");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        const inv = store.get("invoices", invoiceItemMatch[1]);
+        if (!inv || inv.tenantId !== tenantId) return sendJson(res, 404, { ok: false, error: "Factuur niet gevonden" });
+        const patch = { updatedAt: new Date().toISOString() };
+        const allowedFields = ["status", "notes", "dueDate", "invoiceDate", "customerAddress", "customerVatNumber"];
+        allowedFields.forEach(k => { if (body[k] !== undefined) patch[k] = body[k]; });
+        if (body.status === "paid" && !inv.paidAt) patch.paidAt = new Date().toISOString();
+        const updated = store.update("invoices", invoiceItemMatch[1], patch);
+        store.audit({ actor: user.email, tenantId, action: `invoice_${patch.status||"updated"}`, area: "facturen", detail: inv.number });
+        sendJson(res, 200, { ok: true, invoice: updated });
+        return;
+      }
+      if (invoiceItemMatch && req.method === "DELETE") {
+        assertCan(user, "billing");
+        assertInteractiveUser(user);
+        const inv = store.get("invoices", invoiceItemMatch[1]);
+        if (!inv || inv.tenantId !== tenantId) return sendJson(res, 404, { ok: false, error: "Factuur niet gevonden" });
+        if (inv.status === "paid") return sendJson(res, 400, { ok: false, error: "Betaalde facturen kunnen niet worden verwijderd" });
+        store.remove("invoices", invoiceItemMatch[1]);
+        store.audit({ actor: user.email, tenantId, action: "invoice_deleted", area: "facturen", detail: inv.number });
+        sendJson(res, 200, { ok: true });
+        return;
+      }
+
       // ── Locaties / Venues ─────────────────────────────────────────────────────
       if (action === "venues" && req.method === "GET") {
         assertCan(user, "venues");
