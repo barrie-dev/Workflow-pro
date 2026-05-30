@@ -237,6 +237,7 @@
   padding-bottom: 80px;
 }
 .emp-loading { text-align: center; color: #94a3b8; padding: 40px; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.4)} }
 
 /* ── Tab bar ────────────────────────────────── */
 .emp-tabbar {
@@ -665,7 +666,11 @@
 
   // ── Today ──────────────────────────────────────────────────
   async function renderToday() {
-    const dash = await api("GET", "/me/dashboard");
+    const [dash, balData, notifData] = await Promise.all([
+      api("GET", "/me/dashboard"),
+      api("GET", "/me/leaves/balance").catch(() => null),
+      api("GET", "/me/notifications").catch(() => null)
+    ]);
     const today = new Date();
     const dateStr = today.toLocaleDateString("nl-BE", { weekday: "long", day: "numeric", month: "long" });
 
@@ -680,11 +685,12 @@
 
   ${dash.clockedIn ? `
   <div style="display:flex;align-items:center;gap:8px;background:#d1fae5;border-radius:10px;padding:10px 12px;">
-    <span style="width:8px;height:8px;background:#10b981;border-radius:50%;flex-shrink:0;"></span>
-    <div>
+    <span style="width:8px;height:8px;background:#10b981;border-radius:50%;flex-shrink:0;animation:pulse 2s infinite;"></span>
+    <div style="flex:1;">
       <div style="font-size:13px;font-weight:600;color:#065f46;">Je bent ingeklokt</div>
       <div style="font-size:11px;color:#059669;">Sinds ${dash.activeClock?.clockedIn ? new Date(dash.activeClock.clockedIn).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}) : "—"}</div>
     </div>
+    <div id="empClockDuration" style="font-size:18px;font-weight:700;color:#065f46;font-family:monospace;"></div>
   </div>` : `
   <div style="display:flex;align-items:center;gap:8px;background:#f1f5f9;border-radius:10px;padding:10px 12px;">
     <span style="width:8px;height:8px;background:#94a3b8;border-radius:50%;flex-shrink:0;"></span>
@@ -754,7 +760,46 @@ ${dash.urgentWorkorders > 0 ? `
       <div style="font-size:11px;color:#94a3b8;">Onkosten in behandeling</div>
     </div>
   </div>
+</div>
+
+${balData ? (() => {
+  const pct = balData.quota > 0 ? Math.round((balData.remaining / balData.quota) * 100) : 0;
+  const color = pct > 50 ? "#10b981" : pct > 20 ? "#f59e0b" : "#ef4444";
+  return `<div class="emp-card" style="cursor:pointer;" id="empLeaveBalCard">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+    <p class="emp-card-title" style="margin:0">Verlofkrediet ${new Date().getFullYear()}</p>
+    <span style="font-size:12px;color:${color};font-weight:700;">${balData.remaining} van ${balData.quota} dagen resterend</span>
+  </div>
+  <div style="background:#f1f5f9;border-radius:6px;height:10px;overflow:hidden;">
+    <div style="width:${pct}%;background:${color};height:100%;border-radius:6px;transition:width .5s;"></div>
+  </div>
+  <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:#94a3b8;">
+    <span>${balData.used ?? 0} opgenomen</span>
+    <span>${balData.remaining} beschikbaar</span>
+  </div>
 </div>`;
+})() : ""}
+
+${(() => {
+  const unread = (notifData?.rows || []).filter(n => n.status !== "read").slice(0, 3);
+  if (!unread.length) return "";
+  const fmtT = iso => { if (!iso) return ""; const diff = Math.floor((Date.now()-new Date(iso))/60000); if (diff<60) return `${diff}m`; if (diff<1440) return `${Math.floor(diff/60)}u`; return new Date(iso).toLocaleDateString("nl-BE"); };
+  return `<div class="emp-card">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+    <p class="emp-card-title" style="margin:0">Ongelezen meldingen</p>
+    <span style="font-size:11px;color:#38bdf8;font-weight:600;">${unread.length}</span>
+  </div>
+  ${unread.map(n => `
+  <div style="display:flex;gap:8px;padding:7px 0;border-bottom:1px solid #f8fafc;">
+    <div style="width:7px;height:7px;border-radius:50%;background:#38bdf8;margin-top:5px;flex-shrink:0;"></div>
+    <div style="flex:1;">
+      <div style="font-size:12.5px;font-weight:600;color:#0f172a;">${esc(n.title||"Melding")}</div>
+      ${n.body?`<div style="font-size:11.5px;color:#64748b;">${esc(n.body)}</div>`:""}
+    </div>
+    <div style="font-size:10.5px;color:#94a3b8;flex-shrink:0;">${fmtT(n.createdAt)}</div>
+  </div>`).join("")}
+</div>`;
+})()}`;
 
     document.getElementById("empActClock")?.addEventListener("click", async () => {
       if (dash.clockedIn) {
@@ -772,6 +817,7 @@ ${dash.urgentWorkorders > 0 ? `
       }
     });
     document.getElementById("empActWO")?.addEventListener("click", () => switchView("workorders"));
+    document.getElementById("empLeaveBalCard")?.addEventListener("click", () => switchView("leaves"));
     document.getElementById("empActLeave")?.addEventListener("click", openLeaveSheet);
     document.getElementById("empActExp")?.addEventListener("click", openExpSheet);
     document.getElementById("empUrgentWO")?.addEventListener("click", () => switchView("workorders"));
@@ -783,6 +829,23 @@ ${dash.urgentWorkorders > 0 ? `
     // set unread dot
     if (dash.unreadMessages > 0) {
       document.getElementById("empMsgDot")?.classList.remove("hidden");
+    }
+
+    // Live clock duration counter
+    if (dash.clockedIn && dash.activeClock?.clockedIn) {
+      const clockStart = new Date(dash.activeClock.clockedIn).getTime();
+      const durEl = document.getElementById("empClockDuration");
+      if (durEl) {
+        const updateDur = () => {
+          const secs = Math.floor((Date.now() - clockStart) / 1000);
+          const h = Math.floor(secs / 3600);
+          const m = Math.floor((secs % 3600) / 60);
+          const s = secs % 60;
+          durEl.textContent = `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+        };
+        updateDur();
+        const timer = setInterval(() => { if (!document.getElementById("empClockDuration")) { clearInterval(timer); return; } updateDur(); }, 1000);
+      }
     }
   }
 
