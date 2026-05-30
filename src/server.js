@@ -895,6 +895,12 @@ http.createServer(async (req, res) => {
         sendJson(res, 201, { ok: true, result: createDemoGoldenPath(store, tenant, user) });
         return;
       }
+      if (action === "kbo/lookup" && req.method === "POST") {
+        assertCan(user, "customers");
+        const body = await readBody(req);
+        sendJson(res, 200, { ok: true, company: lookupKbo(body.vat || body.name) });
+        return;
+      }
       if (action === "kbo/apply" && req.method === "POST") {
         assertCan(user, "tenants");
         assertInteractiveUser(user);
@@ -1409,17 +1415,26 @@ http.createServer(async (req, res) => {
         if (!wo) return sendJson(res, 404, { ok: false, error: "Werkbon niet gevonden" });
         if (wo.userId !== user.id) return sendJson(res, 403, { ok: false, error: "Niet toegewezen aan jou" });
         const body = await readBody(req);
-        const allowedStatuses = ["in_progress", "Voltooid"];
-        if (!allowedStatuses.includes(body.status)) {
-          return sendJson(res, 400, { ok: false, error: `Status moet ${allowedStatuses.join(" of ")} zijn` });
+        const patch = { updatedAt: new Date().toISOString() };
+        // Status update
+        if (body.status) {
+          const allowedStatuses = ["in_progress", "Voltooid"];
+          if (!allowedStatuses.includes(body.status)) {
+            return sendJson(res, 400, { ok: false, error: `Status moet ${allowedStatuses.join(" of ")} zijn` });
+          }
+          patch.status = body.status;
+          if (body.status === "in_progress") patch.startedAt = new Date().toISOString();
+          if (body.status === "Voltooid") patch.completedAt = new Date().toISOString();
         }
-        const updated = store.update("workorders", woId, {
-          status: body.status,
-          ...(body.status === "in_progress" ? { startedAt: new Date().toISOString() } : {}),
-          ...(body.status === "Voltooid" ? { completedAt: new Date().toISOString() } : {}),
-          updatedAt: new Date().toISOString()
-        });
-        store.audit({ actor: user.email, tenantId, action: "workorder_status_updated", area: "workorders", detail: `${woId} → ${body.status}` });
+        // Allow adding completion note and photos (base64 array)
+        if (body.completionNote !== undefined) patch.completionNote = String(body.completionNote||"").slice(0, 2000);
+        if (Array.isArray(body.photos)) {
+          // Store max 5 photos, each max 3MB
+          const validPhotos = body.photos.filter(p => typeof p === "string" && p.length < 4*1024*1024).slice(0, 5);
+          patch.photos = validPhotos;
+        }
+        const updated = store.update("workorders", woId, patch);
+        store.audit({ actor: user.email, tenantId, action: "workorder_status_updated", area: "workorders", detail: `${woId} → ${patch.status||"updated"}` });
         sendJson(res, 200, { ok: true, workorder: updated });
         return;
       }

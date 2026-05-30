@@ -659,7 +659,8 @@
       more: renderMore,
       expenses: renderExpenses,
       workorders: renderWorkorders,
-      messages: renderMessages
+      messages: renderMessages,
+      timesheet: renderTimesheet
     };
     if (renders[view]) renders[view]();
   }
@@ -1243,10 +1244,23 @@ ${data.absentNow ? `<div style="background:#fef3c7;border-radius:10px;padding:12
   </div>
   <!-- Action buttons -->
   ${!done ? `
-  <div style="padding:0 20px;display:flex;gap:10px;">
-    ${!inProg ? `<button id="woSheetStart" class="emp-btn emp-btn-primary" style="flex:1;padding:12px;font-size:14px;font-weight:600;">▶ Start werkbon</button>` : ""}
-    ${inProg  ? `<button id="woSheetDone"  class="emp-btn emp-btn-primary" style="flex:1;padding:12px;font-size:14px;font-weight:600;background:#10b981;">✓ Markeer als voltooid</button>` : ""}
-  </div>` : ""}
+  <div style="padding:0 20px;display:flex;flex-direction:column;gap:10px;">
+    ${!inProg ? `<button id="woSheetStart" class="emp-btn emp-btn-primary" style="padding:12px;font-size:14px;font-weight:600;">▶ Start werkbon</button>` : ""}
+    ${inProg  ? `<button id="woSheetDone"  class="emp-btn emp-btn-primary" style="padding:12px;font-size:14px;font-weight:600;background:#10b981;">✓ Afsluiten & notitie toevoegen</button>` : ""}
+  </div>` : `
+  <div style="padding:0 20px 8px;">
+    <div style="background:#d1fae5;border-radius:8px;padding:10px 14px;font-size:13px;color:#065f46;font-weight:600;">✅ Werkbon voltooid${wo.completedAt?" op "+new Date(wo.completedAt).toLocaleDateString("nl-BE"):""}</div>
+    ${wo.completionNote?`<div style="margin-top:8px;font-size:12px;color:#64748b;background:#f8fafc;border-radius:6px;padding:8px;">${esc(wo.completionNote)}</div>`:""}
+  </div>`}
+  <!-- Foto's sectie -->
+  <div style="padding:0 20px;margin-top:12px;">
+    <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Foto's</div>
+    ${(wo.photos||[]).length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;">${(wo.photos||[]).map(p=>`<img src="${p}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid #e2e8f0;">`).join("")}</div>` : `<div style="font-size:12px;color:#94a3b8;">Geen foto's</div>`}
+    <label id="woAddPhotoBtn" style="display:inline-flex;align-items:center;gap:6px;margin-top:8px;background:#f1f5f9;border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-weight:500;color:#374151;">
+      📷 Foto toevoegen <input type="file" accept="image/*" capture="environment" id="woPhotoInput" style="display:none;">
+    </label>
+    <div id="woPhotoPreview" style="margin-top:8px;"></div>
+  </div>
 </div>`;
 
     document.body.appendChild(sheet);
@@ -1256,14 +1270,52 @@ ${data.absentNow ? `<div style="background:#fef3c7;border-radius:10px;padding:12
     document.getElementById("woSheetStart")?.addEventListener("click", async () => {
       try {
         await api("PATCH", `/me/workorders/${wo.id}`, { status: "in_progress" });
+        window.showToast && window.showToast("Werkbon gestart ▶", "success");
         close(); renderWorkorders();
       } catch(e) { alert(e.message); }
     });
-    document.getElementById("woSheetDone")?.addEventListener("click", async () => {
-      try {
-        await api("PATCH", `/me/workorders/${wo.id}`, { status: "Voltooid" });
-        close(); renderWorkorders();
-      } catch(e) { alert(e.message); }
+
+    // Photo upload (stores as base64 on workorder)
+    document.getElementById("woPhotoInput")?.addEventListener("change", async e => {
+      const file = e.target.files[0]; if (!file) return;
+      const preview = document.getElementById("woPhotoPreview");
+      if (file.size > 3 * 1024 * 1024) { alert("Foto max 3MB"); return; }
+      const reader = new FileReader();
+      reader.onload = async (ev) => {
+        const b64 = ev.target.result;
+        if (preview) preview.innerHTML = `<img src="${b64}" style="width:100px;height:100px;object-fit:cover;border-radius:8px;border:2px solid #10b981;">`;
+        try {
+          const existing = wo.photos || [];
+          await api("PATCH", `/me/workorders/${wo.id}`, { photos: [...existing, b64] });
+          window.showToast && window.showToast("Foto opgeslagen ✓", "success");
+          wo.photos = [...existing, b64];
+        } catch(err) { alert("Upload fout: "+err.message); }
+      };
+      reader.readAsDataURL(file);
+    });
+
+    document.getElementById("woSheetDone")?.addEventListener("click", () => {
+      // Show completion dialog inline
+      const actionDiv = document.querySelector("#woSheetDone")?.parentElement;
+      if (actionDiv) actionDiv.innerHTML = `
+<div style="background:#f0fdf4;border-radius:10px;padding:14px;">
+  <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Werkbon afsluiten</div>
+  <textarea id="woCompletionNote" rows="3" placeholder="Optionele notitie bij afronding (bijv. uitgevoerde werkzaamheden, materiaal gebruikt…)"
+    style="width:100%;padding:8px;border:1px solid #d1fae5;border-radius:8px;font-size:13px;resize:vertical;"></textarea>
+  <div style="display:flex;gap:8px;margin-top:10px;">
+    <button id="woCompleteCancelBtn" class="emp-btn emp-btn-secondary" style="flex:1;padding:10px;">Annuleren</button>
+    <button id="woCompleteConfirmBtn" class="emp-btn emp-btn-primary" style="flex:2;padding:10px;background:#10b981;font-weight:600;">✓ Bevestigen</button>
+  </div>
+</div>`;
+      document.getElementById("woCompleteCancelBtn")?.addEventListener("click", close);
+      document.getElementById("woCompleteConfirmBtn")?.addEventListener("click", async () => {
+        const note = document.getElementById("woCompletionNote")?.value?.trim();
+        try {
+          await api("PATCH", `/me/workorders/${wo.id}`, { status: "Voltooid", completionNote: note||undefined });
+          window.showToast && window.showToast("Werkbon voltooid ✓", "success");
+          close(); renderWorkorders();
+        } catch(e) { alert(e.message); }
+      });
     });
   }
 
@@ -1407,6 +1459,103 @@ ${data.absentNow ? `<div style="background:#fef3c7;border-radius:10px;padding:12
     });
   }
 
+  // ── Tijdregistratie (timesheet) ────────────────────────────
+  let _tsMonthOffset = 0;
+  async function renderTimesheet() {
+    const main = document.getElementById("empMain");
+    main.innerHTML = `<div class="emp-loading">Laden…</div>`;
+
+    const now = new Date();
+    const d = new Date(now.getFullYear(), now.getMonth() + _tsMonthOffset, 1);
+    const year = d.getFullYear(), month = d.getMonth();
+    const from = new Date(year, month, 1).toISOString().slice(0,10);
+    const to   = new Date(year, month+1, 0).toISOString().slice(0,10);
+    const monthLabel = d.toLocaleDateString("nl-BE",{month:"long",year:"numeric"});
+
+    const data = await api("GET", `/me/clock`);
+    const allClocks = data.clocks || [];
+    const clocks = allClocks.filter(c => (c.clockedIn||"").slice(0,7) === `${year}-${String(month+1).padStart(2,"0")}`);
+
+    // Group by day
+    const byDay = {};
+    clocks.forEach(c => {
+      const day = (c.clockedIn||"").slice(0,10);
+      if (!byDay[day]) byDay[day] = [];
+      byDay[day].push(c);
+    });
+
+    const totalHours = clocks.reduce((s,c) => {
+      if (!c.clockedOut) return s;
+      return s + (new Date(c.clockedOut)-new Date(c.clockedIn))/3600000;
+    }, 0);
+    const workedDays = Object.keys(byDay).length;
+
+    // CSV download
+    function exportCSV() {
+      const rows = [["Datum","Inkloktijd","Uitkloktijd","Uren","Lopend"]];
+      clocks.forEach(c => {
+        const h = c.clockedOut ? ((new Date(c.clockedOut)-new Date(c.clockedIn))/3600000).toFixed(2) : "";
+        rows.push([c.clockedIn?.slice(0,10)||"", c.clockedIn?.slice(11,16)||"", c.clockedOut?.slice(11,16)||"", h, c.clockedOut?"":"Ja"]);
+      });
+      const csv = rows.map(r=>r.map(v=>`"${v}"`).join(";")).join("\n");
+      const a = document.createElement("a");
+      a.href = "data:text/csv;charset=utf-8,﻿"+encodeURIComponent(csv);
+      a.download = `tijdregistratie-${from.slice(0,7)}.csv`;
+      a.click();
+    }
+
+    main.innerHTML = `
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+  <div style="display:flex;gap:8px;align-items:center;">
+    <button class="emp-btn emp-btn-secondary emp-btn-sm" id="tsPrev">‹</button>
+    <span style="font-size:14px;font-weight:600;text-transform:capitalize;">${monthLabel}</span>
+    <button class="emp-btn emp-btn-secondary emp-btn-sm" id="tsNext" ${_tsMonthOffset===0?"disabled":""}>›</button>
+    ${_tsMonthOffset!==0?`<button class="emp-btn emp-btn-secondary emp-btn-sm" id="tsNow">Nu</button>`:""}
+  </div>
+  <button class="emp-btn emp-btn-secondary emp-btn-sm" id="tsExport">📥 CSV</button>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;">
+  <div class="emp-card" style="margin:0;text-align:center;">
+    <div style="font-size:22px;font-weight:700;color:#0f172a;">${totalHours.toFixed(1)}</div>
+    <div style="font-size:11px;color:#94a3b8;">Uren gewerkt</div>
+  </div>
+  <div class="emp-card" style="margin:0;text-align:center;">
+    <div style="font-size:22px;font-weight:700;color:#0f172a;">${workedDays}</div>
+    <div style="font-size:11px;color:#94a3b8;">Dagen aanwezig</div>
+  </div>
+  <div class="emp-card" style="margin:0;text-align:center;">
+    <div style="font-size:22px;font-weight:700;color:#0f172a;">${workedDays?((totalHours/workedDays).toFixed(1)):"—"}</div>
+    <div style="font-size:11px;color:#94a3b8;">Gem. uur/dag</div>
+  </div>
+</div>
+
+<div class="emp-card">
+  <p class="emp-card-title">Dagdetail — ${monthLabel}</p>
+  ${Object.keys(byDay).length ? Object.entries(byDay).sort((a,b)=>a[0].localeCompare(b[0])).map(([day, dc]) => {
+    const dayHours = dc.reduce((s,c)=>s+(c.clockedOut?(new Date(c.clockedOut)-new Date(c.clockedIn))/3600000:0),0);
+    const dayName = new Date(day).toLocaleDateString("nl-BE",{weekday:"short",day:"numeric",month:"short"});
+    return `<div style="padding:8px 0;border-bottom:1px solid #f8fafc;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <span style="font-size:13px;font-weight:600;color:#0f172a;text-transform:capitalize;">${dayName}</span>
+        <span style="font-size:12px;font-weight:700;color:#10b981;">${dayHours.toFixed(1)} u</span>
+      </div>
+      ${dc.map(c=>`<div style="font-size:11.5px;color:#64748b;display:flex;gap:8px;padding:1px 0;">
+        <span>${c.clockedIn?new Date(c.clockedIn).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}):"—"}</span>
+        <span>–</span>
+        <span>${c.clockedOut?new Date(c.clockedOut).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}):`<span style="color:#f59e0b">Lopend</span>`}</span>
+        <span style="margin-left:auto;">${c.clockedOut?((new Date(c.clockedOut)-new Date(c.clockedIn))/3600000).toFixed(1)+" u":""}</span>
+      </div>`).join("")}
+    </div>`;
+  }).join("") : `<div class="emp-empty"><div class="emp-empty-icon">🕐</div><div class="emp-empty-text">Geen registraties in ${monthLabel}</div></div>`}
+</div>`;
+
+    document.getElementById("tsPrev")?.addEventListener("click", () => { _tsMonthOffset--; renderTimesheet(); });
+    document.getElementById("tsNext")?.addEventListener("click", () => { _tsMonthOffset++; renderTimesheet(); });
+    document.getElementById("tsNow")?.addEventListener("click", () => { _tsMonthOffset = 0; renderTimesheet(); });
+    document.getElementById("tsExport")?.addEventListener("click", exportCSV);
+  }
+
   // ── More ───────────────────────────────────────────────────
   async function renderMore() {
     const main = document.getElementById("empMain");
@@ -1433,6 +1582,11 @@ ${data.absentNow ? `<div style="background:#fef3c7;border-radius:10px;padding:12
   <div class="emp-list-item" id="empMoreMsg" style="cursor:pointer;">
     <div class="emp-list-icon" style="background:#e0f2fe;"><svg viewBox="0 0 24 24" style="fill:#0284c7"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg></div>
     <div class="emp-list-info"><div class="emp-list-title">Berichten</div><div class="emp-list-sub">Team communicatie</div></div>
+    <svg viewBox="0 0 24 24" style="width:16px;fill:#94a3b8;flex-shrink:0;"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+  </div>
+  <div class="emp-list-item" id="empMoreTimesheet" style="cursor:pointer;">
+    <div class="emp-list-icon" style="background:#f0fdf4;"><svg viewBox="0 0 24 24" style="fill:#16a34a"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg></div>
+    <div class="emp-list-info"><div class="emp-list-title">Tijdregistratie</div><div class="emp-list-sub">Maandoverzicht van mijn uren</div></div>
     <svg viewBox="0 0 24 24" style="width:16px;fill:#94a3b8;flex-shrink:0;"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
   </div>
 </div>
@@ -1482,6 +1636,7 @@ ${data.absentNow ? `<div style="background:#fef3c7;border-radius:10px;padding:12
     document.getElementById("empMoreWO")?.addEventListener("click", () => switchView("workorders"));
     document.getElementById("empMoreExp")?.addEventListener("click", () => switchView("expenses"));
     document.getElementById("empMoreMsg")?.addEventListener("click", () => switchView("messages"));
+    document.getElementById("empMoreTimesheet")?.addEventListener("click", () => switchView("timesheet"));
 
     document.getElementById("empProfileForm")?.addEventListener("submit", async e => {
       e.preventDefault();

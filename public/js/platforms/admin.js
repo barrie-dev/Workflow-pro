@@ -129,6 +129,10 @@
         <span class="adm-badge" id="admInvoiceBadge" style="display:none">0</span>
       </a>
       <div class="adm-nav-divider"></div>
+      <a class="adm-nav-item" data-view="roadmap" href="#">
+        <svg viewBox="0 0 24 24"><path d="M21 3L3 10.53v.98l6.84 2.65L12.48 21h.98L21 3z"/></svg>
+        Roadmap
+      </a>
       <a class="adm-nav-item" data-view="audit" href="#">
         <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>
         Audittrail
@@ -384,7 +388,7 @@ table.adm-table { width:100%; border-collapse:collapse; font-size:13px; }
     workorders: "Werkbonnen", messages: "Berichten", reports: "Rapportages",
     customers: "Klanten", facturen: "Facturen", venues: "Locaties", vehicles: "Voertuigen",
     stock: "Stock", billing: "Facturatie",
-    audit: "Audittrail", settings: "Instellingen"
+    roadmap: "Roadmap", audit: "Audittrail", settings: "Instellingen"
   };
 
   const VIEW_BTN_LABEL = {
@@ -423,6 +427,7 @@ table.adm-table { width:100%; border-collapse:collapse; font-size:13px; }
       vehicles: renderVehicles,
       stock: renderStock,
       billing: renderBilling,
+      roadmap: renderRoadmap,
       audit: renderAudit,
       settings: renderSettings
     };
@@ -586,6 +591,8 @@ ${(() => {
       ${inactiveCount ? `<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#64748b;cursor:pointer;">
         <input type="checkbox" id="admEmpShowInactive" ${_empShowInactive?"checked":""}> Toon inactief
       </label>` : ""}
+      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admEmpImport" title="CSV importeren">📥 CSV Import</button>
+      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admEmpExport" title="Exporteer als CSV">📤 Export</button>
     </div>
   </div>
   <div class="adm-card-body adm-table-wrap" id="admEmpTable">
@@ -604,6 +611,50 @@ ${(() => {
       _empShowInactive = e.target.checked; renderEmployees();
     });
     bindEmpActions();
+
+    // CSV Export
+    document.getElementById("admEmpExport")?.addEventListener("click", () => {
+      const rows = [["Naam","E-mail","Telefoon","Functie","Rol","Actief","IBAN","Adres"]];
+      employees.forEach(u => rows.push([u.name||"",u.email||"",u.phone||"",u.function||"",u.role||"",u.active!==false?"ja":"nee",u.iban||"",u.address||""]));
+      const csv = rows.map(r=>r.map(v=>`"${String(v||"").replace(/"/g,'""')}"`).join(";")).join("\n");
+      const a = document.createElement("a"); a.href="data:text/csv;charset=utf-8,﻿"+encodeURIComponent(csv);
+      a.download="medewerkers.csv"; a.click();
+    });
+
+    // CSV Import
+    document.getElementById("admEmpImport")?.addEventListener("click", () => {
+      const input = document.createElement("input"); input.type="file"; input.accept=".csv";
+      input.onchange = async () => {
+        const file = input.files[0]; if (!file) return;
+        const text = await file.text();
+        const lines = text.split("\n").map(l=>l.trim()).filter(Boolean);
+        if (!lines.length) return;
+        // Detect header row
+        const headers = lines[0].split(";").map(h=>h.replace(/^"|"$/g,"").trim().toLowerCase());
+        const iCol = k => headers.indexOf(k);
+        const imported = [], errors = [];
+        for (let i = 1; i < lines.length; i++) {
+          const cols = lines[i].split(";").map(c=>c.replace(/^"|"$/g,"").trim());
+          const email = cols[iCol("e-mail")||iCol("email")||1]||"";
+          const name  = cols[iCol("naam")||iCol("name")||0]||"";
+          if (!email || !email.includes("@")) { errors.push(`Rij ${i+1}: ongeldige e-mail`); continue; }
+          const body = { name, email,
+            phone:    iCol("telefoon")>=0?cols[iCol("telefoon")]:"",
+            function: iCol("functie")>=0?cols[iCol("functie")]:"",
+            role:     (iCol("rol")>=0&&cols[iCol("rol")])?cols[iCol("rol")]:"employee",
+            iban:     iCol("iban")>=0?cols[iCol("iban")]:"",
+            address:  iCol("adres")>=0?cols[iCol("adres")]:""
+          };
+          try {
+            await api("POST", "/employees", { ...body, sendWelcome: false });
+            imported.push(email);
+          } catch(e) { errors.push(`${email}: ${e.message}`); }
+        }
+        const msg = `Import klaar: ${imported.length} aangemaakt${errors.length?`, ${errors.length} fouten`:""}.\n${errors.slice(0,5).join("\n")}`;
+        alert(msg); renderEmployees();
+      };
+      input.click();
+    });
   }
 
   function renderEmployeeTable(employees) {
@@ -941,6 +992,27 @@ ${emp ? `
   <div class="adm-form-group"><label>Notitie</label>
     <input name="note" placeholder="Optionele notitie" value="${esc(shift?.note||"")}">
   </div>
+  ${!isEdit ? `
+  <div style="background:#f8fafc;border-radius:8px;padding:12px;margin-bottom:4px;">
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;cursor:pointer;">
+      <input type="checkbox" id="shiftRecurring" style="width:16px;height:16px;"> Wekelijks herhalen
+    </label>
+    <div id="shiftRecurWrap" style="display:none;margin-top:10px;">
+      <div class="adm-form-row">
+        <div class="adm-form-group"><label>Aantal weken</label>
+          <select id="shiftRecurWeeks" style="width:100%;padding:7px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;">
+            <option value="2">2 weken</option>
+            <option value="4" selected>4 weken</option>
+            <option value="8">8 weken</option>
+            <option value="12">12 weken</option>
+          </select>
+        </div>
+        <div class="adm-form-group" style="align-self:flex-end;padding-bottom:4px;font-size:12px;color:#64748b;" id="shiftRecurInfo">
+          Maakt 4 shifts aan
+        </div>
+      </div>
+    </div>
+  </div>` : ""}
   <div id="admShiftErr" style="display:none;color:#ef4444;font-size:12px;padding:4px 0;"></div>
   <div class="adm-form-actions" style="justify-content:space-between;">
     ${isEdit ? `<button type="button" class="adm-btn adm-btn-danger adm-btn-sm" id="admShiftDelete">🗑 Verwijderen</button>` : `<span></span>`}
@@ -952,6 +1024,16 @@ ${emp ? `
 </form>`;
       openDrawer();
       document.getElementById("admShiftCancel").addEventListener("click", closeDrawer);
+
+      // Recurring toggle
+      document.getElementById("shiftRecurring")?.addEventListener("change", e => {
+        const wrap = document.getElementById("shiftRecurWrap");
+        if (wrap) wrap.style.display = e.target.checked ? "" : "none";
+      });
+      document.getElementById("shiftRecurWeeks")?.addEventListener("change", e => {
+        const info = document.getElementById("shiftRecurInfo");
+        if (info) info.textContent = `Maakt ${e.target.value} shifts aan`;
+      });
 
       if (isEdit) {
         document.getElementById("admShiftDelete").addEventListener("click", async () => {
@@ -971,8 +1053,18 @@ ${emp ? `
         errEl.style.display = "none";
         submitBtn.disabled = true; submitBtn.textContent = "Bezig…";
         try {
-          if (isEdit) await api("PATCH", `/planning/${shift.id}`, body);
-          else await api("POST", "/planning", body);
+          if (isEdit) {
+            await api("PATCH", `/planning/${shift.id}`, body);
+          } else {
+            const isRecurring = document.getElementById("shiftRecurring")?.checked;
+            const weeks = isRecurring ? Number(document.getElementById("shiftRecurWeeks")?.value || 4) : 1;
+            const baseDate = new Date(body.date);
+            for (let w = 0; w < weeks; w++) {
+              const d = new Date(baseDate); d.setDate(baseDate.getDate() + w*7);
+              await api("POST", "/planning", { ...body, date: d.toISOString().slice(0,10) });
+            }
+            if (weeks > 1) window.showToast && window.showToast(`${weeks} shifts aangemaakt ✓`, "success");
+          }
           closeDrawer(); renderPlanning();
         } catch (err) {
           errEl.textContent = err.message; errEl.style.display = "";
@@ -2698,7 +2790,13 @@ ${emp ? `
   <div class="adm-form-group"><label>Naam *</label><input name="name" value="${esc(customer?.name||"")}" required placeholder="Bedrijfsnaam BV"></div>
   <div class="adm-form-row">
     <div class="adm-form-group"><label>Contactpersoon</label><input name="contactName" value="${esc(customer?.contactName||"")}" placeholder="Jan Janssen"></div>
-    <div class="adm-form-group"><label>BTW-nummer</label><input name="vatNumber" value="${esc(customer?.vatNumber||"")}" placeholder="BE0000.000.000"></div>
+    <div class="adm-form-group">
+      <label>BTW-nummer
+        <button type="button" id="kboLookupBtn" style="background:none;border:none;cursor:pointer;font-size:11px;color:#4f46e5;font-weight:600;margin-left:6px;padding:1px 6px;border:1px solid #c7d2fe;border-radius:4px;">🔍 KBO opzoeken</button>
+      </label>
+      <input name="vatNumber" id="custVatInput" value="${esc(customer?.vatNumber||"")}" placeholder="BE0000.000.000">
+      <div id="kboResult" style="display:none;margin-top:6px;background:#f0fdf4;border-radius:6px;padding:8px;font-size:12px;color:#166534;"></div>
+    </div>
   </div>
   <div class="adm-form-row">
     <div class="adm-form-group"><label>E-mail</label><input name="email" type="email" value="${esc(customer?.email||"")}"></div>
@@ -2715,6 +2813,37 @@ ${emp ? `
 </form>`;
     openDrawer();
     document.getElementById("custCancel").addEventListener("click", closeDrawer);
+
+    // KBO opzoeken
+    document.getElementById("kboLookupBtn")?.addEventListener("click", async () => {
+      const btn = document.getElementById("kboLookupBtn");
+      const vatInput = document.getElementById("custVatInput");
+      const nameInput = document.querySelector("#custForm [name=name]");
+      const resultEl = document.getElementById("kboResult");
+      const query = (vatInput?.value?.trim()) || (nameInput?.value?.trim());
+      if (!query) { window.showToast&&window.showToast("Vul BTW-nummer of naam in","info"); return; }
+      btn.textContent = "Laden…"; btn.disabled = true;
+      try {
+        const d = await api("POST", "/kbo/lookup", { vat: query, name: query });
+        const c = d.company || {};
+        if (resultEl) {
+          resultEl.style.display = "";
+          resultEl.innerHTML = `<strong>${esc(c.name||"Onbekend")}</strong><br>${esc(c.vatNumber||"")} · ${esc(c.address||"")}
+            <button type="button" id="kboApplyBtn" style="background:none;border:none;cursor:pointer;color:#4f46e5;font-size:11px;font-weight:600;margin-left:8px;">↗ Toepassen</button>`;
+          document.getElementById("kboApplyBtn")?.addEventListener("click", () => {
+            if (nameInput && c.name) nameInput.value = c.name;
+            if (vatInput && c.vatNumber) vatInput.value = c.vatNumber;
+            const addrInput = document.querySelector("#custForm [name=address]");
+            if (addrInput && c.address) addrInput.value = c.address;
+            const emailInput = document.querySelector("#custForm [name=email]");
+            if (emailInput && c.email) emailInput.value = c.email;
+            if (resultEl) { resultEl.style.display="none"; }
+          });
+        }
+      } catch(e) { window.showToast&&window.showToast("KBO fout: "+e.message,"error"); }
+      finally { btn.textContent="🔍 KBO opzoeken"; btn.disabled=false; }
+    });
+
     document.getElementById("custDelete")?.addEventListener("click", async () => {
       if (!confirm(`Klant "${customer.name}" verwijderen?`)) return;
       try {
@@ -3080,6 +3209,111 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
     });
   }
 
+  // ── Factuur PDF afdrukken ──────────────────────────────────
+  function printInvoicePDF(inv, tenant = {}) {
+    const fE = n => new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR"}).format(Number(n||0));
+    const fD = iso => iso ? new Date(iso).toLocaleDateString("nl-BE",{day:"2-digit",month:"2-digit",year:"numeric"}) : "—";
+    const stLabel = { open:"Openstaand", paid:"Betaald", overdue:"Vervallen", draft:"Concept", sent:"Verstuurd" };
+    const stColor = { open:"#f59e0b", paid:"#10b981", overdue:"#ef4444", draft:"#94a3b8", sent:"#3b82f6" };
+    const lines = inv.lines || [];
+    const win = window.open("", "_blank");
+    win.document.write(`<!DOCTYPE html><html lang="nl"><head><meta charset="UTF-8">
+<title>Factuur ${esc(inv.number||"")}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#1e293b;background:#fff;padding:32px 40px}
+  .page{max-width:750px;margin:0 auto}
+  .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px}
+  .brand{font-size:22px;font-weight:700;color:#4f46e5}
+  .brand-sub{font-size:12px;color:#64748b;margin-top:2px}
+  .invoice-meta{text-align:right}
+  .invoice-nr{font-size:20px;font-weight:700;color:#0f172a}
+  .invoice-status{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;margin-top:4px;background:${stColor[inv.status]||"#94a3b8"}20;color:${stColor[inv.status]||"#94a3b8"}}
+  .parties{display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-bottom:28px}
+  .party-label{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+  .party-name{font-size:14px;font-weight:600;color:#0f172a;margin-bottom:3px}
+  .party-detail{font-size:12px;color:#64748b;line-height:1.5}
+  .dates{display:flex;gap:24px;background:#f8fafc;border-radius:8px;padding:12px 16px;margin-bottom:24px}
+  .date-item{flex:1}
+  .date-label{font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
+  .date-val{font-size:13px;font-weight:600}
+  table{width:100%;border-collapse:collapse;margin-bottom:20px}
+  thead th{background:#f1f5f9;padding:8px 10px;text-align:left;font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid #e2e8f0}
+  tbody td{padding:9px 10px;border-bottom:1px solid #f1f5f9;vertical-align:top}
+  tbody tr:last-child td{border-bottom:none}
+  .desc{color:#0f172a;font-weight:500}
+  .num{text-align:right;font-variant-numeric:tabular-nums}
+  .totals{margin-left:auto;width:260px}
+  .totals-row{display:flex;justify-content:space-between;padding:5px 0;font-size:13px}
+  .totals-row.total{font-weight:700;font-size:15px;border-top:2px solid #0f172a;padding-top:8px;margin-top:4px}
+  .notes{background:#f8fafc;border-radius:8px;padding:12px 16px;margin-top:16px;font-size:12px;color:#64748b}
+  .footer{margin-top:36px;text-align:center;font-size:11px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:16px}
+  @media print{body{padding:0}@page{margin:15mm}}
+</style></head><body>
+<div class="page">
+  <div class="header">
+    <div>
+      <div class="brand">${esc(tenant.name||"WorkFlow Pro")}</div>
+      <div class="brand-sub">${esc(tenant.vatNumber||"")}</div>
+      <div class="brand-sub">${esc(tenant.address||"")}</div>
+      ${tenant.contactEmail?`<div class="brand-sub">${esc(tenant.contactEmail)}</div>`:""}
+    </div>
+    <div class="invoice-meta">
+      <div class="invoice-nr">FACTUUR ${esc(inv.number||"")}</div>
+      <div class="invoice-status">${stLabel[inv.status]||inv.status||""}</div>
+    </div>
+  </div>
+
+  <div class="parties">
+    <div>
+      <div class="party-label">Factuuradres</div>
+      <div class="party-name">${esc(inv.customerName||"—")}</div>
+      ${inv.customerVatNumber?`<div class="party-detail">BTW: ${esc(inv.customerVatNumber)}</div>`:""}
+      ${inv.customerAddress?`<div class="party-detail">${esc(inv.customerAddress)}</div>`:""}
+    </div>
+    <div>
+      <div class="party-label">Factuurgegevens</div>
+      <div class="party-detail">Datum: ${fD(inv.invoiceDate)}</div>
+      <div class="party-detail">Vervaldatum: ${fD(inv.dueDate)}</div>
+      ${inv.paidAt?`<div class="party-detail" style="color:#10b981;font-weight:600">Betaald op: ${fD(inv.paidAt)}</div>`:""}
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr><th>Omschrijving</th><th class="num">Qty</th><th class="num">Prijs</th><th class="num">BTW%</th><th class="num">Subtotaal</th><th class="num">BTW</th><th class="num">Totaal</th></tr>
+    </thead>
+    <tbody>
+      ${lines.map(l=>`<tr>
+        <td class="desc">${esc(l.description||"")}</td>
+        <td class="num">${Number(l.qty||1)}</td>
+        <td class="num">${fE(l.unitPrice)}</td>
+        <td class="num">${l.vatRate??21}%</td>
+        <td class="num">${fE(l.lineSubtotal)}</td>
+        <td class="num">${fE(l.lineVat)}</td>
+        <td class="num" style="font-weight:600">${fE(l.lineTotal)}</td>
+      </tr>`).join("")}
+    </tbody>
+  </table>
+
+  <div class="totals">
+    <div class="totals-row"><span>Subtotaal</span><span>${fE(inv.subtotal)}</span></div>
+    <div class="totals-row"><span>BTW</span><span>${fE(inv.vatAmount)}</span></div>
+    <div class="totals-row total"><span>TOTAAL</span><span>${fE(inv.total)}</span></div>
+  </div>
+
+  ${inv.notes?`<div class="notes"><strong>Opmerkingen:</strong> ${esc(inv.notes)}</div>`:""}
+
+  <div class="footer">
+    ${esc(tenant.name||"")} · ${esc(tenant.vatNumber||"")} · ${esc(tenant.contactEmail||"")}
+    <br>Gelieve te betalen voor ${fD(inv.dueDate)} op rekening van ${esc(tenant.name||"")}.
+  </div>
+</div>
+<script>window.onload=()=>{window.print()}</script>
+</body></html>`);
+    win.document.close();
+  }
+
   // ── Facturen (klantfacturen) ───────────────────────────────
   const fmtEurInv = n => new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR"}).format(Number(n||0));
   const INV_STATUS = {
@@ -3164,6 +3398,7 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
             <td><span class="adm-status ${st.css}">${st.label}</span></td>
             <td style="white-space:nowrap;display:flex;gap:6px;">
               <button class="adm-btn adm-btn-secondary adm-btn-sm inv-edit" data-id="${inv.id}">✏</button>
+              <button class="adm-btn adm-btn-secondary adm-btn-sm inv-pdf" data-id="${inv.id}" title="PDF / Afdrukken">📄</button>
               ${["open","overdue"].includes(inv.status) ? `<button class="adm-btn adm-btn-success adm-btn-sm inv-paid" data-id="${inv.id}" title="Markeer als betaald">✓ Betaald</button>` : ""}
             </td>
           </tr>`;
@@ -3174,6 +3409,15 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
       document.getElementById("invStatusFilter")?.addEventListener("change", () => renderFacturen());
       document.querySelectorAll(".inv-edit").forEach(btn => {
         btn.addEventListener("click", () => openFactuurDrawer(rows.find(i => i.id === btn.dataset.id)));
+      });
+      document.querySelectorAll(".inv-pdf").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const inv = rows.find(i => i.id === btn.dataset.id);
+          if (!inv) return;
+          let tenant = {};
+          try { const t = await api("GET", "/settings"); tenant = t.tenant || {}; } catch(_){}
+          printInvoicePDF(inv, tenant);
+        });
       });
       document.querySelectorAll(".inv-paid").forEach(btn => {
         btn.addEventListener("click", async () => {
@@ -3363,6 +3607,61 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
     });
   }
 
+  // ── Roadmap ────────────────────────────────────────────────
+  async function renderRoadmap() {
+    const content = document.getElementById("admContent");
+    content.innerHTML = `<div class="adm-loading">Roadmap laden…</div>`;
+    try {
+      const d = await api("GET", "/roadmap");
+      const rm = d.roadmap || {};
+      const phases = rm.phases || [];
+      const phaseIcons = { foundation:"🏗️", core_operations:"⚙️", billing_compliance:"💳", pilot_launch:"🚀", commercial_launch:"🌐" };
+
+      content.innerHTML = `
+<div style="margin-bottom:20px;">
+  <div style="font-size:18px;font-weight:700;color:#0f172a;margin-bottom:4px;">Roadmap — ${esc(rm.tenant?.name||"")}</div>
+  <div style="font-size:13px;color:#64748b;">Gegenereerd op ${new Date(rm.generatedAt||Date.now()).toLocaleString("nl-BE")} · ${rm.summary?.go||0}/${rm.summary?.total||0} fasen gereed · ${rm.summary?.openActions||0} open acties</div>
+</div>
+
+${phases.map(p => {
+  const isGo = p.go;
+  const icon = phaseIcons[p.key]||"📍";
+  const isCurrent = p.key === rm.currentPhase;
+  return `
+<div style="margin-bottom:16px;border-radius:12px;border:2px solid ${isGo?"#d1fae5":isCurrent?"#fef3c7":"#f1f5f9"};overflow:hidden;">
+  <div style="background:${isGo?"#d1fae5":isCurrent?"#fef3c7":"#f1f5f9"};padding:14px 18px;display:flex;align-items:center;gap:12px;">
+    <span style="font-size:20px;">${icon}</span>
+    <div style="flex:1;">
+      <div style="font-size:15px;font-weight:700;color:#0f172a;">${esc(p.label)}${isCurrent?` <span style="background:#f59e0b;color:#fff;border-radius:4px;font-size:10px;padding:1px 6px;font-weight:700;vertical-align:middle;margin-left:6px;">HUIDIGE FASE</span>`:""}</div>
+      <div style="font-size:12px;color:#64748b;margin-top:2px;">${esc(p.detail||"")}</div>
+    </div>
+    <div style="text-align:right;">
+      <div style="font-size:22px;font-weight:700;color:${isGo?"#10b981":isCurrent?"#f59e0b":"#94a3b8"};">${p.score}%</div>
+      <div style="font-size:11px;font-weight:600;color:${isGo?"#10b981":"#ef4444"};">${isGo?"✅ GO":"🔴 NO GO"}</div>
+    </div>
+  </div>
+  <!-- Progress bar -->
+  <div style="height:6px;background:#e2e8f0;">
+    <div style="height:100%;width:${p.score}%;background:${isGo?"#10b981":isCurrent?"#f59e0b":"#6366f1"};transition:width .5s;"></div>
+  </div>
+  <!-- Open actions -->
+  ${p.actions?.length ? `
+  <div style="padding:12px 18px;">
+    <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">${p.actions.length} OPEN ${p.actions.length===1?"ACTIE":"ACTIES"}</div>
+    ${p.actions.map(a=>`
+    <div style="display:flex;gap:10px;padding:6px 0;border-bottom:1px solid #f8fafc;">
+      <span style="background:${a.priority==="P0"?"#fee2e2":"#fef3c7"};color:${a.priority==="P0"?"#dc2626":"#92400e"};border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700;flex-shrink:0;height:fit-content;">${esc(a.priority||"P1")}</span>
+      <div>
+        <div style="font-size:13px;font-weight:600;color:#0f172a;">${esc(a.label||"")}</div>
+        <div style="font-size:12px;color:#64748b;">${esc(a.action||"")}</div>
+      </div>
+    </div>`).join("")}
+  </div>` : `<div style="padding:10px 18px;font-size:13px;color:#10b981;font-weight:600;">✓ Alle checks geslaagd</div>`}
+</div>`;
+}).join("")}`;
+    } catch(e) { content.innerHTML = `<div style="padding:20px;color:#dc2626">Fout: ${e.message}</div>`; }
+  }
+
   // ── Facturatie ─────────────────────────────────────────────
   async function renderBilling() {
     const content = document.getElementById("admContent");
@@ -3472,10 +3771,25 @@ ${billing.status === "trial" ? `<div style="background:#fffbeb;border:1px solid 
     </div>
   </div>
   <div class="adm-card">
-    <div class="adm-card-header"><h3 class="adm-card-title">Beveiliging</h3></div>
+    <div class="adm-card-header"><h3 class="adm-card-title">Beveiliging — MFA</h3></div>
     <div class="adm-card-body">
-      <p style="font-size:13px;color:#64748b;margin-bottom:12px;">MFA (Two-Factor Authenticatie) voegt een extra beveiligingslaag toe aan uw account.</p>
-      <button class="adm-btn adm-btn-primary" id="admMfaSetup">MFA instellen / beheren</button>
+      <div id="admMfaStatus" style="margin-bottom:12px;font-size:13px;color:#64748b;">Status laden…</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="adm-btn adm-btn-primary" id="admMfaSetup">🔐 MFA instellen</button>
+        <button class="adm-btn adm-btn-secondary" id="admMfaDisable" style="display:none;">MFA uitschakelen</button>
+      </div>
+      <div id="admMfaWizard" style="display:none;margin-top:16px;background:#f8fafc;border-radius:10px;padding:16px;"></div>
+    </div>
+  </div>
+  <div class="adm-card">
+    <div class="adm-card-header"><h3 class="adm-card-title">Data & Backup</h3></div>
+    <div class="adm-card-body">
+      <p style="font-size:13px;color:#64748b;margin-bottom:12px;">Maak een volledige backup van alle tenantdata en download als JSON-bestand.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="adm-btn adm-btn-secondary" id="admBackupCreate">📦 Backup aanmaken</button>
+        <button class="adm-btn adm-btn-secondary" id="admBackupList">📋 Bestaande backups</button>
+      </div>
+      <div id="admBackupResult" style="margin-top:12px;"></div>
     </div>
   </div>
   <div class="adm-card">
@@ -3528,8 +3842,104 @@ ${billing.status === "trial" ? `<div style="background:#fffbeb;border:1px solid 
       }
     });
 
-    document.getElementById("admMfaSetup")?.addEventListener("click", () => {
-      window.showToast && window.showToast("MFA configuratie — beschikbaar in volgende versie", "info");
+    // Load MFA status
+    (async () => {
+      try {
+        const meData = await api("GET", "/me");
+        const u = meData.user || {};
+        const statusEl = document.getElementById("admMfaStatus");
+        const disableBtn = document.getElementById("admMfaDisable");
+        const setupBtn = document.getElementById("admMfaSetup");
+        if (u.mfaEnabled) {
+          if (statusEl) statusEl.innerHTML = `<span style="color:#10b981;font-weight:600;">✅ MFA actief</span> — uw account is beveiligd met 2FA.`;
+          if (disableBtn) disableBtn.style.display = "";
+          if (setupBtn) setupBtn.textContent = "🔄 MFA opnieuw instellen";
+        } else {
+          if (statusEl) statusEl.innerHTML = `<span style="color:#f59e0b;font-weight:600;">⚠️ MFA niet actief</span> — wij raden sterk aan om MFA in te schakelen.`;
+        }
+      } catch(_){}
+    })();
+
+    document.getElementById("admMfaSetup")?.addEventListener("click", async () => {
+      const wizard = document.getElementById("admMfaWizard");
+      if (!wizard) return;
+      wizard.style.display = "block";
+      wizard.innerHTML = `<div style="font-size:13px;color:#64748b;">Setup laden…</div>`;
+      try {
+        const data = await api("POST", "/me/mfa/setup");
+        const setup = data.setup || {};
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(setup.otpauth||"")}`;
+        wizard.innerHTML = `
+<div style="font-size:14px;font-weight:600;margin-bottom:12px;">MFA instellen — stap 1 van 2</div>
+<p style="font-size:13px;color:#64748b;margin-bottom:12px;">Scan de QR-code met Google Authenticator, Authy of een andere TOTP-app:</p>
+<div style="text-align:center;margin-bottom:14px;">
+  <img src="${qrUrl}" alt="QR Code" style="border:4px solid #e2e8f0;border-radius:8px;width:180px;height:180px;" onerror="this.style.display='none'">
+  <div style="margin-top:8px;font-size:11px;color:#94a3b8;">Kan de QR-code niet scannen? Gebruik de handmatige sleutel:</div>
+  <div style="font-family:monospace;background:#f1f5f9;padding:8px 12px;border-radius:6px;font-size:13px;margin-top:4px;word-break:break-all;">${esc(setup.secret||"")}</div>
+</div>
+<div style="font-size:14px;font-weight:600;margin-bottom:8px;">Stap 2: bevestig met code</div>
+<div style="display:flex;gap:8px;">
+  <input id="admMfaCode" type="text" inputmode="numeric" maxlength="6" placeholder="6-cijferige code"
+    style="flex:1;padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:16px;letter-spacing:4px;text-align:center;">
+  <button class="adm-btn adm-btn-primary" id="admMfaVerify">Bevestigen</button>
+</div>
+<div id="admMfaErr" style="display:none;color:#ef4444;font-size:12px;margin-top:6px;"></div>`;
+        document.getElementById("admMfaVerify")?.addEventListener("click", async () => {
+          const code = document.getElementById("admMfaCode")?.value?.trim();
+          const errEl = document.getElementById("admMfaErr");
+          if (!code || code.length !== 6) { if(errEl){errEl.textContent="Vul een 6-cijferige code in.";errEl.style.display="";} return; }
+          try {
+            await api("POST", "/me/mfa/verify", { token: code });
+            wizard.innerHTML = `<div style="color:#10b981;font-weight:600;font-size:14px;">✅ MFA is nu actief! Uw account is beveiligd met 2FA.</div>`;
+            const statusEl = document.getElementById("admMfaStatus");
+            if (statusEl) statusEl.innerHTML = `<span style="color:#10b981;font-weight:600;">✅ MFA actief</span>`;
+            const disableBtn = document.getElementById("admMfaDisable");
+            if (disableBtn) disableBtn.style.display = "";
+          } catch(err) {
+            if(errEl){errEl.textContent="Ongeldige code. Probeer opnieuw.";errEl.style.display="";}
+          }
+        });
+      } catch(e) { wizard.innerHTML = `<div style="color:#dc2626;font-size:13px;">Fout: ${e.message}</div>`; }
+    });
+
+    // Backup
+    document.getElementById("admBackupCreate")?.addEventListener("click", async () => {
+      const resultEl = document.getElementById("admBackupResult");
+      if(resultEl) resultEl.innerHTML = `<div style="font-size:13px;color:#64748b;">Backup aanmaken…</div>`;
+      try {
+        const d = await api("POST", "/admin/backups");
+        const backup = d.backup || {};
+        if (resultEl) resultEl.innerHTML = `
+<div style="background:#d1fae5;border-radius:8px;padding:10px 14px;font-size:13px;color:#065f46;">
+  ✅ Backup aangemaakt: <strong>${esc(backup.id||"")}</strong><br>
+  <span style="font-size:11px;">${new Date(backup.createdAt||Date.now()).toLocaleString("nl-BE")}</span>
+  <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admBackupDownload" style="margin-top:8px;display:block;" data-id="${esc(backup.id||"")}">📥 Download JSON</button>
+</div>`;
+        document.getElementById("admBackupDownload")?.addEventListener("click", async () => {
+          try {
+            const pv = await api("GET", `/admin/backups/${backup.id}/preview`);
+            const blob = new Blob([JSON.stringify(pv, null, 2)], { type: "application/json" });
+            const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+            a.download = `backup-${backup.id}.json`; a.click();
+          } catch(e2) { alert("Download fout: "+e2.message); }
+        });
+      } catch(e) { if(resultEl) resultEl.innerHTML = `<div style="color:#dc2626;font-size:13px;">Fout: ${e.message}</div>`; }
+    });
+
+    document.getElementById("admBackupList")?.addEventListener("click", async () => {
+      const resultEl = document.getElementById("admBackupResult");
+      try {
+        const d = await api("GET", "/admin/backups");
+        const rows = d.rows || [];
+        if(resultEl) resultEl.innerHTML = rows.length ? `
+<div style="margin-top:8px;">
+  ${rows.map(b=>`<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #f1f5f9;font-size:12px;">
+    <span style="font-family:monospace;color:#6366f1;">${esc(b.id||"")}</span>
+    <span style="color:#64748b;">${b.createdAt?new Date(b.createdAt).toLocaleString("nl-BE"):""}</span>
+    <span style="color:#64748b;">${b.tenantCount||0} tenants</span>
+  </div>`).join("")}
+</div>` : `<div style="font-size:13px;color:#94a3b8;margin-top:8px;">Geen backups gevonden</div>`;
+      } catch(e) { if(resultEl) resultEl.innerHTML = `<div style="color:#dc2626;font-size:13px;">Fout: ${e.message}</div>`; }
     });
   }
 
