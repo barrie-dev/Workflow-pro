@@ -1,14 +1,36 @@
+const {
+  buildCompletionPatch,
+  validatePhotoPayload,
+  validateSignaturePayload
+} = require("./workorder-rules");
+
 function todayPayload(store, user) {
   const tenantId = user.tenantId;
   const tenant = store.get("tenants", tenantId) || {};
   const syncState = mobileQueueState(tenant);
   const today = new Date().toISOString().slice(0, 10);
+  const shifts = store.list("shifts", tenantId);
+  const workorders = store.list("workorders", tenantId);
+  const canPreviewFieldUser = ["tenant_admin", "planner", "super_admin"].includes(user.role);
+  const fieldUserId = canPreviewFieldUser
+    ? shifts.find(shift => shift.date === today)?.userId
+      || workorders.find(row => !["Voltooid", "Afgewerkt"].includes(row.status))?.userId
+      || shifts[0]?.userId
+      || user.id
+    : user.id;
+  const fieldUser = store.get("users", fieldUserId) || user;
+  const sortedDates = Array.from(new Set(shifts.filter(shift => shift.userId === fieldUserId).map(shift => shift.date).filter(Boolean))).sort();
+  const nextDate = sortedDates.find(date => date >= today) || sortedDates[sortedDates.length - 1] || today;
+  const activeDate = sortedDates.includes(today) ? today : nextDate;
   return {
-    date: today,
-    user: { id: user.id, name: user.name, role: user.role },
-    shifts: store.list("shifts", tenantId).filter(s => s.userId === user.id && s.date === today),
-    openWorkorders: store.list("workorders", tenantId).filter(w => w.userId === user.id && !["Voltooid", "Afgewerkt"].includes(w.status)),
-    activeClock: store.list("clocks", tenantId).find(c => c.userId === user.id && c.date === today && !c.clockOut) || null,
+    date: activeDate,
+    liveDate: today,
+    preview: fieldUserId !== user.id,
+    user: { id: fieldUser.id, name: fieldUser.name, role: fieldUser.role },
+    requestedBy: { id: user.id, name: user.name, role: user.role },
+    shifts: shifts.filter(s => s.userId === fieldUserId && s.date === activeDate),
+    openWorkorders: workorders.filter(w => w.userId === fieldUserId && !["Voltooid", "Afgewerkt"].includes(w.status)),
+    activeClock: store.list("clocks", tenantId).find(c => c.userId === fieldUserId && c.date === activeDate && !c.clockOut) || null,
     offlineHints: {
       pwaReady: true,
       syncQueue: 0,
@@ -32,13 +54,7 @@ function getTenantWorkorder(store, tenantId, workorderId) {
 
 function completeWorkorder(store, tenant, workorderId, payload, actor) {
   const workorder = getTenantWorkorder(store, tenant.id, workorderId);
-  const row = store.update("workorders", workorder.id, {
-    status: "Voltooid",
-    completedAt: new Date().toISOString(),
-    completedBy: actor.email,
-    checklist: Array.isArray(payload.checklist) ? payload.checklist : workorder.checklist || [],
-    mobileNote: payload.note || workorder.mobileNote || ""
-  });
+  const row = store.update("workorders", workorder.id, buildCompletionPatch(workorder, payload, actor));
   store.audit({ actor: actor.email, tenantId: tenant.id, action: "mobile_workorder_completed", area: "mobile", detail: workorder.id });
   return row;
 }
@@ -46,10 +62,7 @@ function completeWorkorder(store, tenant, workorderId, payload, actor) {
 function attachWorkorderPhoto(store, tenant, workorderId, payload, actor) {
   const workorder = getTenantWorkorder(store, tenant.id, workorderId);
   const photo = {
-    id: `photo_${Date.now()}_${Math.random().toString(16).slice(2)}`,
-    name: payload.name || "werkbon-foto.jpg",
-    type: payload.type || "image/jpeg",
-    size: Number(payload.size || 0),
+    ...validatePhotoPayload(payload),
     uploadedAt: new Date().toISOString(),
     uploadedBy: actor.email
   };
@@ -62,8 +75,9 @@ function attachWorkorderPhoto(store, tenant, workorderId, payload, actor) {
 
 function signWorkorder(store, tenant, workorderId, payload, actor) {
   const workorder = getTenantWorkorder(store, tenant.id, workorderId);
+  const signaturePayload = validateSignaturePayload(payload);
   const signature = {
-    signerName: payload.signerName || "Klant",
+    signerName: signaturePayload.signerName,
     signedAt: new Date().toISOString(),
     signedBy: actor.email
   };

@@ -122,6 +122,75 @@ function supportTicketUpdateSchema() {
   };
 }
 
+function customerStartResponseSchema() {
+  return {
+    type: "object",
+    properties: {
+      generatedAt: { type: "string", format: "date-time" },
+      tenant: {
+        type: "object",
+        properties: {
+          id: { type: "string", example: "t_demo" },
+          name: { type: "string", example: "Demo Bouw BV" },
+          plan: { type: "string", example: "business" },
+          status: { type: "string", example: "trial" }
+        }
+      },
+      activation: {
+        type: "object",
+        properties: {
+          percent: { type: "integer", example: 78 },
+          doneSteps: { type: "integer", example: 7 },
+          totalSteps: { type: "integer", example: 9 },
+          currentPhase: { type: "string", example: "core_operations" },
+          readyForPilot: { type: "boolean", example: false },
+          readyForProduction: { type: "boolean", example: false }
+        }
+      },
+      nextAction: {
+        type: "object",
+        properties: {
+          label: { type: "string", example: "Open werkbonnen" },
+          view: { type: "string", example: "workorders" },
+          detail: { type: "string", example: "Maak of controleer de eerste werkbon." }
+        }
+      },
+      workspace: {
+        type: "object",
+        properties: {
+          date: { type: "string", format: "date", example: "2026-05-12" },
+          liveStatus: {
+            type: "object",
+            description: "Customer-facing readiness for the daily operational flow.",
+            properties: {
+              ready: { type: "boolean", example: true },
+              label: { type: "string", example: "Dagelijkse flow klaar" },
+              detail: { type: "string", example: "Planning en werkbonnen zijn aanwezig." },
+              blockers: {
+                type: "array",
+                items: { type: "string" },
+                example: []
+              }
+            }
+          },
+          metrics: {
+            type: "array",
+            items: { type: "object" }
+          },
+          priorityActions: {
+            type: "array",
+            items: { type: "object" }
+          }
+        }
+      },
+      sections: {
+        type: "array",
+        items: { type: "object" }
+      }
+    }
+  };
+}
+
 function ticketParameter() {
   return { name: "ticketId", in: "path", required: true, schema: { type: "string" } };
 }
@@ -188,11 +257,46 @@ function openApiSpec() {
       },
       "/api/tenants/{tenantId}/golden-path": { get: operation("Golden path readiness") },
       "/api/tenants/{tenantId}/golden-path/demo": { post: operation("Create demo golden path", "post") },
+      "/api/tenants/{tenantId}/customer-start": {
+        get: {
+          ...operation("Customer activation start"),
+          parameters: [tenantParameter()],
+          description: "Returns a customer-facing activation checklist with next action, grouped steps, live readiness and progress for getting a tenant live quickly.",
+          responses: {
+            200: {
+              description: "Customer start payload",
+              content: {
+                "application/json": {
+                  schema: customerStartResponseSchema()
+                }
+              }
+            },
+            401: response("Unauthorized"),
+            403: response("Forbidden")
+          }
+        }
+      },
       "/api/tenants/{tenantId}/suggestions/home": {
         get: {
           ...operation("Homepage AI suggestion"),
           parameters: [tenantParameter()],
           description: "Returns the next best in-app action for the current tenant and user. Admin users may receive production or pilot suggestions; field users receive operational suggestions."
+        }
+      },
+      "/api/tenants/{tenantId}/suggestions/home/events": {
+        post: {
+          ...operation("Track homepage AI suggestion interaction", "post"),
+          parameters: [tenantParameter()],
+          requestBody: jsonBody({
+            type: "object",
+            properties: {
+              key: { type: "string", example: "production_blockers" },
+              event: { type: "string", enum: ["primary", "secondary", "dismissed"], example: "primary" },
+              source: { type: "string", example: "go_live" },
+              priority: { type: "string", example: "P0" }
+            }
+          }),
+          description: "Writes a tenant-scoped audit event for suggestion clicks, making in-app AI advice measurable without storing extra recommendation records."
         }
       },
       "/api/tenants/{tenantId}/admin/status": { get: operation("Tenant admin status") },
@@ -360,6 +464,13 @@ function openApiSpec() {
         get: {
           ...operation("Combined go-live readiness"),
           description: "Returns combined production, pilot and commercial launch gates for dashboards and external status automation."
+        }
+      },
+      "/api/tenants/{tenantId}/roadmap": {
+        get: {
+          ...operation("Roadmap phase status"),
+          parameters: [tenantParameter()],
+          description: "Returns the five roadmap phases with score, go/no-go status and open actions derived from production, golden path, pilot and commercial launch gates."
         }
       },
       "/api/tenants/{tenantId}/reports": {

@@ -18,7 +18,8 @@ function parseSince(value) {
 function listAuditEvents(store, user, filters = {}) {
   const requestedTenantId = filters.tenantId || "";
   const tenantId = user.role === "super_admin" ? requestedTenantId : user.tenantId;
-  const since = parseSince(filters.since);
+  const since = parseSince(filters.since || filters.from);
+  const until = parseSince(filters.to);
   const limit = parseLimit(filters.limit);
   let rows = store.data.auditLogs || [];
 
@@ -27,6 +28,7 @@ function listAuditEvents(store, user, filters = {}) {
   if (filters.action) rows = rows.filter(row => row.action === filters.action);
   if (filters.actor) rows = rows.filter(row => String(row.actor || "").toLowerCase().includes(String(filters.actor).toLowerCase()));
   if (since) rows = rows.filter(row => new Date(row.at).getTime() >= since);
+  if (until) rows = rows.filter(row => new Date(row.at).getTime() <= until);
 
   const sorted = rows
     .slice()

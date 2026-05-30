@@ -149,22 +149,66 @@ function attachPaymentMethod(store, tenant, paymentMethodRef, actor) {
   return next;
 }
 
+function workorderLine(workorder) {
+  const explicit = workorder.billableAmount ?? workorder.amount ?? workorder.fixedPrice;
+  const amount = explicit != null
+    ? Number(explicit)
+    : Number(workorder.billableHours || workorder.hours || 0) * Number(workorder.hourlyRate || 0);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    const error = new Error(`Werkbon ${workorder.id} mist een positief factureerbaar bedrag`);
+    error.status = 422;
+    throw error;
+  }
+  return {
+    type: "workorder",
+    workorderId: workorder.id,
+    description: workorder.title || `Werkbon ${workorder.id}`,
+    quantity: Number(workorder.billableHours || workorder.hours || 1),
+    unitPrice: Number(workorder.hourlyRate || amount),
+    amount: +amount.toFixed(2)
+  };
+}
+
+function invoiceLinesFromWorkorders(store, tenant, payload) {
+  if (!payload.fromWorkorders) return null;
+  const requestedIds = Array.isArray(payload.workorderIds) ? new Set(payload.workorderIds) : null;
+  const rows = store.list("workorders", tenant.id)
+    .filter(row => row.billableStatus === "ready_for_invoice")
+    .filter(row => !requestedIds || requestedIds.has(row.id));
+  if (!rows.length) {
+    const error = new Error("Geen facturatieklare werkbonnen gevonden");
+    error.status = 422;
+    throw error;
+  }
+  return rows.map(workorderLine);
+}
+
 function createInvoice(store, tenant, payload, actor) {
   const billingOps = tenant.billingOps || {};
-  const gross = Number(payload.amount || tenant.mrr * 12 || 0);
+  const operationalLines = invoiceLinesFromWorkorders(store, tenant, payload) || [];
+  const gross = operationalLines.length
+    ? operationalLines.reduce((sum, line) => sum + line.amount, 0)
+    : Number(payload.amount || tenant.mrr * 12 || 0);
   const discountPct = Number(payload.discountPct || billingOps.discountPct || 0);
   const net = +(gross * (1 - discountPct / 100)).toFixed(2);
+  if (!Number.isFinite(gross) || gross <= 0) {
+    const error = new Error("Factuurbedrag moet groter zijn dan 0");
+    error.status = 422;
+    throw error;
+  }
   const invoice = {
     id: `INV-${new Date().getFullYear()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
     at: new Date().toISOString().slice(0, 10),
     dueDate: payload.dueDate || new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10),
     line: payload.line || "WorkFlow Pro licentie",
+    lines: operationalLines.length ? operationalLines : [{ type: "manual", description: payload.line || "WorkFlow Pro licentie", amount: gross }],
     gross,
     discountPct,
     net,
     status: "draft",
     peppolStatus: tenant.invoiceProfile?.peppolId ? "ready" : "missing_peppol",
-    enterpriseContract: tenant.plan === "enterprise"
+    enterpriseContract: tenant.plan === "enterprise",
+    source: operationalLines.length ? "workorders" : "manual"
   };
   const next = store.updateTenant(tenant.id, {
     billingOps: {
@@ -172,6 +216,14 @@ function createInvoice(store, tenant, payload, actor) {
       invoiceHistory: [...(billingOps.invoiceHistory || []), invoice]
     }
   });
+  for (const line of operationalLines) {
+    store.update("workorders", line.workorderId, {
+      billableStatus: "invoiced",
+      invoiceId: invoice.id,
+      invoicedAt: new Date().toISOString(),
+      invoicedBy: actor.email
+    });
+  }
   store.audit({ actor: actor.email, tenantId: tenant.id, action: "invoice_created", area: "billing", detail: invoice.id });
   return { tenant: next, invoice };
 }

@@ -1,18 +1,45 @@
 {
   "name": "WorkFlow Pro",
-  "short_name": "WorkFlow Pro",
+  "short_name": "WF Pro",
   "description": "Planning, werkbonnen en tijdregistratie voor Belgische teams op locatie.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#f3f6f9",
-  "theme_color": "#176c5f",
+  "orientation": "portrait-primary",
+  "background_color": "#f8f9fb",
+  "theme_color": "#4f46e5",
+  "lang": "nl-BE",
+  "categories": ["business", "productivity"],
   "icons": [
     {
       "src": "/icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
     }
-  ]
+  ],
+  "shortcuts": [
+    {
+      "name": "Vandaag",
+      "short_name": "Vandaag",
+      "description": "Bekijk de planning voor vandaag",
+      "url": "/?shortcut=today",
+      "icons": [{ "src": "/icon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Inklokken",
+      "short_name": "Inklokken",
+      "description": "Klok snel in of uit",
+      "url": "/?shortcut=clock",
+      "icons": [{ "src": "/icon.svg", "sizes": "any" }]
+    }
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false
 }

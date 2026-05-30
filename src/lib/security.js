@@ -33,7 +33,25 @@ function hashPassword(password, salt = crypto.randomBytes(16).toString("hex")) {
 function verifyPassword(password, stored) {
   if (!stored || !stored.includes(":")) return false;
   const [salt] = stored.split(":");
-  return hashPassword(password, salt) === stored;
+  const expected = hashPassword(password, salt);
+  const left = Buffer.from(expected);
+  const right = Buffer.from(stored);
+  return left.length === right.length && crypto.timingSafeEqual(left, right);
 }
 
-module.exports = { encryptSecret, decryptSecret, hashPassword, verifyPassword };
+function assertStrongPassword(password) {
+  const value = String(password || "");
+  const checks = [
+    value.length >= 12,
+    /[a-z]/.test(value),
+    /[A-Z]/.test(value),
+    /\d/.test(value),
+    /[^A-Za-z0-9]/.test(value)
+  ];
+  if (checks.every(Boolean)) return;
+  const error = new Error("Wachtwoord moet minstens 12 tekens bevatten, met hoofdletter, kleine letter, cijfer en symbool.");
+  error.status = 400;
+  throw error;
+}
+
+module.exports = { encryptSecret, decryptSecret, hashPassword, verifyPassword, assertStrongPassword };

@@ -3,10 +3,10 @@ const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 const { config } = require("./lib/config");
-const { sendJson, readBody, readRawBody } = require("./lib/http");
+const { sendJson, readBody, readRawBody, securityHeaders } = require("./lib/http");
 const { checkRateLimit } = require("./lib/rate-limit");
-const { Store, BUSINESS_ADMIN_PERMISSIONS } = require("./lib/store");
-const { hashPassword } = require("./lib/security");
+const { Store, BUSINESS_ADMIN_PERMISSIONS, MANAGER_PERMISSIONS, EMPLOYEE_PERMISSIONS } = require("./lib/store");
+const { hashPassword, assertStrongPassword, verifyPassword } = require("./lib/security");
 const {
   authenticate,
   login,
@@ -17,8 +17,18 @@ const {
   resetLoginFailures,
   assertTenant,
   assertCan,
-  assertSuperAdmin
+  assertOwn,
+  assertSuperAdmin,
+  assertAdminMfa,
+  isEmployee,
+  isManager,
+  isAdmin
 } = require("./lib/auth");
+const {
+  getMyProfile, getMyPlanning, getMyClock, getMyExpenses,
+  getMyLeaves, getMyWorkorders, getMyMessages, getMyDashboard,
+  getManagerDashboard, getManagerTeamPlanning
+} = require("./modules/me");
 const { modules } = require("./modules/registry");
 const { listModule, createModuleRow, updateModuleRow } = require("./modules/crud");
 const { lookupKbo } = require("./modules/kbo");
@@ -45,6 +55,7 @@ const { tenantStatus, unlockUser, listBackups, createBackup, backupPreview, rest
 const { createNotification, listNotifications, markNotificationRead, generateReminders, notificationSummary } = require("./modules/notifications");
 const { importEmployees } = require("./modules/imports");
 const { portalPayload, updateOnboardingStep } = require("./modules/portal");
+const { customerStartPayload } = require("./modules/customer-start");
 const { listApiKeys, createApiKey, revokeApiKey, rotateApiKey, authenticateApiKey, recordApiKeyDenied } = require("./modules/api-keys");
 const { apiKeyGovernance } = require("./modules/api-key-governance");
 const { releaseInfo } = require("./modules/releases");
@@ -54,9 +65,28 @@ const { salesSummary, salesLaunchReadiness, advanceLead, addPartnerNote } = requ
 const { goLiveReadiness } = require("./modules/go-live");
 const { listReports, getReport, generateStatusBundle } = require("./modules/reports");
 const { listAuditEvents } = require("./modules/audit");
+const { sendMail } = require("./lib/mailer");
+const {
+  leaveSubmittedToAdmin,
+  leaveReviewedToEmployee,
+  expenseSubmittedToAdmin,
+  expenseReviewedToEmployee,
+  welcomeEmployee
+} = require("./modules/email-templates");
 const { listErrorEvents } = require("./modules/errors");
-const { homeSuggestion } = require("./modules/suggestions");
+const { homeSuggestion, recordSuggestionEvent } = require("./modules/suggestions");
+const { roadmapStatus } = require("./modules/roadmap");
 const { openApiSpec } = require("./modules/openapi");
+const {
+  listStock, getStockItem, createStockItem,
+  updateStockItem, addMutation, stockAlerts, releaseReservation
+} = require("./modules/stock");
+const {
+  listLeaves, getLeave, createLeave, reviewLeave, leaveConflicts, leaveCalendar
+} = require("./modules/leaves");
+const {
+  listVehicles, getVehicle, createVehicle, updateVehicle, logMileage, scheduleService
+} = require("./modules/vehicles");
 
 const store = new Store();
 
@@ -103,6 +133,11 @@ function forbidden(message) {
 
 function assertInteractiveUser(user) {
   if (user?.authType === "api_key") forbidden("Interactive admin login required");
+  assertAdminMfa(user);
+}
+
+function assertHumanUser(user) {
+  if (user?.authType === "api_key") forbidden("Interactive admin login required");
 }
 
 function assertApiKeyWriteAllowed(user, req) {
@@ -147,8 +182,30 @@ function serveStatic(req, res) {
       return;
     }
     const ext = path.extname(filePath);
-    const type = ext === ".js" ? "text/javascript" : ext === ".css" ? "text/css" : "text/html";
-    res.writeHead(200, { "Content-Type": `${type}; charset=utf-8`, "Cache-Control": "no-store" });
+    const MIME = {
+      ".js": "text/javascript",
+      ".css": "text/css",
+      ".html": "text/html",
+      ".json": "application/json",
+      ".webmanifest": "application/manifest+json",
+      ".png": "image/png",
+      ".jpg": "image/jpeg",
+      ".jpeg": "image/jpeg",
+      ".svg": "image/svg+xml",
+      ".ico": "image/x-icon",
+      ".woff2": "font/woff2",
+      ".woff": "font/woff",
+      ".txt": "text/plain"
+    };
+    const type = MIME[ext] || "application/octet-stream";
+    const isText = type.startsWith("text/") || type === "application/json" || type === "application/manifest+json";
+    const cacheControl = [".woff2", ".woff", ".png", ".jpg", ".jpeg", ".svg", ".ico"].includes(ext)
+      ? "public, max-age=86400"  // 24h cache voor statische assets
+      : "no-store";
+    res.writeHead(200, securityHeaders({
+      "Content-Type": isText ? `${type}; charset=utf-8` : type,
+      "Cache-Control": cacheControl
+    }));
     res.end(data);
   });
 }
@@ -196,13 +253,27 @@ http.createServer(async (req, res) => {
     }
 
     if (url.pathname === "/api/health") {
+      const storeStatus = store.storageStatus ? store.storageStatus() : { ok: true };
       sendJson(res, 200, {
         ok: true,
         app: "WorkFlow Pro Fullstack",
-        mode: "production-foundation",
+        version: config.appVersion,
+        releaseChannel: config.releaseChannel,
+        commitSha: config.commitSha,
+        storageAdapter: config.storageAdapter,
+        storeReady: storeStatus?.ok !== false,
         modules: modules.length,
+        uptime: Math.floor(process.uptime()),
         time: new Date().toISOString()
       });
+      return;
+    }
+
+    // Kubernetes/Render/Railway liveness probe
+    if (url.pathname === "/api/ready") {
+      const storeStatus = store.storageStatus ? store.storageStatus() : { ok: true };
+      const ready = storeStatus?.ok !== false;
+      sendJson(res, ready ? 200 : 503, { ok: ready, store: storeStatus });
       return;
     }
 
@@ -261,19 +332,36 @@ http.createServer(async (req, res) => {
       return;
     }
 
+    if (url.pathname === "/api/auth/change-password" && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertHumanUser(user);
+      const body = await readBody(req);
+      if (!body.currentPassword) return sendJson(res, 400, { ok: false, error: "Huidig wachtwoord is verplicht" });
+      if (!body.newPassword) return sendJson(res, 400, { ok: false, error: "Nieuw wachtwoord is verplicht" });
+      if (!verifyPassword(body.currentPassword, user.passwordHash)) {
+        return sendJson(res, 401, { ok: false, error: "Huidig wachtwoord is onjuist" });
+      }
+      assertStrongPassword(body.newPassword);
+      store.update("users", user.id, { passwordHash: hashPassword(body.newPassword) });
+      store.audit({ actor: user.email, tenantId: user.tenantId, action: "password_changed", area: "auth" });
+      sendJson(res, 200, { ok: true });
+      return;
+    }
+
     if (url.pathname === "/api/me/mfa/setup" && req.method === "POST") {
       const user = actor(req);
       if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
-      assertInteractiveUser(user);
+      assertHumanUser(user);
       const setup = createMfaSetup(store, user);
-      sendJson(res, 201, { ok: true, setup: { secret: setup.secret, otpauth: setup.otpauth, demoCode: setup.demoCode } });
+      sendJson(res, 201, { ok: true, setup: { secret: setup.secret, otpauth: setup.otpauth } });
       return;
     }
 
     if (url.pathname === "/api/me/mfa/verify" && req.method === "POST") {
       const user = actor(req);
       if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
-      assertInteractiveUser(user);
+      assertHumanUser(user);
       const body = await readBody(req);
       const result = verifyMfaSetup(store, user, body.code);
       sendJson(res, 200, { ok: true, user: result.user, recoveryCodes: result.recoveryCodes });
@@ -283,6 +371,7 @@ http.createServer(async (req, res) => {
     if (url.pathname === "/api/modules") {
       const user = actor(req);
       if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertAdminMfa(user);
       assertApiKeyWriteAllowed(user, req);
       sendJson(res, 200, { ok: true, modules });
       return;
@@ -292,6 +381,7 @@ http.createServer(async (req, res) => {
     if (moduleMatch) {
       const user = actor(req);
       if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertAdminMfa(user);
       assertApiKeyWriteAllowed(user, req);
       const key = moduleMatch[1];
       const id = moduleMatch[2];
@@ -311,6 +401,7 @@ http.createServer(async (req, res) => {
     if (exportMatch && req.method === "GET") {
       const user = actor(req);
       if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertAdminMfa(user);
       const key = exportMatch[1];
       const tenantId = url.searchParams.get("tenantId") || user.tenantId;
       const rows = listModule(store, user, key, tenantId);
@@ -323,7 +414,8 @@ http.createServer(async (req, res) => {
       const user = actor(req);
       if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
       assertSuperAdmin(user);
-      const rows = store.data.tenants.map(tenant => {
+      assertInteractiveUser(user);
+      const tenants = store.data.tenants.map(tenant => {
         const scoped = store.tenantScoped(tenant.id);
         return {
           ...tenant,
@@ -335,7 +427,7 @@ http.createServer(async (req, res) => {
           }
         };
       });
-      sendJson(res, 200, { ok: true, rows });
+      sendJson(res, 200, { ok: true, tenants });
       return;
     }
 
@@ -343,6 +435,7 @@ http.createServer(async (req, res) => {
       const user = actor(req);
       if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
       assertSuperAdmin(user);
+      assertInteractiveUser(user);
       const body = await readBody(req);
       const tenant = store.insert("tenants", {
         id: body.id || `tenant_${Date.now()}_${Math.random().toString(16).slice(2)}`,
@@ -357,12 +450,13 @@ http.createServer(async (req, res) => {
       });
       let adminUser = null;
       if (body.adminEmail) {
+        assertStrongPassword(body.adminPassword);
         adminUser = store.insert("users", {
           id: `user_${Date.now()}_${Math.random().toString(16).slice(2)}`,
           tenantId: tenant.id,
           name: body.adminName || "Klant admin",
           email: String(body.adminEmail).toLowerCase(),
-          passwordHash: hashPassword(body.adminPassword || "Welkom123!"),
+          passwordHash: hashPassword(body.adminPassword),
           role: "tenant_admin",
           permissions: BUSINESS_ADMIN_PERMISSIONS,
           mfaEnabled: false,
@@ -382,6 +476,7 @@ http.createServer(async (req, res) => {
       const user = actor(req);
       if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
       assertSuperAdmin(user);
+      assertInteractiveUser(user);
       const tenant = store.data.tenants.find(row => row.id === adminTenantMatch[1]);
       if (!tenant) return sendJson(res, 404, { ok: false, error: "Tenant not found" });
       const body = await readBody(req);
@@ -393,6 +488,158 @@ http.createServer(async (req, res) => {
       };
       const next = store.updateTenant(tenant.id, patch);
       store.audit({ actor: user.email, tenantId: tenant.id, action: "tenant_updated", area: "tenants", detail: JSON.stringify(patch) });
+      sendJson(res, 200, { ok: true, tenant: next });
+      return;
+    }
+
+    // ── Super-admin: stats dashboard ──────────────────────────────────────────
+    if (url.pathname === "/api/admin/stats" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertSuperAdmin(user);
+      const tenants = store.data.tenants;
+      const allUsers = store.data.users;
+      // MRR schatting per plan
+      const MRR_PLAN = { starter: 9, business: 18, enterprise: 29 };
+      let mrr = 0;
+      tenants.filter(t => t.status === "active").forEach(t => {
+        const users = store.list("users", t.id).length;
+        mrr += (MRR_PLAN[t.plan] || 18) * Math.max(users, 1);
+      });
+      const errorCount = (store.data.errorEvents || []).filter(e => {
+        const d = new Date(e.at || 0);
+        return d > new Date(Date.now() - 24 * 60 * 60 * 1000);
+      }).length;
+      sendJson(res, 200, {
+        ok: true,
+        tenants: { total: tenants.length, active: tenants.filter(t => t.status === "active").length,
+          trial: tenants.filter(t => t.status === "trial").length,
+          suspended: tenants.filter(t => t.status === "suspended").length },
+        users: { total: allUsers.length, active: allUsers.filter(u => u.active !== false).length,
+          admins: allUsers.filter(u => ["tenant_admin","super_admin"].includes(u.role)).length },
+        mrr: Math.round(mrr),
+        arr: Math.round(mrr * 12),
+        errors24h: errorCount,
+        uptime: Math.floor(process.uptime()),
+        storageAdapter: config.storageAdapter,
+        version: config.appVersion,
+        releaseChannel: config.releaseChannel,
+        commitSha: config.commitSha
+      });
+      return;
+    }
+
+    // ── Super-admin: alle gebruikers ──────────────────────────────────────────
+    if (url.pathname === "/api/admin/users" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertSuperAdmin(user);
+      const safe = (u) => { const { passwordHash, mfaSecret, mfaPendingSecret, recoveryCodes, ...s } = u; return s; };
+      const users = store.data.users.map(safe);
+      sendJson(res, 200, { ok: true, users });
+      return;
+    }
+
+    // ── Super-admin: gebruiker bijwerken (deactiveren / rol) ──────────────────
+    const adminUserMatch = url.pathname.match(/^\/api\/admin\/users\/([^/]+)$/);
+    if (adminUserMatch && req.method === "PATCH") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertSuperAdmin(user);
+      const body = await readBody(req);
+      const allowed = ["active", "name", "function", "phone"];
+      const patch = Object.fromEntries(Object.entries(body).filter(([k]) => allowed.includes(k)));
+      const updated = store.update("users", adminUserMatch[1], { ...patch, updatedAt: new Date().toISOString() });
+      store.audit({ actor: user.email, tenantId: updated.tenantId, action: "admin_user_updated", area: "users", detail: adminUserMatch[1] });
+      const { passwordHash, mfaSecret, mfaPendingSecret, recoveryCodes, ...safe } = updated;
+      sendJson(res, 200, { ok: true, user: safe });
+      return;
+    }
+
+    // ── Super-admin: gebruiker ontgrendelen ───────────────────────────────────
+    const adminUserUnlockMatch = url.pathname.match(/^\/api\/admin\/users\/([^/]+)\/unlock$/);
+    if (adminUserUnlockMatch && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertSuperAdmin(user);
+      const updated = store.update("users", adminUserUnlockMatch[1], {
+        failedLoginCount: 0, lockedUntil: null, updatedAt: new Date().toISOString()
+      });
+      store.audit({ actor: user.email, tenantId: updated.tenantId, action: "admin_user_unlocked", area: "users", detail: adminUserUnlockMatch[1] });
+      sendJson(res, 200, { ok: true });
+      return;
+    }
+
+    // ── Super-admin: wachtwoord resetten ──────────────────────────────────────
+    const adminUserResetMatch = url.pathname.match(/^\/api\/admin\/users\/([^/]+)\/reset-password$/);
+    if (adminUserResetMatch && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertSuperAdmin(user);
+      const target = store.getUserById(adminUserResetMatch[1]);
+      if (!target) return sendJson(res, 404, { ok: false, error: "Gebruiker niet gevonden" });
+      const tempPassword = crypto.randomBytes(10).toString("base64url");
+      store.update("users", target.id, { passwordHash: hashPassword(tempPassword), updatedAt: new Date().toISOString() });
+      store.audit({ actor: user.email, tenantId: target.tenantId, action: "admin_password_reset", area: "users", detail: target.email });
+      sendJson(res, 200, { ok: true, tempPassword });
+      return;
+    }
+
+    // ── Super-admin: facturatie overzicht ─────────────────────────────────────
+    if (url.pathname === "/api/admin/billing" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertSuperAdmin(user);
+      const MRR_PLAN = { starter: 9, business: 18, enterprise: 29 };
+      const rows = store.data.tenants.map(t => {
+        const users = store.list("users", t.id).length;
+        const mrrUnit = MRR_PLAN[t.plan] || 18;
+        const mrr = t.status === "active" ? mrrUnit * Math.max(users, 1) : 0;
+        return { id: t.id, name: t.name, plan: t.plan, status: t.status,
+          users, mrrUnit, mrr, arr: mrr * 12, billingEmail: t.billingEmail || "" };
+      }).sort((a, b) => b.mrr - a.mrr);
+      const totalMrr = rows.reduce((s, r) => s + r.mrr, 0);
+      sendJson(res, 200, { ok: true, rows, totalMrr, totalArr: totalMrr * 12 });
+      return;
+    }
+
+    // ── Super-admin: systeem errors (alle tenants) ────────────────────────────
+    if (url.pathname === "/api/admin/errors" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertSuperAdmin(user);
+      const limit = Number(url.searchParams.get("limit") || 100);
+      const errors = (store.data.errorEvents || []).slice().reverse().slice(0, limit);
+      sendJson(res, 200, { ok: true, errors });
+      return;
+    }
+
+    // ── Super-admin: alle support tickets ─────────────────────────────────────
+    if (url.pathname === "/api/admin/support" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertSuperAdmin(user);
+      const limit = Number(url.searchParams.get("limit") || 100);
+      const tickets = store.data.tenants.flatMap(t =>
+        (store.list("supportTickets", t.id) || []).map(tk => ({ ...tk, tenantName: t.name }))
+      ).sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))
+        .slice(0, limit);
+      sendJson(res, 200, { ok: true, tickets });
+      return;
+    }
+
+    // ── Super-admin: suspend/activate tenant ──────────────────────────────────
+    const adminTenantActionMatch = url.pathname.match(/^\/api\/admin\/tenants\/([^/]+)\/(suspend|activate)$/);
+    if (adminTenantActionMatch && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertSuperAdmin(user);
+      const [, tid, action] = adminTenantActionMatch;
+      const tenant = store.data.tenants.find(t => t.id === tid);
+      if (!tenant) return sendJson(res, 404, { ok: false, error: "Tenant niet gevonden" });
+      const newStatus = action === "suspend" ? "suspended" : "active";
+      const next = store.updateTenant(tid, { status: newStatus });
+      store.audit({ actor: user.email, tenantId: tid, action: `tenant_${action}d`, area: "tenants", detail: tid });
       sendJson(res, 200, { ok: true, tenant: next });
       return;
     }
@@ -410,6 +657,7 @@ http.createServer(async (req, res) => {
     if (tenantMatch) {
       const user = actor(req);
       if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertAdminMfa(user);
       const tenantId = tenantMatch[1];
       errorTenantId = tenantId;
       const action = tenantMatch[2];
@@ -424,6 +672,10 @@ http.createServer(async (req, res) => {
       }
       if (action === "suggestions/home" && req.method === "GET") {
         sendJson(res, 200, { ok: true, suggestion: homeSuggestion(store, tenant, user) });
+        return;
+      }
+      if (action === "suggestions/home/events" && req.method === "POST") {
+        sendJson(res, 200, { ok: true, event: recordSuggestionEvent(store, tenant, user, await readBody(req)) });
         return;
       }
       if (action === "admin/status" && req.method === "GET") {
@@ -441,6 +693,13 @@ http.createServer(async (req, res) => {
       }
       if (action === "portal" && req.method === "GET") {
         sendJson(res, 200, { ok: true, portal: portalPayload(store, tenant, tenantStatus(store, tenantId), billingSummary(tenant)) });
+        return;
+      }
+      if (action === "customer-start" && req.method === "GET") {
+        const status = tenantStatus(store, tenantId);
+        const billing = billingSummary(tenant);
+        const portal = portalPayload(store, tenant, status, billing);
+        sendJson(res, 200, { ok: true, start: customerStartPayload(store, tenant, portal, billing) });
         return;
       }
       const onboardingStepMatch = action.match(/^portal\/onboarding\/([^/]+)$/);
@@ -468,6 +727,11 @@ http.createServer(async (req, res) => {
       if (action === "go-live" && req.method === "GET") {
         assertCan(user, "tenants");
         sendJson(res, 200, { ok: true, readiness: goLiveReadiness(store, tenant, { strictProduction: url.searchParams.get("strictProduction") === "true" }) });
+        return;
+      }
+      if (action === "roadmap" && req.method === "GET") {
+        assertCan(user, "tenants");
+        sendJson(res, 200, { ok: true, roadmap: roadmapStatus(store, tenant) });
         return;
       }
       if (action === "reports" && req.method === "GET") {
@@ -625,6 +889,7 @@ http.createServer(async (req, res) => {
         return;
       }
       if (action === "golden-path/demo" && req.method === "POST") {
+        if (config.isProduction) return sendJson(res, 403, { ok: false, error: "Demo data is uitgeschakeld in productie" });
         assertCan(user, "tenants");
         assertInteractiveUser(user);
         sendJson(res, 201, { ok: true, result: createDemoGoldenPath(store, tenant, user) });
@@ -827,6 +1092,649 @@ http.createServer(async (req, res) => {
           return;
         }
       }
+      // ── Stock routes ──────────────────────────────────────────────────────────
+      if (action === "stock" && req.method === "GET") {
+        assertCan(user, "stock");
+        const opts = {
+          venueId: url.searchParams.get("venueId"),
+          category: url.searchParams.get("category"),
+          alertOnly: url.searchParams.get("alertOnly") === "true"
+        };
+        sendJson(res, 200, { ok: true, ...listStock(store, tenantId, opts) });
+        return;
+      }
+
+      if (action === "stock/alerts" && req.method === "GET") {
+        assertCan(user, "stock");
+        sendJson(res, 200, { ok: true, ...stockAlerts(store, tenantId) });
+        return;
+      }
+
+      if (action === "stock" && req.method === "POST") {
+        assertCan(user, "stock");
+        assertApiKeyWriteAllowed(user, req);
+        sendJson(res, 201, { ok: true, item: createStockItem(store, tenant, await readBody(req), user) });
+        return;
+      }
+
+      const stockItemMatch = action.match(/^stock\/([^/]+)$/);
+      if (stockItemMatch && req.method === "GET") {
+        assertCan(user, "stock");
+        sendJson(res, 200, { ok: true, item: getStockItem(store, tenantId, stockItemMatch[1]) });
+        return;
+      }
+
+      if (stockItemMatch && req.method === "PATCH") {
+        assertCan(user, "stock");
+        assertApiKeyWriteAllowed(user, req);
+        sendJson(res, 200, { ok: true, item: updateStockItem(store, tenant, stockItemMatch[1], await readBody(req), user) });
+        return;
+      }
+
+      if (stockItemMatch && req.method === "DELETE") {
+        assertCan(user, "stock");
+        assertInteractiveUser(user);
+        const stockId = stockItemMatch[1];
+        const item = store.list("stock", tenantId).find(s => s.id === stockId);
+        if (!item) return sendJson(res, 404, { ok: false, error: "Artikel niet gevonden" });
+        store.remove("stock", stockId);
+        store.audit({ actor: user.email, tenantId, action: "stock_item_deleted", area: "stock", detail: item.name || stockId });
+        sendJson(res, 200, { ok: true });
+        return;
+      }
+
+      const stockMutMatch = action.match(/^stock\/([^/]+)\/mutations$/);
+      if (stockMutMatch && req.method === "POST") {
+        assertCan(user, "stock");
+        assertApiKeyWriteAllowed(user, req);
+        sendJson(res, 201, { ok: true, item: addMutation(store, tenant, stockMutMatch[1], await readBody(req), user) });
+        return;
+      }
+
+      const stockRelMatch = action.match(/^stock\/mutations\/([^/]+)\/release$/);
+      if (stockRelMatch && req.method === "POST") {
+        assertCan(user, "stock");
+        assertApiKeyWriteAllowed(user, req);
+        sendJson(res, 200, { ok: true, item: releaseReservation(store, tenant, stockRelMatch[1], user) });
+        return;
+      }
+      // ── Einde stock routes ────────────────────────────────────────────────────
+
+      // ── Verlof routes ─────────────────────────────────────────────────────────
+      if (action === "leaves" && req.method === "GET") {
+        assertCan(user, "leaves");
+        const opts = {
+          userId: url.searchParams.get("userId"),
+          status: url.searchParams.get("status"),
+          type: url.searchParams.get("type"),
+          from: url.searchParams.get("from"),
+          to: url.searchParams.get("to")
+        };
+        const leaveResult = listLeaves(store, tenantId, opts);
+        const uCache1 = {};
+        leaveResult.leaves = leaveResult.leaves.map(l => {
+          if (l.userName) return l;
+          if (!uCache1[l.userId]) { const u = store.getUserById(l.userId); uCache1[l.userId] = u ? (u.name || u.email) : l.userId; }
+          return { ...l, userName: uCache1[l.userId] };
+        });
+        sendJson(res, 200, { ok: true, ...leaveResult });
+        return;
+      }
+
+      if (action === "leaves/calendar" && req.method === "GET") {
+        assertCan(user, "leaves");
+        const year = Number(url.searchParams.get("year") || new Date().getFullYear());
+        const month = Number(url.searchParams.get("month") || new Date().getMonth() + 1);
+        const calResult = leaveCalendar(store, tenantId, year, month);
+        const uCache2 = {};
+        calResult.leaves = calResult.leaves.map(l => {
+          if (l.userName) return l;
+          if (!uCache2[l.userId]) { const u = store.getUserById(l.userId); uCache2[l.userId] = u ? (u.name || u.email) : l.userId; }
+          return { ...l, userName: uCache2[l.userId] };
+        });
+        sendJson(res, 200, { ok: true, ...calResult });
+        return;
+      }
+
+      // GET /leaves/balance — verlof saldo per medewerker voor dit jaar
+      if (action === "leaves/balance" && req.method === "GET") {
+        assertCan(user, "leaves");
+        const year = Number(url.searchParams.get("year") || new Date().getFullYear());
+        const yearStr = String(year);
+        const employees = store.list("users", tenantId)
+          .filter(u => !["super_admin"].includes(u.role));
+        const allLeaves = store.list("leaves", tenantId).filter(l =>
+          l.status === "goedgekeurd" && l.type === "vakantie" &&
+          (l.startDate || "").startsWith(yearStr)
+        );
+        const balance = employees.map(u => {
+          const quota = Number(u.leaveQuota || 20);
+          const usedDays = allLeaves.filter(l => l.userId === u.id)
+            .reduce((s, l) => s + Number(l.days || 0), 0);
+          return {
+            userId: u.id,
+            name: u.name || u.email,
+            email: u.email,
+            quota,
+            used: usedDays,
+            remaining: Math.max(0, quota - usedDays)
+          };
+        });
+        sendJson(res, 200, { ok: true, year, balance });
+        return;
+      }
+
+      // GET /me/leaves/balance — eigen verlof saldo
+      if (action === "me/leaves/balance" && req.method === "GET") {
+        const year = Number(url.searchParams.get("year") || new Date().getFullYear());
+        const yearStr = String(year);
+        const u = store.getUserById(user.id);
+        const quota = Number(u?.leaveQuota || 20);
+        const used = store.list("leaves", tenantId)
+          .filter(l => l.userId === user.id && l.status === "goedgekeurd" && l.type === "vakantie" && (l.startDate||"").startsWith(yearStr))
+          .reduce((s, l) => s + Number(l.days || 0), 0);
+        sendJson(res, 200, { ok: true, year, quota, used, remaining: Math.max(0, quota - used) });
+        return;
+      }
+
+      if (action === "leaves" && req.method === "POST") {
+        assertCan(user, "leaves");
+        sendJson(res, 201, { ok: true, leave: createLeave(store, tenant, await readBody(req), user) });
+        return;
+      }
+
+      const leaveMatch = action.match(/^leaves\/([^/]+)$/);
+      if (leaveMatch && req.method === "GET") {
+        assertCan(user, "leaves");
+        sendJson(res, 200, { ok: true, leave: getLeave(store, tenantId, leaveMatch[1]) });
+        return;
+      }
+
+      const leaveReviewMatch = action.match(/^leaves\/([^/]+)\/review$/);
+      if (leaveReviewMatch && (req.method === "POST" || req.method === "PATCH")) {
+        assertCan(user, "leaves");
+        const reviewBody = await readBody(req);
+        const leave = reviewLeave(store, tenant, leaveReviewMatch[1], reviewBody, user);
+        // E-mail naar medewerker bij goedkeuring/afwijzing
+        if (["goedgekeurd", "geweigerd"].includes(leave?.status)) {
+          const employee = store.getUserById(leave.userId);
+          if (employee?.email) {
+            const tpl = leaveReviewedToEmployee({ employee, leave, reviewer: user, appUrl: config.appUrl });
+            sendMail({ to: employee.email, ...tpl });
+          }
+        }
+        sendJson(res, 200, { ok: true, leave });
+        return;
+      }
+
+      if (action === "leaves/conflicts" && req.method === "GET") {
+        assertCan(user, "leaves");
+        const from = url.searchParams.get("from") || new Date().toISOString().slice(0, 10);
+        const to = url.searchParams.get("to") || from;
+        sendJson(res, 200, { ok: true, ...leaveConflicts(store, tenantId, from, to) });
+        return;
+      }
+      // ── Einde verlof routes ───────────────────────────────────────────────────
+
+      // ── Voertuigen routes ─────────────────────────────────────────────────────
+      if (action === "vehicles" && req.method === "GET") {
+        assertCan(user, "vehicles");
+        const opts = {
+          status: url.searchParams.get("status"),
+          driverId: url.searchParams.get("driverId"),
+          alertOnly: url.searchParams.get("alertOnly") === "true"
+        };
+        sendJson(res, 200, { ok: true, ...listVehicles(store, tenantId, opts) });
+        return;
+      }
+
+      if (action === "vehicles" && req.method === "POST") {
+        assertCan(user, "vehicles");
+        assertApiKeyWriteAllowed(user, req);
+        sendJson(res, 201, { ok: true, vehicle: createVehicle(store, tenant, await readBody(req), user) });
+        return;
+      }
+
+      const vehicleMatch = action.match(/^vehicles\/([^/]+)$/);
+      if (vehicleMatch && req.method === "GET") {
+        assertCan(user, "vehicles");
+        sendJson(res, 200, { ok: true, vehicle: getVehicle(store, tenantId, vehicleMatch[1]) });
+        return;
+      }
+
+      if (vehicleMatch && req.method === "PATCH") {
+        assertCan(user, "vehicles");
+        assertApiKeyWriteAllowed(user, req);
+        sendJson(res, 200, { ok: true, vehicle: updateVehicle(store, tenant, vehicleMatch[1], await readBody(req), user) });
+        return;
+      }
+
+      if (vehicleMatch && req.method === "DELETE") {
+        assertCan(user, "vehicles");
+        assertInteractiveUser(user);
+        const vehicleId = vehicleMatch[1];
+        const vehicle = store.list("vehicles", tenantId).find(v => v.id === vehicleId);
+        if (!vehicle) return sendJson(res, 404, { ok: false, error: "Voertuig niet gevonden" });
+        store.remove("vehicles", vehicleId);
+        store.audit({ actor: user.email, tenantId, action: "vehicle_deleted", area: "vehicles", detail: vehicle.name || vehicle.plate || vehicleId });
+        sendJson(res, 200, { ok: true });
+        return;
+      }
+
+      const vehicleMileageMatch = action.match(/^vehicles\/([^/]+)\/mileage$/);
+      if (vehicleMileageMatch && req.method === "POST") {
+        assertCan(user, "vehicles");
+        assertApiKeyWriteAllowed(user, req);
+        sendJson(res, 200, { ok: true, vehicle: logMileage(store, tenant, vehicleMileageMatch[1], await readBody(req), user) });
+        return;
+      }
+
+      const vehicleServiceMatch = action.match(/^vehicles\/([^/]+)\/service$/);
+      if (vehicleServiceMatch && req.method === "POST") {
+        assertCan(user, "vehicles");
+        assertApiKeyWriteAllowed(user, req);
+        sendJson(res, 200, { ok: true, vehicle: scheduleService(store, tenant, vehicleServiceMatch[1], await readBody(req), user) });
+        return;
+      }
+      // ── Einde voertuigen routes ───────────────────────────────────────────────
+
+      // ── Employee "me" routes ──────────────────────────────────────────────────
+      if (action === "me" && req.method === "GET") {
+        sendJson(res, 200, { ok: true, user: getMyProfile(store, user) });
+        return;
+      }
+
+      if (action === "me" && req.method === "PATCH") {
+        assertHumanUser(user);
+        const body = await readBody(req);
+        // Alleen veilige velden bijwerken — geen rol, geen rechten, geen wachtwoord
+        const allowed = ["name", "phone", "language", "notificationPrefs"];
+        const patch = {};
+        allowed.forEach(k => { if (body[k] !== undefined) patch[k] = body[k]; });
+        const updated = store.update("users", user.id, { ...patch, updatedAt: new Date().toISOString() });
+        const { passwordHash, mfaSecret, ...safeUser } = updated;
+        sendJson(res, 200, { ok: true, user: safeUser });
+        return;
+      }
+
+      if (action === "me/dashboard" && req.method === "GET") {
+        sendJson(res, 200, { ok: true, ...getMyDashboard(store, tenantId, user) });
+        return;
+      }
+
+      if (action === "me/planning" && req.method === "GET") {
+        const opts = { from: url.searchParams.get("from"), to: url.searchParams.get("to") };
+        sendJson(res, 200, { ok: true, ...getMyPlanning(store, tenantId, user.id, opts) });
+        return;
+      }
+
+      if (action === "me/clock" && req.method === "GET") {
+        sendJson(res, 200, { ok: true, ...getMyClock(store, tenantId, user.id) });
+        return;
+      }
+
+      if (action === "me/expenses" && req.method === "GET") {
+        const opts = { status: url.searchParams.get("status") };
+        sendJson(res, 200, { ok: true, ...getMyExpenses(store, tenantId, user.id, opts) });
+        return;
+      }
+
+      if (action === "me/leaves" && req.method === "GET") {
+        sendJson(res, 200, { ok: true, ...getMyLeaves(store, tenantId, user.id) });
+        return;
+      }
+
+      if (action === "me/workorders" && req.method === "GET") {
+        const opts = { status: url.searchParams.get("status") };
+        sendJson(res, 200, { ok: true, ...getMyWorkorders(store, tenantId, user.id, opts) });
+        return;
+      }
+
+      // Medewerker werkt eigen werkbon bij (enkel status: in_progress / Voltooid)
+      const meWoMatch = action.match(/^me\/workorders\/([^/]+)$/);
+      if (meWoMatch && req.method === "PATCH") {
+        assertHumanUser(user);
+        const woId = meWoMatch[1];
+        const wo = store.list("workorders", tenantId).find(w => w.id === woId);
+        if (!wo) return sendJson(res, 404, { ok: false, error: "Werkbon niet gevonden" });
+        if (wo.userId !== user.id) return sendJson(res, 403, { ok: false, error: "Niet toegewezen aan jou" });
+        const body = await readBody(req);
+        const allowedStatuses = ["in_progress", "Voltooid"];
+        if (!allowedStatuses.includes(body.status)) {
+          return sendJson(res, 400, { ok: false, error: `Status moet ${allowedStatuses.join(" of ")} zijn` });
+        }
+        const updated = store.update("workorders", woId, {
+          status: body.status,
+          ...(body.status === "in_progress" ? { startedAt: new Date().toISOString() } : {}),
+          ...(body.status === "Voltooid" ? { completedAt: new Date().toISOString() } : {}),
+          updatedAt: new Date().toISOString()
+        });
+        store.audit({ actor: user.email, tenantId, action: "workorder_status_updated", area: "workorders", detail: `${woId} → ${body.status}` });
+        sendJson(res, 200, { ok: true, workorder: updated });
+        return;
+      }
+
+      if (action === "me/messages" && req.method === "GET") {
+        sendJson(res, 200, { ok: true, ...getMyMessages(store, tenantId, user.id) });
+        return;
+      }
+
+      // PATCH /me/messages/:id/read — markeer als gelezen
+      const meMessageReadMatch = action.match(/^me\/messages\/([^/]+)\/read$/);
+      if (meMessageReadMatch && req.method === "PATCH") {
+        const msgId = meMessageReadMatch[1];
+        const msg = (store.data.messages || []).find(m => m.id === msgId && m.tenantId === tenantId);
+        if (!msg) return sendJson(res, 404, { ok: false, error: "Bericht niet gevonden" });
+        const readBy = Array.isArray(msg.readBy) ? msg.readBy : [];
+        if (!readBy.includes(user.id)) {
+          store.update("messages", msgId, { readBy: [...readBy, user.id] });
+        }
+        sendJson(res, 200, { ok: true });
+        return;
+      }
+
+      // me/clock/in en me/clock/out — medewerker klokt zichzelf in/uit
+      if (action === "me/clock/in" && req.method === "POST") {
+        sendJson(res, 201, { ok: true, row: clockIn(store, tenant, { userId: user.id }, user) });
+        return;
+      }
+      if (action === "me/clock/out" && req.method === "POST") {
+        sendJson(res, 200, { ok: true, row: clockOut(store, tenant, { userId: user.id }, user) });
+        return;
+      }
+
+      // me/expenses POST — medewerker dient onkosten in
+      if (action === "me/expenses" && req.method === "POST") {
+        const body = await readBody(req);
+        const row = store.insert("expenses", {
+          id: `exp_${Date.now()}_${require("crypto").randomBytes(4).toString("hex")}`,
+          tenantId,
+          userId: user.id,
+          userName: user.name || user.email,
+          date: body.date || new Date().toISOString().slice(0, 10),
+          amount: Number(body.amount || 0),
+          category: body.category || "overig",
+          description: body.description || "",
+          status: "ingediend",
+          createdAt: new Date().toISOString()
+        });
+        // E-mail naar tenant-admins
+        const adminEmails = store.list("users", tenantId)
+          .filter(u => u.active !== false && ["tenant_admin", "manager"].includes(u.role) && u.email)
+          .map(u => u.email);
+        if (adminEmails.length) {
+          const tpl = expenseSubmittedToAdmin({ employee: user, expense: row, appUrl: config.appUrl });
+          adminEmails.forEach(to => sendMail({ to, ...tpl }));
+        }
+        sendJson(res, 201, { ok: true, row });
+        return;
+      }
+
+      // me/leaves POST — medewerker vraagt verlof aan
+      if (action === "me/leaves" && req.method === "POST") {
+        const body = await readBody(req);
+        const row = store.insert("leaves", {
+          id: `leave_${Date.now()}_${require("crypto").randomBytes(4).toString("hex")}`,
+          tenantId,
+          userId: user.id,
+          userName: user.name || user.email,
+          type: body.type || "vakantie",
+          startDate: body.startDate,
+          endDate: body.endDate,
+          reason: body.reason || "",
+          status: "aangevraagd",
+          createdAt: new Date().toISOString()
+        });
+        // E-mail naar tenant-admins
+        const adminEmails = store.list("users", tenantId)
+          .filter(u => u.active !== false && ["tenant_admin", "manager"].includes(u.role) && u.email)
+          .map(u => u.email);
+        if (adminEmails.length) {
+          const tpl = leaveSubmittedToAdmin({ employee: user, leave: row, appUrl: config.appUrl });
+          adminEmails.forEach(to => sendMail({ to, ...tpl }));
+        }
+        sendJson(res, 201, { ok: true, row });
+        return;
+      }
+
+      // me/leaves/:id DELETE — medewerker trekt eigen aanvraag in
+      const meLeaveItemMatch = action.match(/^me\/leaves\/([^/]+)$/);
+      if (meLeaveItemMatch && req.method === "DELETE") {
+        assertHumanUser(user);
+        const leaveId = meLeaveItemMatch[1];
+        const leave = store.list("leaves", tenantId).find(l => l.id === leaveId);
+        if (!leave) return sendJson(res, 404, { ok: false, error: "Verlofaanvraag niet gevonden" });
+        if (leave.userId !== user.id) return sendJson(res, 403, { ok: false, error: "Geen toegang" });
+        if (leave.status !== "aangevraagd") return sendJson(res, 400, { ok: false, error: "Alleen aanvragen met status 'aangevraagd' kunnen worden ingetrokken" });
+        store.update("leaves", leaveId, { status: "geannuleerd", cancelledAt: new Date().toISOString(), cancelledBy: user.email });
+        store.audit({ actor: user.email, tenantId, action: "leave_cancelled_by_employee", area: "leaves", detail: `${leave.type} ${leave.startDate}→${leave.endDate}` });
+        sendJson(res, 200, { ok: true });
+        return;
+      }
+
+      // me/expenses/:id DELETE — medewerker verwijdert eigen openstaande declaratie
+      const meExpItemMatch = action.match(/^me\/expenses\/([^/]+)$/);
+      if (meExpItemMatch && req.method === "DELETE") {
+        assertHumanUser(user);
+        const expId = meExpItemMatch[1];
+        const exp = store.list("expenses", tenantId).find(e => e.id === expId);
+        if (!exp) return sendJson(res, 404, { ok: false, error: "Declaratie niet gevonden" });
+        if (exp.userId !== user.id) return sendJson(res, 403, { ok: false, error: "Geen toegang" });
+        if (!["aangevraagd", "ingediend", "pending"].includes(exp.status)) return sendJson(res, 400, { ok: false, error: "Alleen openstaande declaraties kunnen worden verwijderd" });
+        store.remove("expenses", expId);
+        store.audit({ actor: user.email, tenantId, action: "expense_deleted_by_employee", area: "expenses", detail: `€${exp.amount} ${exp.category}` });
+        sendJson(res, 200, { ok: true });
+        return;
+      }
+
+      // ── Einde employee me routes ──────────────────────────────────────────────
+
+      // ── Manager team routes ───────────────────────────────────────────────────
+      if (action === "manager/dashboard" && req.method === "GET") {
+        assertCan(user, "planning");
+        sendJson(res, 200, { ok: true, ...getManagerDashboard(store, tenantId, user) });
+        return;
+      }
+
+      if (action === "manager/planning" && req.method === "GET") {
+        assertCan(user, "planning");
+        const opts = { from: url.searchParams.get("from"), to: url.searchParams.get("to") };
+        sendJson(res, 200, { ok: true, shifts: getManagerTeamPlanning(store, tenantId, opts) });
+        return;
+      }
+
+      // ── Planning shift aanmaken ────────────────────────────────────────────────
+      if (action === "planning" && req.method === "POST") {
+        assertCan(user, "planning");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        if (!body.userId) return sendJson(res, 400, { ok: false, error: "Medewerker (userId) is verplicht" });
+        if (!body.date)   return sendJson(res, 400, { ok: false, error: "Datum is verplicht" });
+        if (!body.start)  return sendJson(res, 400, { ok: false, error: "Starttijd is verplicht" });
+        if (!body.end)    return sendJson(res, 400, { ok: false, error: "Eindtijd is verplicht" });
+        const shift = store.insert("shifts", {
+          id: `shift_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+          tenantId,
+          userId: body.userId,
+          date: body.date,
+          start: body.start,
+          end: body.end,
+          venueId: body.venueId || null,
+          note: body.note || "",
+          createdBy: user.id,
+          createdAt: new Date().toISOString()
+        });
+        store.audit({ actor: user.email, tenantId, action: "shift_created", area: "planning", detail: `${body.date} ${body.start}–${body.end}` });
+        sendJson(res, 201, { ok: true, shift });
+        return;
+      }
+
+      // ── Planning shift bijwerken / verwijderen ────────────────────────────────
+      const planningItemMatch = action.match(/^planning\/([^/]+)$/);
+      if (planningItemMatch && req.method === "PATCH") {
+        assertCan(user, "planning");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        const shift = store.update("shifts", planningItemMatch[1], { ...body, updatedAt: new Date().toISOString() });
+        store.audit({ actor: user.email, tenantId, action: "shift_updated", area: "planning", detail: planningItemMatch[1] });
+        sendJson(res, 200, { ok: true, shift });
+        return;
+      }
+      if (planningItemMatch && req.method === "DELETE") {
+        assertCan(user, "planning");
+        assertInteractiveUser(user);
+        store.remove("shifts", planningItemMatch[1]);
+        store.audit({ actor: user.email, tenantId, action: "shift_deleted", area: "planning", detail: planningItemMatch[1] });
+        sendJson(res, 200, { ok: true });
+        return;
+      }
+      // ── Einde manager routes ──────────────────────────────────────────────────
+
+      // ── Klanten (customers) ───────────────────────────────────────────────────
+      if (action === "customers" && req.method === "GET") {
+        assertCan(user, "customers");
+        sendJson(res, 200, { ok: true, customers: store.list("customers", tenantId) });
+        return;
+      }
+      if (action === "customers" && req.method === "POST") {
+        assertCan(user, "customers");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        if (!String(body.name||"").trim()) return sendJson(res, 400, { ok: false, error: "Naam is verplicht" });
+        const row = store.insert("customers", {
+          id: `cust_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+          tenantId, ...body, createdAt: new Date().toISOString()
+        });
+        store.audit({ actor: user.email, tenantId, action: "customer_created", area: "customers", detail: body.name });
+        sendJson(res, 201, { ok: true, customer: row });
+        return;
+      }
+      const customerMatch = action.match(/^customers\/([^/]+)$/);
+      if (customerMatch && req.method === "PATCH") {
+        assertCan(user, "customers");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        const row = store.update("customers", customerMatch[1], { ...body, updatedAt: new Date().toISOString() });
+        store.audit({ actor: user.email, tenantId, action: "customer_updated", area: "customers", detail: customerMatch[1] });
+        sendJson(res, 200, { ok: true, customer: row });
+        return;
+      }
+      if (customerMatch && req.method === "DELETE") {
+        assertCan(user, "customers");
+        assertInteractiveUser(user);
+        store.remove("customers", customerMatch[1]);
+        store.audit({ actor: user.email, tenantId, action: "customer_deleted", area: "customers", detail: customerMatch[1] });
+        sendJson(res, 200, { ok: true });
+        return;
+      }
+
+      // ── Locaties / Venues ─────────────────────────────────────────────────────
+      if (action === "venues" && req.method === "GET") {
+        assertCan(user, "venues");
+        sendJson(res, 200, { ok: true, venues: store.list("venues", tenantId) });
+        return;
+      }
+      if (action === "venues" && req.method === "POST") {
+        assertCan(user, "venues");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        if (!String(body.name||"").trim()) return sendJson(res, 400, { ok: false, error: "Naam is verplicht" });
+        const row = store.insert("venues", {
+          id: `venue_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+          tenantId, ...body, active: body.active !== false, createdAt: new Date().toISOString()
+        });
+        store.audit({ actor: user.email, tenantId, action: "venue_created", area: "venues", detail: body.name });
+        sendJson(res, 201, { ok: true, venue: row });
+        return;
+      }
+      const venueMatch = action.match(/^venues\/([^/]+)$/);
+      if (venueMatch && req.method === "PATCH") {
+        assertCan(user, "venues");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        const row = store.update("venues", venueMatch[1], { ...body, updatedAt: new Date().toISOString() });
+        store.audit({ actor: user.email, tenantId, action: "venue_updated", area: "venues", detail: venueMatch[1] });
+        sendJson(res, 200, { ok: true, venue: row });
+        return;
+      }
+      if (venueMatch && req.method === "DELETE") {
+        assertCan(user, "venues");
+        assertApiKeyWriteAllowed(user, req);
+        const venue = (store.data.venues || []).find(v => v.id === venueMatch[1] && v.tenantId === tenantId);
+        if (!venue) return sendJson(res, 404, { ok: false, error: "Locatie niet gevonden" });
+        store.remove("venues", venueMatch[1]);
+        store.audit({ actor: user.email, tenantId, action: "venue_deleted", area: "venues", detail: venue.name || venueMatch[1] });
+        sendJson(res, 200, { ok: true });
+        return;
+      }
+
+      // ── Medewerkers ophalen ───────────────────────────────────────────────────
+      if (action === "employees" && req.method === "GET") {
+        assertCan(user, "employees");
+        const includeInactive = url.searchParams.get("includeInactive") === "true";
+        const users = store.list("users", tenantId)
+          .filter(u => (includeInactive || u.active !== false) && !["super_admin"].includes(u.role))
+          .map(u => { const { passwordHash, mfaSecret, mfaPendingSecret, recoveryCodes, ...safe } = u; return safe; });
+        sendJson(res, 200, { ok: true, employees: users });
+        return;
+      }
+
+      // ── Medewerker bijwerken ──────────────────────────────────────────────────
+      const employeePatchMatch = action.match(/^employees\/([^/]+)$/);
+      if (employeePatchMatch && req.method === "PATCH") {
+        assertCan(user, "employees");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        const { passwordHash, mfaSecret, mfaPendingSecret, recoveryCodes, newPassword, ...safe } = body;
+        if (newPassword) {
+          assertStrongPassword(newPassword);
+          safe.passwordHash = hashPassword(newPassword);
+          store.audit({ actor: user.email, tenantId, action: "admin_password_reset", area: "users", detail: employeePatchMatch[1] });
+        }
+        const row = store.update("users", employeePatchMatch[1], { ...safe, updatedAt: new Date().toISOString() });
+        const { passwordHash: _ph, mfaSecret: _ms, ...safeRow } = row;
+        sendJson(res, 200, { ok: true, user: safeRow });
+        return;
+      }
+
+      // ── Medewerker aanmaken met rol ───────────────────────────────────────────
+      if (action === "employees" && req.method === "POST") {
+        assertCan(user, "employees");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        const email = String(body.email || "").toLowerCase().trim();
+        if (!email) { sendJson(res, 400, { ok: false, error: "Email is verplicht" }); return; }
+        if (store.getUserByEmail(email)) { sendJson(res, 409, { ok: false, error: "Email bestaat al" }); return; }
+        const role = ["manager", "employee"].includes(body.role) ? body.role : "employee";
+        const permissions = role === "manager" ? MANAGER_PERMISSIONS : EMPLOYEE_PERMISSIONS;
+        const tempPassword = body.password || crypto.randomBytes(12).toString("base64url");
+        const newUser = store.insert("users", {
+          id: `user_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`,
+          tenantId,
+          name: String(body.name || "").trim() || email,
+          email,
+          passwordHash: hashPassword(tempPassword),
+          role,
+          permissions,
+          mfaEnabled: false,
+          mfaEnforced: false,
+          active: true,
+          function: body.function || null,
+          phone: body.phone || null,
+          createdAt: new Date().toISOString()
+        });
+        store.audit({ actor: user.email, tenantId, action: "employee_created", area: "employees", detail: `${email} (${role})` });
+        // Welkomstmail naar nieuwe medewerker (alleen als er een tijdelijk wachtwoord is)
+        const sendWelcome = !body.password; // enkel bij auto-gegenereerd ww
+        if (sendWelcome && email) {
+          const tpl = welcomeEmployee({ employee: newUser, tempPassword, appUrl: config.appUrl });
+          sendMail({ to: email, ...tpl });
+        }
+        sendJson(res, 201, { ok: true, user: { ...newUser, passwordHash: undefined }, tempPassword });
+        return;
+      }
+      // ── Einde medewerker aanmaken ─────────────────────────────────────────────
+
       if (action === "clock/in" && req.method === "POST") {
         assertCan(user, "clockings");
         assertApiKeyWriteAllowed(user, req);
@@ -843,9 +1751,230 @@ http.createServer(async (req, res) => {
       if (expenseApprovalMatch && req.method === "POST") {
         assertCan(user, "expenses");
         assertApiKeyWriteAllowed(user, req);
-        sendJson(res, 200, { ok: true, row: approveExpense(store, tenant, expenseApprovalMatch[1], user) });
+        const expense = approveExpense(store, tenant, expenseApprovalMatch[1], user);
+        // E-mail naar medewerker
+        if (expense?.userId) {
+          const employee = store.getUserById(expense.userId);
+          if (employee?.email) {
+            const tpl = expenseReviewedToEmployee({ employee, expense, reviewer: user, appUrl: config.appUrl });
+            sendMail({ to: employee.email, ...tpl });
+          }
+        }
+        sendJson(res, 200, { ok: true, row: expense });
         return;
       }
+
+      // ── Onkosten lijst (admin/manager) ────────────────────────────────────────
+      if (action === "expenses" && req.method === "GET") {
+        assertCan(user, "expenses");
+        const expenses = store.list("expenses", tenantId)
+          .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+        sendJson(res, 200, { ok: true, expenses });
+        return;
+      }
+
+      // PATCH /expenses/:id — status bijwerken (goedgekeurd/geweigerd)
+      const expPatchMatch = action.match(/^expenses\/([^/]+)$/);
+      if (expPatchMatch && req.method === "PATCH") {
+        assertCan(user, "expenses");
+        const body = await readBody(req);
+        // Whitelist: only allow specific fields to be updated via this route
+        const allowed = ["status", "reviewNote", "reviewedBy", "reviewedAt", "amount", "category", "description", "date"];
+        const patch = Object.fromEntries(Object.entries(body).filter(([k]) => allowed.includes(k)));
+        if (patch.status === "goedgekeurd" || patch.status === "geweigerd") {
+          patch.reviewedBy = user.email;
+          patch.reviewedAt = new Date().toISOString();
+        }
+        const row = store.update("expenses", expPatchMatch[1], { ...patch, updatedAt: new Date().toISOString() });
+        store.audit({ actor: user.email, tenantId, action: `expense_${patch.status||"updated"}`, area: "expenses", detail: `€${row?.amount} — ${row?.category}` });
+        // E-mail naar medewerker bij statuswijziging naar goedgekeurd/geweigerd
+        if (["goedgekeurd", "geweigerd"].includes(row?.status) && row?.userId) {
+          const employee = store.getUserById(row.userId);
+          if (employee?.email) {
+            const tpl = expenseReviewedToEmployee({ employee, expense: row, reviewer: user, appUrl: config.appUrl });
+            sendMail({ to: employee.email, ...tpl });
+          }
+        }
+        sendJson(res, 200, { ok: true, row });
+        return;
+      }
+
+      // ── Clocks lijst (admin/manager) ──────────────────────────────────────────
+      if (action === "clocks" && req.method === "GET") {
+        assertCan(user, "clockings");
+        const fromQ = url.searchParams.get("from");
+        const toQ   = url.searchParams.get("to");
+        let clocks = store.list("clocks", tenantId)
+          .sort((a, b) => (b.clockedIn || "").localeCompare(a.clockedIn || ""));
+        const dateFilter = url.searchParams.get("date");
+        if (dateFilter) clocks = clocks.filter(c => c.clockedIn?.startsWith(dateFilter));
+        if (fromQ) clocks = clocks.filter(c => (c.clockedIn || "").slice(0,10) >= fromQ);
+        if (toQ)   clocks = clocks.filter(c => (c.clockedIn || "").slice(0,10) <= toQ);
+        sendJson(res, 200, { ok: true, clocks });
+        return;
+      }
+
+      // Handmatige klokregistratie aanmaken (admin correctie)
+      if (action === "clocks/manual" && req.method === "POST") {
+        assertCan(user, "clockings");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        const row = store.insert("clocks", {
+          id: `clk_${Date.now()}_${require("crypto").randomBytes(4).toString("hex")}`,
+          tenantId,
+          userId: body.userId,
+          userName: body.userName || body.userId,
+          clockedIn: body.clockedIn,
+          clockedOut: body.clockedOut || null,
+          status: body.clockedOut ? "out" : "in",
+          note: body.note || "Handmatige correctie",
+          manual: true,
+          createdBy: user.email,
+          createdAt: new Date().toISOString()
+        });
+        store.audit({ actor: user.email, tenantId, action: "clock_manual_created", area: "clockings",
+          detail: `${body.userName||body.userId} ${body.clockedIn?.slice(0,10)}` });
+        sendJson(res, 201, { ok: true, row });
+        return;
+      }
+
+      // Klokregistratie bijwerken (correctie)
+      const clockItemMatch = action.match(/^clocks\/([^/]+)$/);
+      if (clockItemMatch && req.method === "PATCH") {
+        assertCan(user, "clockings");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        const allowed = ["clockedIn", "clockedOut", "status", "note"];
+        const patch = Object.fromEntries(Object.entries(body).filter(([k]) => allowed.includes(k)));
+        const updated = store.update("clocks", clockItemMatch[1], { ...patch, updatedAt: new Date().toISOString() });
+        store.audit({ actor: user.email, tenantId, action: "clock_corrected", area: "clockings", detail: clockItemMatch[1] });
+        sendJson(res, 200, { ok: true, row: updated });
+        return;
+      }
+
+      // ── Berichten lijst (admin/manager) ──────────────────────────────────────
+      if (action === "messages" && req.method === "GET") {
+        assertCan(user, "messages");
+        const messages = store.list("messages", tenantId)
+          .sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""))
+          .slice(0, 100);
+        sendJson(res, 200, { ok: true, messages });
+        return;
+      }
+
+      // POST /messages — nieuw bericht versturen
+      if (action === "messages" && req.method === "POST") {
+        assertCan(user, "messages");
+        const body = await readBody(req);
+        // recipientRole: stuur aan iedereen met die rol in de tenant
+        let toRole = body.toRole || body.recipientRole || null;
+        let toName = null;
+        if (toRole) {
+          const targetUsers = store.list("users", tenantId).filter(u => u.role === toRole && u.active !== false);
+          toName = toRole === "tenant_admin" ? "Admin" : toRole === "manager" ? "Manager(s)" : toRole;
+          body.recipientId = null; // broadcast by role, not single user
+        }
+        const row = store.insert("messages", {
+          id: `msg_${Date.now()}_${require("crypto").randomBytes(4).toString("hex")}`,
+          tenantId,
+          senderId: user.id,
+          senderName: user.name || user.email,
+          recipientId: body.recipientId || null,
+          toRole: toRole || null,
+          toName: toName || null,
+          subject: body.subject || "",
+          body: body.body || "",
+          readBy: [],
+          createdAt: new Date().toISOString()
+        });
+        sendJson(res, 201, { ok: true, row });
+        return;
+      }
+
+      // DELETE /messages/:id — bericht verwijderen (admin/manager)
+      const msgDeleteMatch = action.match(/^messages\/([^/]+)$/);
+      if (msgDeleteMatch && req.method === "DELETE") {
+        assertCan(user, "messages");
+        assertInteractiveUser(user);
+        const msgId = msgDeleteMatch[1];
+        const msg = store.list("messages", tenantId).find(m => m.id === msgId);
+        if (!msg) return sendJson(res, 404, { ok: false, error: "Bericht niet gevonden" });
+        store.remove("messages", msgId);
+        store.audit({ actor: user.email, tenantId, action: "message_deleted", area: "messages", detail: msgId });
+        sendJson(res, 200, { ok: true });
+        return;
+      }
+
+      // ── Werkbonnen lijst (admin/manager) ─────────────────────────────────────
+      if (action === "workorders" && req.method === "GET") {
+        assertCan(user, "workorders");
+        const workorders = store.list("workorders", tenantId)
+          .sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+        sendJson(res, 200, { ok: true, workorders });
+        return;
+      }
+
+      if (action === "workorders" && req.method === "POST") {
+        assertCan(user, "workorders");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        if (!String(body.title||"").trim()) return sendJson(res, 400, { ok: false, error: "Titel is verplicht" });
+        const row = store.insert("workorders", {
+          id: `wo_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+          tenantId, ...body,
+          status: body.status || "open",
+          createdBy: user.id,
+          createdAt: new Date().toISOString()
+        });
+        store.audit({ actor: user.email, tenantId, action: "workorder_created", area: "workorders", detail: body.title });
+        sendJson(res, 201, { ok: true, workorder: row });
+        return;
+      }
+
+      const workorderItemMatch = action.match(/^workorders\/([^/]+)$/);
+      if (workorderItemMatch && req.method === "PATCH") {
+        assertCan(user, "workorders");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        const row = store.update("workorders", workorderItemMatch[1], { ...body, updatedAt: new Date().toISOString() });
+        store.audit({ actor: user.email, tenantId, action: "workorder_updated", area: "workorders", detail: workorderItemMatch[1] });
+        sendJson(res, 200, { ok: true, workorder: row });
+        return;
+      }
+      if (workorderItemMatch && req.method === "DELETE") {
+        assertCan(user, "workorders");
+        assertApiKeyWriteAllowed(user, req);
+        const wo = (store.data.workorders || []).find(w => w.id === workorderItemMatch[1] && w.tenantId === tenantId);
+        if (!wo) return sendJson(res, 404, { ok: false, error: "Werkbon niet gevonden" });
+        store.remove("workorders", workorderItemMatch[1]);
+        store.audit({ actor: user.email, tenantId, action: "workorder_deleted", area: "workorders", detail: wo.title || workorderItemMatch[1] });
+        sendJson(res, 200, { ok: true });
+        return;
+      }
+
+      // ── Bedrijfsinstellingen bijwerken ────────────────────────────────────────
+      if (action === "settings" && req.method === "GET") {
+        assertCan(user, "settings");
+        const t = store.data.tenants.find(x => x.id === tenantId);
+        if (!t) return sendJson(res, 404, { ok: false, error: "Tenant niet gevonden" });
+        const { billingOps, supportAccess, ...safeTenant } = t;
+        sendJson(res, 200, { ok: true, tenant: safeTenant });
+        return;
+      }
+
+      if (action === "settings" && req.method === "PATCH") {
+        assertCan(user, "settings");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        const allowed = ["name", "vatNumber", "address", "contactEmail", "phone", "invoiceProfile"];
+        const patch = {};
+        allowed.forEach(k => { if (body[k] !== undefined) patch[k] = body[k]; });
+        const updated = store.updateTenant(tenantId, patch);
+        store.audit({ actor: user.email, tenantId, action: "settings_updated", area: "settings", detail: JSON.stringify(patch) });
+        sendJson(res, 200, { ok: true, tenant: updated });
+        return;
+      }
+      // ── Einde instellingen ────────────────────────────────────────────────────
     }
 
     if (url.pathname === "/api/audit") {
@@ -858,6 +1987,8 @@ http.createServer(async (req, res) => {
         action: url.searchParams.get("action"),
         actor: url.searchParams.get("actor"),
         since: url.searchParams.get("since"),
+        from: url.searchParams.get("from"),
+        to: url.searchParams.get("to"),
         limit: url.searchParams.get("limit")
       });
       if (url.searchParams.get("format") === "csv") {
@@ -901,4 +2032,33 @@ http.createServer(async (req, res) => {
   }
 }).listen(config.port, () => {
   console.log(`WorkFlow Pro Fullstack draait op http://localhost:${config.port}`);
+  console.log(`  Omgeving  : ${config.isProduction ? "production" : "development"}`);
+  console.log(`  Opslag    : ${config.storageAdapter}`);
+  console.log(`  Versie    : ${config.appVersion} (${config.commitSha})`);
+  console.log(`  MFA-eis   : ${process.env.REQUIRE_ADMIN_MFA === "false" ? "uitgeschakeld (dev)" : "verplicht voor admins"}`);
+});
+
+// ── Graceful shutdown ─────────────────────────────────────────
+// PaaS-platforms (Render, Railway, Heroku) sturen SIGTERM vóór een deploy/restart.
+// We geven lopende requests maximaal 10 s om af te ronden vóór we stoppen.
+function gracefulShutdown(signal) {
+  console.log(`[shutdown] ${signal} ontvangen — server sluit af…`);
+  // Geef lopende requests 10 s
+  setTimeout(() => {
+    console.log("[shutdown] Timeout bereikt — forceer stop");
+    process.exit(0);
+  }, 10_000).unref();
+}
+
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.on("SIGINT",  () => gracefulShutdown("SIGINT"));
+
+process.on("uncaughtException", err => {
+  console.error("[uncaughtException]", err.message, err.stack);
+  // Niet crashen bij een onverwachte fout in een request-handler;
+  // de error is al gelogd via handleError(). Alleen crashen bij echte fatale fouten.
+});
+
+process.on("unhandledRejection", (reason) => {
+  console.error("[unhandledRejection]", reason);
 });

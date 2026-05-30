@@ -1,13 +1,14 @@
 # WorkFlow Pro Roadmap Checklist
 
-Generated: 2026-04-30T13:55:01.099Z
+Generated: 2026-05-09T07:15:38.475Z
 Tenant: ABMS Consultancy BV (t_demo)
 
 ## Gate Summary
 
-- Production readiness: 55% (6 P0, 3 P1 open)
+- Production readiness: 59% (6 P0, 3 P1 open)
 - Pilot readiness: 71% (2 KPI's open)
 - Commercial launch readiness: 17% (5 checks open)
+- Customer start readiness: OK (Dagelijkse flow klaar)
 
 ## Open P0 Blockers
 
@@ -30,3 +31,7 @@ Tenant: ABMS Consultancy BV (t_demo)
 - [ ] Betalende klanten: Converteer pilots of voorstellen naar minstens 3 betalende klanten.
 - [ ] Activation rate: Verhoog activatie door onboardingstappen, eerste planning en werkbon binnen dag 1 af te ronden.
 - [ ] Trial-to-paid: Werk pricing, objections en opvolging uit om trial-to-paid boven 20% te krijgen.
+
+## Customer Start Actions
+
+- [x] Dagelijkse klantflow klaar.

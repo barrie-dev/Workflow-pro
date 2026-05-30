@@ -1,5 +1,7 @@
 const { assertCan, assertTenant, assertSuperAdmin } = require("../lib/auth");
-const { encryptSecret, hashPassword } = require("../lib/security");
+const { encryptSecret, hashPassword, assertStrongPassword } = require("../lib/security");
+const { applyExpenseDefaults } = require("./expense-rules");
+const { validatePlanningRules } = require("./planning-rules");
 const { moduleByKey } = require("./registry");
 
 function actorTenant(user, explicitTenantId) {
@@ -19,6 +21,7 @@ function publicRow(key, row) {
 function normalizePayload(key, payload) {
   const next = { ...payload };
   if (key === "users" && payload.password) {
+    assertStrongPassword(payload.password);
     next.passwordHash = hashPassword(payload.password);
     delete next.password;
   }
@@ -112,6 +115,7 @@ function createModuleRow(store, user, key, tenantId, payload) {
   const scopedTenant = mod.tenantScoped ? actorTenant(user, tenantId || normalized.tenantId) : normalized.tenantId || null;
   if (mod.tenantScoped && !scopedTenant) badRequest("Tenant is required");
   if (mod.tenantScoped) assertTenant(user, scopedTenant);
+  if (key === "planning") validatePlanningRules(store, scopedTenant, normalized);
   const row = {
     id: normalized.id || `${mod.collection}_${Date.now()}_${Math.random().toString(16).slice(2)}`,
     ...normalized,
@@ -137,6 +141,7 @@ function createModuleRow(store, user, key, tenantId, payload) {
     row.createdAt = row.createdAt || new Date().toISOString();
     row.updatedAt = row.updatedAt || row.createdAt;
   }
+  if (key === "expenses") Object.assign(row, applyExpenseDefaults(row));
   store.insert(mod.collection, row);
   store.audit({ actor: user.email, tenantId: scopedTenant, action: "create", area: mod.key, detail: row.id });
   return publicRow(key, row);
@@ -162,11 +167,13 @@ function updateModuleRow(store, user, key, id, payload) {
   validatePayload(key, patch, existing);
   delete patch.id;
   if (mod.tenantScoped) delete patch.tenantId;
+  if (key === "planning") validatePlanningRules(store, existing.tenantId, patch, existing);
   if (key === "sales") {
     patch.updatedAt = new Date().toISOString();
     if (patch.seats != null) patch.seats = Number(patch.seats || 0);
   }
   if (key === "partners") patch.updatedAt = new Date().toISOString();
+  if (key === "expenses") Object.assign(patch, applyExpenseDefaults(patch, existing));
   const row = store.update(mod.collection, id, patch);
   store.audit({ actor: user.email, tenantId: existing.tenantId, action: "update", area: mod.key, detail: id });
   return publicRow(key, row);

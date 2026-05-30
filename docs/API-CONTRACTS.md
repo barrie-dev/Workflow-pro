@@ -8,7 +8,7 @@
 Demo credentials:
 
 - `admin@demobouw.be`
-- `admin123`
+- Gebruik een tenant-admin met een sterk wachtwoord en geactiveerde MFA.
 
 ## Public status
 
@@ -37,14 +37,21 @@ Module keys staan in `src/modules/registry.js`.
 - `POST /api/tenants/:tenantId/kbo/apply`
 - `GET /api/tenants/:tenantId/golden-path`
 - `POST /api/tenants/:tenantId/golden-path/demo`
+- `GET /api/tenants/:tenantId/customer-start`
 - `GET /api/tenants/:tenantId/mobile/today`
 - `POST /api/tenants/:tenantId/mobile/sync`
 - `GET /api/tenants/:tenantId/suggestions/home`
+- `POST /api/tenants/:tenantId/suggestions/home/events`
 - `GET /api/tenants/:tenantId/go-live`
+- `GET /api/tenants/:tenantId/roadmap`
 - `GET /api/tenants/:tenantId/reports`
 - `POST /api/tenants/:tenantId/reports/generate`
 
-`/suggestions/home` geeft de volgende beste actie voor de huidige gebruiker terug. Admins kunnen productie- of pilotadvies krijgen; veldgebruikers krijgen operationele suggesties zonder production-configdetails.
+`/suggestions/home` geeft de volgende beste actie voor de huidige gebruiker terug, inclusief `confidence`, `reasons` en compacte `metrics` zodat de UI kan tonen waarom de suggestie verschijnt. Admins kunnen productie- of pilotadvies krijgen; veldgebruikers krijgen operationele suggesties zonder production-configdetails.
+`/customer-start` geeft een klantgerichte activatieflow terug met drie blokken: bedrijf klaarzetten, eerste werkdag testen en live-afspraken.
+`/suggestions/home/events` logt tenant-scoped interacties met de suggestie in het auditspoor, zodat AI-advies meetbaar wordt zonder extra zware datamodellen.
+`/roadmap` geeft de vijf roadmapfases terug met score, go/no-go en open acties. De status wordt afgeleid uit production readiness, golden path, pilot KPI's en commercial launch checks.
+Dezelfde gate is beschikbaar als release-preflight via `npm run preflight:roadmap` en `npm run preflight:roadmap:json`. Standaard blokkeert die op de huidige fase; gebruik `-- --all-phases` om elke latere no-go fase ook als blokkering te behandelen.
 
 ## Billing
 

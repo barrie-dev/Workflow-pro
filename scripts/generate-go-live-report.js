@@ -1,9 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const { Store } = require("../src/lib/store");
-const { productionReadiness } = require("../src/modules/production");
-const { pilotKpis } = require("../src/modules/pilot");
-const { salesLaunchReadiness } = require("../src/modules/sales");
+const { goLiveReadiness } = require("../src/modules/go-live");
 
 function argValue(name, fallback) {
   const index = process.argv.indexOf(name);
@@ -13,27 +11,6 @@ function argValue(name, fallback) {
 
 function safeName(value) {
   return String(value || "report").replace(/[^a-zA-Z0-9_-]/g, "-");
-}
-
-function buildReport(store, tenant, options) {
-  const production = productionReadiness(store);
-  const openP0 = production.checks.filter(row => !row.ok && row.priority === "P0");
-  const openP1 = production.checks.filter(row => !row.ok && row.priority === "P1");
-  const pilot = pilotKpis(store, tenant.id);
-  const openPilot = pilot.kpis.filter(row => !row.ok);
-  const sales = salesLaunchReadiness(store, tenant.id);
-  const productionOk = openP0.length === 0 && (!options.strictProduction || openP1.length === 0);
-  const pilotOk = pilot.score >= options.minPilotScore && openPilot.length === 0;
-  return {
-    ok: productionOk && pilotOk && sales.ok,
-    tenant: { id: tenant.id, name: tenant.name, plan: tenant.plan, status: tenant.status },
-    generatedAt: new Date().toISOString(),
-    gates: {
-      production: { ok: productionOk, strict: options.strictProduction, score: production.score, p0: openP0.length, p1: openP1.length, openP0, openP1 },
-      pilot: { ok: pilotOk, minScore: options.minPilotScore, score: pilot.score, openCount: openPilot.length, openKpis: openPilot },
-      sales: { ok: sales.ok, score: sales.score, openCount: sales.openChecks.length, openChecks: sales.openChecks }
-    }
-  };
 }
 
 function markdownReport(report) {
@@ -48,6 +25,7 @@ function markdownReport(report) {
     `- Production: ${report.gates.production.score}% (P0 ${report.gates.production.p0}, P1 ${report.gates.production.p1})`,
     `- Pilot: ${report.gates.pilot.score}% (${report.gates.pilot.openCount} open KPI's)`,
     `- Sales: ${report.gates.sales.score}% (${report.gates.sales.openCount} open checks)`,
+    `- Customer start: ${report.gates.customerStart.ok ? "OK" : "OPEN"} (${report.gates.customerStart.label})`,
     "",
     "## Production P0 Blockers",
     "",
@@ -66,6 +44,12 @@ function markdownReport(report) {
     ...(report.gates.sales.openChecks.length
       ? report.gates.sales.openChecks.map(row => `- ${row.label}: ${row.action}`)
       : ["- Geen open sales acties."]),
+    "",
+    "## Customer Start",
+    "",
+    ...(report.gates.customerStart.blockers.length
+      ? report.gates.customerStart.blockers.map(row => `- ${row}`)
+      : ["- Dagelijkse klantflow klaar."]),
     ""
   ].join("\n");
 }
@@ -86,7 +70,7 @@ if (!["json", "md", "both"].includes(format)) {
   process.exit(1);
 }
 
-const report = buildReport(store, tenant, { minPilotScore, strictProduction });
+const report = goLiveReadiness(store, tenant, { minPilotScore, strictProduction });
 const defaultPath = path.join("data", "reports", `${safeName(tenantId)}-go-live-${safeName(report.generatedAt)}.json`);
 const outputPath = argValue("--out", defaultPath);
 const outputBase = path.resolve(outputPath).replace(/\.(json|md)$/i, "");
@@ -113,5 +97,6 @@ console.log(JSON.stringify({
   goLiveReady: report.ok,
   productionP0: report.gates.production.p0,
   pilotOpen: report.gates.pilot.openCount,
-  salesOpen: report.gates.sales.openCount
+  salesOpen: report.gates.sales.openCount,
+  customerStartOk: report.gates.customerStart.ok
 }, null, 2));

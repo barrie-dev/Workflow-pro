@@ -1,0 +1,1846 @@
+{
+  "schemaVersion": 6,
+  "tenants": [
+    {
+      "invoiceProfile": {
+        "vat": "BE0897225572",
+        "companyNumber": "0897225572",
+        "street": "Stationsstraat 44",
+        "postalCode": "2800",
+        "city": "Mechelen",
+        "country": "Belgie",
+        "kboSyncedAt": "2026-04-29T19:44:15.530Z"
+      },
+      "onboarding": {
+        "company": true,
+        "manualSteps": {
+          "pilot_agreement": {
+            "done": false,
+            "completedAt": null,
+            "completedBy": null
+          }
+        }
+      },
+      "billingOps": {
+        "invoiceHistory": [
+          {
+            "id": "INV-2026-KACDHY",
+            "at": "2026-04-28",
+            "dueDate": "2026-05-12",
+            "line": "Eerste jaarlicentie WorkFlow Pro",
+            "gross": 12,
+            "discountPct": 0,
+            "net": 12,
+            "status": "draft",
+            "peppolStatus": "failed",
+            "enterpriseContract": false,
+            "peppolProvider": "mock",
+            "peppolReference": "",
+            "peppolError": "Peppol ID ontbreekt op het factuurprofiel",
+            "peppolErrorCode": "missing_peppol_id",
+            "sentAt": null,
+            "peppolAttempts": 1
+          },
+          {
+            "id": "INV-2026-NO992G",
+            "at": "2026-04-28",
+            "dueDate": "2026-05-12",
+            "line": "Eerste jaarlicentie WorkFlow Pro",
+            "gross": 12,
+            "discountPct": 0,
+            "net": 12,
+            "status": "draft",
+            "peppolStatus": "missing_peppol",
+            "enterpriseContract": false
+          },
+          {
+            "id": "INV-2026-5BU62A",
+            "at": "2026-04-28",
+            "dueDate": "2026-05-12",
+            "line": "Eerste jaarlicentie WorkFlow Pro",
+            "gross": 12,
+            "discountPct": 0,
+            "net": 12,
+            "status": "draft",
+            "peppolStatus": "missing_peppol",
+            "enterpriseContract": false
+          },
+          {
+            "id": "INV-2026-QLO0D8",
+            "at": "2026-04-28",
+            "dueDate": "2026-05-12",
+            "line": "Eerste jaarlicentie WorkFlow Pro",
+            "gross": 12,
+            "discountPct": 0,
+            "net": 12,
+            "status": "draft",
+            "peppolStatus": "missing_peppol",
+            "enterpriseContract": false
+          },
+          {
+            "id": "INV-2026-HY5JIL",
+            "at": "2026-04-28",
+            "dueDate": "2026-05-12",
+            "line": "Eerste jaarlicentie WorkFlow Pro",
+            "gross": 12,
+            "discountPct": 0,
+            "net": 12,
+            "status": "draft",
+            "peppolStatus": "missing_peppol",
+            "enterpriseContract": false
+          },
+          {
+            "id": "INV-2026-Q33Z8L",
+            "at": "2026-04-28",
+            "dueDate": "2026-05-12",
+            "line": "WorkFlow Pro jaarlicentie",
+            "gross": 1200,
+            "discountPct": 0,
+            "net": 1200,
+            "status": "draft",
+            "peppolStatus": "missing_peppol",
+            "enterpriseContract": false
+          }
+        ],
+        "paymentMethodTokenized": true,
+        "paymentMethodRef": "pm_card_visa_mock",
+        "autoCharge": true,
+        "peppolEvents": [
+          {
+            "id": "peppol_1778254808284_2aab816f6664a8",
+            "invoiceId": "INV-2026-KACDHY",
+            "at": "2026-05-08T15:40:08.284Z",
+            "by": "admin@demobouw.be",
+            "ok": false,
+            "provider": "mock",
+            "status": "failed",
+            "errorCode": "missing_peppol_id",
+            "message": "Peppol ID ontbreekt op het factuurprofiel"
+          }
+        ]
+      },
+      "supportAccess": {
+        "enabled": false
+      },
+      "id": "t_demo",
+      "name": "ABMS Consultancy BV",
+      "plan": "business",
+      "status": "trial",
+      "billingEmail": "finance@demobouw.be",
+      "paymentMethod": "Card token opgeslagen",
+      "billingStatus": "paid"
+    }
+  ],
+  "users": [
+    {
+      "mfaEnabled": false,
+      "mfaEnforced": false,
+      "lastLoginAt": "2026-05-12T17:45:04.261Z",
+      "failedLoginCount": 0,
+      "lockedUntil": null,
+      "id": "u_super",
+      "tenantId": null,
+      "name": "Super Admin",
+      "email": "super@workflowpro.be",
+      "passwordHash": "21e88d6f8b61e6a7edf963430a7c3591:f92f9a55908e7e103e0cae084e00f70d9dc91cfe42dd8e199af9cd7895b681f3",
+      "role": "super_admin",
+      "permissions": [
+        "*"
+      ],
+      "active": true
+    },
+    {
+      "mfaEnabled": false,
+      "mfaEnforced": false,
+      "lastLoginAt": "2026-05-12T17:50:51.896Z",
+      "failedLoginCount": 0,
+      "lockedUntil": null,
+      "id": "u_admin",
+      "tenantId": "t_demo",
+      "name": "Tenant Admin",
+      "email": "admin@demobouw.be",
+      "passwordHash": "51741dcf42335fac39307669e1a1e79d:63bc2207cd4fc99479c7131636707cb9522677d2a192cde4a8f693045af3fba3",
+      "role": "tenant_admin",
+      "permissions": [
+        "tenants",
+        "employees",
+        "planning",
+        "workorders",
+        "clockings",
+        "billing",
+        "settings",
+        "audit",
+        "venues",
+        "customers",
+        "expenses",
+        "messages",
+        "alerts",
+        "integrations",
+        "stock",
+        "vehicles",
+        "leaves"
+      ],
+      "active": true,
+      "updatedAt": "2026-05-12T17:44:38.729Z"
+    },
+    {
+      "mfaEnabled": false,
+      "mfaEnforced": false,
+      "lastLoginAt": null,
+      "failedLoginCount": 0,
+      "lockedUntil": null,
+      "id": "user_1777360515127",
+      "tenantId": "t_demo",
+      "name": "Eerste medewerker",
+      "email": "medewerker@demobouwgroepnv.be",
+      "role": "employee",
+      "permissions": [
+        "workorders",
+        "expenses",
+        "leaves",
+        "messages"
+      ],
+      "active": true
+    },
+    {
+      "mfaEnabled": false,
+      "mfaEnforced": false,
+      "lastLoginAt": null,
+      "failedLoginCount": 0,
+      "lockedUntil": null,
+      "id": "user_1777361523661",
+      "tenantId": "t_demo",
+      "name": "Eerste medewerker",
+      "email": "medewerker@demobouwgroepnv.be",
+      "role": "employee",
+      "permissions": [
+        "workorders",
+        "expenses",
+        "leaves",
+        "messages"
+      ],
+      "active": true
+    },
+    {
+      "mfaEnabled": false,
+      "mfaEnforced": false,
+      "lastLoginAt": null,
+      "failedLoginCount": 0,
+      "lockedUntil": null,
+      "id": "user_1777361525543",
+      "tenantId": "t_demo",
+      "name": "Eerste medewerker",
+      "email": "medewerker@demobouwgroepnv.be",
+      "role": "employee",
+      "permissions": [
+        "workorders",
+        "expenses",
+        "leaves",
+        "messages"
+      ],
+      "active": true
+    },
+    {
+      "mfaEnabled": false,
+      "mfaEnforced": false,
+      "lastLoginAt": null,
+      "failedLoginCount": 0,
+      "lockedUntil": null,
+      "id": "user_1777390883723",
+      "tenantId": "t_demo",
+      "name": "Eerste medewerker",
+      "email": "medewerker@demobouwgroepnv.be",
+      "role": "employee",
+      "permissions": [
+        "workorders",
+        "expenses",
+        "leaves",
+        "messages"
+      ],
+      "active": true
+    },
+    {
+      "mfaEnabled": false,
+      "mfaEnforced": false,
+      "lastLoginAt": null,
+      "failedLoginCount": 0,
+      "lockedUntil": null,
+      "id": "user_1777390984219",
+      "tenantId": "t_demo",
+      "name": "Eerste medewerker",
+      "email": "medewerker@demobouwgroepnv.be",
+      "role": "employee",
+      "permissions": [
+        "workorders",
+        "expenses",
+        "leaves",
+        "messages"
+      ],
+      "active": true
+    }
+  ],
+  "roles": [
+    {
+      "id": "role_admin",
+      "tenantId": "t_demo",
+      "name": "Admin",
+      "permissions": [
+        "*"
+      ],
+      "locked": true
+    }
+  ],
+  "venues": [
+    {
+      "id": "venue_1777360515125",
+      "tenantId": "t_demo",
+      "name": "Eerste werf",
+      "code": "EW",
+      "address": "Nog aan te vullen",
+      "active": true
+    },
+    {
+      "id": "venue_1777361523660",
+      "tenantId": "t_demo",
+      "name": "Eerste werf",
+      "code": "EW",
+      "address": "Nog aan te vullen",
+      "active": true
+    },
+    {
+      "id": "venue_1777361525541",
+      "tenantId": "t_demo",
+      "name": "Eerste werf",
+      "code": "EW",
+      "address": "Nog aan te vullen",
+      "active": true
+    },
+    {
+      "id": "venue_1777390883719",
+      "tenantId": "t_demo",
+      "name": "Eerste werf",
+      "code": "EW",
+      "address": "Nog aan te vullen",
+      "active": true
+    },
+    {
+      "id": "venue_1777390984218",
+      "tenantId": "t_demo",
+      "name": "Eerste werf",
+      "code": "EW",
+      "address": "Nog aan te vullen",
+      "active": true
+    }
+  ],
+  "customers": [],
+  "shifts": [
+    {
+      "id": "shift_1777360515128",
+      "tenantId": "t_demo",
+      "userId": "user_1777360515127",
+      "venueId": "venue_1777360515125",
+      "date": "2026-04-28",
+      "start": "08:00",
+      "end": "16:30",
+      "project": "Eerste klantopdracht",
+      "client": "Demo klant",
+      "billable": true
+    },
+    {
+      "id": "shift_1777361523662",
+      "tenantId": "t_demo",
+      "userId": "user_1777361523661",
+      "venueId": "venue_1777361523660",
+      "date": "2026-04-28",
+      "start": "08:00",
+      "end": "16:30",
+      "project": "Eerste klantopdracht",
+      "client": "Demo klant",
+      "billable": true
+    },
+    {
+      "id": "shift_1777361525544",
+      "tenantId": "t_demo",
+      "userId": "user_1777361525543",
+      "venueId": "venue_1777361525541",
+      "date": "2026-04-28",
+      "start": "08:00",
+      "end": "16:30",
+      "project": "Eerste klantopdracht",
+      "client": "Demo klant",
+      "billable": true
+    },
+    {
+      "id": "shift_1777390883729",
+      "tenantId": "t_demo",
+      "userId": "user_1777390883723",
+      "venueId": "venue_1777390883719",
+      "date": "2026-04-28",
+      "start": "08:00",
+      "end": "16:30",
+      "project": "Eerste klantopdracht",
+      "client": "Demo klant",
+      "billable": true
+    },
+    {
+      "id": "shift_1777390984220",
+      "tenantId": "t_demo",
+      "userId": "user_1777390984219",
+      "venueId": "venue_1777390984218",
+      "date": "2026-04-28",
+      "start": "08:00",
+      "end": "16:30",
+      "project": "Eerste klantopdracht",
+      "client": "Demo klant",
+      "billable": true
+    }
+  ],
+  "workorders": [
+    {
+      "id": "wo_1777360515142",
+      "tenantId": "t_demo",
+      "userId": "user_1777360515127",
+      "venueId": "venue_1777360515125",
+      "title": "Eerste werkbon",
+      "client": "Demo klant",
+      "status": "Bezig",
+      "checklist": [
+        {
+          "label": "Werk controleren",
+          "done": false
+        }
+      ]
+    },
+    {
+      "id": "wo_1777361523674",
+      "tenantId": "t_demo",
+      "userId": "user_1777361523661",
+      "venueId": "venue_1777361523660",
+      "title": "Eerste werkbon",
+      "client": "Demo klant",
+      "status": "Bezig",
+      "checklist": [
+        {
+          "label": "Werk controleren",
+          "done": false
+        }
+      ]
+    },
+    {
+      "id": "wo_1777361525555",
+      "tenantId": "t_demo",
+      "userId": "user_1777361525543",
+      "venueId": "venue_1777361525541",
+      "title": "Eerste werkbon",
+      "client": "Demo klant",
+      "status": "Bezig",
+      "checklist": [
+        {
+          "label": "Werk controleren",
+          "done": false
+        }
+      ]
+    },
+    {
+      "id": "wo_1777390883749",
+      "tenantId": "t_demo",
+      "userId": "user_1777390883723",
+      "venueId": "venue_1777390883719",
+      "title": "Eerste werkbon",
+      "client": "Demo klant",
+      "status": "Bezig",
+      "checklist": [
+        {
+          "label": "Werk controleren",
+          "done": false
+        }
+      ]
+    },
+    {
+      "id": "wo_1777390984234",
+      "tenantId": "t_demo",
+      "userId": "user_1777390984219",
+      "venueId": "venue_1777390984218",
+      "title": "Eerste werkbon",
+      "client": "Demo klant",
+      "status": "Bezig",
+      "checklist": [
+        {
+          "label": "Werk controleren",
+          "done": false
+        }
+      ]
+    }
+  ],
+  "clocks": [
+    {
+      "id": "clock_1777360515156",
+      "tenantId": "t_demo",
+      "userId": "user_1777360515127",
+      "venueId": "venue_1777360515125",
+      "date": "2026-04-28",
+      "clockIn": "08:00",
+      "clockOut": "16:30"
+    },
+    {
+      "id": "clock_1777361523684",
+      "tenantId": "t_demo",
+      "userId": "user_1777361523661",
+      "venueId": "venue_1777361523660",
+      "date": "2026-04-28",
+      "clockIn": "08:00",
+      "clockOut": "16:30"
+    },
+    {
+      "id": "clock_1777361525566",
+      "tenantId": "t_demo",
+      "userId": "user_1777361525543",
+      "venueId": "venue_1777361525541",
+      "date": "2026-04-28",
+      "clockIn": "08:00",
+      "clockOut": "16:30"
+    },
+    {
+      "id": "clock_1777390883762",
+      "tenantId": "t_demo",
+      "userId": "user_1777390883723",
+      "venueId": "venue_1777390883719",
+      "date": "2026-04-28",
+      "clockIn": "08:00",
+      "clockOut": "16:30"
+    },
+    {
+      "id": "clock_1777390984249",
+      "tenantId": "t_demo",
+      "userId": "user_1777390984219",
+      "venueId": "venue_1777390984218",
+      "date": "2026-04-28",
+      "clockIn": "08:00",
+      "clockOut": "16:30"
+    }
+  ],
+  "expenses": [],
+  "stock": [],
+  "vehicles": [],
+  "leaves": [],
+  "messages": [],
+  "notifications": [
+    {
+      "id": "notification_1778317405012_31e4a0bb7a6d3",
+      "tenantId": "t_demo",
+      "type": "workorder",
+      "channel": "in_app",
+      "audience": "user_1777360515127",
+      "title": "Open werkbon",
+      "body": "Eerste werkbon",
+      "status": "queued",
+      "priority": "high",
+      "scheduledFor": "2026-05-09T09:03:25.012Z",
+      "sourceRef": null,
+      "createdBy": "admin@demobouw.be",
+      "createdAt": "2026-05-09T09:03:25.012Z",
+      "readAt": null
+    },
+    {
+      "id": "notification_1778317405016_4330891727be58",
+      "tenantId": "t_demo",
+      "type": "workorder",
+      "channel": "in_app",
+      "audience": "user_1777361523661",
+      "title": "Open werkbon",
+      "body": "Eerste werkbon",
+      "status": "queued",
+      "priority": "high",
+      "scheduledFor": "2026-05-09T09:03:25.016Z",
+      "sourceRef": null,
+      "createdBy": "admin@demobouw.be",
+      "createdAt": "2026-05-09T09:03:25.016Z",
+      "readAt": null
+    },
+    {
+      "id": "notification_1778317405036_d478c55dd7301",
+      "tenantId": "t_demo",
+      "type": "workorder",
+      "channel": "in_app",
+      "audience": "user_1777361525543",
+      "title": "Open werkbon",
+      "body": "Eerste werkbon",
+      "status": "queued",
+      "priority": "high",
+      "scheduledFor": "2026-05-09T09:03:25.036Z",
+      "sourceRef": null,
+      "createdBy": "admin@demobouw.be",
+      "createdAt": "2026-05-09T09:03:25.036Z",
+      "readAt": null
+    },
+    {
+      "id": "notification_1778317405066_5b5a3b822ecd58",
+      "tenantId": "t_demo",
+      "type": "workorder",
+      "channel": "in_app",
+      "audience": "user_1777390883723",
+      "title": "Open werkbon",
+      "body": "Eerste werkbon",
+      "status": "queued",
+      "priority": "high",
+      "scheduledFor": "2026-05-09T09:03:25.066Z",
+      "sourceRef": null,
+      "createdBy": "admin@demobouw.be",
+      "createdAt": "2026-05-09T09:03:25.066Z",
+      "readAt": null
+    },
+    {
+      "id": "notification_1778317405098_82a73cd07b42f",
+      "tenantId": "t_demo",
+      "type": "workorder",
+      "channel": "in_app",
+      "audience": "user_1777390984219",
+      "title": "Open werkbon",
+      "body": "Eerste werkbon",
+      "status": "queued",
+      "priority": "high",
+      "scheduledFor": "2026-05-09T09:03:25.098Z",
+      "sourceRef": null,
+      "createdBy": "admin@demobouw.be",
+      "createdAt": "2026-05-09T09:03:25.098Z",
+      "readAt": null
+    }
+  ],
+  "integrations": [],
+  "invoices": [],
+  "paymentMethods": [],
+  "files": [],
+  "secrets": [],
+  "auditLogs": [
+    {
+      "id": "audit_1777360515186_38b104cbb49fb",
+      "at": "2026-04-28T07:15:15.186Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "invoice_created",
+      "area": "billing",
+      "detail": "INV-2026-KACDHY"
+    },
+    {
+      "id": "audit_1777360515199_3a1c9125dc658",
+      "at": "2026-04-28T07:15:15.199Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "golden_path_demo_created",
+      "area": "golden_path"
+    },
+    {
+      "id": "audit_1777361500850_9a778f6082731",
+      "at": "2026-04-28T07:31:40.850Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1777361518960_b208c8ccb70bd",
+      "at": "2026-04-28T07:31:58.960Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1777361523706_9a07fb00afcf98",
+      "at": "2026-04-28T07:32:03.706Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "invoice_created",
+      "area": "billing",
+      "detail": "INV-2026-NO992G"
+    },
+    {
+      "id": "audit_1777361523716_81b0ab67df20d8",
+      "at": "2026-04-28T07:32:03.716Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "golden_path_demo_created",
+      "area": "golden_path"
+    },
+    {
+      "id": "audit_1777361525586_7abde1bdd38108",
+      "at": "2026-04-28T07:32:05.586Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "invoice_created",
+      "area": "billing",
+      "detail": "INV-2026-5BU62A"
+    },
+    {
+      "id": "audit_1777361525597_a5deb3f50f4b08",
+      "at": "2026-04-28T07:32:05.597Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "golden_path_demo_created",
+      "area": "golden_path"
+    },
+    {
+      "id": "audit_1777390752120_8f563aa06a0ee",
+      "at": "2026-04-28T15:39:12.120Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1777390883786_c497f9edd5dee",
+      "at": "2026-04-28T15:41:23.786Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "invoice_created",
+      "area": "billing",
+      "detail": "INV-2026-QLO0D8"
+    },
+    {
+      "id": "audit_1777390883799_7f2ac20d2c644",
+      "at": "2026-04-28T15:41:23.799Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "golden_path_demo_created",
+      "area": "golden_path"
+    },
+    {
+      "id": "audit_1777390977338_1241eb53f91ae",
+      "at": "2026-04-28T15:42:57.338Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1777390984272_98543deb6e8ce",
+      "at": "2026-04-28T15:43:04.272Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "invoice_created",
+      "area": "billing",
+      "detail": "INV-2026-HY5JIL"
+    },
+    {
+      "id": "audit_1777390984274_9f9554f0c779c",
+      "at": "2026-04-28T15:43:04.274Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "golden_path_demo_created",
+      "area": "golden_path"
+    },
+    {
+      "id": "audit_1777391242439_f18d0dec98ce6",
+      "at": "2026-04-28T15:47:22.439Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1777391848024_ce351f405ae2d8",
+      "at": "2026-04-28T15:57:28.024Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1777392229289_2d382825004ac8",
+      "at": "2026-04-28T16:03:49.289Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1777392503419_06f02dcbfad64",
+      "at": "2026-04-28T16:08:23.419Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1777392513245_bc060c06ed4ef8",
+      "at": "2026-04-28T16:08:33.245Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "invoice_created",
+      "area": "billing",
+      "detail": "INV-2026-Q33Z8L"
+    },
+    {
+      "id": "audit_1777392515026_c8020b9b09b8a8",
+      "at": "2026-04-28T16:08:35.026Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "payment_method_attached",
+      "area": "billing"
+    },
+    {
+      "id": "audit_1777455495953_314bec8a9fa248",
+      "at": "2026-04-29T09:38:15.953Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1777455598008_757e45186fbd4",
+      "at": "2026-04-29T09:39:58.008Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1777455628648_b14f29eaf544f8",
+      "at": "2026-04-29T09:40:28.648Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1777456232492_9f0fa6b67d50e",
+      "at": "2026-04-29T09:50:32.492Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1777456901452_0f88b04390503",
+      "at": "2026-04-29T10:01:41.452Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1777460425603_4e32e5bd6b761",
+      "at": "2026-04-29T11:00:25.603Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1777460455995_03c4f684fd0768",
+      "at": "2026-04-29T11:00:55.995Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1777460457517_d50f2331f22de",
+      "at": "2026-04-29T11:00:57.517Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1777460458681_86f0b6a0761088",
+      "at": "2026-04-29T11:00:58.681Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1777460774048_b9f827d40f373",
+      "at": "2026-04-29T11:06:14.048Z",
+      "actor": "super@workflowpro.be",
+      "tenantId": null,
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1777460857073_0a662e6add4168",
+      "at": "2026-04-29T11:07:37.073Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1777460918669_9740f249bd447",
+      "at": "2026-04-29T11:08:38.669Z",
+      "actor": "super@workflowpro.be",
+      "tenantId": null,
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1777461496985_0b4e6b2cd1f37",
+      "at": "2026-04-29T11:18:16.985Z",
+      "actor": "super@workflowpro.be",
+      "tenantId": null,
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1777461768213_45c119b39f9da",
+      "at": "2026-04-29T11:22:48.213Z",
+      "actor": "super@workflowpro.be",
+      "tenantId": null,
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1777461815166_b6d4b3f0b7cc7",
+      "at": "2026-04-29T11:23:35.166Z",
+      "actor": "super@workflowpro.be",
+      "tenantId": null,
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1777462715800_c581146d298f1",
+      "at": "2026-04-29T11:38:35.800Z",
+      "actor": "super@workflowpro.be",
+      "tenantId": null,
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1777462717493_28801cb7ab056",
+      "at": "2026-04-29T11:38:37.493Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1777477045649_91a22cf946a55",
+      "at": "2026-04-29T15:37:25.649Z",
+      "actor": "super@workflowpro.be",
+      "tenantId": null,
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1777478854803_7165c7908f56d",
+      "at": "2026-04-29T16:07:34.803Z",
+      "actor": "super@workflowpro.be",
+      "tenantId": null,
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1777485631200_38735fb1698948",
+      "at": "2026-04-29T18:00:31.200Z",
+      "actor": "super@workflowpro.be",
+      "tenantId": null,
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1777491845668_92dd11b7975a2",
+      "at": "2026-04-29T19:44:05.668Z",
+      "actor": "super@workflowpro.be",
+      "tenantId": null,
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1777491855534_79f30da6ba2da",
+      "at": "2026-04-29T19:44:15.534Z",
+      "actor": "super@workflowpro.be",
+      "tenantId": "t_demo",
+      "action": "kbo_lookup",
+      "area": "tenants",
+      "detail": "BE0897225572"
+    },
+    {
+      "id": "audit_1777509570868_11bed5f52178d8",
+      "at": "2026-04-30T00:39:30.868Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1777509573795_70988031aad88",
+      "at": "2026-04-30T00:39:33.795Z",
+      "actor": "super@workflowpro.be",
+      "tenantId": null,
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1777509575796_a2e1f7878f2598",
+      "at": "2026-04-30T00:39:35.796Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1777509589598_ff0eb65aef51f",
+      "at": "2026-04-30T00:39:49.598Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1777509590788_0a3706afb0d37",
+      "at": "2026-04-30T00:39:50.788Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1777509591551_6d9b313145f6b",
+      "at": "2026-04-30T00:39:51.551Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1777573921084_5f23a4711f404",
+      "at": "2026-04-30T18:32:01.085Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1777573932280_b6b621081d5a",
+      "at": "2026-04-30T18:32:12.280Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1777634014725_6c77df0bc45d28",
+      "at": "2026-05-01T11:13:34.725Z",
+      "actor": "super@workflowpro.be",
+      "tenantId": null,
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778230925419_4a573b709eb92",
+      "at": "2026-05-08T09:02:05.419Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778238443743_aeaca56dd07ff",
+      "at": "2026-05-08T11:07:23.743Z",
+      "actor": "super@workflowpro.be",
+      "tenantId": null,
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778238571329_d73dd67f2ee86",
+      "at": "2026-05-08T11:09:31.329Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778238572732_fe0d450f3815c",
+      "at": "2026-05-08T11:09:32.732Z",
+      "actor": "super@workflowpro.be",
+      "tenantId": null,
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778244577172_01576450cfc708",
+      "at": "2026-05-08T12:49:37.173Z",
+      "actor": "super@workflowpro.be",
+      "tenantId": null,
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778244580087_2165a7bc7ff298",
+      "at": "2026-05-08T12:49:40.087Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778244591176_71d482a3cca2b8",
+      "at": "2026-05-08T12:49:51.176Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778244604489_b76963cfb0dd28",
+      "at": "2026-05-08T12:50:04.489Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "onboarding_step_updated",
+      "area": "portal",
+      "detail": "pilot_agreement:true"
+    },
+    {
+      "id": "audit_1778244605939_fc4e1675e728d",
+      "at": "2026-05-08T12:50:05.939Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "onboarding_step_updated",
+      "area": "portal",
+      "detail": "pilot_agreement:false"
+    },
+    {
+      "id": "audit_1778246534947_85b86d9d3e7b1",
+      "at": "2026-05-08T13:22:14.947Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778248528360_9b5cefc55551e8",
+      "at": "2026-05-08T13:55:28.361Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778248540146_459786b6e6177",
+      "at": "2026-05-08T13:55:40.146Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778249797510_fa5594493d2498",
+      "at": "2026-05-08T14:16:37.510Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778250610625_9c472e470ac6c8",
+      "at": "2026-05-08T14:30:10.625Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778250942110_8a8115d92739f",
+      "at": "2026-05-08T14:35:42.110Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778251175081_5a768d9380171",
+      "at": "2026-05-08T14:39:35.081Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "decision_report_generated",
+      "area": "reports",
+      "detail": "decision_report_1778251175081_1937da1fe3d58"
+    },
+    {
+      "id": "audit_1778251539015_6bea4851567cd",
+      "at": "2026-05-08T14:45:39.015Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778251702164_064a646fad72f",
+      "at": "2026-05-08T14:48:22.164Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778254791736_390aaaa9556088",
+      "at": "2026-05-08T15:39:51.736Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778254797498_a4125736a50cb8",
+      "at": "2026-05-08T15:39:57.498Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778254808299_ee6096c1b20f98",
+      "at": "2026-05-08T15:40:08.299Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "peppol_failed",
+      "area": "billing",
+      "detail": "INV-2026-KACDHY:missing_peppol_id"
+    },
+    {
+      "id": "audit_1778268229262_8391ee8eb536f8",
+      "at": "2026-05-08T19:23:49.262Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778269326182_7e114a27c0096",
+      "at": "2026-05-08T19:42:06.182Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778269829427_505bf15bb65658",
+      "at": "2026-05-08T19:50:29.427Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778269923963_756d2eb64f05f",
+      "at": "2026-05-08T19:52:03.963Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778277854298_e80c1b9a75ade",
+      "at": "2026-05-08T22:04:14.299Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778284044737_226fc57e1d7db",
+      "at": "2026-05-08T23:47:24.737Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778284918726_c258dc1076cf98",
+      "at": "2026-05-09T00:01:58.726Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778285024208_a050fa80cf2788",
+      "at": "2026-05-09T00:03:44.208Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778286171658_84f9d3cde388e",
+      "at": "2026-05-09T00:22:51.658Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778286362536_4fb998d62147d8",
+      "at": "2026-05-09T00:26:02.536Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778291708866_dab59023eb7d1",
+      "at": "2026-05-09T01:55:08.866Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778291723157_afe13c75dafc6",
+      "at": "2026-05-09T01:55:23.157Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778310527493_743ac402dca5a8",
+      "at": "2026-05-09T07:08:47.493Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778315816995_d2b34012d1ab28",
+      "at": "2026-05-09T08:36:56.995Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778317397950_beeae030c66ea",
+      "at": "2026-05-09T09:03:17.951Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778317405014_f94792ec932bd8",
+      "at": "2026-05-09T09:03:25.014Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "notification_created",
+      "area": "notifications",
+      "detail": "Open werkbon"
+    },
+    {
+      "id": "audit_1778317405018_39a3e907a95fa8",
+      "at": "2026-05-09T09:03:25.018Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "notification_created",
+      "area": "notifications",
+      "detail": "Open werkbon"
+    },
+    {
+      "id": "audit_1778317405051_4e35d547dd1f88",
+      "at": "2026-05-09T09:03:25.051Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "notification_created",
+      "area": "notifications",
+      "detail": "Open werkbon"
+    },
+    {
+      "id": "audit_1778317405083_b1c0d3495e6e58",
+      "at": "2026-05-09T09:03:25.083Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "notification_created",
+      "area": "notifications",
+      "detail": "Open werkbon"
+    },
+    {
+      "id": "audit_1778317405112_9e79455a3d66a",
+      "at": "2026-05-09T09:03:25.112Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "notification_created",
+      "area": "notifications",
+      "detail": "Open werkbon"
+    },
+    {
+      "id": "audit_1778317405126_e1413dfb3e947",
+      "at": "2026-05-09T09:03:25.126Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "reminders_generated",
+      "area": "notifications",
+      "detail": "5"
+    },
+    {
+      "id": "audit_1778317962616_38ff988f8fbf1",
+      "at": "2026-05-09T09:12:42.616Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778317962698_e761867dbe9fb",
+      "at": "2026-05-09T09:12:42.698Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778318037810_894090adbdc35",
+      "at": "2026-05-09T09:13:57.810Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778318310691_f5766536ae89a8",
+      "at": "2026-05-09T09:18:30.691Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778318508211_ea288d2c3c8d2",
+      "at": "2026-05-09T09:21:48.211Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778319047561_c5e997b56ee07",
+      "at": "2026-05-09T09:30:47.561Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778319912536_b09c5b3ebaace8",
+      "at": "2026-05-09T09:45:12.536Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778329432587_4f185c74db54d",
+      "at": "2026-05-09T12:23:52.587Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778330149328_0993e9ec2f22e8",
+      "at": "2026-05-09T12:35:49.328Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778330309540_d3ab272a4163e8",
+      "at": "2026-05-09T12:38:29.540Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778330619120_c40edc3c6cffa",
+      "at": "2026-05-09T12:43:39.120Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778330828040_079398206cd1a8",
+      "at": "2026-05-09T12:47:08.040Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778330863246_4565750df0a1b8",
+      "at": "2026-05-09T12:47:43.246Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778331186874_c0078b05e28e8",
+      "at": "2026-05-09T12:53:06.874Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778331813154_9648f826548958",
+      "at": "2026-05-09T13:03:33.154Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778331849932_03474caa10291",
+      "at": "2026-05-09T13:04:09.932Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778332100884_5ca36d6e1564e8",
+      "at": "2026-05-09T13:08:20.884Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778332295858_259c6b9b882ee",
+      "at": "2026-05-09T13:11:35.858Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778332525128_1ed90acfcc6158",
+      "at": "2026-05-09T13:15:25.128Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778332546037_28d1c6272975a8",
+      "at": "2026-05-09T13:15:46.037Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778333023279_4d12dcf634162",
+      "at": "2026-05-09T13:23:43.279Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778333806994_218bca8891c55",
+      "at": "2026-05-09T13:36:46.994Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778333945381_4e357e4558bcf8",
+      "at": "2026-05-09T13:39:05.381Z",
+      "actor": "super@workflowpro.be",
+      "tenantId": null,
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778333947176_41f4d05c94a6b8",
+      "at": "2026-05-09T13:39:07.176Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778333969710_434e04991f5ae",
+      "at": "2026-05-09T13:39:29.710Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778333985797_9f90893a54b96",
+      "at": "2026-05-09T13:39:45.797Z",
+      "actor": "super@workflowpro.be",
+      "tenantId": null,
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778333986926_205c79f905342",
+      "at": "2026-05-09T13:39:46.926Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778333988137_44aa6df6cd85b",
+      "at": "2026-05-09T13:39:48.137Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778333995544_53c2aa6e69181",
+      "at": "2026-05-09T13:39:55.544Z",
+      "actor": "super@workflowpro.be",
+      "tenantId": null,
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778401202469_c3f059a9312b2",
+      "at": "2026-05-10T08:20:02.469Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778401202506_efaa92ff30522",
+      "at": "2026-05-10T08:20:02.506Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778401235879_f321a3bef6fdf8",
+      "at": "2026-05-10T08:20:35.880Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778401252472_5eda9284a35b78",
+      "at": "2026-05-10T08:20:52.472Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778414558697_c6a492d6bfea08",
+      "at": "2026-05-10T12:02:38.697Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778414594580_5445919877bb88",
+      "at": "2026-05-10T12:03:14.580Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778570506209_90599a0571a058",
+      "at": "2026-05-12T07:21:46.209Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login_failed",
+      "area": "auth",
+      "detail": "1/5"
+    },
+    {
+      "id": "audit_1778570515401_ae393ad44aa6c",
+      "at": "2026-05-12T07:21:55.401Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778571241762_8db52967ab2d58",
+      "at": "2026-05-12T07:34:01.762Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778584167081_a81af7172dea8",
+      "at": "2026-05-12T11:09:27.081Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778584223356_48d952daed3ca8",
+      "at": "2026-05-12T11:10:23.356Z",
+      "actor": "super@workflowpro.be",
+      "tenantId": null,
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778584725563_1625a344a7487",
+      "at": "2026-05-12T11:18:45.563Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778585016559_25b7b4b6cfdd5",
+      "at": "2026-05-12T11:23:36.559Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778585031952_69493eb5b66108",
+      "at": "2026-05-12T11:23:51.952Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778607710831_7371228209e158",
+      "at": "2026-05-12T17:41:50.831Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login_failed",
+      "area": "auth",
+      "detail": "1/5"
+    },
+    {
+      "id": "audit_1778607721782_5e2e692c4c8a88",
+      "at": "2026-05-12T17:42:01.782Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login_failed",
+      "area": "auth",
+      "detail": "2/5"
+    },
+    {
+      "id": "audit_1778607878735_0c5b204208faa8",
+      "at": "2026-05-12T17:44:38.735Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778607900307_88c429b56293c",
+      "at": "2026-05-12T17:45:00.307Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778607902160_d6179ca511ae78",
+      "at": "2026-05-12T17:45:02.160Z",
+      "actor": "super@workflowpro.be",
+      "tenantId": null,
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778607903649_5b57640b09fc88",
+      "at": "2026-05-12T17:45:03.649Z",
+      "actor": "super@workflowpro.be",
+      "tenantId": null,
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778607903998_6f873dc58f07b8",
+      "at": "2026-05-12T17:45:03.998Z",
+      "actor": "super@workflowpro.be",
+      "tenantId": null,
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778607904262_53e176ce626ae",
+      "at": "2026-05-12T17:45:04.262Z",
+      "actor": "super@workflowpro.be",
+      "tenantId": null,
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778607917127_1677c6542326f",
+      "at": "2026-05-12T17:45:17.127Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778608143936_9db099b04c17c8",
+      "at": "2026-05-12T17:49:03.936Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1778608251900_5f2699a9c3071",
+      "at": "2026-05-12T17:50:51.900Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    }
+  ],
+  "migrationHistory": [
+    {
+      "version": 2,
+      "name": "account-security-defaults",
+      "appliedAt": "2026-05-07T14:41:49.646Z"
+    },
+    {
+      "version": 3,
+      "name": "tenant-admin-production-permissions",
+      "appliedAt": "2026-05-07T14:41:49.663Z"
+    },
+    {
+      "version": 4,
+      "name": "pilot-and-production-collections",
+      "appliedAt": "2026-05-07T14:41:49.663Z"
+    },
+    {
+      "version": 5,
+      "name": "commercial-launch-collections",
+      "appliedAt": "2026-05-07T14:41:49.663Z"
+    },
+    {
+      "version": 6,
+      "name": "support-escalation-notification-shape",
+      "appliedAt": "2026-05-07T14:41:49.663Z"
+    }
+  ],
+  "errorEvents": [],
+  "apiKeys": [],
+  "supportTickets": [],
+  "salesLeads": [],
+  "partners": [],
+  "stockMutations": [],
+  "mileageLogs": []
+}

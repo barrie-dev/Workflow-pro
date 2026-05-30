@@ -1,7 +1,5 @@
 const { Store } = require("../src/lib/store");
-const { productionReadiness } = require("../src/modules/production");
-const { pilotKpis } = require("../src/modules/pilot");
-const { salesLaunchReadiness } = require("../src/modules/sales");
+const { goLiveReadiness } = require("../src/modules/go-live");
 
 function argValue(name, fallback) {
   const index = process.argv.indexOf(name);
@@ -29,61 +27,26 @@ if (!tenant) {
   process.exit(1);
 }
 
-const production = productionReadiness(store);
-const openP0 = production.checks.filter(row => !row.ok && row.priority === "P0");
-const openP1 = production.checks.filter(row => !row.ok && row.priority === "P1");
-const pilot = pilotKpis(store, tenantId);
-const openPilot = pilot.kpis.filter(row => !row.ok);
-const sales = salesLaunchReadiness(store, tenantId);
-const productionOk = openP0.length === 0 && (!strictProduction || openP1.length === 0);
-const pilotOk = pilot.score >= minPilotScore && openPilot.length === 0;
-const ok = productionOk && pilotOk && sales.ok;
-
-const payload = {
-  ok,
-  tenant: { id: tenant.id, name: tenant.name },
-  generatedAt: new Date().toISOString(),
-  gates: {
-    production: {
-      ok: productionOk,
-      strict: strictProduction,
-      score: production.score,
-      p0: openP0.length,
-      p1: openP1.length,
-      openP0,
-      openP1
-    },
-    pilot: {
-      ok: pilotOk,
-      minScore: minPilotScore,
-      score: pilot.score,
-      openCount: openPilot.length,
-      openKpis: openPilot
-    },
-    sales: {
-      ok: sales.ok,
-      score: sales.score,
-      openCount: sales.openChecks.length,
-      openChecks: sales.openChecks
-    }
-  }
-};
+const payload = goLiveReadiness(store, tenant, { minPilotScore, strictProduction });
+const { production, pilot, sales, customerStart } = payload.gates;
 
 if (jsonMode) {
   console.log(JSON.stringify(payload, null, 2));
-  process.exit(ok ? 0 : 1);
+  process.exit(payload.ok ? 0 : 1);
 }
 
 console.log(`WorkFlow Pro go-live gate voor ${tenant.name}`);
-console.log(`Overall: ${ok ? "OK" : "OPEN"}`);
-console.log(`Production: ${production.score}% - P0 ${openP0.length}, P1 ${openP1.length}`);
-console.log(`Pilot: ${pilot.score}% - open KPI's ${openPilot.length}`);
+console.log(`Overall: ${payload.ok ? "OK" : "OPEN"}`);
+console.log(`Production: ${production.score}% - P0 ${production.p0}, P1 ${production.p1}`);
+console.log(`Pilot: ${pilot.score}% - open KPI's ${pilot.openCount}`);
 console.log(`Sales: ${sales.score}% - open checks ${sales.openChecks.length}`);
+console.log(`Customer start: ${customerStart.ok ? "OK" : "OPEN"} - ${customerStart.label}`);
 
-printActionRows("Production P0 blockers", openP0, row => `[P0] ${row.label}: ${row.detail}`);
-if (strictProduction) printActionRows("Production P1 warnings", openP1, row => `[P1] ${row.label}: ${row.detail}`);
-printActionRows("Pilot actions", openPilot, row => `[OPEN] ${row.label}: ${row.action}`);
+printActionRows("Production P0 blockers", production.openP0, row => `[P0] ${row.label}: ${row.detail}`);
+if (strictProduction) printActionRows("Production P1 warnings", production.openP1, row => `[P1] ${row.label}: ${row.detail}`);
+printActionRows("Pilot actions", pilot.openKpis, row => `[OPEN] ${row.label}: ${row.action}`);
 printActionRows("Sales actions", sales.openChecks, row => `[OPEN] ${row.label}: ${row.action}`);
+printActionRows("Customer start blockers", customerStart.blockers || [], row => `[OPEN] ${row}`);
 
-if (!ok) process.exit(1);
+if (!payload.ok) process.exit(1);
 console.log("\nGo-live gate OK.");

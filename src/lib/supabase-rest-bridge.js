@@ -169,6 +169,29 @@ async function ping() {
   };
 }
 
+async function probeWrite() {
+  const id = `probe_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+  const row = {
+    collection: "_health",
+    id,
+    data: {
+      id,
+      purpose: "workflowpro-supabase-write-probe",
+      at: new Date().toISOString()
+    }
+  };
+  await upsert("global_records", [row], "collection,id");
+  const found = await readAll("global_records", `select=collection,id&collection=eq._health&id=eq.${encodeURIComponent(id)}&limit=1`);
+  await request(`global_records?collection=eq._health&id=eq.${encodeURIComponent(id)}`, {
+    method: "DELETE"
+  });
+  return {
+    ok: Array.isArray(found) && found.length === 1,
+    id,
+    checkedAt: new Date().toISOString()
+  };
+}
+
 async function upsert(table, rows, onConflict = "id") {
   if (!rows.length) return;
   await request(`${table}?on_conflict=${encodeURIComponent(onConflict)}`, {
@@ -284,6 +307,10 @@ async function readStdinJson() {
   }
   if (action === "ping") {
     process.stdout.write(JSON.stringify(await ping()));
+    return;
+  }
+  if (action === "probe-write") {
+    process.stdout.write(JSON.stringify(await probeWrite()));
     return;
   }
   if (action === "save") {

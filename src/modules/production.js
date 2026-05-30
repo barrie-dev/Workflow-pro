@@ -8,7 +8,18 @@ const MODULE_SCOPES = ["planning", "workorders", "billing", "integrations"];
 const BACKUP_STALE_DAYS = 7;
 
 function isDevSecret(value, marker) {
-  return !value || String(value).includes(marker) || String(value).startsWith("change_me");
+  const raw = String(value || "");
+  return !raw || raw.includes(marker) || raw.startsWith("change_me") || raw.startsWith("replace_me");
+}
+
+function isLiveStripeSecret(value) {
+  const raw = String(value || "");
+  return raw.startsWith("sk_live_");
+}
+
+function isLiveStripeWebhookSecret(value) {
+  const raw = String(value || "");
+  return raw.startsWith("whsec_") && !raw.includes("replace_me");
 }
 
 function check(key, label, ok, detail, priority = "P0") {
@@ -68,16 +79,16 @@ function productionConfigRisk() {
       key: "stripe_secret",
       label: "Stripe secret",
       required: "STRIPE_SECRET_KEY",
-      ok: !!config.stripe.secretKey,
-      value: config.stripe.secretKey ? "configured" : "missing",
-      action: "Zet STRIPE_SECRET_KEY voor SetupIntent en billing events."
+      ok: isLiveStripeSecret(config.stripe.secretKey),
+      value: config.stripe.secretKey ? (isLiveStripeSecret(config.stripe.secretKey) ? "live configured" : "not live") : "missing",
+      action: "Zet STRIPE_SECRET_KEY op een live key die begint met sk_live_."
     },
     {
       key: "stripe_webhook",
       label: "Stripe webhook secret",
       required: "STRIPE_WEBHOOK_SECRET",
-      ok: !!config.stripe.webhookSecret,
-      value: config.stripe.webhookSecret ? "configured" : "missing",
+      ok: isLiveStripeWebhookSecret(config.stripe.webhookSecret),
+      value: config.stripe.webhookSecret ? (isLiveStripeWebhookSecret(config.stripe.webhookSecret) ? "configured" : "placeholder") : "missing",
       action: "Zet STRIPE_WEBHOOK_SECRET zodat events cryptografisch gecontroleerd worden."
     },
     {
@@ -92,8 +103,8 @@ function productionConfigRisk() {
       key: "peppol_api_key",
       label: "Peppol API key",
       required: "PEPPOL_API_KEY",
-      ok: !!config.peppol.apiKey,
-      value: config.peppol.apiKey ? "configured" : "missing",
+      ok: !isDevSecret(config.peppol.apiKey, "dev_only"),
+      value: !isDevSecret(config.peppol.apiKey, "dev_only") ? "configured" : "missing",
       action: "Zet PEPPOL_API_KEY voor productie Peppol-verzending."
     },
     {
@@ -176,6 +187,8 @@ function productionReadiness(store) {
   const migrations = store.migrationStatus();
   const sqlMigrations = sqlMigrationCount();
   const users = store.data.users || [];
+  const demoTenantCount = (store.data.tenants || []).filter(tenant => /^t_demo$/i.test(tenant.id) || /demo/i.test(`${tenant.name || ""} ${tenant.billingEmail || ""}`)).length;
+  const demoUserCount = users.filter(user => /demo|workflowpro\.be/i.test(`${user.email || ""} ${user.name || ""}`)).length;
   const adminUsers = users.filter(user => ["tenant_admin", "super_admin"].includes(user.role));
   const mfaAdmins = adminUsers.filter(user => user.mfaEnabled && user.mfaEnforced);
   const activeApiKeys = (store.data.apiKeys || []).filter(key => key.status === "active");
@@ -230,6 +243,15 @@ function productionReadiness(store) {
       "P1"
     ),
     check(
+      "demo_data_removed",
+      "Demo data verwijderd",
+      !config.isProduction || (demoTenantCount === 0 && demoUserCount === 0),
+      demoTenantCount || demoUserCount
+        ? `${demoTenantCount} demo tenants en ${demoUserCount} demo/admin voorbeeldgebruikers gevonden. Verwijder deze uit productie.`
+        : "Geen demodata in productie-dataset gevonden.",
+      "P0"
+    ),
+    check(
       "mfa",
       "Admin MFA",
       adminUsers.length > 0 && mfaAdmins.length === adminUsers.length,
@@ -253,14 +275,14 @@ function productionReadiness(store) {
     check(
       "stripe",
       "Stripe test/live configuratie",
-      !!config.stripe.secretKey && !!config.stripe.webhookSecret,
-      "STRIPE_SECRET_KEY en STRIPE_WEBHOOK_SECRET zijn nodig voor echte payment events.",
+      isLiveStripeSecret(config.stripe.secretKey) && isLiveStripeWebhookSecret(config.stripe.webhookSecret),
+      "STRIPE_SECRET_KEY moet live zijn en STRIPE_WEBHOOK_SECRET moet geldig ingesteld zijn.",
       "P0"
     ),
     check(
       "peppol",
       "Peppol provider",
-      config.peppol.provider !== "mock" && !!config.peppol.apiKey,
+      config.peppol.provider !== "mock" && !isDevSecret(config.peppol.apiKey, "dev_only"),
       "Kies echte Peppol provider en zet PEPPOL_API_KEY.",
       "P0"
     ),

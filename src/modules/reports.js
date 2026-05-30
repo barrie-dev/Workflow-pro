@@ -87,6 +87,7 @@ function goLiveMarkdown(report) {
     `- Production: ${report.gates.production.score}% (P0 ${report.gates.production.p0}, P1 ${report.gates.production.p1})`,
     `- Pilot: ${report.gates.pilot.score}% (${report.gates.pilot.openCount} open KPI's)`,
     `- Sales: ${report.gates.sales.score}% (${report.gates.sales.openCount} open checks)`,
+    `- Customer start: ${report.gates.customerStart.ok ? "OK" : "OPEN"} (${report.gates.customerStart.label})`,
     "",
     "## Production P0 Blockers",
     "",
@@ -99,6 +100,10 @@ function goLiveMarkdown(report) {
     "## Sales Actions",
     "",
     ...(report.gates.sales.openChecks.length ? report.gates.sales.openChecks.map(row => `- ${row.label}: ${row.action}`) : ["- Geen open sales acties."]),
+    "",
+    "## Customer Start",
+    "",
+    ...(report.gates.customerStart.blockers.length ? report.gates.customerStart.blockers.map(row => `- ${row}`) : ["- Dagelijkse klantflow klaar."]),
     ""
   ].join("\n");
 }
@@ -115,6 +120,7 @@ function roadmapMarkdown(report) {
     `- Production readiness: ${report.gates.production.score}% (${report.gates.production.p0} P0, ${report.gates.production.p1} P1 open)`,
     `- Pilot readiness: ${report.gates.pilot.score}% (${report.gates.pilot.openCount} KPI's open)`,
     `- Commercial launch readiness: ${report.gates.sales.score}% (${report.gates.sales.openCount} checks open)`,
+    `- Customer start readiness: ${report.gates.customerStart.ok ? "OK" : "OPEN"} (${report.gates.customerStart.label})`,
     "",
     "## Open P0 Blockers",
     "",
@@ -127,6 +133,10 @@ function roadmapMarkdown(report) {
     "## Sales Actions",
     "",
     ...(report.gates.sales.openChecks.length ? report.gates.sales.openChecks.map(row => `- [ ] ${row.label}: ${row.action}`) : ["- [x] Geen open sales acties."]),
+    "",
+    "## Customer Start Actions",
+    "",
+    ...(report.gates.customerStart.blockers.length ? report.gates.customerStart.blockers.map(row => `- [ ] ${row}`) : ["- [x] Dagelijkse klantflow klaar."]),
     ""
   ].join("\n");
 }
@@ -246,7 +256,8 @@ function generateStatusBundle(store, tenant, user, options = {}) {
     gates: {
       production: { score: goLive.gates.production.score, p0: goLive.gates.production.p0, p1: goLive.gates.production.p1 },
       pilot: { score: goLive.gates.pilot.score, openCount: goLive.gates.pilot.openCount },
-      sales: { score: goLive.gates.sales.score, openCount: goLive.gates.sales.openCount }
+      sales: { score: goLive.gates.sales.score, openCount: goLive.gates.sales.openCount },
+      customerStart: { ok: goLive.gates.customerStart.ok, blockers: goLive.gates.customerStart.blockers.length }
     },
     files: generatedFiles
   };

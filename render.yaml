@@ -1,0 +1,50 @@
+# WorkFlow Pro – Render.com deployment config
+# https://render.com/docs/blueprint-spec
+#
+# Deploy: koppel je GitHub-repo aan Render en kies "Blueprint".
+# Render leest dit bestand en maakt automatisch de service aan.
+# Stel daarna de ENV-vars in via het Render-dashboard (zie .env.production.example).
+
+services:
+  - type: web
+    name: workflowpro
+    runtime: node
+    region: frankfurt          # dichtstbij België/Nederland
+    plan: starter              # upgrade naar standard voor productie-SLA
+    buildCommand: npm install --omit=dev
+    startCommand: node src/server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: RELEASE_CHANNEL
+        value: production
+      - key: PORT
+        value: "10000"         # Render injecteert PORT automatisch; dit is de default
+      - key: STORAGE_ADAPTER
+        value: postgres        # gebruik postgres in productie, niet json
+      - key: REQUIRE_ADMIN_MFA
+        value: "true"          # MFA verplicht in productie
+      # Secrets: vul in via Render dashboard of koppel aan Render Secret Groups
+      - key: JWT_SECRET
+        sync: false
+      - key: ENCRYPTION_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: APP_URL
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: WORKFLOWPRO_INITIAL_ADMIN_EMAIL
+        sync: false
+      - key: WORKFLOWPRO_INITIAL_ADMIN_PASSWORD
+        sync: false
+      - key: WORKFLOWPRO_INITIAL_ADMIN_NAME
+        sync: false

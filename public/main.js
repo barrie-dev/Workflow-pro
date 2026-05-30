@@ -1,45 +1,15 @@
 let token = "";
 let pendingMfaLogin = null;
 const tenantId = "t_demo";
-const state = {
-  users: [],
-  venues: [],
-  planning: [],
-  workorders: [],
-  expenses: [],
-  report: null,
-  billing: null,
-  billingQuote: null,
-  mobile: null,
-  integrations: [],
-  notifications: [],
-  notificationSummary: null,
-  admin: null,
-  auditRows: [],
-  auditSummary: null,
-  errorRows: [],
-  errorSummary: null,
-  goLive: null,
-  reports: [],
-  reportsSummary: null,
-  reportPreview: null,
-  portal: null,
-  supportTickets: [],
-  supportTicketSummary: null,
-  pilot: null,
-  decisionReport: null,
-  sales: [],
-  salesSummary: null,
-  salesLaunch: null,
-  partners: [],
-  publicStatus: null,
-  tenants: [],
-  apiKeys: [],
-  apiKeyGovernance: null,
-  backups: [],
-  aiSuggestion: null,
-  queue: JSON.parse(localStorage.getItem("workflowProQueue") || "[]")
-};
+window.WorkFlowProApi.configure({ getToken: () => token });
+const api = window.WorkFlowProApi.request;
+const listModuleRows = key => window.WorkFlowProApi.listModuleRows(key, tenantId);
+const createModuleRow = (key, payload) => window.WorkFlowProApi.createModuleRow(key, payload, tenantId);
+const updateModuleRow = (key, id, payload) => window.WorkFlowProApi.updateModuleRow(key, id, payload, tenantId);
+const { el, setText, showJson, escapeHtml, setNoticeText, statusTone } = window.WorkFlowProDom;
+const { todayValue, futureDateValue, shortDateTime, optionList, personName, venueName, renderList } = window.WorkFlowProDomain;
+const state = window.WorkFlowProState;
+window.WorkFlowProDomain.configure({ state, el });
 
 const stepLabels = {
   tenant: "Klantomgeving",
@@ -109,43 +79,61 @@ const rolePresets = {
 };
 const allowedApiKeyScopes = ["read", "write", "planning", "workorders", "billing", "integrations"];
 const moduleApiKeyScopes = ["planning", "workorders", "billing", "integrations"];
+const viewConfig = window.WorkFlowProConfig?.views || {};
 
-function el(id) {
-  return document.getElementById(id);
+function showToast(message, good = true) {
+  let toast = el("appToast");
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.id = "appToast";
+    toast.className = "app-toast";
+    toast.setAttribute("role", "status");
+    document.body.appendChild(toast);
+  }
+  toast.textContent = message;
+  toast.classList.toggle("bad", !good);
+  toast.classList.add("visible");
+  window.clearTimeout(showToast.timeout);
+  showToast.timeout = window.setTimeout(() => toast.classList.remove("visible"), 3200);
 }
 
-async function api(path, options = {}) {
-  const res = await fetch(path, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(options.headers || {})
-    }
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "Actie mislukt");
-  return data;
+function setShellAuthenticated(authenticated) {
+  document.body.classList.toggle("guest", !authenticated);
+  document.body.classList.toggle("authenticated", authenticated);
 }
 
-function setText(id, value) {
-  el(id).textContent = value;
-}
-
-function showJson(id, data) {
-  el(id).textContent = JSON.stringify(data, null, 2);
-}
-
-function setAiSuggestion(title, text, primary, secondary) {
-  state.aiSuggestion = { title, text, primary, secondary };
+function setAiSuggestion(title, text, primary, secondary, meta = {}) {
+  state.aiSuggestion = { title, text, primary, secondary, meta };
   setText("aiSuggestionTitle", title);
   setText("aiSuggestionText", text);
   el("aiSuggestionPrimary").textContent = primary.label;
   el("aiSuggestionSecondary").textContent = secondary.label;
+  const reasons = meta.reasons || [];
+  const confidenceLabels = { high: "hoog", medium: "gemiddeld", low: "laag" };
+  const confidenceValue = confidenceLabels[meta.confidence] || meta.confidence;
+  const confidence = confidenceValue ? `Zekerheid: ${confidenceValue}` : "Gebaseerd op live appstatus";
+  el("aiSuggestionMeta").textContent = reasons.length
+    ? `${confidence} - ${reasons.slice(0, 2).join(" ")}`
+    : confidence;
 }
 
-function runAiSuggestionAction(action) {
+function trackAiSuggestion(eventName) {
+  const suggestion = state.aiSuggestion;
+  if (!token || !suggestion?.meta?.key) return;
+  api(`/api/tenants/${tenantId}/suggestions/home/events`, {
+    method: "POST",
+    body: JSON.stringify({
+      key: suggestion.meta.key,
+      event: eventName,
+      source: suggestion.meta.source,
+      priority: suggestion.meta.priority
+    })
+  }).catch(() => {});
+}
+
+function runAiSuggestionAction(action, eventName = "opened") {
   if (!action) return;
+  trackAiSuggestion(eventName);
   if (action.type === "login") {
     el("login").click();
     return;
@@ -173,6 +161,14 @@ function applyApiSuggestion(suggestion) {
       label: suggestion.secondary?.label || "Bekijk status",
       type: suggestion.secondary?.type || "view",
       view: suggestion.secondary?.target || "status"
+    },
+    {
+      key: suggestion.key,
+      confidence: suggestion.confidence,
+      reasons: suggestion.reasons,
+      metrics: suggestion.metrics,
+      source: suggestion.source,
+      priority: suggestion.priority
     }
   );
   return true;
@@ -190,7 +186,7 @@ function updateHomeSuggestion(context = {}) {
       "Start met de demo-login",
       "Login als demo admin. Daarna kan ik gericht aangeven of je eerst onboarding, mobiel werk of productieconfig moet aanpakken.",
       { label: "Login demo admin", type: "login" },
-      { label: "Bekijk API docs", type: "view", view: "api" }
+      { label: "Bekijk status", type: "view", view: "status" }
     );
     return;
   }
@@ -229,116 +225,46 @@ function updateHomeSuggestion(context = {}) {
 
   setAiSuggestion(
     "Klaar voor pilotvalidatie",
-    "De basisflow ziet er goed uit. De volgende beste stap is pilotdata verzamelen: planning, werkbonvolume, supporttickets en beslissersrapport.",
-    { label: "Open Portal", type: "view", view: "portal" },
-    { label: "Open Sales", type: "view", view: "sales" }
+    "De basisflow ziet er goed uit. De volgende beste stap is dagelijkse uitvoering blijven opvolgen en go-live blockers in instellingen afronden.",
+    { label: "Open Actiecentrum", type: "view", view: "notifications" },
+    { label: "Open Instellingen", type: "view", view: "admin" }
   );
 }
 
 function setView(view) {
-  const planning = view === "planning";
-  const workorders = view === "workorders";
-  const ops = view === "ops";
-  const billing = view === "billing";
-  const mobile = view === "mobile";
-  const integrations = view === "integrations";
-  const notifications = view === "notifications";
-  const admin = view === "admin";
-  const portal = view === "portal";
-  const sales = view === "sales";
-  const status = view === "status";
-  const json = view === "json";
-  const apiDocs = view === "api";
-  el("demoPage").classList.toggle("hidden", planning || workorders || ops || billing || mobile || integrations || notifications || admin || portal || sales || status || json || apiDocs);
-  el("planningPage").classList.toggle("hidden", !planning);
-  el("workordersPage").classList.toggle("hidden", !workorders);
-  el("opsPage").classList.toggle("hidden", !ops);
-  el("billingPage").classList.toggle("hidden", !billing);
-  el("mobilePage").classList.toggle("hidden", !mobile);
-  el("integrationsPage").classList.toggle("hidden", !integrations);
-  el("notificationsPage").classList.toggle("hidden", !notifications);
-  el("adminPage").classList.toggle("hidden", !admin);
-  el("portalPage").classList.toggle("hidden", !portal);
-  el("salesPage").classList.toggle("hidden", !sales);
-  el("statusPage").classList.toggle("hidden", !status);
-  el("jsonPage").classList.toggle("hidden", !json);
-  el("apiPage").classList.toggle("hidden", !apiDocs);
-  el("viewDemo").classList.toggle("active", !planning && !workorders && !ops && !billing && !mobile && !integrations && !notifications && !admin && !portal && !sales && !status && !json && !apiDocs);
-  el("viewPlanning").classList.toggle("active", planning);
-  el("viewWorkorders").classList.toggle("active", workorders);
-  el("viewOps").classList.toggle("active", ops);
-  el("viewBilling").classList.toggle("active", billing);
-  el("viewMobile").classList.toggle("active", mobile);
-  el("viewIntegrations").classList.toggle("active", integrations);
-  el("viewNotifications").classList.toggle("active", notifications);
-  el("viewAdmin").classList.toggle("active", admin);
-  el("viewPortal").classList.toggle("active", portal);
-  el("viewSales").classList.toggle("active", sales);
-  el("viewStatus").classList.toggle("active", status);
-  el("viewJson").classList.toggle("active", json);
-  el("viewApi").classList.toggle("active", apiDocs);
-  if (planning || workorders) refreshOps();
-  if (ops) refreshOps();
-  if (billing) refreshBilling();
-  if (mobile) refreshMobile();
-  if (integrations) refreshIntegrations();
-  if (notifications) refreshNotifications();
-  if (admin) refreshAdmin();
-  if (portal) refreshPortal();
-  if (sales) refreshSales();
-  if (status) refreshStatus();
-  if (json) refreshJson();
+  window.WorkFlowProRouter.setView(view);
 }
 
 function formData(form) {
   return Object.fromEntries(new FormData(form).entries());
 }
 
-function todayValue() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function futureDateValue(days) {
-  const date = new Date();
-  date.setDate(date.getDate() + days);
-  return date.toISOString().slice(0, 10);
-}
-
-function shortDateTime(value) {
-  if (!value) return "Nog niet";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Onbekend";
-  return date.toLocaleString("nl-BE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
-}
-
 function setNotice(message, good = true) {
-  const notice = el("opsNotice");
-  notice.textContent = message;
-  notice.classList.toggle("bad", !good);
+  setNoticeText("opsNotice", message, good);
 }
 
 function setBillingNotice(message, good = true) {
-  const notice = el("billingNotice");
-  notice.textContent = message;
-  notice.classList.toggle("bad", !good);
+  setNoticeText("billingNotice", message, good);
+}
+
+function setAssetNotice(message, good = true) {
+  setNoticeText("assetNotice", message, good);
+}
+
+function setReportNotice(message, good = true) {
+  setNoticeText("reportNotice", message, good);
 }
 
 function setIntegrationNotice(message, good = true) {
-  const notice = el("integrationNotice");
-  notice.textContent = message;
-  notice.classList.toggle("bad", !good);
+  setNoticeText("integrationNotice", message, good);
 }
 
 function setNotificationNotice(message, good = true) {
-  const notice = el("notificationNotice");
-  notice.textContent = message;
-  notice.classList.toggle("bad", !good);
+  setNoticeText("notificationNotice", message, good);
 }
 
 function setAdminNotice(message, good = true) {
-  const notice = el("adminNotice");
-  notice.textContent = message;
-  notice.classList.toggle("bad", !good);
+  setNoticeText("adminNotice", message, good);
 }
 
 function isSuperAdmin() {
@@ -408,13 +334,7 @@ function renderToday(today) {
 }
 
 function saveQueue() {
-  localStorage.setItem("workflowProQueue", JSON.stringify(state.queue));
-  setText("queueCount", String(state.queue.length));
-}
-
-function optionList(rows, emptyLabel) {
-  if (!rows.length) return `<option value="">${emptyLabel}</option>`;
-  return rows.map(row => `<option value="${row.id}">${row.name || row.title || row.id}</option>`).join("");
+  window.WorkFlowProMobile.saveQueue();
 }
 
 function fillSelects() {
@@ -427,39 +347,6 @@ function fillSelects() {
   el("clockUser").innerHTML = userOptions;
   el("permissionUser").innerHTML = allUserOptions;
   el("clockVenue").innerHTML = `<option value="">Geen werf</option>${state.venues.map(row => `<option value="${row.id}">${row.name}</option>`).join("")}`;
-}
-
-function personName(id) {
-  return state.users.find(user => user.id === id)?.name || "Onbekend";
-}
-
-function venueName(id) {
-  return state.venues.find(venue => venue.id === id)?.name || "Geen werf";
-}
-
-function renderList(id, rows, template, empty) {
-  el(id).innerHTML = rows.length ? rows.map(template).join("") : `<div class="empty">${empty}</div>`;
-}
-
-function escapeHtml(value) {
-  return String(value ?? "").replace(/[&<>"']/g, char => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    "\"": "&quot;",
-    "'": "&#39;"
-  })[char]);
-}
-
-function statusTone(status) {
-  const normalized = String(status || "").toLowerCase();
-  if (["voltooid", "afgerond", "klaar", "approved"].includes(normalized)) return "success";
-  if (["operational", "online", "up-to-date"].includes(normalized)) return "success";
-  if (["bezig", "review"].includes(normalized)) return "info";
-  if (["pending", "mock-ready", "testmode"].includes(normalized)) return "warning";
-  if (["overdue", "te laat", "risico"].includes(normalized)) return "danger";
-  if (["degraded", "error", "offline"].includes(normalized)) return "danger";
-  return "warning";
 }
 
 function renderStatusPage(status) {
@@ -480,6 +367,28 @@ function renderStatusPage(status) {
   setText("statusMigrations", storage.migrations || "-");
   setText("statusReadiness", `${readiness.score ?? 0}%`);
   setText("statusBlockers", blockers.length ? `${blockers.length} blocker(s)` : "Geen publieke blocker");
+  el("statusFocus").innerHTML = `
+    <article class="status-focus-card primary">
+      <p class="eyebrow">Monitoring</p>
+      <h2>${operational ? "Platform operationeel" : blockers[0]?.label || "Aandacht nodig"}</h2>
+      <p>${escapeHtml(operational ? "Publieke status is gezond. Deze pagina bevat geen tenantdata." : blockers[0]?.detail || "Controleer componentstatus en readiness voordat klanten live gaan.")}</p>
+    </article>
+    <article class="status-focus-card">
+      <span>Componenten</span>
+      <strong>${(status.modules || []).filter(row => row.status === "operational").length}/${(status.modules || []).length}</strong>
+      <small>operationeel</small>
+    </article>
+    <article class="status-focus-card">
+      <span>Release</span>
+      <strong>${escapeHtml(release.version || "-")}</strong>
+      <small>${escapeHtml(release.channel || "kanaal onbekend")}</small>
+    </article>
+    <article class="status-focus-card">
+      <span>Readiness</span>
+      <strong>${readiness.score ?? 0}%</strong>
+      <small>${blockers.length} publieke blocker(s)</small>
+    </article>
+  `;
   renderList("statusModules", status.modules || [], row => `
     <div class="data-row">
       <strong>${escapeHtml(row.name)}</strong>
@@ -490,166 +399,130 @@ function renderStatusPage(status) {
 }
 
 function renderPlanningExperience() {
-  const users = state.users.filter(user => user.role !== "tenant_admin").slice(0, 6);
-  const shifts = state.planning.slice(0, 10);
-  const linkedWorkorders = state.workorders.length;
-  const today = todayValue();
-  const activeToday = shifts.filter(shift => shift.date === today).length || shifts.length;
-  const absent = Math.max(1, state.users.filter(user => user.role === "employee").length - users.length);
-  const conflicts = shifts.length > users.length ? 1 : 0;
-  const days = ["Ma 29", "Di 30", "Wo 1", "Do 2", "Vr 3"];
-
-  if (!token) {
-    el("planningExperience").innerHTML = `
-      <div class="experience-empty">
-        <strong>Login om de nieuwe planning-look te testen.</strong>
-        <small>Gebruik bovenaan "Login demo admin" en open daarna opnieuw Planning.</small>
-      </div>
-    `;
-    return;
+  if (window.calendarRender) {
+    window.calendarRender();
+  } else {
+    window.WorkFlowProOperations.renderPlanningExperience();
   }
-
-  const planningRows = (users.length ? users : state.users.slice(0, 4)).map((user, index) => {
-    const userShifts = shifts.filter(shift => shift.userId === user.id);
-    const cells = days.map((day, dayIndex) => {
-      const shift = userShifts[dayIndex % Math.max(userShifts.length, 1)];
-      if (!shift && (index + dayIndex) % 3 === 0) {
-        return `<div class="planner-cell muted-cell">Beschikbaar</div>`;
-      }
-      if (!shift) return `<div class="planner-cell empty-cell">-</div>`;
-      return `
-        <div class="planner-cell shift-cell">
-          <strong>${escapeHtml(shift.start || shift.startsAt || "08:00")} - ${escapeHtml(shift.end || shift.endsAt || "16:30")}</strong>
-          <small>${escapeHtml(shift.project || venueName(shift.venueId))}</small>
-        </div>
-      `;
-    }).join("");
-
-    return `
-      <div class="planner-row">
-        <div class="planner-person">
-          <span>${escapeHtml(user.name?.slice(0, 2).toUpperCase() || "WF")}</span>
-          <div>
-            <strong>${escapeHtml(user.name || "Medewerker")}</strong>
-            <small>${escapeHtml(user.jobTitle || user.role || "Veldteam")}</small>
-          </div>
-        </div>
-        ${cells}
-      </div>
-    `;
-  }).join("");
-
-  el("planningExperience").innerHTML = `
-    <div class="experience-kpis">
-      <article><span>Beschikbaar</span><strong>${users.length || state.users.length}</strong><small>medewerkers</small></article>
-      <article><span>Overboekt</span><strong>${conflicts}</strong><small>conflict</small></article>
-      <article><span>Afwezig</span><strong>${absent}</strong><small>vandaag</small></article>
-      <article><span>Werkbonnen</span><strong>${linkedWorkorders}</strong><small>gekoppeld</small></article>
-    </div>
-    <div class="experience-layout">
-      <section class="experience-panel planning-board">
-        <div class="experience-panel-head">
-          <div>
-            <h3>29 apr - 5 mei 2026</h3>
-            <p>${activeToday} planningitems actief, ${conflicts} aandachtspunt.</p>
-          </div>
-          <span class="status-badge success">OK Bevestigd</span>
-        </div>
-        <div class="planner-grid" role="table" aria-label="Weekplanning">
-          <div class="planner-header">
-            <span>Medewerker</span>
-            ${days.map(day => `<span>${day}</span>`).join("")}
-          </div>
-          ${planningRows || `<div class="experience-empty">Nog geen planning. Maak eerst demo-data aan.</div>`}
-        </div>
-      </section>
-      <aside class="experience-panel assistant-panel">
-        <h3>Conflicten</h3>
-        <div class="assistant-item warning"><strong>Capaciteit bewaken</strong><small>${conflicts ? "Een medewerker heeft overlappende shifts." : "Geen harde conflicten gevonden."}</small></div>
-        <h3>Aanbevolen acties</h3>
-        <div class="assistant-item info"><strong>Werkbon koppelen</strong><small>Koppel open werkbonnen aan de planning voor mobiele voorbereiding.</small></div>
-        <div class="assistant-item success"><strong>Offline klaarzetten</strong><small>Veldteams kunnen planning en werkbonnen vooraf synchroniseren.</small></div>
-      </aside>
-    </div>
-  `;
 }
 
 function renderWorkorderExperience() {
-  if (!token) {
-    el("workorderExperience").innerHTML = `
-      <div class="experience-empty">
-        <strong>Login om de nieuwe werkbonnen-look te testen.</strong>
-        <small>Gebruik bovenaan "Login demo admin" en open daarna opnieuw Werkbonnen.</small>
-      </div>
-    `;
-    return;
-  }
+  window.WorkFlowProOperations.renderWorkorderExperience();
+}
 
-  const columns = [
-    ["Te starten", ["Nieuw", "Open"]],
-    ["Bezig", ["Bezig"]],
-    ["Review", ["Review", "Voltooid"]],
-    ["Klaar voor facturatie", ["Klaar voor facturatie", "Afgerond"]]
-  ];
-  const selected = state.workorders[0] || {};
-  const workorders = state.workorders.length ? state.workorders : [];
-  const openCount = workorders.filter(row => (row.status || "Nieuw") !== "Voltooid").length;
-  const reviewCount = workorders.filter(row => ["Review", "Voltooid"].includes(row.status)).length;
+function renderOpsFocus() {
+  const totals = state.report?.totals || {};
+  const finance = state.report?.finance || {};
+  const pendingExpenses = state.expenses.filter(expense => expense.status !== "approved");
+  const approvedExpenses = state.expenses.filter(expense => expense.status === "approved");
+  const openWorkorders = state.workorders.filter(workorder => !["Voltooid", "Afgewerkt"].includes(workorder.status));
+  const payrollReady = pendingExpenses.length === 0 && Number(totals.clockedHours || 0) > 0;
+  const selectedExpense = pendingExpenses[0] || state.expenses[0] || null;
+  const selectedAmount = Number(selectedExpense?.amount || 0);
+  const policyLimit = 75;
+  const policyChecks = selectedExpense ? [
+    ["Categorie geldig", Boolean(selectedExpense.category)],
+    [`Bedrag binnen limiet (< EUR ${policyLimit.toFixed(2)})`, selectedAmount <= policyLimit],
+    ["Medewerker gekoppeld", Boolean(selectedExpense.userId)],
+    ["Klaar voor finance review", selectedExpense.status !== "approved"]
+  ] : [];
+  const nextAction = pendingExpenses.length
+    ? { label: `${pendingExpenses.length} onkosten goedkeuren`, detail: "Controleer bedrag, categorie en bon voordat finance exporteert.", tone: "warning" }
+    : openWorkorders.length
+      ? { label: `${openWorkorders.length} werkbonnen opvolgen`, detail: "Werkbonnen moeten afgerond zijn voor volledige facturatie.", tone: "info" }
+      : { label: "Export voorbereiden", detail: "Uren en onkosten zijn klaar om naar finance te gaan.", tone: "success" };
 
-  const columnMarkup = columns.map(([label, statuses], index) => {
-    const rows = workorders.filter(row => statuses.includes(row.status || "Nieuw"));
-    const fallbackRows = index === 0 && !workorders.length ? [] : rows;
-    return `
-      <section class="kanban-column">
-        <div class="kanban-title">
-          <strong>${label}</strong>
-          <span>${fallbackRows.length}</span>
+  el("opsFocus").innerHTML = `
+    <section class="ops-focus-grid">
+      <article class="ops-focus-card primary">
+        <p class="eyebrow">Tijd & onkosten</p>
+        <h2>${escapeHtml(nextAction.label)}</h2>
+        <p>${escapeHtml(nextAction.detail)}</p>
+        <span class="status-badge ${payrollReady ? "success" : nextAction.tone}">${payrollReady ? "Klaar voor export" : "Actie nodig"}</span>
+      </article>
+      <article class="ops-focus-card">
+        <span>Geklokte uren</span>
+        <strong>${Number(totals.clockedHours || 0).toFixed(1)}u</strong>
+        <small>${totals.planningItems || 0} planningen</small>
+      </article>
+      <article class="ops-focus-card">
+        <span>Onkosten open</span>
+        <strong>${pendingExpenses.length}</strong>
+        <small>EUR ${Number(finance.pendingExpenseTotal || 0).toFixed(2)} te keuren</small>
+      </article>
+      <article class="ops-focus-card">
+        <span>Goedgekeurd</span>
+        <strong>${approvedExpenses.length}</strong>
+        <small>EUR ${Number(finance.approvedExpenseTotal || 0).toFixed(2)} finance-ready</small>
+      </article>
+    </section>
+    <section class="ops-review-layout">
+      <article class="ops-approval-panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Goedkeuring</p>
+            <h2>Onkosten die finance blokkeren</h2>
+          </div>
+          <button class="secondary-action small-action" data-export="expenses" type="button">CSV export</button>
         </div>
-        ${fallbackRows.map(row => {
-          const checklistDone = (row.checklist || []).filter(item => item.done).length;
-          const checklistTotal = (row.checklist || []).length;
-          return `
-            <article class="workorder-card">
-              <div class="card-topline">
-                <span class="status-badge ${statusTone(row.status)}">${escapeHtml(row.status || "Nieuw")}</span>
-                <small>${escapeHtml(row.id || "WB")}</small>
+        <div class="ops-approval-list">
+          ${pendingExpenses.length ? pendingExpenses.map(expense => `
+            <div class="ops-approval-row ${selectedExpense?.id === expense.id ? "active" : ""}">
+              <div>
+                <strong>${escapeHtml(expense.title)} - EUR ${Number(expense.amount || 0).toFixed(2)}</strong>
+                <small>${escapeHtml(expense.category || "Onkost")} - ${escapeHtml(personName(expense.userId))}</small>
               </div>
-              <strong>${escapeHtml(row.title || "Werkbon")}</strong>
-              <small>${escapeHtml(venueName(row.venueId))} - ${escapeHtml(personName(row.userId))}</small>
-              <div class="card-meta">
-                <span>Checklist ${checklistDone}/${checklistTotal || 3}</span>
-                <span>${row.files?.length || 0} foto's</span>
-              </div>
-            </article>
-          `;
-        }).join("") || `<div class="kanban-empty">Geen werkbonnen</div>`}
-      </section>
-    `;
-  }).join("");
-
-  el("workorderExperience").innerHTML = `
-    <div class="experience-kpis">
-      <article><span>Open</span><strong>${openCount}</strong><small>werkbonnen</small></article>
-      <article><span>Review</span><strong>${reviewCount}</strong><small>wacht op controle</small></article>
-      <article><span>Foto's</span><strong>${workorders.reduce((sum, row) => sum + (row.files?.length || 0), 0)}</strong><small>bewijsstukken</small></article>
-      <article><span>SLA risico</span><strong>${openCount > 3 ? 2 : 0}</strong><small>aandacht</small></article>
-    </div>
-    <div class="workorder-layout">
-      <section class="kanban-board">${columnMarkup}</section>
-      <aside class="experience-panel detail-panel">
-        <p class="eyebrow">Geselecteerd</p>
-        <h3>${escapeHtml(selected.title || "Geen werkbon geselecteerd")}</h3>
-        <div class="detail-stack">
-          <div><span>Klant / werf</span><strong>${escapeHtml(venueName(selected.venueId))}</strong></div>
-          <div><span>Uitvoerder</span><strong>${escapeHtml(personName(selected.userId))}</strong></div>
-          <div><span>Status</span><strong>${escapeHtml(selected.status || "Nieuw")}</strong></div>
-          <div><span>Handtekening</span><strong>${selected.signed ? "Ontvangen" : "Nog nodig"}</strong></div>
+              <button class="small-action" data-approve-expense="${expense.id}" type="button">Goedkeuren</button>
+            </div>
+          `).join("") : `<div class="empty">Geen open onkosten. Finance kan exporteren wanneer de uren gecontroleerd zijn.</div>`}
         </div>
-        <h3>Assistent</h3>
-        <div class="assistant-item info"><strong>Uren controleren</strong><small>Controleer of tijdregistratie gekoppeld is voor facturatie.</small></div>
-        <div class="assistant-item warning"><strong>Materiaal reserveren</strong><small>Stock kan automatisch dalen na afronding.</small></div>
+      </article>
+      <aside class="ops-detail-panel">
+        <div class="ops-detail-card">
+          <div class="panel-head compact">
+            <div>
+              <p class="eyebrow">Detail</p>
+              <h2>${selectedExpense ? escapeHtml(personName(selectedExpense.userId)) : "Geen selectie"}</h2>
+            </div>
+            ${selectedExpense ? `<span class="status-badge ${selectedExpense.status === "approved" ? "success" : "warning"}">${escapeHtml(selectedExpense.status || "submitted")}</span>` : ""}
+          </div>
+          ${selectedExpense ? `
+            <div class="expense-receipt">
+              <span>TOTAAL</span>
+              <strong>EUR ${selectedAmount.toFixed(2)}</strong>
+              <small>${escapeHtml(selectedExpense.title || "Onkost")} - ${escapeHtml(selectedExpense.category || "Categorie")}</small>
+            </div>
+            <dl class="ops-detail-list">
+              <div><dt>Medewerker</dt><dd>${escapeHtml(personName(selectedExpense.userId))}</dd></div>
+              <div><dt>Categorie</dt><dd>${escapeHtml(selectedExpense.category || "-")}</dd></div>
+              <div><dt>Status</dt><dd>${escapeHtml(selectedExpense.status || "submitted")}</dd></div>
+            </dl>
+          ` : `<div class="empty">Selecteer of dien een onkost in om detail te zien.</div>`}
+        </div>
+        <div class="ops-detail-card">
+          <div class="panel-head compact">
+            <div>
+              <p class="eyebrow">Beleidscheck</p>
+              <h2>Finance controle</h2>
+            </div>
+          </div>
+          <div class="policy-list">
+            ${policyChecks.length ? policyChecks.map(([label, ok]) => `
+              <div class="policy-row ${ok ? "ok" : "warning"}">
+                <span>${ok ? "OK" : "!"}</span>
+                <strong>${escapeHtml(label)}</strong>
+              </div>
+            `).join("") : `<div class="empty">Geen onkost om te controleren.</div>`}
+          </div>
+        </div>
+        <div class="ops-detail-card assistant-card">
+          <p class="eyebrow">Payroll readiness</p>
+          <strong>${payrollReady ? "Klaar voor export" : "Nog niet exporteren"}</strong>
+          <small>${payrollReady ? "Tijdregistraties en onkosten zijn klaar voor finance." : `${pendingExpenses.length} open onkosten en ${openWorkorders.length} open werkbonnen blijven zichtbaar.`}</small>
+          <button class="secondary-action small-action" data-export="expenses" type="button">Exporteer naar payroll</button>
+        </div>
       </aside>
-    </div>
+    </section>
   `;
 }
 
@@ -659,6 +532,7 @@ function renderOps() {
   renderPermissionForm();
   renderPlanningExperience();
   renderWorkorderExperience();
+  renderOpsFocus();
   renderList("employeeRows", state.users, user => `
     <div class="data-row">
       <strong>${user.name}</strong>
@@ -736,6 +610,10 @@ function renderReport() {
   `).join("");
 }
 
+async function refreshCustomerStart() {
+  await window.WorkFlowProCustomerStart.refresh();
+}
+
 async function refresh() {
   try {
     const health = await api("/api/health");
@@ -745,6 +623,7 @@ async function refresh() {
 
     if (!token) {
       renderToday(null);
+      window.WorkFlowProCustomerStart.render(null);
       updateHomeSuggestion({ health });
       return;
     }
@@ -762,6 +641,7 @@ async function refresh() {
     renderModules(modules.modules || []);
     renderSteps(golden.readiness);
     renderToday(today.today);
+    await refreshCustomerStart();
     if (!applyApiSuggestion(suggestion?.suggestion)) updateHomeSuggestion({ health, golden, today });
   } catch (error) {
     setText("apiStatus", "Fout");
@@ -797,429 +677,105 @@ async function refreshOps() {
     return;
   }
   const [users, venues, planning, workorders, expenses, report] = await Promise.all([
-    api(`/api/modules/users?tenantId=${tenantId}`),
-    api(`/api/modules/venues?tenantId=${tenantId}`),
-    api(`/api/modules/planning?tenantId=${tenantId}`),
-    api(`/api/modules/workorders?tenantId=${tenantId}`),
-    api(`/api/modules/expenses?tenantId=${tenantId}`),
+    listModuleRows("users"),
+    listModuleRows("venues"),
+    listModuleRows("planning"),
+    listModuleRows("workorders"),
+    listModuleRows("expenses"),
     api(`/api/tenants/${tenantId}/management-report`)
   ]);
-  state.users = users.rows || [];
-  state.venues = venues.rows || [];
-  state.planning = planning.rows || [];
-  state.workorders = workorders.rows || [];
-  state.expenses = expenses.rows || [];
+  state.users = users;
+  state.venues = venues;
+  state.planning = planning;
+  state.workorders = workorders;
+  state.expenses = expenses;
   state.report = report.report || null;
   renderOps();
   setNotice("Operationele data is bijgewerkt.");
 }
 
 function renderBilling() {
-  const billing = state.billing || {};
-  const quote = state.billingQuote || {};
-  const cards = [
-    ["Status", billing.billingStatus || "trial"],
-    ["Plan", quote.planLabel || billing.plan || "business"],
-    ["Seats", quote.seats ?? "-"],
-    ["Betaalmethode", billing.paymentMethodTokenized ? "Tokenized" : "Ontbreekt"],
-    ["Auto-charge", billing.autoCharge ? "Actief" : "Niet actief"],
-    ["Facturen", billing.invoices?.length || 0],
-    ["Peppol", billing.peppolProvider || "mock"],
-    ["DPA", billing.dpaAccepted ? "Geaccepteerd" : "Open"],
-    ["Jaarprijs", quote.enterpriseCustom ? "Maatwerk" : `EUR ${Number(quote.annualTotal || 0).toFixed(2)}`]
-  ];
-  el("billingCards").innerHTML = cards.map(([label, value]) => `
-    <article class="metric">
-      <span class="metric-label">${label}</span>
-      <strong>${value}</strong>
-      <small>Tenant ${billing.tenantId || tenantId}</small>
-    </article>
-  `).join("");
-
-  renderPricingQuote(quote);
-
-  renderList("invoiceRows", billing.invoices || [], invoice => `
-    <div class="data-row">
-      <strong>${invoice.id} - EUR ${Number(invoice.net || 0).toFixed(2)}</strong>
-      <small>${invoice.status} - Peppol: ${invoice.peppolStatus} - pogingen ${invoice.peppolAttempts || 0} - vervalt ${invoice.dueDate}</small>
-      ${invoice.peppolError ? `<small>Peppol fout: ${invoice.peppolError}</small>` : ""}
-      <div class="row-actions">
-        <button class="small-action" data-peppol="${invoice.id}" type="button">Peppol versturen</button>
-        <button class="small-action" data-payment-failed="${invoice.id}" type="button">Payment failed</button>
-      </div>
-    </div>
-  `, "Nog geen facturen.");
-
-  renderList("contractRows", billing.contractEvents || [], event => `
-    <div class="data-row">
-      <strong>${event.label}</strong>
-      <small>${event.from} naar ${event.to} - ${event.at} - ${event.by}</small>
-      ${event.reason ? `<small>${event.reason}</small>` : ""}
-    </div>
-  `, "Nog geen contract events.");
-
-  const complianceRows = [
-    ...(billing.dpaAccepted ? [{ kind: "dpa", title: "DPA geaccepteerd", detail: billing.dpaAcceptedAt }] : [{ kind: "dpa", title: "DPA nog open", detail: "Nog niet geaccepteerd" }]),
-    ...(billing.gdprRequests || []).map(request => ({
-      kind: "gdpr",
-      id: request.id,
-      title: `GDPR ${request.type}`,
-      detail: `${request.subjectEmail} - ${request.status}${request.processedAt ? ` - verwerkt ${request.processedAt}` : ""}`,
-      status: request.status,
-      result: request.result
-    })),
-    ...(billing.failedPayments || []).map(payment => ({
-      kind: "payment",
-      id: payment.id,
-      title: "Failed payment",
-      detail: `${payment.reason} - ${payment.status} - stage ${payment.dunningStage || 1}`,
-      status: payment.status,
-      nextActionAt: payment.nextActionAt,
-      events: payment.events || []
-    }))
-  ];
-  renderList("complianceRows", complianceRows, row => `
-    <div class="data-row">
-      <strong>${row.title}</strong>
-      <small>${row.detail}</small>
-      ${row.result?.export?.counts ? `<small>Export: ${Object.entries(row.result.export.counts).map(([key, value]) => `${key} ${value}`).join(", ")}</small>` : ""}
-      ${row.result?.anonymizedUsers !== undefined ? `<small>Geanonimiseerd: ${row.result.anonymizedUsers} gebruiker(s)</small>` : ""}
-      ${row.nextActionAt ? `<small>Volgende actie: ${row.nextActionAt}</small>` : ""}
-      ${row.kind === "gdpr" && row.status !== "completed" ? `<div class="row-actions"><button class="small-action" data-gdpr-process="${row.id}" type="button">Verwerk verzoek</button></div>` : ""}
-      ${row.kind === "payment" && row.status === "open" ? `<div class="row-actions">
-        <button class="small-action" data-dunning-action="reminder" data-dunning-id="${row.id}" type="button">Reminder</button>
-        <button class="small-action" data-dunning-action="retry" data-dunning-id="${row.id}" type="button">Retry</button>
-        <button class="small-action" data-dunning-action="resolve" data-dunning-id="${row.id}" type="button">Opgelost</button>
-      </div>` : ""}
-    </div>
-  `, "Nog geen compliance events.");
-
-  renderList("peppolEventRows", billing.peppolEvents || [], event => `
-    <div class="data-row">
-      <strong>${event.invoiceId} - ${event.status}</strong>
-      <small>${event.at} - ${event.provider} - ${event.message || event.providerReference || ""}</small>
-    </div>
-  `, "Nog geen Peppol events.");
-
-  renderList("stripeEventRows", billing.stripeEvents || [], event => `
-    <div class="data-row">
-      <strong>${event.type} - ${event.status}</strong>
-      <small>${event.at} - ${event.action} - ${event.id}</small>
-    </div>
-  `, "Nog geen Stripe events.");
-
-  document.querySelectorAll("[data-peppol]").forEach(button => {
-    button.addEventListener("click", () => sendPeppolInvoice(button.dataset.peppol));
-  });
-  document.querySelectorAll("[data-payment-failed]").forEach(button => {
-    button.addEventListener("click", () => markPaymentFailed(button.dataset.paymentFailed));
-  });
-  document.querySelectorAll("[data-gdpr-process]").forEach(button => {
-    button.addEventListener("click", () => processGdprRequest(button.dataset.gdprProcess));
-  });
-  document.querySelectorAll("[data-dunning-id]").forEach(button => {
-    button.addEventListener("click", () => advanceDunning(button.dataset.dunningId, button.dataset.dunningAction));
-  });
-}
-
-function renderPricingQuote(quote) {
-  if (!quote.planLabel) {
-    el("pricingQuote").innerHTML = "";
-    return;
-  }
-  el("pricingQuote").innerHTML = `
-    <article class="quote-card">
-      <div>
-        <p class="eyebrow">Pricing package</p>
-        <h3>${quote.planLabel}</h3>
-        <small>${quote.seats} billable seats - ${quote.includedSeats} inbegrepen - ${quote.extraSeats} extra</small>
-      </div>
-      <div class="quote-price">
-        <strong>${quote.enterpriseCustom ? "Maatwerk" : `EUR ${Number(quote.annualTotal || 0).toFixed(2)}`}</strong>
-        <small>${quote.enterpriseCustom ? "Jaarcontract op offerte" : `incl. ${Math.round((quote.vatRate || 0) * 100)}% btw`}</small>
-      </div>
-    </article>
-    <div class="quote-features">
-      ${(quote.features || []).map(feature => `<span>${feature}</span>`).join("")}
-    </div>
-  `;
+  window.WorkFlowProBilling.render();
 }
 
 async function refreshBilling() {
-  if (!token) {
-    setBillingNotice("Login met de demo admin om billing te beheren.", false);
-    return;
-  }
-  const [summary, quote] = await Promise.all([
-    api(`/api/tenants/${tenantId}/billing/summary`),
-    api(`/api/tenants/${tenantId}/billing/quote`)
-  ]);
-  state.billing = summary.billing;
-  state.billingQuote = quote.quote;
-  renderBilling();
-  setBillingNotice("Billing data is bijgewerkt.");
+  await window.WorkFlowProBilling.refresh();
 }
 
-function renderMobile(today) {
-  if (!today) {
-    el("mobileShiftRows").innerHTML = `<div class="empty">Login om mobiele planning te laden.</div>`;
-    el("mobileWorkorderRows").innerHTML = `<div class="empty">Login om werkbonnen te laden.</div>`;
-    setText("queueCount", String(state.queue.length));
-    setText("mobileLastSync", "Nog niet");
-    setText("mobileSyncDetail", "0 acties verwerkt");
-    return;
-  }
+function serviceDueSoon(vehicle) {
+  return window.WorkFlowProAssets.serviceDueSoon(vehicle);
+}
 
-  const offlineHints = today.offlineHints || {};
-  setText("mobileTodayDate", today.date || "-");
-  setText("mobileTodayUser", today.user?.name || "Veldteam");
-  setText("mobileIntro", "Mobiele flow geladen met planning, werkbonnen, PWA-status en offline wachtrij.");
-  setText("queueCount", String(state.queue.length));
-  setText("mobileLastSync", shortDateTime(offlineHints.lastSyncedAt));
-  setText("mobileSyncDetail", `${offlineHints.processedCount || 0} acties verwerkt`);
+function renderAssets() {
+  window.WorkFlowProAssets.render();
+}
 
-  renderList("mobileShiftRows", today.shifts || [], shift => `
-    <div class="data-row">
-      <strong>${shift.start || shift.startsAt || "?"} tot ${shift.end || shift.endsAt || "?"}</strong>
-      <small>${shift.project || "Planning"} - ${venueName(shift.venueId)}</small>
-    </div>
-  `, "Geen planning voor vandaag.");
+async function refreshAssets() {
+  await window.WorkFlowProAssets.refresh();
+}
 
-  renderList("mobileWorkorderRows", today.openWorkorders || [], workorder => `
-    <div class="mobile-workorder">
-      <strong>${workorder.title}</strong>
-      <small>${workorder.status || "Nieuw"} - ${venueName(workorder.venueId)} - ${workorder.files?.length || 0} foto's - ${workorder.signed ? "getekend" : "niet getekend"}</small>
-      <div class="mobile-actions">
-        <button class="small-action" data-mobile-photo="${workorder.id}" type="button">Foto</button>
-        <button class="small-action" data-mobile-sign="${workorder.id}" type="button">Handtekening</button>
-        <button class="small-action" data-mobile-complete="${workorder.id}" type="button">Afronden</button>
-      </div>
-    </div>
-  `, "Geen open werkbonnen.");
+async function refreshStock() {
+  if (window.stockLoad) await window.stockLoad();
+}
 
-  document.querySelectorAll("[data-mobile-photo]").forEach(button => {
-    button.addEventListener("click", () => mobileWorkorderAction(button.dataset.mobilePhoto, "photo"));
-  });
-  document.querySelectorAll("[data-mobile-sign]").forEach(button => {
-    button.addEventListener("click", () => mobileWorkorderAction(button.dataset.mobileSign, "signature"));
-  });
-  document.querySelectorAll("[data-mobile-complete]").forEach(button => {
-    button.addEventListener("click", () => mobileWorkorderAction(button.dataset.mobileComplete, "complete"));
-  });
+async function refreshVerlof() {
+  if (window.verlofLoad) await window.verlofLoad();
+}
+
+async function refreshWagenpark() {
+  if (window.wagenparkLoad) await window.wagenparkLoad();
+}
+
+async function submitAssetModule(form, key, mapper) {
+  await window.WorkFlowProAssets.submit(form, key, mapper);
+}
+
+function renderReportsDashboard() {
+  window.WorkFlowProReports.render();
+}
+
+async function refreshReportsDashboard() {
+  await window.WorkFlowProReports.refresh();
 }
 
 async function refreshMobile() {
-  setText("pwaStatus", "Controle");
-  setText("pwaDetail", "Manifest actief, service worker wordt nagekeken");
-  if (!token) {
-    renderMobile(null);
-    return;
-  }
-  await refreshOps();
-  const result = await api(`/api/tenants/${tenantId}/mobile/today`);
-  state.mobile = result.today;
-  renderMobile(result.today);
-}
-
-function mappingTextToRows(text) {
-  return String(text || "").split(/\r?\n/).map(line => line.trim()).filter(Boolean).map(line => {
-    const [local, remote] = line.split("=>").map(part => part.trim());
-    return { local, remote, direction: "both" };
-  });
-}
-
-function mappingRowsToText(rows) {
-  return (rows || []).map(row => `${row.local} => ${row.remote}`).join("\n");
+  await window.WorkFlowProMobile.refresh();
 }
 
 function renderIntegrations() {
-  const options = state.integrations.length
-    ? state.integrations.map(row => `<option value="${row.id}">${row.label || row.provider}</option>`).join("")
-    : `<option value="">Maak eerst een koppeling</option>`;
-  el("mappingIntegration").innerHTML = options;
-  const first = state.integrations[0];
-  if (first) el("mappingForm").elements.mappingText.value = mappingRowsToText(first.config?.fieldMapping || []);
-
-  renderList("integrationCards", state.integrations, row => `
-    <div class="data-row ${row.syncSummary?.needsAttention || row.mappingSummary?.needsAttention ? "kpi-open" : ""}">
-      <strong>${row.label || row.provider}</strong>
-      <small>${row.status} - ${row.syncSummary?.lastSyncAt || "nog niet gesynchroniseerd"} - secret: ${row.hasSecret ? "aanwezig" : "ontbreekt"}</small>
-      <small>Syncs: ${row.syncSummary?.success || 0} OK, ${row.syncSummary?.failed || 0} fouten, ${row.syncSummary?.retryableFailures || 0} retrybaar, ${row.syncSummary?.retries || 0} retries</small>
-      <small>Mappings: ${row.mappingSummary?.valid || 0} geldig, ${row.mappingSummary?.invalid || 0} ongeldig</small>
-    </div>
-  `, "Nog geen koppelingen.");
-
-  renderList("integrationRows", state.integrations, row => `
-    <div class="data-row">
-      <strong>${row.label || row.provider}</strong>
-      <small>${row.provider} - ${row.config?.environment || "test"} - ${row.config?.fieldMapping?.length || 0} mappings</small>
-      <small>Mappingstatus: ${row.mappingSummary?.needsAttention ? "nakijken" : "klaar"}</small>
-      <small>Laatste sync: ${row.syncSummary?.lastStatus || "never"}${row.syncSummary?.lastErrorCode ? ` (${row.syncSummary.lastErrorCode})` : ""}${row.syncSummary?.lastMessage ? ` - ${row.syncSummary.lastMessage}` : ""}</small>
-      <small>Open foutcodes: ${(row.syncSummary?.openErrorCodes || []).join(", ") || "geen"}</small>
-      <div class="row-actions">
-        <button class="small-action" data-sync-integration="${row.id}" type="button">Sync nu</button>
-      </div>
-    </div>
-  `, "Nog geen koppelingen.");
-
-  const logs = state.integrations.flatMap(row => (row.syncLogs || []).map(log => ({ ...log, provider: row.provider, integrationId: row.id })));
-  renderList("syncLogRows", logs, log => `
-    <div class="data-row ${log.retryable ? "kpi-open" : ""}">
-      <strong>${log.provider} - ${log.status}${log.resolved ? " - opgelost" : ""}</strong>
-      <small>${log.at}${log.errorCode ? ` - ${log.errorCode}` : ""} - push werkbonnen ${log.pushed?.workorders || 0}, facturen ${log.pushed?.invoices || 0}</small>
-      <div class="row-actions">
-        ${log.retryable ? `<button class="small-action" data-retry-sync="${log.integrationId}" data-sync-id="${log.id}" type="button">Retry</button>` : ""}
-      </div>
-    </div>
-  `, "Nog geen sync logs.");
-
-  document.querySelectorAll("[data-sync-integration]").forEach(button => {
-    button.addEventListener("click", () => runIntegrationSync(button.dataset.syncIntegration));
-  });
-  document.querySelectorAll("[data-retry-sync]").forEach(button => {
-    button.addEventListener("click", () => retryIntegrationSync(button.dataset.retrySync, button.dataset.syncId));
-  });
+  window.WorkFlowProIntegrations.render();
 }
 
 async function refreshIntegrations() {
-  if (!token) {
-    setIntegrationNotice("Login met de demo admin om integraties te beheren.", false);
-    return;
-  }
-  const result = await api(`/api/tenants/${tenantId}/integrations`);
-  state.integrations = result.rows || [];
-  renderIntegrations();
-  setIntegrationNotice("Integraties zijn bijgewerkt.");
+  await window.WorkFlowProIntegrations.refresh();
 }
 
 async function connectIntegration(form) {
-  if (!token) return setIntegrationNotice("Login eerst met de demo admin.", false);
-  try {
-    await api(`/api/tenants/${tenantId}/integrations/connect`, { method: "POST", body: JSON.stringify(formData(form)) });
-    setIntegrationNotice("Koppeling opgeslagen.");
-    await refreshIntegrations();
-  } catch (error) {
-    setIntegrationNotice(error.message, false);
-  }
+  await window.WorkFlowProIntegrations.connect(form);
 }
 
 async function saveMapping(form) {
-  if (!token) return setIntegrationNotice("Login eerst met de demo admin.", false);
-  const data = formData(form);
-  if (!data.integrationId) return setIntegrationNotice("Kies eerst een integratie.", false);
-  try {
-    await api(`/api/tenants/${tenantId}/integrations/${data.integrationId}/mapping`, {
-      method: "POST",
-      body: JSON.stringify({ fieldMapping: mappingTextToRows(data.mappingText) })
-    });
-    setIntegrationNotice("Mapping opgeslagen.");
-    await refreshIntegrations();
-  } catch (error) {
-    setIntegrationNotice(error.message, false);
-  }
-}
-
-async function runIntegrationSync(integrationId) {
-  try {
-    await api(`/api/tenants/${tenantId}/integrations/${integrationId}/sync`, { method: "POST", body: "{}" });
-    setIntegrationNotice("Sync uitgevoerd.");
-    await refreshIntegrations();
-  } catch (error) {
-    setIntegrationNotice(error.message, false);
-  }
-}
-
-async function retryIntegrationSync(integrationId, syncId) {
-  try {
-    const result = await api(`/api/tenants/${tenantId}/integrations/${integrationId}/retry`, {
-      method: "POST",
-      body: JSON.stringify({ syncId })
-    });
-    setIntegrationNotice(result.result?.duplicate ? "Retry was al verwerkt." : "Retry uitgevoerd.");
-    await refreshIntegrations();
-  } catch (error) {
-    setIntegrationNotice(error.message, false);
-  }
+  await window.WorkFlowProIntegrations.saveMapping(form);
 }
 
 function renderNotifications() {
-  const summary = state.notificationSummary || {};
-  const cards = [
-    ["Totaal", summary.total || 0],
-    ["In wachtrij", summary.queued || 0],
-    ["Gelezen", summary.read || 0],
-    ["Hoge prioriteit", summary.highPriority || 0],
-    ["Support escalaties", summary.supportEscalations || 0]
-  ];
-  el("notificationCards").innerHTML = cards.map(([label, value]) => `
-    <article class="metric">
-      <span class="metric-label">${label}</span>
-      <strong>${value}</strong>
-      <small>Notificaties</small>
-    </article>
-  `).join("");
-
-  renderList("notificationRows", state.notifications, row => `
-    <div class="data-row">
-      <strong>${row.title}</strong>
-      <small>${row.type} - ${row.channel} - ${row.audience} - ${row.status} - ${row.priority}</small>
-      <small>${row.body || ""}${row.sourceRef ? ` - bron ${row.sourceRef}` : ""}</small>
-      <div class="row-actions">
-        ${row.status === "read" ? "" : `<button class="small-action" data-read-notification="${row.id}" type="button">Markeer gelezen</button>`}
-      </div>
-    </div>
-  `, "Nog geen notificaties.");
-
-  document.querySelectorAll("[data-read-notification]").forEach(button => {
-    button.addEventListener("click", () => markNotificationRead(button.dataset.readNotification));
-  });
+  window.WorkFlowProActionCenter.render();
 }
 
 async function refreshNotifications() {
-  if (!token) {
-    setNotificationNotice("Login met de demo admin om notificaties te beheren.", false);
-    return;
-  }
-  const result = await api(`/api/tenants/${tenantId}/notifications`);
-  state.notifications = result.rows || [];
-  state.notificationSummary = result.summary || {};
-  renderNotifications();
-  setNotificationNotice("Notificaties zijn bijgewerkt.");
+  await window.WorkFlowProActionCenter.refresh();
 }
 
 async function createNotificationFromForm(form) {
-  if (!token) return setNotificationNotice("Login eerst met de demo admin.", false);
-  try {
-    await api(`/api/tenants/${tenantId}/notifications`, {
-      method: "POST",
-      body: JSON.stringify(formData(form))
-    });
-    setNotificationNotice("Notificatie aangemaakt.");
-    await refreshNotifications();
-  } catch (error) {
-    setNotificationNotice(error.message, false);
-  }
+  await window.WorkFlowProActionCenter.createFromForm(form);
 }
 
 async function generateReminders() {
-  if (!token) return setNotificationNotice("Login eerst met de demo admin.", false);
-  try {
-    const result = await api(`/api/tenants/${tenantId}/notifications/reminders`, { method: "POST", body: "{}" });
-    setNotificationNotice(`${result.rows.length} reminders aangemaakt.`);
-    await refreshNotifications();
-  } catch (error) {
-    setNotificationNotice(error.message, false);
-  }
+  await window.WorkFlowProActionCenter.generate();
 }
 
 async function markNotificationRead(notificationId) {
-  try {
-    await api(`/api/tenants/${tenantId}/notifications/${notificationId}/read`, { method: "POST", body: "{}" });
-    setNotificationNotice("Notificatie gemarkeerd als gelezen.");
-    await refreshNotifications();
-  } catch (error) {
-    setNotificationNotice(error.message, false);
-  }
+  await window.WorkFlowProActionCenter.markRead(notificationId);
 }
 
 function renderAdmin() {
@@ -1238,18 +794,23 @@ function renderAdmin() {
   const rateLimits = status.rateLimits || {};
   const backupHealth = status.backupHealth || {};
   const goLive = state.goLive || {};
+  const roadmap = state.roadmap || {};
   const gates = goLive.gates || {};
   const productionGate = gates.production || {};
   const pilotGate = gates.pilot || {};
   const salesGate = gates.sales || {};
+  const customerStartGate = gates.customerStart || {};
   const cards = [
     ["API", health.api || "-"],
     ["Storage", health.storage || "-"],
     ["Go-live", goLive.ok ? "Klaar" : "Open"],
+    ["Roadmapfase", roadmap.currentPhase || "-"],
+    ["Roadmap go", `${roadmap.summary?.go || 0}/${roadmap.summary?.total || 0}`],
     ["Production", `${readiness.score || 0}%`],
     ["P0 blockers", productionGate.p0 ?? readiness.blockers ?? 0],
     ["Pilot gate", `${pilotGate.score || 0}%`],
     ["Sales gate", `${salesGate.score || 0}%`],
+    ["Klantstart", customerStartGate.ok ? "Klaar" : "Open"],
     ["Rapporten", state.reportsSummary?.total || 0],
     ["Schema", `${storage.schemaVersion || "-"} / ${storage.latestSchemaVersion || "-"}`],
     ["Migraties", health.migrations || "-"],
@@ -1303,6 +864,107 @@ function renderAdmin() {
       <small>${status.tenant?.name || "Tenant"}</small>
     </article>
   `).join("");
+
+  const firstGoLiveBlocker = (productionGate.openP0 || [])[0]
+    || (pilotGate.openKpis || [])[0]
+    || (salesGate.openChecks || [])[0]
+    || (customerStartGate.blockers || []).map(label => ({ label, detail: customerStartGate.detail }))[0]
+    || null;
+  el("goLiveFocus").innerHTML = `
+    <section class="go-live-focus-grid">
+      <article class="go-live-focus-card primary">
+        <p class="eyebrow">Go-live cockpit</p>
+        <h2>${goLive.ok ? "Klaar voor gecontroleerde livegang" : firstGoLiveBlocker?.label || "Go-live nog open"}</h2>
+        <p>${escapeHtml(goLive.ok ? "Production, pilot, sales en klantstart staan groen." : firstGoLiveBlocker?.detail || firstGoLiveBlocker?.action || "Werk de open gates af voordat echte klanten live gaan.")}</p>
+        <button id="goLiveGenerateReports" type="button">Rapporten genereren</button>
+      </article>
+      <article class="go-live-focus-card">
+        <span>Production</span>
+        <strong>${productionGate.score || 0}%</strong>
+        <small>${productionGate.p0 ?? 0} P0 open</small>
+      </article>
+      <article class="go-live-focus-card">
+        <span>Pilot</span>
+        <strong>${pilotGate.score || 0}%</strong>
+        <small>${pilotGate.openCount || 0} KPI open</small>
+      </article>
+      <article class="go-live-focus-card">
+        <span>Sales</span>
+        <strong>${salesGate.score || 0}%</strong>
+        <small>${salesGate.openCount || 0} checks open</small>
+      </article>
+      <article class="go-live-focus-card">
+        <span>Klantstart</span>
+        <strong>${customerStartGate.ok ? "Go" : "Open"}</strong>
+        <small>${customerStartGate.ready ? customerStartGate.label || "dagflow klaar" : (customerStartGate.blockers || []).length + " blocker(s)"}</small>
+      </article>
+    </section>
+  `;
+  const goLiveGenerateReports = el("goLiveGenerateReports");
+  if (goLiveGenerateReports) goLiveGenerateReports.addEventListener("click", generateReports);
+
+  const securityOpen = [
+    mfaRisk.ok ? "" : `${mfaRisk.missingMfa || 0} admin MFA open`,
+    support.enabled ? "Supporttoegang staat open" : "",
+    backupHealth.ok ? "" : `${backupHealth.missing || 0} backup issue(s)`,
+    Number(counts.errorEvents || 0) ? `${counts.errorEvents} fout-events` : ""
+  ].filter(Boolean);
+  const securityReady = !securityOpen.length;
+  const setupCounts = status.counts || {};
+  const setupOpen = [
+    setupCounts.users ? "" : "Medewerkers ontbreken",
+    setupCounts.venues ? "" : "Werven ontbreken",
+    setupCounts.workorders ? "" : "Werkbonnen ontbreken"
+  ].filter(Boolean);
+  el("setupFocus").innerHTML = `
+    <section class="setup-focus-grid">
+      <article class="setup-focus-card primary">
+        <p class="eyebrow">Klantsetup</p>
+        <h2>${setupOpen.length ? setupOpen[0] : "Basis klantsetup staat klaar"}</h2>
+        <p>${setupOpen.length ? "Gebruik setup-acties alleen tijdens onboarding; dagelijkse gebruikers zien deze formulieren niet." : "Medewerkers, werven en werkbonnen zijn aanwezig. Dagelijkse flow blijft schoon."}</p>
+      </article>
+      <article class="setup-focus-card">
+        <span>Gebruikers</span>
+        <strong>${setupCounts.users || 0}</strong>
+        <small>tenant accounts</small>
+      </article>
+      <article class="setup-focus-card">
+        <span>Werven</span>
+        <strong>${setupCounts.venues || 0}</strong>
+        <small>locaties</small>
+      </article>
+      <article class="setup-focus-card">
+        <span>Werkbonnen</span>
+        <strong>${setupCounts.workorders || 0}</strong>
+        <small>operationeel</small>
+      </article>
+    </section>
+  `;
+  el("adminFocus").innerHTML = `
+    <section class="admin-focus-grid">
+      <article class="admin-focus-card primary">
+        <p class="eyebrow">Security readiness</p>
+        <h2>${securityReady ? "Security klaar voor pilot" : securityOpen[0]}</h2>
+        <p>${securityReady ? "MFA, backup, audit en supporttoegang staan onder controle." : "Los deze blocker eerst op voordat echte klanten live gaan."}</p>
+        <span class="status-badge ${securityReady ? "success" : "warning"}">${securityReady ? "Go" : "Actie nodig"}</span>
+      </article>
+      <article class="admin-focus-card">
+        <span>MFA admins</span>
+        <strong>${mfaRisk.readyAdmins || 0}/${mfaRisk.totalAdmins || 0}</strong>
+        <small>${mfaRisk.missingMfa || 0} ontbreekt</small>
+      </article>
+      <article class="admin-focus-card">
+        <span>Support</span>
+        <strong>${support.enabled ? "Open" : "Gesloten"}</strong>
+        <small>${support.enabled ? support.reason || "consent actief" : "geen actieve toegang"}</small>
+      </article>
+      <article class="admin-focus-card">
+        <span>Backup</span>
+        <strong>${backupHealth.ok ? "Klaar" : "Open"}</strong>
+        <small>${backupHealth.stale || 0} te oud, ${backupHealth.missing || 0} ontbreekt</small>
+      </article>
+    </section>
+  `;
 
   const auditRows = state.auditRows.length ? state.auditRows : (status.latestAudit || []);
   renderList("adminAuditRows", auditRows, row => `
@@ -1374,6 +1036,11 @@ function renderAdmin() {
       label: `Sales - ${row.label}`,
       detail: row.action || row.detail,
       group: "Commercial"
+    })),
+    ...(customerStartGate.blockers || []).map(row => ({
+      label: `Klantstart - ${row}`,
+      detail: customerStartGate.detail || "Maak de dagelijkse klantflow klaar voor live gebruik.",
+      group: "Customer start"
     }))
   ];
   renderList("goLiveRows", goLiveRows, row => `
@@ -1382,6 +1049,17 @@ function renderAdmin() {
       <small>${row.detail || "Nog te vervolledigen voor go-live."}</small>
     </div>
   `, goLive.ok ? "Alle go-live gates staan groen." : "Nog geen go-live gate geladen.");
+
+  renderList("roadmapRows", roadmap.phases || [], row => {
+    const firstAction = (row.actions || [])[0];
+    return `
+      <div class="data-row ${row.go ? "kpi-ok" : "kpi-open"}">
+        <strong>${row.go ? "Go" : "No-go"} - ${row.label} - ${row.score}%</strong>
+        <small>${row.detail || "Roadmapfase"} ${row.openCount ? `- ${row.openCount} open acties` : ""}</small>
+        <small>${firstAction ? `Volgende actie: ${firstAction.label} - ${firstAction.action}` : "Geen open acties voor deze fase."}</small>
+      </div>
+    `;
+  }, "Nog geen roadmapstatus geladen.");
 
   renderList("reportRows", state.reports, row => `
     <div class="data-row">
@@ -1538,15 +1216,17 @@ async function refreshAdmin() {
     api(`/api/tenants/${tenantId}/api-keys`),
     api(`/api/tenants/${tenantId}/api-keys/governance?strict=true`),
     api(`/api/tenants/${tenantId}/go-live`),
+    api(`/api/tenants/${tenantId}/roadmap`),
     api(`/api/tenants/${tenantId}/reports`)
   ];
   if (isSuperAdmin()) requests.push(api("/api/admin/tenants"));
-  const [status, backups, apiKeys, apiKeyGovernance, goLive, reports, tenants] = await Promise.all(requests);
+  const [status, backups, apiKeys, apiKeyGovernance, goLive, roadmap, reports, tenants] = await Promise.all(requests);
   state.admin = status.status;
   state.backups = backups.rows || [];
   state.apiKeys = apiKeys.rows || [];
   state.apiKeyGovernance = apiKeyGovernance.governance || null;
   state.goLive = goLive.readiness || {};
+  state.roadmap = roadmap.roadmap || null;
   state.reports = reports.rows || [];
   state.reportsSummary = reports.summary || null;
   state.tenants = tenants?.rows || state.tenants;
@@ -1991,9 +1671,8 @@ async function startMfaSetup() {
     el("mfaStatus").innerHTML = `
       <strong>MFA setup gestart</strong>
       <small>Secret: ${result.setup.secret}</small>
-      <small>Demo code: ${result.setup.demoCode}</small>
+      <small>Scan de secret in je authenticator en vul de actuele code hieronder in.</small>
     `;
-    el("mfaVerifyForm").elements.code.value = result.setup.demoCode;
     el("mfaStatus").classList.remove("bad");
     setAdminNotice("MFA setup gestart. Bevestig met de code.");
   } catch (error) {
@@ -2058,6 +1737,41 @@ function renderPortal() {
       <small>${portal.tenant.name}</small>
     </article>
   `).join("");
+
+  const pilot = state.pilot || {};
+  const supportSummary = state.supportTicketSummary || portal.status.supportTickets || {};
+  const openPilotKpis = (pilot.kpis || []).filter(kpi => !kpi.ok);
+  const onboardingOpen = (portal.onboarding.steps || []).filter(step => !step.done);
+  const pilotReady = (pilot.score || 0) >= 80 && portal.onboarding.percent >= 70 && !(supportSummary.criticalOpen || 0);
+  const portalAction = openPilotKpis[0]?.action || onboardingOpen[0]?.label || "Genereer beslissersrapport voor go/no-go.";
+  el("portalFocus").innerHTML = `
+    <article class="portal-focus-card primary">
+      <p class="eyebrow">Pilot readiness</p>
+      <h2>${pilotReady ? "Pilot kan richting go/no-go" : "Pilot heeft nog actie nodig"}</h2>
+      <p>${escapeHtml(pilotReady ? "De belangrijkste onboarding- en pilotindicatoren zijn klaar om met de beslisser te bespreken." : portalAction)}</p>
+      <button id="portalDecisionAction" type="button">${pilotReady ? "Rapport genereren" : "Volgende actie opvolgen"}</button>
+    </article>
+    <article class="portal-focus-card">
+      <span>Onboarding</span>
+      <strong>${portal.onboarding.percent}%</strong>
+      <small>${onboardingOpen.length} open stappen</small>
+    </article>
+    <article class="portal-focus-card">
+      <span>Pilot KPI</span>
+      <strong>${pilot.score || 0}%</strong>
+      <small>${openPilotKpis.length} open KPI's</small>
+    </article>
+    <article class="portal-focus-card">
+      <span>Support</span>
+      <strong>${supportSummary.open || 0}</strong>
+      <small>${supportSummary.criticalOpen || 0} kritisch open</small>
+    </article>
+  `;
+  const portalDecisionAction = el("portalDecisionAction");
+  if (portalDecisionAction) portalDecisionAction.addEventListener("click", () => {
+    if (pilotReady) generateDecisionReport();
+    else setView("notifications");
+  });
 
   el("portalSteps").innerHTML = (portal.onboarding.steps || []).map(step => `
     <div class="step ${step.done ? "done" : ""}">
@@ -2273,6 +1987,37 @@ function renderSales() {
     </article>
   `).join("");
 
+  const activeLeads = state.sales.filter(lead => !["paying_customer", "lost"].includes(lead.stage));
+  const nextLead = activeLeads.slice().sort((a, b) => String(a.nextActionAt || "9999-12-31").localeCompare(String(b.nextActionAt || "9999-12-31")))[0];
+  const openChecks = launch.openChecks || (launch.checks || []).filter(check => !check.ok);
+  el("salesFocus").innerHTML = `
+    <article class="sales-focus-card primary">
+      <p class="eyebrow">Commercial launch</p>
+      <h2>${launch.ok ? "Klaar voor gecontroleerde verkoop" : `${openChecks.length} launch checks open`}</h2>
+      <p>${escapeHtml(nextLead ? `Volg ${nextLead.company} op voor ${nextLead.nextActionAt || "de volgende actie"}.` : openChecks[0]?.action || "Voeg qualified leads en demo calls toe om launchvalidatie op te bouwen.")}</p>
+      <button id="salesFocusAction" type="button">${nextLead ? "Lead opvolgen" : "Launch checks bekijken"}</button>
+    </article>
+    <article class="sales-focus-card">
+      <span>Actieve leads</span>
+      <strong>${activeLeads.length}</strong>
+      <small>${actuals.qualifiedLeads || 0} qualified</small>
+    </article>
+    <article class="sales-focus-card">
+      <span>Demo calls</span>
+      <strong>${actuals.demoCalls || 0}</strong>
+      <small>target ${targets.demoCalls || 10}</small>
+    </article>
+    <article class="sales-focus-card">
+      <span>Trial-to-paid</span>
+      <strong>${summary.activation?.paidProgress || 0}%</strong>
+      <small>${actuals.payingCustomers || 0}/${targets.payingCustomers || 3} klanten</small>
+    </article>
+  `;
+  const salesFocusAction = el("salesFocusAction");
+  if (salesFocusAction) salesFocusAction.addEventListener("click", () => {
+    document.getElementById("salesRows")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
   renderList("salesLaunchRows", launch.checks || [], check => `
     <div class="data-row ${check.ok ? "kpi-ok" : "kpi-open"}">
       <strong>${check.label}</strong>
@@ -2341,13 +2086,13 @@ async function refreshSales() {
   }
   try {
     const [rowsResult, partnersResult, summaryResult, readinessResult] = await Promise.all([
-      api(`/api/modules/sales?tenantId=${tenantId}`),
-      api(`/api/modules/partners?tenantId=${tenantId}`),
+      listModuleRows("sales"),
+      listModuleRows("partners"),
       api(`/api/tenants/${tenantId}/sales/summary`),
       api(`/api/tenants/${tenantId}/sales/readiness`)
     ]);
-    state.sales = rowsResult.rows || [];
-    state.partners = partnersResult.rows || [];
+    state.sales = rowsResult;
+    state.partners = partnersResult;
     state.salesSummary = summaryResult.summary || {};
     state.salesLaunch = readinessResult.readiness || {};
     renderSales();
@@ -2361,10 +2106,7 @@ async function createSalesLead(form) {
   try {
     const data = formData(form);
     if (!data.partnerId) delete data.partnerId;
-    await api(`/api/modules/sales?tenantId=${tenantId}`, {
-      method: "POST",
-      body: JSON.stringify({ ...data, stage: "qualified_lead", source: data.partnerId ? "partner" : "demo_booking" })
-    });
+    await createModuleRow("sales", { ...data, stage: "qualified_lead", source: data.partnerId ? "partner" : "demo_booking" });
     form.reset();
     form.elements.seats.value = 12;
     await refreshSales();
@@ -2376,10 +2118,7 @@ async function createSalesLead(form) {
 async function createPartner(form) {
   if (!token) return;
   try {
-    await api(`/api/modules/partners?tenantId=${tenantId}`, {
-      method: "POST",
-      body: JSON.stringify(formData(form))
-    });
+    await createModuleRow("partners", formData(form));
     form.reset();
     await refreshSales();
   } catch (error) {
@@ -2390,10 +2129,7 @@ async function createPartner(form) {
 async function updatePartnerStatus(partnerId, status) {
   if (!token) return;
   try {
-    await api(`/api/modules/partners/${partnerId}?tenantId=${tenantId}`, {
-      method: "PATCH",
-      body: JSON.stringify({ status })
-    });
+    await updateModuleRow("partners", partnerId, { status });
     await refreshSales();
   } catch (error) {
     setText("salesIntro", error.message);
@@ -2431,65 +2167,8 @@ async function advanceSalesLead(leadId) {
   }
 }
 
-function mobilePayload(action) {
-  if (action === "photo") return { name: `werf-foto-${Date.now()}.jpg`, type: "image/jpeg", size: 420000 };
-  if (action === "signature") return { signerName: "Klant akkoord" };
-  return { note: "Afgerond via mobiele flow" };
-}
-
-function queueId() {
-  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
-  return `queue_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-}
-
-async function mobileWorkorderAction(workorderId, action) {
-  const queued = { id: queueId(), workorderId, action, payload: mobilePayload(action), at: new Date().toISOString(), attempts: 0 };
-  if (!navigator.onLine) {
-    state.queue.push(queued);
-    saveQueue();
-    setText("mobileIntro", "Geen verbinding. Actie lokaal bewaard voor sync.");
-    return;
-  }
-  try {
-    await api(`/api/tenants/${tenantId}/mobile/workorders/${workorderId}/${action}`, {
-      method: "POST",
-      body: JSON.stringify(queued.payload)
-    });
-    setText("mobileIntro", "Mobiele actie opgeslagen.");
-    await refreshMobile();
-    await refresh();
-  } catch (error) {
-    state.queue.push(queued);
-    saveQueue();
-    setText("mobileIntro", `Actie in offline wachtrij geplaatst: ${error.message}`);
-  }
-}
-
 async function syncQueue() {
-  if (!token || !navigator.onLine || !state.queue.length) return;
-  const pending = state.queue.map(item => ({ ...item, id: item.id || queueId(), attempts: Number(item.attempts || 0) + 1 }));
-  state.queue = [];
-  saveQueue();
-  try {
-    const result = await api(`/api/tenants/${tenantId}/mobile/sync`, {
-      method: "POST",
-      body: JSON.stringify({ items: pending })
-    });
-    const failedIds = new Set((result.sync?.results || []).filter(row => !row.ok).map(row => row.id));
-    state.queue = pending.filter(item => failedIds.has(item.id));
-    saveQueue();
-    const processed = result.sync?.processed || 0;
-    const failed = result.sync?.failed || 0;
-    setText("mobileIntro", failed
-      ? `${processed} mobiele acties gesynchroniseerd, ${failed} blijven in de wachtrij.`
-      : `${processed} mobiele acties gesynchroniseerd.`);
-  } catch (error) {
-    state.queue = pending;
-    saveQueue();
-    setText("mobileIntro", `Sync tijdelijk niet gelukt: ${error.message}`);
-    return;
-  }
-  if (!state.queue.length) await refreshMobile();
+  await window.WorkFlowProMobile.syncQueue();
 }
 
 async function refreshJson() {
@@ -2517,14 +2196,12 @@ async function refreshJson() {
 async function submitModule(form, key, mapper) {
   if (!token) {
     setNotice("Login eerst met de demo admin.", false);
+    showToast("Login eerst met de demo admin.", false);
     return;
   }
   try {
     const payload = mapper(formData(form));
-    await api(`/api/modules/${key}?tenantId=${tenantId}`, {
-      method: "POST",
-      body: JSON.stringify(payload)
-    });
+    await createModuleRow(key, payload);
     form.reset();
     if (form.id === "planningForm") {
       form.elements.date.value = todayValue();
@@ -2549,6 +2226,7 @@ async function downloadExport(key) {
   });
   if (!res.ok) {
     setNotice("CSV export mislukt.", false);
+    showToast("CSV export mislukt.", false);
     return;
   }
   const blob = await res.blob();
@@ -2561,6 +2239,153 @@ async function downloadExport(key) {
   link.remove();
   URL.revokeObjectURL(url);
   setNotice("CSV export is aangemaakt.");
+  showToast("CSV export is aangemaakt.");
+}
+
+function visibleNavigationTarget(label) {
+  const key = String(label || "").trim().toLowerCase();
+  return {
+    werkruimte: "start",
+    actiecentrum: "notifications",
+    planning: "planning",
+    werkbonnen: "workorders",
+    tijd: "ops",
+    onkosten: "billing",
+    stock: "stock",
+    wagenpark: "assets",
+    verlof: "verlof",
+    integraties: "integrations",
+    instellingen: "admin",
+    rapportage: "reports"
+  }[key] || "";
+}
+
+async function ensureOpsData() {
+  if (!state.users.length || !state.venues.length) await refreshOps();
+}
+
+async function quickCreateShift() {
+  if (!token) {
+    showToast("Login eerst om een shift aan te maken.", false);
+    el("login").click();
+    return;
+  }
+  try {
+    await ensureOpsData();
+    const user = state.users.find(row => row.role !== "tenant_admin") || state.users[0];
+    const venue = state.venues[0];
+    if (!user || !venue) {
+      setView("admin");
+      showToast("Maak eerst minstens een medewerker en werf aan in klantsetup.", false);
+      return;
+    }
+    await createModuleRow("planning", {
+      userId: user.id,
+      venueId: venue.id,
+      date: todayValue(),
+      start: "08:00",
+      end: "16:30",
+      project: "Nieuwe opdracht",
+      billable: true
+    });
+    await refreshOps();
+    await refreshCustomerStart();
+    setView("planning");
+    showToast("Nieuwe shift aangemaakt.");
+  } catch (error) {
+    showToast(error.message, false);
+  }
+}
+
+async function quickCreateWorkorder() {
+  if (!token) {
+    showToast("Login eerst om een werkbon aan te maken.", false);
+    el("login").click();
+    return;
+  }
+  try {
+    await ensureOpsData();
+    const user = state.users.find(row => row.role !== "tenant_admin") || state.users[0];
+    const venue = state.venues[0];
+    if (!user || !venue) {
+      setView("admin");
+      showToast("Maak eerst minstens een medewerker en werf aan in klantsetup.", false);
+      return;
+    }
+    await createModuleRow("workorders", {
+      title: "Nieuwe werkbon",
+      userId: user.id,
+      venueId: venue.id,
+      status: "Te starten",
+      checklist: [
+        { label: "Werf controleren", done: false },
+        { label: "Foto of handtekening toevoegen", done: false }
+      ]
+    });
+    await refreshOps();
+    await refreshCustomerStart();
+    setView("workorders");
+    showToast("Nieuwe werkbon aangemaakt.");
+  } catch (error) {
+    showToast(error.message, false);
+  }
+}
+
+function handlePassiveProductButton(button) {
+  if (button.dataset.jumpView || button.dataset.startView || button.id || button.type === "submit") return false;
+  const label = button.textContent.trim();
+  if (button.classList.contains("environment-chip")) {
+    showToast("Je werkt in de live demo-omgeving. Alle data blijft tenant-scoped.");
+    return true;
+  }
+  if (button.getAttribute("aria-label") === "Help") {
+    setView("notifications");
+    showToast("Helpvragen en acties worden via het Actiecentrum opgevolgd.");
+    return true;
+  }
+  const sideNav = button.closest(".side-nav");
+  if (sideNav) {
+    const view = visibleNavigationTarget(label);
+    if (!view) return false;
+    setView(view);
+    if (["Stock", "Rapportage", "Wagenpark"].includes(label)) {
+      showToast(`${label} wordt nu via het operationele overzicht opgevolgd.`);
+    }
+    return true;
+  }
+
+  if (button.closest(".commandbar") && button.classList.contains("icon-button")) {
+    setView("notifications");
+    showToast("Actiecentrum geopend.");
+    return true;
+  }
+
+  if (button.closest(".view-switch")) {
+    button.parentElement.querySelectorAll("button").forEach(row => row.classList.toggle("active", row === button));
+    showToast(`${label} weergave actief.`);
+    return true;
+  }
+
+  if (button.closest(".action-row")) {
+    if (label === "Nieuwe shift") {
+      quickCreateShift();
+      return true;
+    }
+    if (label === "Nieuwe werkbon") {
+      quickCreateWorkorder();
+      return true;
+    }
+    if (label === "Importeer") {
+      setView("admin");
+      showToast("Import en klantsetup staan onder Instellingen.");
+      return true;
+    }
+    if (label === "Filters") {
+      showToast("Gebruik de zoekbalk bovenaan om deze lijst direct te filteren.");
+      return true;
+    }
+  }
+  return false;
 }
 
 function renderImportResult(result) {
@@ -2584,7 +2409,7 @@ async function importEmployees(form) {
     const data = formData(form);
     const result = await api(`/api/tenants/${tenantId}/imports/employees`, {
       method: "POST",
-      body: JSON.stringify({ csv: data.csv, defaultPassword: "Welkom123!" })
+      body: JSON.stringify({ csv: data.csv, defaultPassword: data.defaultPassword })
     });
     renderImportResult(result.result || {});
     setNotice("Medewerkersimport is verwerkt.");
@@ -2654,10 +2479,7 @@ async function savePermissions(form) {
   }
   const permissions = Array.from(form.querySelectorAll('input[name="permissions"]:checked')).map(input => input.value);
   try {
-    await api(`/api/modules/users/${data.userId}?tenantId=${tenantId}`, {
-      method: "PATCH",
-      body: JSON.stringify({ role: data.role, permissions })
-    });
+    await updateModuleRow("users", data.userId, { role: data.role, permissions });
     setNotice("Rollen en rechten zijn opgeslagen.");
     await refreshOps();
     await refresh();
@@ -2667,96 +2489,20 @@ async function savePermissions(form) {
 }
 
 async function createSetupIntent() {
-  if (!token) {
-    setBillingNotice("Login eerst met de demo admin.", false);
-    return;
-  }
-  const result = await api(`/api/tenants/${tenantId}/billing/setup-intent`, { method: "POST", body: "{}" });
-  setBillingNotice(`SetupIntent klaar: ${result.setupIntent.status}`);
+  await window.WorkFlowProBilling.createSetupIntent();
 }
 
 async function submitBilling(form, endpoint, successMessage) {
-  if (!token) {
-    setBillingNotice("Login eerst met de demo admin.", false);
-    return;
-  }
-  try {
-    await api(endpoint, { method: "POST", body: JSON.stringify(formData(form)) });
-    form.reset();
-    setBillingNotice(successMessage);
-    await refreshBilling();
-  } catch (error) {
-    setBillingNotice(error.message, false);
-  }
+  await window.WorkFlowProBilling.submit(form, endpoint, successMessage);
 }
 
 async function transitionContract(form) {
-  if (!token) {
-    setBillingNotice("Login eerst met de demo admin.", false);
-    return;
-  }
-  try {
-    const result = await api(`/api/tenants/${tenantId}/billing/contract-state`, {
-      method: "POST",
-      body: JSON.stringify(formData(form))
-    });
-    setBillingNotice(`Contractstatus: ${result.result.event.from} naar ${result.result.event.to}`);
-    await refreshBilling();
-    await refreshPortal();
-  } catch (error) {
-    setBillingNotice(error.message, false);
-  }
-}
-
-async function sendPeppolInvoice(invoiceId) {
-  try {
-    const result = await api(`/api/tenants/${tenantId}/billing/peppol/${invoiceId}`, { method: "POST", body: "{}" });
-    setBillingNotice(result.result.event.ok ? "Peppol status bijgewerkt." : `Peppol fout: ${result.result.event.message}`, result.result.event.ok);
-    await refreshBilling();
-  } catch (error) {
-    setBillingNotice(error.message, false);
-  }
-}
-
-async function markPaymentFailed(invoiceId) {
-  try {
-    await api(`/api/tenants/${tenantId}/billing/payment-failed`, {
-      method: "POST",
-      body: JSON.stringify({ invoiceId, reason: "Stripe test failure" })
-    });
-    setBillingNotice("Failed payment geregistreerd.");
-    await refreshBilling();
-  } catch (error) {
-    setBillingNotice(error.message, false);
-  }
-}
-
-async function processGdprRequest(requestId) {
-  try {
-    await api(`/api/tenants/${tenantId}/compliance/gdpr-requests/${requestId}/process`, { method: "POST", body: "{}" });
-    setBillingNotice("GDPR verzoek verwerkt.");
-    await refreshBilling();
-    await refreshAdmin();
-  } catch (error) {
-    setBillingNotice(error.message, false);
-  }
-}
-
-async function advanceDunning(paymentId, action) {
-  try {
-    await api(`/api/tenants/${tenantId}/billing/failed-payments/${paymentId}/dunning`, {
-      method: "POST",
-      body: JSON.stringify({ action, note: `Actie via billing scherm: ${action}` })
-    });
-    setBillingNotice(`Dunning actie verwerkt: ${action}`);
-    await refreshBilling();
-    await refreshPortal();
-  } catch (error) {
-    setBillingNotice(error.message, false);
-  }
+  await window.WorkFlowProBilling.transitionContract(form);
 }
 
 async function loginAs(email, password, intro) {
+  el("loginNotice").textContent = "Inloggen...";
+  el("loginNotice").classList.remove("bad");
   const payload = { email, password };
   if (pendingMfaLogin?.email === email && pendingMfaLogin.code) payload.mfaCode = pendingMfaLogin.code;
   const result = await api("/api/auth/login", {
@@ -2773,6 +2519,9 @@ async function loginAs(email, password, intro) {
   }
   pendingMfaLogin = null;
   token = result.token || "";
+  localStorage.setItem("wfp_token", token);
+  window._wfpCurrentUser = result.user || null;
+  setShellAuthenticated(true);
   setText("sessionState", result.user?.name || "Ingelogd");
   el("sessionState").dataset.role = result.user?.role || "";
   el("sessionState").classList.remove("muted");
@@ -2784,12 +2533,40 @@ async function loginAs(email, password, intro) {
   await refreshAdmin();
 }
 
+async function submitLoginForm(form) {
+  const data = formData(form);
+  try {
+    await loginAs(data.email, data.password, "Je bent ingelogd. Werk vanuit Start naar de eerste klantactivatie.");
+    const role = el("sessionState").dataset.role || "";
+    // Route naar het juiste platform op basis van rol
+    if (window.WorkFlowProPlatformRouter) {
+      // Verberg loginPage
+      const loginPage = document.getElementById("loginPage");
+      if (loginPage) loginPage.classList.add("hidden");
+      window.WorkFlowProPlatformRouter.showPlatform(role);
+    } else {
+      setView("start");
+    }
+  } catch (error) {
+    el("loginNotice").textContent = error.message;
+    el("loginNotice").classList.add("bad");
+  }
+}
+
 el("login").addEventListener("click", () => {
-  loginAs("admin@demobouw.be", "admin123", "Demo admin is ingelogd. Je test nu tenant-isolatie, rechten, audit en de golden path via echte endpoints.");
+  setShellAuthenticated(false);
 });
 
 el("loginSuper").addEventListener("click", () => {
-  loginAs("super@workflowpro.be", "admin123", "Super admin is ingelogd. Je kan nu tenants aanmaken, pauzeren en activeren.");
+  el("loginForm").elements.email.value = "super@workflowpro.be";
+  el("loginForm").elements.password.focus();
+  el("loginNotice").textContent = "Vul het super-admin wachtwoord en MFA-code in.";
+  el("loginNotice").classList.remove("bad");
+});
+
+el("loginForm").addEventListener("submit", event => {
+  event.preventDefault();
+  submitLoginForm(event.currentTarget);
 });
 
 el("demo").addEventListener("click", async () => {
@@ -2808,7 +2585,7 @@ el("employeeForm").addEventListener("submit", event => {
     name: data.name,
     email: data.email,
     role: data.role,
-    password: "Welkom123!",
+    password: data.password,
     permissions: data.role === "tenant_admin"
       ? ["tenants", "employees", "venues", "customers", "planning", "workorders", "clockings", "expenses", "billing", "settings", "audit"]
       : ["workorders", "expenses", "leaves", "messages"]
@@ -2868,6 +2645,26 @@ el("expenseForm").addEventListener("submit", event => {
   }));
 });
 
+el("stockForm").addEventListener("submit", event => {
+  event.preventDefault();
+  submitAssetModule(event.currentTarget, "stock", data => ({
+    ...data,
+    quantity: Number(data.quantity || 0),
+    minLevel: Number(data.minLevel || 0),
+    reserved: 0,
+    status: Number(data.quantity || 0) < Number(data.minLevel || 0) ? "low" : "ok"
+  }));
+});
+
+el("vehicleForm").addEventListener("submit", event => {
+  event.preventDefault();
+  submitAssetModule(event.currentTarget, "vehicles", data => ({
+    ...data,
+    mileage: Number(data.mileage || 0),
+    status: serviceDueSoon(data) ? "service_due" : "ok"
+  }));
+});
+
 el("kboForm").addEventListener("submit", event => {
   event.preventDefault();
   applyKboFromForm(event.currentTarget);
@@ -2912,26 +2709,143 @@ el("notificationForm").addEventListener("submit", event => {
 });
 el("generateReminders").addEventListener("click", generateReminders);
 
-el("viewDemo").addEventListener("click", () => setView("demo"));
-el("viewPlanning").addEventListener("click", () => setView("planning"));
-el("viewWorkorders").addEventListener("click", () => setView("workorders"));
-el("viewOps").addEventListener("click", () => setView("ops"));
-el("viewBilling").addEventListener("click", () => setView("billing"));
-el("viewMobile").addEventListener("click", () => setView("mobile"));
-el("viewIntegrations").addEventListener("click", () => setView("integrations"));
-el("viewNotifications").addEventListener("click", () => setView("notifications"));
-el("viewAdmin").addEventListener("click", () => setView("admin"));
-el("viewPortal").addEventListener("click", () => setView("portal"));
-el("viewSales").addEventListener("click", () => setView("sales"));
-el("viewStatus").addEventListener("click", () => setView("status"));
-el("viewJson").addEventListener("click", () => setView("json"));
-el("viewApi").addEventListener("click", () => setView("api"));
+window.WorkFlowProRouter.configure({
+  views: viewConfig,
+  el,
+  refreshHandlers: {
+    refreshCustomerStart,
+    refreshOps,
+    refreshBilling,
+    refreshAssets,
+    refreshStock,
+    refreshVerlof,
+    refreshWagenpark,
+    refreshReportsDashboard,
+    refreshMobile,
+    refreshIntegrations,
+    refreshNotifications,
+    refreshAdmin,
+    refreshPortal,
+    refreshSales,
+    refreshStatus,
+    refreshJson
+  }
+});
+window.WorkFlowProCustomerStart.configure({
+  token: () => token,
+  api,
+  tenantId,
+  state,
+  el,
+  setText,
+  escapeHtml,
+  venueName,
+  setView
+});
+window.WorkFlowProOperations.configure({
+  token: () => token,
+  state,
+  el,
+  escapeHtml,
+  personName,
+  venueName,
+  statusTone,
+  todayValue,
+  setView
+});
+window.WorkFlowProBilling.configure({
+  token: () => token,
+  api,
+  tenantId,
+  state,
+  el,
+  escapeHtml,
+  renderList,
+  formData,
+  setBillingNotice,
+  refreshPortal,
+  refreshAdmin
+});
+window.WorkFlowProAssets.configure({
+  token: () => token,
+  state,
+  el,
+  escapeHtml,
+  personName,
+  optionList,
+  renderList,
+  listModuleRows,
+  createModuleRow,
+  setAssetNotice,
+  futureDateValue
+});
+window.WorkFlowProReports.configure({
+  token: () => token,
+  state,
+  el,
+  escapeHtml,
+  renderList,
+  venueName,
+  personName,
+  serviceDueSoon,
+  refreshOps,
+  listModuleRows,
+  setReportNotice
+});
+window.WorkFlowProIntegrations.configure({
+  token: () => token,
+  api,
+  tenantId,
+  state,
+  el,
+  escapeHtml,
+  renderList,
+  formData,
+  setIntegrationNotice
+});
+window.WorkFlowProActionCenter.configure({
+  token: () => token,
+  api,
+  tenantId,
+  state,
+  el,
+  escapeHtml,
+  renderList,
+  formData,
+  setNotificationNotice,
+  setView
+});
+window.WorkFlowProMobile.configure({
+  token: () => token,
+  api,
+  tenantId,
+  state,
+  el,
+  setText,
+  escapeHtml,
+  statusTone,
+  shortDateTime,
+  venueName,
+  renderList,
+  refreshOps,
+  refreshAll: refresh
+});
+window.WorkFlowProRouter.bindNavigation();
+
+// ── Globale helpers voor nieuwe modules (calendar, werkbon-detail, stock) ──────
+window.showToast = showToast;
+window.renderWorkorderExperience = renderWorkorderExperience;
 el("refreshJson").addEventListener("click", refreshJson);
 el("refreshStatus").addEventListener("click", refreshStatus);
-el("aiSuggestionPrimary").addEventListener("click", () => runAiSuggestionAction(state.aiSuggestion?.primary));
-el("aiSuggestionSecondary").addEventListener("click", () => runAiSuggestionAction(state.aiSuggestion?.secondary));
+el("aiSuggestionPrimary").addEventListener("click", () => runAiSuggestionAction(state.aiSuggestion?.primary, "primary"));
+el("aiSuggestionSecondary").addEventListener("click", () => runAiSuggestionAction(state.aiSuggestion?.secondary, "secondary"));
+el("startNextAction").addEventListener("click", () => {
+  window.WorkFlowProCustomerStart.runAction(state.customerStart?.workspace?.assistant?.primary || state.customerStart?.nextAction);
+});
 el("refreshOps").addEventListener("click", refreshOps);
 el("refreshBilling").addEventListener("click", refreshBilling);
+el("refreshAssets").addEventListener("click", refreshAssets);
+el("refreshReportsDashboard").addEventListener("click", refreshReportsDashboard);
 el("refreshMobile").addEventListener("click", refreshMobile);
 el("syncMobileQueue").addEventListener("click", syncQueue);
 el("refreshIntegrations").addEventListener("click", refreshIntegrations);
@@ -2988,11 +2902,18 @@ el("tenantForm").addEventListener("submit", event => {
   event.preventDefault();
   createTenant(event.currentTarget);
 });
-document.querySelectorAll("[data-export]").forEach(button => {
-  button.addEventListener("click", () => downloadExport(button.dataset.export));
-});
 document.querySelectorAll("[data-jump-view]").forEach(button => {
   button.addEventListener("click", () => setView(button.dataset.jumpView));
+});
+document.addEventListener("click", event => {
+  const button = event.target.closest("button");
+  if (!button) return;
+  if (button.dataset.export) {
+    event.preventDefault();
+    downloadExport(button.dataset.export);
+    return;
+  }
+  if (handlePassiveProductButton(button)) event.preventDefault();
 });
 
 if ("serviceWorker" in navigator) {
@@ -3010,6 +2931,7 @@ if ("serviceWorker" in navigator) {
 window.addEventListener("online", syncQueue);
 
 el("planningForm").elements.date.value = todayValue();
+el("vehicleForm").elements.nextService.value = futureDateValue(14);
 el("apiKeyExpiresAt").value = futureDateValue(90);
 saveQueue();
 refresh();

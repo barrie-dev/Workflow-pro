@@ -14,7 +14,9 @@ function sign(payload) {
 
 function verify(token) {
   if (!token || !token.includes(".")) return null;
-  const [body, signature] = token.split(".");
+  const parts = token.split(".");
+  if (parts.length !== 2) return null;
+  const [body, signature] = parts;
   const expected = crypto.createHmac("sha256", config.jwtSecret).update(body).digest("base64url");
   if (Buffer.byteLength(signature || "") !== Buffer.byteLength(expected)) return null;
   if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return null;
@@ -153,6 +155,8 @@ function loginWithMfa(store, email, password, code) {
     const recoveryResult = consumeRecoveryCode(store, user, code);
     const validTotp = user.mfaSecret && verifyTotp(decryptSecret(user.mfaSecret), code);
     if (!validTotp && !recoveryResult.ok) {
+      registerFailedLogin(store, user);
+      store.audit({ actor: user.email, tenantId: user.tenantId, action: "mfa_failed", area: "auth", detail: user.id });
       const error = new Error("MFA code is ongeldig");
       error.status = 401;
       throw error;
@@ -191,7 +195,7 @@ function createMfaSetup(store, user) {
     updatedAt: new Date().toISOString()
   });
   store.audit({ actor: user.email, tenantId: user.tenantId, action: "mfa_setup_started", area: "auth", detail: user.id });
-  return { user: row, secret, otpauth, demoCode: totp(secret) };
+  return { user: row, secret, otpauth };
 }
 
 function verifyMfaSetup(store, user, code) {
@@ -225,7 +229,34 @@ function can(user, permission) {
   if (!user) return false;
   if (user.role === "super_admin") return true;
   const permissions = user.permissions || [];
-  return permissions.includes("*") || permissions.includes(permission);
+  if (permissions.includes("*")) return true;
+  // employee kan via "own:X" ook de basis X-scope claimen voor eigen data
+  if (permissions.includes(permission)) return true;
+  if (permissions.includes(`own:${permission}`)) return true;
+  return false;
+}
+
+// Controleer of employee alleen zijn eigen resource mag lezen/wijzigen
+function assertOwn(user, resourceUserId) {
+  if (!user) { const e = new Error("Unauthorized"); e.status = 401; throw e; }
+  if (["super_admin", "tenant_admin", "manager"].includes(user.role)) return; // admins mogen alles
+  if (user.id !== resourceUserId) {
+    const error = new Error("Je hebt geen toegang tot deze resource");
+    error.status = 403;
+    throw error;
+  }
+}
+
+function isEmployee(user) {
+  return user?.role === "employee";
+}
+
+function isManager(user) {
+  return user?.role === "manager";
+}
+
+function isAdmin(user) {
+  return ["tenant_admin", "super_admin"].includes(user?.role);
 }
 
 function assertSuperAdmin(user) {
@@ -234,6 +265,16 @@ function assertSuperAdmin(user) {
     error.status = 403;
     throw error;
   }
+}
+
+function assertAdminMfa(user) {
+  // In dev-modus of als REQUIRE_ADMIN_MFA=false → MFA niet verplicht
+  if (process.env.REQUIRE_ADMIN_MFA === "false") return;
+  if (!user || !["super_admin", "tenant_admin"].includes(user.role)) return;
+  if (user.mfaEnabled && user.mfaEnforced && user.mfaSecret) return;
+  const error = new Error("MFA is verplicht voor admin-acties. Activeer MFA via Instellingen.");
+  error.status = 403;
+  throw error;
 }
 
 function assertTenant(user, tenantId) {
@@ -251,6 +292,7 @@ function assertTenant(user, tenantId) {
 }
 
 function assertCan(user, permission) {
+  assertAdminMfa(user);
   if (!can(user, permission)) {
     const error = new Error("Missing permission");
     error.status = 403;
@@ -270,5 +312,10 @@ module.exports = {
   can,
   assertTenant,
   assertCan,
-  assertSuperAdmin
+  assertOwn,
+  assertSuperAdmin,
+  assertAdminMfa,
+  isEmployee,
+  isManager,
+  isAdmin
 };

@@ -1,4 +1,4 @@
-const { hashPassword } = require("../lib/security");
+const { hashPassword, assertStrongPassword } = require("../lib/security");
 
 const FIELD_ALIASES = {
   naam: "name",
@@ -92,6 +92,7 @@ function publicUser(user) {
 
 function importEmployees(store, tenant, body, user) {
   const csv = body.csv || body.text || "";
+  assertStrongPassword(body.defaultPassword);
   const rows = parseEmployeesCsv(csv);
   const result = { created: [], updated: [], skipped: [] };
   const now = new Date().toISOString();
@@ -124,7 +125,7 @@ function importEmployees(store, tenant, body, user) {
     const created = store.insert("users", {
       id: `user_${Date.now()}_${Math.random().toString(16).slice(2)}`,
       tenantId: tenant.id,
-      passwordHash: hashPassword(body.defaultPassword || "Welkom123!"),
+      passwordHash: hashPassword(body.defaultPassword),
       mfaEnabled: false,
       mfaEnforced: false,
       lastLoginAt: null,
