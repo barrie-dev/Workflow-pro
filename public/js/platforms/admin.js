@@ -431,9 +431,11 @@ table.adm-table { width:100%; border-collapse:collapse; font-size:13px; }
 
   // ── Dashboard ──────────────────────────────────────────────
   async function renderDashboard() {
-    const [dash, pending] = await Promise.all([
+    const [dash, pending, factData, expData] = await Promise.all([
       api("GET", "/manager/dashboard"),
-      api("GET", "/leaves?status=aangevraagd")
+      api("GET", "/leaves?status=aangevraagd"),
+      api("GET", "/facturen").catch(() => ({ invoices: [] })),
+      api("GET", "/expenses").catch(() => ({ expenses: [] }))
     ]);
 
     const content = document.getElementById("admContent");
@@ -514,9 +516,38 @@ table.adm-table { width:100%; border-collapse:collapse; font-size:13px; }
       </table>
     </div>
   </div>
+</div>
+
+${(() => {
+  const invoices   = factData.invoices || [];
+  const overdueInv = invoices.filter(i => i.status === "overdue");
+  const openInv    = invoices.filter(i => i.status === "open");
+  const expensesPending = (expData.expenses || []).filter(e => e.status === "pending" || !e.status);
+  const items = [
+    ...overdueInv.map(i => ({ icon:"🔴", text:`Factuur ${i.number} vervallen — ${new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR"}).format(i.total)}`, view:"facturen", urgent:true })),
+    ...expensesPending.slice(0,3).map(e => ({ icon:"🟡", text:`Onkostennota €${e.amount||0} van ${e.userName||e.userId||"medewerker"} wacht op goedkeuring`, view:"expenses", urgent:false })),
+    ...openInv.slice(0,2).map(i => ({ icon:"🔵", text:`Factuur ${i.number} openstaand — ${new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR"}).format(i.total)}`, view:"facturen", urgent:false }))
+  ];
+  if (!items.length) return "";
+  return `<div class="adm-card" style="margin-top:16px">
+  <div class="adm-card-header"><h3 class="adm-card-title">Actie vereist <span style="background:#fef2f2;color:#dc2626;border-radius:999px;padding:2px 8px;font-size:11px;font-weight:700;">${items.length}</span></h3></div>
+  <div class="adm-card-body" style="padding:0">
+    ${items.map(it => `
+    <div class="adm-action-item" data-view="${it.view}" style="padding:10px 16px;border-bottom:1px solid #f8fafc;display:flex;align-items:center;gap:10px;cursor:pointer;transition:background .1s;">
+      <span style="font-size:16px;">${it.icon}</span>
+      <span style="font-size:13px;color:#374151;flex:1;">${it.text}</span>
+      <svg viewBox="0 0 24 24" style="width:14px;fill:#94a3b8;flex-shrink:0"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+    </div>`).join("")}
+  </div>
 </div>`;
+})()}`;
 
     document.getElementById("admViewAllLeaves")?.addEventListener("click", e => { e.preventDefault(); switchView("leaves"); });
+    document.querySelectorAll(".adm-action-item").forEach(el => {
+      el.addEventListener("click", () => switchView(el.dataset.view));
+      el.addEventListener("mouseenter", () => el.style.background = "#f8fafc");
+      el.addEventListener("mouseleave", () => el.style.background = "");
+    });
 
     const pendingLeaves = pending.leaves || pending || [];
     document.querySelectorAll(".adm-dash-lv-ok").forEach(btn => {
@@ -1615,15 +1646,29 @@ ${emp ? `
   <div class="adm-form-group"><label>Notities</label>
     <textarea name="notes" rows="2" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;">${esc(workorder?.notes || "")}</textarea>
   </div>
+  ${workorder?.invoiceId ? `<div style="background:#d1fae5;border-radius:8px;padding:8px 12px;font-size:12px;color:#065f46;margin-bottom:8px;">🧾 Factuur aangemaakt</div>` : ""}
   <div id="woFormErr" style="display:none;background:#fef2f2;color:#dc2626;border-radius:8px;padding:8px;font-size:12px;margin-bottom:8px;"></div>
-  <div class="adm-form-actions">
+  <div class="adm-form-actions" style="flex-wrap:wrap;gap:8px;">
     <button type="button" class="adm-btn adm-btn-secondary" id="woCancel">Annuleren</button>
-    ${workorder ? `<button type="button" class="adm-btn adm-btn-danger" id="woDelete">🗑 Verwijderen</button>` : ""}
+    ${workorder ? `<button type="button" class="adm-btn adm-btn-danger" id="woDelete">🗑</button>` : ""}
+    ${workorder && ["Voltooid","Afgewerkt"].includes(workorder.status) && !workorder.invoiceId
+      ? `<button type="button" class="adm-btn adm-btn-secondary" id="woMakeInvoice" style="color:#4f46e5;border-color:#c7d2fe;">🧾 Factuur aanmaken</button>`
+      : ""}
     <button type="submit" class="adm-btn adm-btn-primary">${workorder ? "Opslaan" : "Aanmaken"}</button>
   </div>
 </form>`;
       openDrawer();
       document.getElementById("woCancel").addEventListener("click", closeDrawer);
+      document.getElementById("woMakeInvoice")?.addEventListener("click", () => {
+        closeDrawer();
+        // Pre-fill factuur drawer from this workorder
+        openFactuurDrawer(null, {
+          prefillCustomerName: workorder.clientName || "",
+          prefillLines: [{ description: workorder.title, qty: 1, unitPrice: 0, vatRate: 21 }],
+          prefillNotes: `Werkbon #${workorder.number || workorder.id.slice(-4)}`,
+          workorderId: workorder.id
+        });
+      });
       document.getElementById("woDelete")?.addEventListener("click", async () => {
         if (!confirm(`Werkbon "${workorder.title}" verwijderen?`)) return;
         try {
@@ -2652,7 +2697,7 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
     } catch(e) { content.innerHTML = `<div style="padding:20px;color:#dc2626">Fout: ${e.message}</div>`; }
   }
 
-  async function openFactuurDrawer(invoice) {
+  async function openFactuurDrawer(invoice, prefill = {}) {
     // Load customers for dropdown
     let customers = [];
     try { const d = await api("GET", "/customers"); customers = d.customers || []; } catch(_){}
@@ -2661,7 +2706,7 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
     const today = new Date().toISOString().slice(0, 10);
     const due30 = new Date(Date.now() + 30*86400000).toISOString().slice(0, 10);
 
-    const existingLines = invoice?.lines || [{ description: "", qty: 1, unitPrice: 0, vatRate: 21 }];
+    const existingLines = invoice?.lines || prefill.prefillLines || [{ description: "", qty: 1, unitPrice: 0, vatRate: 21 }];
 
     document.getElementById("admDrawerBody").innerHTML = `
 <form id="invForm">
@@ -2674,7 +2719,7 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
   </div>
   <div class="adm-form-group" id="invCustNameWrap">
     <label>Klantnaam *</label>
-    <input name="customerName" id="invCustName" value="${esc(invoice?.customerName||"")}" placeholder="Bedrijfsnaam NV" required>
+    <input name="customerName" id="invCustName" value="${esc(invoice?.customerName||prefill.prefillCustomerName||"")}" placeholder="Bedrijfsnaam NV" required>
   </div>
   <div class="adm-form-row">
     <div class="adm-form-group">
@@ -2717,8 +2762,9 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
 
   <div class="adm-form-group">
     <label>Opmerkingen</label>
-    <textarea name="notes" rows="2" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">${esc(invoice?.notes||"")}</textarea>
+    <textarea name="notes" rows="2" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">${esc(invoice?.notes||prefill.prefillNotes||"")}</textarea>
   </div>
+  ${prefill.workorderId ? `<input type="hidden" name="workorderId" value="${esc(prefill.workorderId)}">` : ""}
   <div id="invFormErr" style="display:none;background:#fef2f2;color:#dc2626;border-radius:8px;padding:8px;font-size:12px;margin-bottom:8px;"></div>
   <div class="adm-form-actions">
     <button type="button" class="adm-btn adm-btn-secondary" id="invCancel">Annuleren</button>
