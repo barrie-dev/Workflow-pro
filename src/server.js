@@ -2202,6 +2202,27 @@ http.createServer(async (req, res) => {
   console.log(`  Opslag    : ${config.storageAdapter}`);
   console.log(`  Versie    : ${config.appVersion} (${config.commitSha})`);
   console.log(`  MFA-eis   : ${process.env.REQUIRE_ADMIN_MFA === "false" ? "uitgeschakeld (dev)" : "verplicht voor admins"}`);
+
+  // Auto-backup bij opstarten (max 1 per dag per tenant)
+  setImmediate(() => {
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const tenants = store.data.tenants || [];
+      let backed = 0;
+      tenants.forEach(t => {
+        try {
+          const existing = listBackups(t.id);
+          const hasToday = existing.some(b => (b.createdAt||"").startsWith(today));
+          if (!hasToday) {
+            const sysActor = { email: "system@workflowpro", id: "system", role: "super_admin", tenantId: t.id };
+            createBackup(store, t, sysActor);
+            backed++;
+          }
+        } catch(_) {}
+      });
+      if (backed > 0) console.log(`  Backup    : ${backed} tenant(s) automatisch gebackupt`);
+    } catch(_) {}
+  });
 });
 
 // ── Graceful shutdown ─────────────────────────────────────────
