@@ -2184,24 +2184,181 @@ ${emp ? `
         <tbody id="custTbody">${buildCustRows(rows)}</tbody>
       </table></div>`}
 </div>`;
+      function wireCustButtons() {
+        document.querySelectorAll(".cust-view").forEach(b => b.addEventListener("click", () => renderCustomerDetail(b.dataset.id)));
+        document.querySelectorAll(".cust-edit").forEach(b => b.addEventListener("click", () => openCustomerDrawer(rows.find(x => x.id === b.dataset.id))));
+        document.querySelectorAll(".cust-detail-row").forEach(row => row.addEventListener("click", () => renderCustomerDetail(row.dataset.id)));
+      }
       document.getElementById("custSearch")?.addEventListener("input", e => {
         const q = e.target.value.toLowerCase();
         const tb = document.getElementById("custTbody");
         if (tb) tb.innerHTML = buildCustRows(rows.filter(r => `${r.name} ${r.contactName||""} ${r.email||""} ${r.phone||""}`.toLowerCase().includes(q)));
-        document.querySelectorAll(".cust-edit").forEach(b => b.addEventListener("click", () => openCustomerDrawer(rows.find(x => x.id === b.dataset.id))));
+        wireCustButtons();
       });
-      document.querySelectorAll(".cust-edit").forEach(b => b.addEventListener("click", () => openCustomerDrawer(rows.find(x => x.id === b.dataset.id))));
+      wireCustButtons();
     } catch(e) { content.innerHTML = `<div style="padding:20px;color:#dc2626">Fout: ${e.message}</div>`; }
   }
   function buildCustRows(rows) {
-    return rows.map(c => `<tr>
+    return rows.map(c => `<tr style="cursor:pointer;" class="cust-detail-row" data-id="${c.id}">
       <td><strong>${esc(c.name)}</strong></td>
       <td>${esc(c.contactName||"—")}</td>
-      <td><a href="mailto:${esc(c.email||"")}" style="color:#4f46e5">${esc(c.email||"—")}</a></td>
+      <td><a href="mailto:${esc(c.email||"")}" style="color:#4f46e5" onclick="event.stopPropagation()">${esc(c.email||"—")}</a></td>
       <td>${esc(c.phone||"—")}</td>
       <td style="font-family:monospace;font-size:12px">${esc(c.vatNumber||"—")}</td>
-      <td><button class="adm-btn adm-btn-secondary adm-btn-sm cust-edit" data-id="${c.id}">✏ Bewerk</button></td>
+      <td style="white-space:nowrap">
+        <button class="adm-btn adm-btn-primary adm-btn-sm cust-view" data-id="${c.id}" onclick="event.stopPropagation()">🔍 Detail</button>
+        <button class="adm-btn adm-btn-secondary adm-btn-sm cust-edit" data-id="${c.id}" onclick="event.stopPropagation()">✏</button>
+      </td>
     </tr>`).join("");
+  }
+
+  async function renderCustomerDetail(customerId) {
+    const content = document.getElementById("admContent");
+    content.innerHTML = `<div class="adm-loading">Laden…</div>`;
+    try {
+      const [custData, woData, invData] = await Promise.all([
+        api("GET", "/customers"),
+        api("GET", "/workorders").catch(() => ({ workorders: [] })),
+        api("GET", "/facturen").catch(() => ({ invoices: [] }))
+      ]);
+      const customer  = (custData.customers || []).find(c => c.id === customerId);
+      if (!customer) { content.innerHTML = `<div class="adm-empty">Klant niet gevonden</div>`; return; }
+
+      const custWOs   = (woData.workorders || []).filter(w => w.customerId === customerId || w.clientName === customer.name);
+      const custInvs  = (invData.invoices || []).filter(i => i.customerId === customerId || i.customerName === customer.name);
+      const fmtEurCD  = n => new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR"}).format(Number(n||0));
+      const openInvAmt = custInvs.filter(i => ["open","overdue"].includes(i.status)).reduce((s,i) => s+Number(i.total||0),0);
+      const paidInvAmt = custInvs.filter(i => i.status === "paid").reduce((s,i) => s+Number(i.total||0),0);
+
+      let _custTab = "werkbonnen";
+
+      function renderTabs() {
+        content.querySelector("#custDetailTabs")?.querySelectorAll(".cdt-tab").forEach(t => {
+          t.style.fontWeight = t.dataset.tab === _custTab ? "700" : "400";
+          t.style.borderBottom = t.dataset.tab === _custTab ? "2px solid #6366f1" : "2px solid transparent";
+        });
+        const body = content.querySelector("#custDetailBody");
+        if (!body) return;
+        if (_custTab === "werkbonnen") {
+          body.innerHTML = custWOs.length ? `<table class="adm-table">
+            <thead><tr><th>#</th><th>Titel</th><th>Medewerker</th><th>Status</th><th>Datum</th><th>Acties</th></tr></thead>
+            <tbody>${custWOs.map(w => `<tr>
+              <td style="font-family:monospace">${w.number||w.id.slice(-4)}</td>
+              <td>${esc(w.title||"—")}</td>
+              <td>${esc(w.userName||w.userId||"—")}</td>
+              <td><span class="adm-status adm-status-${(w.status||"").toLowerCase().replace(/\s/g,"-")}">${esc(w.status||"—")}</span></td>
+              <td>${w.scheduledDate||w.createdAt?.slice(0,10)||"—"}</td>
+              <td><button class="adm-btn adm-btn-secondary adm-btn-sm wo-from-cust" data-id="${w.id}">✏ Bewerk</button></td>
+            </tr>`).join("")}</tbody>
+          </table>` : `<div class="adm-empty"><div class="adm-empty-icon">📋</div><div class="adm-empty-text">Geen werkbonnen voor deze klant</div></div>`;
+          body.querySelectorAll(".wo-from-cust").forEach(btn => {
+            btn.addEventListener("click", () => openWorkorderDrawer(custWOs.find(w => w.id === btn.dataset.id)));
+          });
+        } else {
+          body.innerHTML = custInvs.length ? `<table class="adm-table">
+            <thead><tr><th>Nr.</th><th>Datum</th><th>Vervaldatum</th><th>Bedrag</th><th>Status</th><th>Acties</th></tr></thead>
+            <tbody>${custInvs.map(inv => {
+              const st = INV_STATUS[inv.status]||{label:inv.status,css:"adm-status-pending"};
+              return `<tr>
+                <td style="font-family:monospace;font-weight:600">${esc(inv.number||"—")}</td>
+                <td>${inv.invoiceDate?new Date(inv.invoiceDate).toLocaleDateString("nl-BE"):"—"}</td>
+                <td>${inv.dueDate?new Date(inv.dueDate).toLocaleDateString("nl-BE"):"—"}</td>
+                <td style="font-weight:600">${fmtEurCD(inv.total)}</td>
+                <td><span class="adm-status ${st.css}">${st.label}</span></td>
+                <td style="display:flex;gap:4px;">
+                  <button class="adm-btn adm-btn-secondary adm-btn-sm inv-from-cust" data-id="${inv.id}">✏</button>
+                  ${["open","overdue"].includes(inv.status)?`<button class="adm-btn adm-btn-success adm-btn-sm inv-paid-cust" data-id="${inv.id}">✓ Betaald</button>`:""}
+                </td>
+              </tr>`;
+            }).join("")}</tbody>
+          </table>` : `<div class="adm-empty"><div class="adm-empty-icon">🧾</div><div class="adm-empty-text">Geen facturen voor deze klant</div></div>`;
+          body.querySelectorAll(".inv-from-cust").forEach(btn => {
+            btn.addEventListener("click", () => openFactuurDrawer(custInvs.find(i => i.id === btn.dataset.id)));
+          });
+          body.querySelectorAll(".inv-paid-cust").forEach(btn => {
+            btn.addEventListener("click", async () => {
+              if (!confirm("Factuur als betaald markeren?")) return;
+              await api("PATCH", `/facturen/${btn.dataset.id}`, { status: "paid" });
+              renderCustomerDetail(customerId);
+            });
+          });
+        }
+      }
+
+      content.innerHTML = `
+<!-- Back header -->
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+  <button class="adm-btn adm-btn-secondary adm-btn-sm" id="custDetailBack">← Terug</button>
+  <h2 style="font-size:18px;font-weight:700;color:#0f172a;margin:0;">${esc(customer.name)}</h2>
+  <button class="adm-btn adm-btn-secondary adm-btn-sm" id="custDetailEdit">✏ Bewerk</button>
+</div>
+
+<!-- KPIs -->
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
+  <div class="adm-kpi adm-kpi-purple"><div class="adm-kpi-label">Werkbonnen</div><div class="adm-kpi-value">${custWOs.length}</div><div class="adm-kpi-sub">${custWOs.filter(w=>!["Voltooid","Afgewerkt","done"].includes(w.status)).length} open</div></div>
+  <div class="adm-kpi adm-kpi-blue"><div class="adm-kpi-label">Facturen</div><div class="adm-kpi-value">${custInvs.length}</div><div class="adm-kpi-sub">${custInvs.filter(i=>["open","overdue"].includes(i.status)).length} openstaand</div></div>
+  <div class="adm-kpi adm-kpi-green"><div class="adm-kpi-label">Betaald</div><div class="adm-kpi-value" style="font-size:17px">${fmtEurCD(paidInvAmt)}</div></div>
+  <div class="adm-kpi ${openInvAmt>0?"adm-kpi-amber":"adm-kpi-blue"}"><div class="adm-kpi-label">Openstaand</div><div class="adm-kpi-value" style="font-size:17px">${fmtEurCD(openInvAmt)}</div></div>
+</div>
+
+<div class="adm-grid-2">
+  <!-- Info card -->
+  <div class="adm-card">
+    <div class="adm-card-header"><h3 class="adm-card-title">Contactgegevens</h3></div>
+    <div class="adm-card-body" style="display:flex;flex-direction:column;gap:8px;">
+      ${customer.contactName?`<div style="font-size:13px;"><span style="color:#94a3b8;min-width:110px;display:inline-block">Contactpersoon</span>${esc(customer.contactName)}</div>`:""}
+      ${customer.email?`<div style="font-size:13px;"><span style="color:#94a3b8;min-width:110px;display:inline-block">E-mail</span><a href="mailto:${esc(customer.email)}" style="color:#4f46e5">${esc(customer.email)}</a></div>`:""}
+      ${customer.phone?`<div style="font-size:13px;"><span style="color:#94a3b8;min-width:110px;display:inline-block">Telefoon</span>${esc(customer.phone)}</div>`:""}
+      ${customer.vatNumber?`<div style="font-size:13px;"><span style="color:#94a3b8;min-width:110px;display:inline-block">BTW-nummer</span><span style="font-family:monospace">${esc(customer.vatNumber)}</span></div>`:""}
+      ${customer.address?`<div style="font-size:13px;"><span style="color:#94a3b8;min-width:110px;display:inline-block">Adres</span>${esc(customer.address)}</div>`:""}
+      ${customer.notes?`<div style="font-size:13px;margin-top:4px;"><span style="color:#94a3b8;display:block;margin-bottom:2px;">Notities</span><span style="color:#64748b">${esc(customer.notes)}</span></div>`:""}
+      <div style="margin-top:8px;display:flex;gap:8px;">
+        <button class="adm-btn adm-btn-primary adm-btn-sm" id="custNewWO">+ Werkbon</button>
+        <button class="adm-btn adm-btn-secondary adm-btn-sm" id="custNewInv">🧾 Factuur</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs card -->
+  <div class="adm-card">
+    <div class="adm-card-header" style="flex-direction:column;gap:0;padding-bottom:0;" id="custDetailTabs">
+      <div style="display:flex;gap:0;border-bottom:1px solid #f1f5f9;width:100%;">
+        <button class="cdt-tab" data-tab="werkbonnen" style="background:none;border:none;cursor:pointer;padding:10px 16px;font-size:13px;color:#374151;border-bottom:2px solid #6366f1;font-weight:700;">Werkbonnen (${custWOs.length})</button>
+        <button class="cdt-tab" data-tab="facturen" style="background:none;border:none;cursor:pointer;padding:10px 16px;font-size:13px;color:#374151;border-bottom:2px solid transparent;">Facturen (${custInvs.length})</button>
+      </div>
+    </div>
+    <div class="adm-card-body adm-table-wrap" id="custDetailBody"></div>
+  </div>
+</div>`;
+
+      // Wire events
+      content.querySelector("#custDetailBack")?.addEventListener("click", () => renderCustomers());
+      content.querySelector("#custDetailEdit")?.addEventListener("click", () => {
+        openCustomerDrawer(customer);
+        document.getElementById("custForm")?.addEventListener("submit", () => {
+          setTimeout(() => renderCustomerDetail(customerId), 300);
+        }, { once: true });
+      });
+      content.querySelector("#custNewWO")?.addEventListener("click", () => {
+        openWorkorderDrawer(null);
+        // Pre-fill clientName after drawer renders
+        setTimeout(() => {
+          const inp = document.querySelector("#admDrawerBody [name=clientName]");
+          if (inp) inp.value = customer.name;
+        }, 100);
+      });
+      content.querySelector("#custNewInv")?.addEventListener("click", () => {
+        openFactuurDrawer(null, {
+          prefillCustomerName: customer.name,
+          prefillCustomerVat: customer.vatNumber || "",
+          prefillCustomerAddress: customer.address || ""
+        });
+      });
+      content.querySelectorAll(".cdt-tab").forEach(t => {
+        t.addEventListener("click", () => { _custTab = t.dataset.tab; renderTabs(); });
+      });
+      renderTabs();
+    } catch(e) { content.innerHTML = `<div style="padding:20px;color:#dc2626">Fout: ${e.message}</div>`; }
   }
   function openCustomerDrawer(customer) {
     document.getElementById("admDrawerTitle").textContent = customer ? "Klant bewerken" : "Nieuwe klant";
@@ -2724,11 +2881,11 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
   <div class="adm-form-row">
     <div class="adm-form-group">
       <label>BTW-nummer klant</label>
-      <input name="customerVatNumber" value="${esc(invoice?.customerVatNumber||"")}" placeholder="BE0000.000.000">
+      <input name="customerVatNumber" value="${esc(invoice?.customerVatNumber||prefill.prefillCustomerVat||"")}" placeholder="BE0000.000.000">
     </div>
     <div class="adm-form-group">
       <label>Adres klant</label>
-      <input name="customerAddress" value="${esc(invoice?.customerAddress||"")}" placeholder="Straat, gemeente">
+      <input name="customerAddress" value="${esc(invoice?.customerAddress||prefill.prefillCustomerAddress||"")}" placeholder="Straat, gemeente">
     </div>
   </div>
   <div class="adm-form-row">
