@@ -806,7 +806,24 @@ ${emp ? `
     });
   }
 
+  // Persoonlijke kleuren per medewerker (cyclisch)
+  const PLAN_COLORS = [
+    ["#dbeafe","#1d4ed8"],["#dcfce7","#15803d"],["#fef3c7","#92400e"],
+    ["#fce7f3","#9d174d"],["#f3e8ff","#6b21a8"],["#cffafe","#0e7490"],
+    ["#fee2e2","#991b1b"],["#e0f2fe","#0369a1"]
+  ];
+  const _planColorMap = {};
+  let _planColorIdx = 0;
+  function planColor(userId) {
+    if (!_planColorMap[userId]) {
+      _planColorMap[userId] = PLAN_COLORS[_planColorIdx % PLAN_COLORS.length];
+      _planColorIdx++;
+    }
+    return _planColorMap[userId];
+  }
+
   function renderPlanningRows(shifts, days) {
+    const today = new Date().toISOString().slice(0,10);
     const byUser = {};
     shifts.forEach(s => {
       if (!byUser[s.userId]) byUser[s.userId] = { name: s.userName || s.userId, days: {} };
@@ -814,15 +831,27 @@ ${emp ? `
       byUser[s.userId].days[s.date].push(s);
     });
     if (!Object.keys(byUser).length) return `<tr><td colspan="${days.length+1}" class="adm-empty">Geen shifts deze week</td></tr>`;
-    return Object.values(byUser).map(u => `
-      <tr>
-        <td>${u.name}</td>
-        ${days.map(d => `<td>${(u.days[d]||[]).map(s =>
-          `<span class="adm-shift-pill" data-id="${s.id}" title="Klik om te bewerken"
-            style="background:#e0e7ff;color:#4338ca;border-radius:4px;padding:2px 6px;font-size:11px;cursor:pointer;display:inline-block;margin-bottom:2px;">
-            ${esc(s.start||"")}${s.end?`–${esc(s.end)}`:""}</span>`
-        ).join(" ")||"—"}</td>`).join("")}
-      </tr>`).join("");
+    return Object.values(byUser).map(u => {
+      const [bg, fg] = planColor(Object.keys(byUser).find(k => byUser[k] === u) || "x");
+      const totalShifts = Object.values(u.days).reduce((s,d)=>s+d.length,0);
+      return `<tr>
+        <td style="font-weight:500;">
+          <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${fg};margin-right:5px;vertical-align:middle;"></span>
+          ${u.name}
+          <span style="font-size:10px;color:#94a3b8;margin-left:4px;">${totalShifts}×</span>
+        </td>
+        ${days.map(d => {
+          const dayShifts = u.days[d] || [];
+          const isToday = d === today;
+          return `<td style="${isToday?"background:#f0f9ff;":""}">${dayShifts.map(s =>
+            `<span class="adm-shift-pill" data-id="${s.id}" title="${esc(s.note||s.location||"")} — klik om te bewerken"
+              style="background:${bg};color:${fg};border:1px solid ${fg}30;border-radius:5px;padding:2px 7px;font-size:11px;font-weight:600;cursor:pointer;display:inline-block;margin-bottom:2px;white-space:nowrap;">
+              ${esc(s.start||"")}${s.end?`–${esc(s.end)}`:""}${s.location?` <span style="opacity:.7;font-weight:400">${esc(s.location.slice(0,8))}</span>`:""}
+            </span>`
+          ).join("<br>")||`<span style="color:#e2e8f0;font-size:12px;">—</span>`}</td>`;
+        }).join("")}
+      </tr>`;
+    }).join("");
   }
 
   // ── Shift drawer (admin) ───────────────────────────────────
@@ -2077,6 +2106,17 @@ ${emp ? `
       <div class="adm-loading">Klik op Laden…</div>
     </div>
   </div>
+</div>
+
+<!-- Loonlijst -->
+<div class="adm-card" style="margin-top:16px;">
+  <div class="adm-card-header">
+    <h3 class="adm-card-title">🧾 Loonlijst overzicht</h3>
+    <button class="adm-btn adm-btn-secondary adm-btn-sm" id="repExportPayroll">📥 Export CSV</button>
+  </div>
+  <div class="adm-card-body adm-table-wrap" id="repPayrollTable">
+    <div class="adm-loading">Klik op Laden…</div>
+  </div>
 </div>`;
 
     // Cache data voor CSV export
@@ -2185,6 +2225,70 @@ ${emp ? `
             </div>`
           : '<div class="adm-empty">Geen werkbonnen in deze periode</div>';
 
+        // ── Loonlijst ─────────────────────────────────────────
+        const payrollByUser = {};
+        clocks.forEach(c => {
+          if (!payrollByUser[c.userId]) payrollByUser[c.userId] = { name: c.userName||c.userId, email: c.userEmail||"", hours: 0, days: new Set(), expAmt: 0, leaveDays: 0 };
+          if (c.clockedOut) {
+            payrollByUser[c.userId].hours += (new Date(c.clockedOut)-new Date(c.clockedIn))/3600000;
+            payrollByUser[c.userId].days.add(c.clockedIn?.slice(0,10));
+          }
+        });
+        expenses.filter(e => ["goedgekeurd","approved"].includes(e.status)).forEach(e => {
+          if (!payrollByUser[e.userId]) payrollByUser[e.userId] = { name: e.userName||e.userId, email: "", hours: 0, days: new Set(), expAmt: 0, leaveDays: 0 };
+          payrollByUser[e.userId].expAmt += Number(e.amount||0);
+        });
+        leaves.filter(l => l.status === "goedgekeurd").forEach(l => {
+          if (!payrollByUser[l.userId]) payrollByUser[l.userId] = { name: l.userName||l.userId, email: "", hours: 0, days: new Set(), expAmt: 0, leaveDays: 0 };
+          const ld = l.startDate && l.endDate ? Math.round((new Date(l.endDate)-new Date(l.startDate))/86400000)+1 : Number(l.days||0);
+          payrollByUser[l.userId].leaveDays += ld;
+        });
+        const payrollRows = Object.values(payrollByUser).sort((a,b)=>a.name.localeCompare(b.name));
+        _repData.payroll = payrollRows;
+        const payrollTbl = document.getElementById("repPayrollTable");
+        if (payrollTbl) {
+          if (!payrollRows.length) {
+            payrollTbl.innerHTML = '<div class="adm-empty">Geen data voor loonlijst in deze periode</div>';
+          } else {
+            const totH = payrollRows.reduce((s,r)=>s+r.hours,0);
+            const totE = payrollRows.reduce((s,r)=>s+r.expAmt,0);
+            const totL = payrollRows.reduce((s,r)=>s+r.leaveDays,0);
+            payrollTbl.innerHTML = `
+<table class="adm-table">
+  <thead>
+    <tr style="background:#f8fafc;">
+      <th>Medewerker</th>
+      <th style="text-align:right">Gewerkte dagen</th>
+      <th style="text-align:right">Gewerkte uren</th>
+      <th style="text-align:right">Gem. uur/dag</th>
+      <th style="text-align:right">Verlof (d)</th>
+      <th style="text-align:right">Onkosten (€)</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${payrollRows.map(r => `<tr>
+      <td><strong>${esc(r.name)}</strong></td>
+      <td style="text-align:right;font-variant-numeric:tabular-nums;">${r.days.size}</td>
+      <td style="text-align:right;font-weight:600;font-variant-numeric:tabular-nums;">${r.hours.toFixed(2)}</td>
+      <td style="text-align:right;color:#64748b;">${r.days.size ? (r.hours/r.days.size).toFixed(2) : "—"}</td>
+      <td style="text-align:right;">${r.leaveDays||"—"}</td>
+      <td style="text-align:right;font-weight:600;">€${r.expAmt.toFixed(2)}</td>
+    </tr>`).join("")}
+  </tbody>
+  <tfoot>
+    <tr style="background:#f1f5f9;font-weight:700;border-top:2px solid #e2e8f0;">
+      <td>Totaal (${payrollRows.length} medewerkers)</td>
+      <td style="text-align:right;">—</td>
+      <td style="text-align:right;">${totH.toFixed(2)} u</td>
+      <td style="text-align:right;">—</td>
+      <td style="text-align:right;">${totL} d</td>
+      <td style="text-align:right;">€${totE.toFixed(2)}</td>
+    </tr>
+  </tfoot>
+</table>`;
+          }
+        }
+
       } catch (err) {
         document.getElementById("repClocksTable").innerHTML = `<div class="adm-empty" style="color:#ef4444;">Fout: ${err.message}</div>`;
       }
@@ -2218,6 +2322,12 @@ ${emp ? `
     document.getElementById("repExportWO").addEventListener("click", () => {
       const rows = (_repData.workorders||[]).map(w => [w.number||w.id.slice(-4), w.title||"", w.userName||w.userId||"", w.status||"", w.scheduledDate||w.createdAt?.slice(0,10)||""]);
       csvDownload("werkbonnen-export.csv", rows, ["#","Titel","Medewerker","Status","Datum"]);
+    });
+    document.getElementById("repExportPayroll").addEventListener("click", () => {
+      const from = document.getElementById("repFrom").value;
+      const to   = document.getElementById("repTo").value;
+      const rows = (_repData.payroll||[]).map(r => [r.name, r.days.size, r.hours.toFixed(2), r.days.size?(r.hours/r.days.size).toFixed(2):"0", r.leaveDays, r.expAmt.toFixed(2)]);
+      csvDownload(`loonlijst-${from}-${to}.csv`, rows, ["Medewerker","Gewerkte dagen","Gewerkte uren","Gem uur/dag","Verlof (d)","Onkosten (EUR)"]);
     });
 
     // Direct laden

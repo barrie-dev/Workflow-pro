@@ -1449,6 +1449,14 @@ ${data.absentNow ? `<div style="background:#fef3c7;border-radius:10px;padding:12
       <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:4px;">Telefoon</label>
       <input name="phone" type="tel" value="${profile.phone||""}" placeholder="+32 ..." style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;">
     </div>
+    <div>
+      <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:4px;">Adres</label>
+      <input name="address" value="${profile.address||""}" placeholder="Straat 1, 1000 Brussel" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;">
+    </div>
+    <div>
+      <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:4px;">IBAN <span style="font-weight:400;color:#94a3b8;">(voor onkostenvergoeding)</span></label>
+      <input name="iban" value="${profile.iban||""}" placeholder="BE68 5390 0754 7034" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:monospace;" autocomplete="off">
+    </div>
     <div id="empProfileMsg" style="display:none;padding:8px 10px;border-radius:8px;font-size:12px;"></div>
     <button type="submit" style="padding:10px;background:#0ea5e9;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Opslaan</button>
   </form>

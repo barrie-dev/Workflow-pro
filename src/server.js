@@ -1358,7 +1358,7 @@ http.createServer(async (req, res) => {
         assertHumanUser(user);
         const body = await readBody(req);
         // Alleen veilige velden bijwerken — geen rol, geen rechten, geen wachtwoord
-        const allowed = ["name", "phone", "language", "notificationPrefs"];
+        const allowed = ["name", "phone", "address", "iban", "language", "notificationPrefs"];
         const patch = {};
         allowed.forEach(k => { if (body[k] !== undefined) patch[k] = body[k]; });
         const updated = store.update("users", user.id, { ...patch, updatedAt: new Date().toISOString() });
