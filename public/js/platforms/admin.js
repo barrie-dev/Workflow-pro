@@ -1600,8 +1600,12 @@ ${emp ? `
 
   // ── Werkbon drawer ─────────────────────────────────────────
   function openWorkorderDrawer(workorder, _preloadedWOs) {
-    api("GET", "/employees").then(data => {
-      const employees = data.employees || [];
+    Promise.all([
+      api("GET", "/employees"),
+      api("GET", "/customers").catch(() => ({ customers: [] }))
+    ]).then(([empData, custData]) => {
+      const employees = empData.employees || [];
+      const customers = custData.customers || [];
       document.getElementById("admDrawerTitle").textContent = workorder ? "Werkbon bewerken" : "Nieuwe werkbon";
       document.getElementById("admDrawerBody").innerHTML = `
 <form id="woForm">
@@ -1616,8 +1620,15 @@ ${emp ? `
       </select>
     </div>
     <div class="adm-form-group"><label>Klant</label>
-      <input name="clientName" value="${esc(workorder?.clientName || "")}" placeholder="Naam klant">
+      <select name="customerId" id="woCustSel">
+        <option value="">— Kies klant of typ vrij —</option>
+        ${customers.map(c => `<option value="${c.id}" ${workorder?.customerId===c.id?"selected":""}>${esc(c.name)}</option>`).join("")}
+      </select>
     </div>
+  </div>
+  <div class="adm-form-group" id="woClientNameWrap">
+    <label>Klantnaam</label>
+    <input name="clientName" id="woClientName" value="${esc(workorder?.clientName || "")}" placeholder="Of typ een klantnaam vrij">
   </div>
   <div class="adm-form-row">
     <div class="adm-form-group"><label>Gepland op</label>
@@ -1658,6 +1669,14 @@ ${emp ? `
   </div>
 </form>`;
       openDrawer();
+
+      // Customer dropdown auto-fill
+      document.getElementById("woCustSel")?.addEventListener("change", e => {
+        const cust = customers.find(c => c.id === e.target.value);
+        const nameInp = document.getElementById("woClientName");
+        if (cust && nameInp) nameInp.value = cust.name;
+      });
+
       document.getElementById("woCancel").addEventListener("click", closeDrawer);
       document.getElementById("woMakeInvoice")?.addEventListener("click", () => {
         closeDrawer();
