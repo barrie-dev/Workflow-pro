@@ -896,6 +896,59 @@ http.createServer(async (req, res) => {
         sendJson(res, 201, { ok: true, result: importEmployees(store, tenant, await readBody(req), user) });
         return;
       }
+      // POST /admin/backfill — data quality fixes (nummers, notificaties, etc.)
+      if (action === "admin/backfill" && req.method === "POST") {
+        assertCan(user, "settings");
+        const results = {};
+        // 1. Werkbon nummers
+        const wos = store.list("workorders", tenantId).filter(w => !w.number);
+        const byYear = {};
+        wos.sort((a, b) => (a.createdAt||"").localeCompare(b.createdAt||"")).forEach(w => {
+          const yr = (w.createdAt||new Date().toISOString()).slice(0, 4);
+          if (!byYear[yr]) byYear[yr] = store.list("workorders", tenantId).filter(x => (x.number||"").startsWith(`WO-${yr}-`)).length;
+          byYear[yr]++;
+          store.update("workorders", w.id, { number: `WO-${yr}-${String(byYear[yr]).padStart(3,"0")}` });
+        });
+        results.workorderNumbers = wos.length;
+        // 2. Notificaties zonder userId (zoek de leaf userId via sourceRef)
+        const notifs = store.list("notifications", tenantId).filter(n => !n.userId && n.sourceRef && n.sourceRef.startsWith("leave:"));
+        let fixedNotifs = 0;
+        notifs.forEach(n => {
+          const leaveId = n.sourceRef.split(":")[1];
+          const leave = store.get("leaves", leaveId);
+          if (leave?.userId) { store.update("notifications", n.id, { userId: leave.userId }); fixedNotifs++; }
+        });
+        results.notificationUserIds = fixedNotifs;
+        // 3. Verloven zonder days
+        const leavesNoDays = store.list("leaves", tenantId).filter(l => !l.days && l.startDate && l.endDate);
+        leavesNoDays.forEach(l => {
+          let days = 0; const cur = new Date(l.startDate), end = new Date(l.endDate);
+          while (cur <= end) { const d = cur.getDay(); if (d!==0&&d!==6) days++; cur.setDate(cur.getDate()+1); }
+          if (days > 0) store.update("leaves", l.id, { days });
+        });
+        results.leaveDays = leavesNoDays.length;
+        store.audit({ actor: user.email, tenantId, action: "data_backfill", area: "admin", detail: JSON.stringify(results) });
+        sendJson(res, 200, { ok: true, results });
+        return;
+      }
+      // POST /admin/backfill-wo-numbers — vult lege werkbon-nummers in
+      if (action === "admin/backfill-wo-numbers" && req.method === "POST") {
+        assertCan(user, "settings");
+        const wos = store.list("workorders", tenantId).filter(w => !w.number);
+        const byYear = {};
+        wos.sort((a, b) => (a.createdAt||"").localeCompare(b.createdAt||"")).forEach(w => {
+          const yr = (w.createdAt||new Date().toISOString()).slice(0, 4);
+          if (!byYear[yr]) {
+            // Count existing numbered WOs for this year
+            byYear[yr] = store.list("workorders", tenantId).filter(x => (x.number||"").startsWith(`WO-${yr}-`)).length;
+          }
+          byYear[yr]++;
+          store.update("workorders", w.id, { number: `WO-${yr}-${String(byYear[yr]).padStart(3,"0")}` });
+        });
+        store.audit({ actor: user.email, tenantId, action: "wo_numbers_backfilled", area: "workorders", detail: `${wos.length} werkbonnen genummerd` });
+        sendJson(res, 200, { ok: true, updated: wos.length });
+        return;
+      }
       if (action === "golden-path/demo" && req.method === "POST") {
         if (config.isProduction) return sendJson(res, 403, { ok: false, error: "Demo data is uitgeschakeld in productie" });
         assertCan(user, "settings");
@@ -1526,7 +1579,22 @@ http.createServer(async (req, res) => {
       // me/leaves POST — medewerker vraagt verlof aan
       if (action === "me/leaves" && req.method === "POST") {
         const body = await readBody(req);
-        const row = store.insert("leaves", {
+        if (!body.startDate || !body.endDate) return sendJson(res, 400, { ok: false, error: "Start- en einddatum zijn verplicht" });
+        // Validatie: geen conflict met bestaand verlof
+        const existingLeaves = store.list("leaves", tenantId).filter(l =>
+          l.userId === user.id &&
+          !["geweigerd", "geannuleerd"].includes(l.status) &&
+          l.startDate <= body.endDate &&
+          l.endDate >= body.startDate
+        );
+        if (existingLeaves.length > 0) return sendJson(res, 409, { ok: false, error: "Je hebt al een verlofaanvraag in deze periode" });
+        // Bereken werkdagen
+        let days = 0;
+        const cur = new Date(body.startDate);
+        const end = new Date(body.endDate);
+        while (cur <= end) { const d = cur.getDay(); if (d !== 0 && d !== 6) days++; cur.setDate(cur.getDate()+1); }
+        if (days === 0) return sendJson(res, 400, { ok: false, error: "Geen werkdagen in de geselecteerde periode" });
+        const leave = store.insert("leaves", {
           id: `leave_${Date.now()}_${require("crypto").randomBytes(4).toString("hex")}`,
           tenantId,
           userId: user.id,
@@ -1534,6 +1602,7 @@ http.createServer(async (req, res) => {
           type: body.type || "vakantie",
           startDate: body.startDate,
           endDate: body.endDate,
+          days,
           reason: body.reason || "",
           status: "aangevraagd",
           createdAt: new Date().toISOString()
@@ -1543,10 +1612,11 @@ http.createServer(async (req, res) => {
           .filter(u => u.active !== false && ["tenant_admin", "manager"].includes(u.role) && u.email)
           .map(u => u.email);
         if (adminEmails.length) {
-          const tpl = leaveSubmittedToAdmin({ employee: user, leave: row, appUrl: config.appUrl });
+          const tpl = leaveSubmittedToAdmin({ employee: user, leave, appUrl: config.appUrl });
           adminEmails.forEach(to => sendMail({ to, ...tpl }));
         }
-        sendJson(res, 201, { ok: true, row });
+        // Consistente response: gebruik 'leave' (niet 'row')
+        sendJson(res, 201, { ok: true, leave, row: leave });
         return;
       }
 

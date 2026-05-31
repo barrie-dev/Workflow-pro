@@ -79,10 +79,15 @@ function billingQuote(store, tenant) {
 
 function billingSummary(tenant) {
   const billingOps = tenant.billingOps || {};
+  const resolvedStatus = tenant.billingStatus || tenant.status || "trial";
+  const paymentMethod = billingOps.paymentMethodRef ? (billingOps.paymentMethodRef.startsWith("card_") ? `Kaart ••••${billingOps.last4||""}` : billingOps.paymentMethodRef) : null;
   return {
     tenantId: tenant.id,
     plan: tenant.plan || "business",
-    billingStatus: tenant.billingStatus || "trial",
+    status: resolvedStatus,            // voor admin UI
+    billingStatus: resolvedStatus,     // alias
+    monthlyAmount: billingOps.monthlyAmount || 0,
+    paymentMethod,                     // voor admin UI
     paymentMethodTokenized: !!billingOps.paymentMethodTokenized,
     autoCharge: !!billingOps.autoCharge,
     paymentMethodRef: billingOps.paymentMethodRef ? "tokenized" : "",

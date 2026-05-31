@@ -624,11 +624,19 @@
     // leave form
     document.getElementById("empLeaveForm")?.addEventListener("submit", async e => {
       e.preventDefault();
-      const fd = new FormData(e.target);
-      await api("POST", "/me/leaves", Object.fromEntries(fd));
-      closeSheets();
-      window.showToast && window.showToast("Verlofaanvraag ingediend ✓", "success");
-      switchView("leaves");
+      const btn = e.target.querySelector("[type=submit]");
+      btn.disabled = true; btn.textContent = "Indienen…";
+      try {
+        const fd = new FormData(e.target);
+        const result = await api("POST", "/me/leaves", Object.fromEntries(fd));
+        const days = result.leave?.days || result.row?.days || "";
+        closeSheets();
+        window.showToast && window.showToast(`Verlofaanvraag ingediend ✓${days?" ("+days+" dag"+(days!==1?"en":"")+")":" "}`, "success");
+        switchView("leaves");
+      } catch(err) {
+        btn.disabled = false; btn.textContent = "Indienen";
+        window.showToast && window.showToast(err.message || "Fout bij indienen", "error");
+      }
     });
 
     // expense form
