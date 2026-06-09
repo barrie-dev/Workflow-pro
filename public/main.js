@@ -2535,20 +2535,57 @@ async function loginAs(email, password, intro) {
 
 async function submitLoginForm(form) {
   const data = formData(form);
+  el("loginNotice").textContent = "";
+  el("loginNotice").classList.remove("bad");
+
   try {
-    await loginAs(data.email, data.password, "Je bent ingelogd. Werk vanuit Start naar de eerste klantactivatie.");
-    const role = el("sessionState").dataset.role || "";
-    // Route naar het juiste platform op basis van rol
+    // Stap 1: authenticeer en haal token op
+    const payload = { email: data.email, password: data.password };
+    const result = await api("/api/auth/login", { method: "POST", body: JSON.stringify(payload) });
+
+    if (!result.ok && !result.token) {
+      throw new Error(result.error || "Inloggen mislukt");
+    }
+
+    if (result.mfaRequired) {
+      const code = window.prompt("Voer uw MFA-code in:");
+      if (!code) return;
+      const result2 = await api("/api/auth/login", { method: "POST", body: JSON.stringify({ ...payload, mfaCode: code }) });
+      if (!result2.token) throw new Error(result2.error || "MFA verificatie mislukt");
+      Object.assign(result, result2);
+    }
+
+    // Stap 2: token opslaan en state zetten
+    token = result.token || "";
+    localStorage.setItem("wfp_token", token);
+    window._wfpCurrentUser = result.user || null;
+    setShellAuthenticated(true);
+    if (el("sessionState")) {
+      el("sessionState").textContent = result.user?.name || "Ingelogd";
+      el("sessionState").dataset.role = result.user?.role || "";
+      el("sessionState").classList.remove("muted");
+    }
+
+    const role = result.user?.role || "";
+
+    // Stap 3: verberg login en toon platform
+    const loginPage = document.getElementById("loginPage");
+    if (loginPage) loginPage.classList.add("hidden");
+
     if (window.WorkFlowProPlatformRouter) {
-      // Verberg loginPage
-      const loginPage = document.getElementById("loginPage");
-      if (loginPage) loginPage.classList.add("hidden");
       window.WorkFlowProPlatformRouter.showPlatform(role);
     } else {
       setView("start");
     }
+
+    // Stap 4: achtergrond refresh (fouten hier crashen de UI niet)
+    Promise.all([
+      refresh().catch(() => {}),
+      refreshOps ? refreshOps().catch(() => {}) : Promise.resolve(),
+    ]).catch(() => {});
+
   } catch (error) {
-    el("loginNotice").textContent = error.message;
+    el("loginNotice").textContent = error.message || "Inloggen mislukt";
     el("loginNotice").classList.add("bad");
   }
 }
@@ -2728,7 +2765,13 @@ window.WorkFlowProRouter.configure({
     refreshPortal,
     refreshSales,
     refreshStatus,
-    refreshJson
+    refreshJson,
+    // Nieuwe domeinschermen
+    refreshCustomers:  () => window.refreshCustomers?.(),
+    refreshEmployees:  () => window.refreshEmployees?.(),
+    refreshClockings:  () => window.refreshClockings?.(),
+    refreshExpenses:   () => window.refreshExpenses?.(),
+    refreshInvoices:   () => window.refreshInvoices?.()
   }
 });
 window.WorkFlowProCustomerStart.configure({
@@ -2933,5 +2976,40 @@ window.addEventListener("online", syncQueue);
 el("planningForm").elements.date.value = todayValue();
 el("vehicleForm").elements.nextService.value = futureDateValue(14);
 el("apiKeyExpiresAt").value = futureDateValue(90);
+
+// ── Nieuwe domeinschermen — knoppen binden ──────────────────────────────────
+[
+  ["refreshCustomers",  () => window.refreshCustomers?.()],
+  ["refreshEmployees",  () => window.refreshEmployees?.()],
+  ["refreshClockings",  () => window.refreshClockings?.()],
+  ["refreshExpenses",   () => window.refreshExpenses?.()],
+  ["refreshInvoices",   () => window.refreshInvoices?.()],
+].forEach(([id, fn]) => el(id)?.addEventListener("click", fn));
+
+// Tab-knoppen via event delegation (werkt altijd, ook na DOM-wijzigingen)
+document.addEventListener("click", event => {
+  const btn = event.target.closest("button");
+  if (!btn) return;
+  if (btn.dataset.invoiceTab !== undefined) {
+    document.querySelectorAll("[data-invoice-tab]").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    window.refreshInvoices?.();
+    return;
+  }
+  if (btn.dataset.expenseTab !== undefined) {
+    document.querySelectorAll("[data-expense-tab]").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    window.refreshExpenses?.();
+    return;
+  }
+});
+
+// + Nieuwe klant / medewerker / onkost / factuur knoppen → scrollen naar form
+el("addCustomerBtn")?.addEventListener("click", () => el("customerForm")?.scrollIntoView({behavior:"smooth"}));
+el("addEmployeeBtn")?.addEventListener("click", () => el("employeeAddForm")?.scrollIntoView({behavior:"smooth"}));
+el("addExpenseBtn")?.addEventListener("click", () => el("expenseSubmitForm")?.scrollIntoView({behavior:"smooth"}));
+el("createInvoiceBtn")?.addEventListener("click", () => el("invoiceCreateForm")?.scrollIntoView({behavior:"smooth"}));
+el("exportClockings")?.addEventListener("click", () => downloadExport("clockings"));
+
 saveQueue();
 refresh();

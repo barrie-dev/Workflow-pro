@@ -17,6 +17,8 @@
     });
     const refreshName = views[activeView]?.refresh;
     if (refreshName) refreshHandlers[refreshName]?.();
+    // Dispatch event for domain-screens.js to bind forms
+    document.dispatchEvent(new CustomEvent('wfp-view-changed', { detail: { view: activeView } }));
   }
 
   function bindNavigation() {

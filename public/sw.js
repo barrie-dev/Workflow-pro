@@ -10,7 +10,7 @@
  * Versie ophogen bij elke release om de oude cache te busten.
  */
 
-const CACHE_VERSION = "wfp-v2";
+const CACHE_VERSION = "wfp-v3";
 const SHELL_CACHE   = `${CACHE_VERSION}-shell`;
 const API_CACHE     = `${CACHE_VERSION}-api`;
 

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>WorkFlow Pro</title>
   <link rel="manifest" href="/manifest.json">
-  <meta name="theme-color" content="#4f46e5">
+  <meta name="theme-color" content="#0d1b2e">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="WorkFlow Pro">
@@ -13,1765 +13,271 @@
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body class="guest">
+
+  <!-- ══════════════════════════════════════════════════════════
+       LOGIN PAGINA
+  ══════════════════════════════════════════════════════════ -->
   <section id="loginPage" class="login-page">
+    <!-- Links: branding -->
     <div class="login-brand">
-      <div class="login-logo">✓</div>
-      <h1>WorkFlow Pro</h1>
-      <p>Belgische B2B SaaS voor KMO's met teams op locatie.</p>
-      <div class="login-benefits">
-        <span>Real-time overzicht</span>
-        <span>Minder administratie</span>
-        <span>Meer controle</span>
+      <div class="login-brand-top">
+        <div class="login-logo-wrap">
+          <svg class="login-logo-icon" viewBox="0 0 40 40" fill="none">
+            <rect width="40" height="40" rx="10" fill="#f47c1b"/>
+            <path d="M13 20l5 5 9-10" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div>
+            <div class="login-brand-name">WorkFlow Pro</div>
+            <div class="login-brand-tag">🇧🇪 Belgische B2B SaaS voor KMO's op locatie</div>
+          </div>
+        </div>
       </div>
-      <div class="login-preview">
-        <strong>Planning, werkbonnen, tijd en kosten</strong>
-        <small>Een veilige flow voor kantoor en medewerkers op de baan.</small>
+
+      <div class="login-brand-body">
+        <h1 class="login-tagline">Plan slimmer.<br>Werk efficiënter.<br><span style="color:var(--wf-orange)">Factureer sneller.</span></h1>
+        <p class="login-sub">Eén platform voor planning, werkbonnen, tijdregistratie, facturen en facturatie — voor Belgische KMO's met teams op locatie.</p>
+        <ul class="login-bullets">
+          <li>
+            <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" fill="rgba(244,124,27,0.15)"/><path d="M7 10l2 2 4-4" stroke="#f47c1b" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <span>Real-time overzicht voor kantoor en baan</span>
+          </li>
+          <li>
+            <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" fill="rgba(244,124,27,0.15)"/><path d="M7 10l2 2 4-4" stroke="#f47c1b" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <span>Slimme planning &amp; urenbeheer</span>
+          </li>
+          <li>
+            <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" fill="rgba(244,124,27,0.15)"/><path d="M7 10l2 2 4-4" stroke="#f47c1b" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <span>Automatische facturatie &amp; Peppol e-invoicing</span>
+          </li>
+          <li>
+            <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" fill="rgba(244,124,27,0.15)"/><path d="M7 10l2 2 4-4" stroke="#f47c1b" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <span>Admin controle &amp; rapportage</span>
+          </li>
+        </ul>
+
+        <!-- Mini preview card -->
+        <div class="login-preview-card">
+          <div class="login-preview-bar">
+            <span class="login-preview-dot" style="background:#ef4444"></span>
+            <span class="login-preview-dot" style="background:#f59e0b"></span>
+            <span class="login-preview-dot" style="background:#10b981"></span>
+            <span style="font-size:10px;color:#94a3b8;margin-left:8px">workflowpro.be · Demo Bouw BV</span>
+          </div>
+          <div class="login-preview-body">
+            <div class="login-preview-sidebar">
+              <div class="lpv-logo">WP</div>
+              <div class="lpv-nav-item lpv-active"></div>
+              <div class="lpv-nav-item"></div>
+              <div class="lpv-nav-item"></div>
+              <div class="lpv-nav-item"></div>
+              <div class="lpv-nav-item"></div>
+            </div>
+            <div class="login-preview-main">
+              <div class="lpv-kpis">
+                <div class="lpv-kpi"><div class="lpv-num">5</div><div class="lpv-lbl"></div></div>
+                <div class="lpv-kpi"><div class="lpv-num" style="color:#f47c1b">11</div><div class="lpv-lbl"></div></div>
+                <div class="lpv-kpi"><div class="lpv-num" style="color:#ef4444">3</div><div class="lpv-lbl"></div></div>
+                <div class="lpv-kpi"><div class="lpv-num" style="color:#16a34a">18</div><div class="lpv-lbl"></div></div>
+              </div>
+              <div class="lpv-rows">
+                <div class="lpv-row"><span class="lpv-badge" style="background:#e8f0fd;color:#1e6be6">Goedkeuring</span><div class="lpv-line"></div><div class="lpv-line short"></div></div>
+                <div class="lpv-row"><span class="lpv-badge" style="background:#dcfce7;color:#16a34a">Voltooid</span><div class="lpv-line"></div><div class="lpv-line short"></div></div>
+                <div class="lpv-row"><span class="lpv-badge" style="background:#fef3e8;color:#f47c1b">Bezig</span><div class="lpv-line"></div><div class="lpv-line short"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="login-brand-footer">
+        <div class="login-trust-badge">
+          <svg viewBox="0 0 16 16" fill="#16a34a"><path d="M8 0l1.8 5.5H16l-4.9 3.6 1.8 5.5L8 11l-4.9 3.6 1.8-5.5L0 5.5h6.2z"/></svg>
+          <span>Vertrouwd in België</span>
+        </div>
+        <div class="login-trust-badge">
+          <svg viewBox="0 0 16 16" fill="#1e6be6"><path d="M8 1L2 4v4c0 3.5 2.5 6.8 6 7.7 3.5-.9 6-4.2 6-7.7V4L8 1z"/></svg>
+          <span>AVG / GDPR compliant</span>
+        </div>
       </div>
     </div>
 
+    <!-- Rechts: login formulier -->
     <div class="login-panel">
-      <form id="loginForm" class="login-card">
-        <p class="eyebrow">Inloggen</p>
-        <h2>Welkom terug</h2>
-        <p>Gebruik je WorkFlow Pro account om verder te werken.</p>
-        <label>E-mail<input name="email" type="email" required autocomplete="username" value="admin@demobouw.be"></label>
-        <label>Wachtwoord<input name="password" type="password" required autocomplete="current-password"></label>
-        <label>Tenant code<input name="tenantCode" autocomplete="organization" value="DEMOBouw"></label>
-        <div id="loginNotice" class="notice">MFA is beschikbaar voor extra beveiliging.</div>
-        <button type="submit">Inloggen</button>
-      </form>
-    </div>
-  </section>
+      <div class="login-panel-inner">
+        <div class="login-panel-lang">
+          <button class="lpv-lang-btn active" type="button">NL</button>
+          <button class="lpv-lang-btn" type="button">EN</button>
+        </div>
 
-  <div id="legacyShell">
-  <header class="topbar">
-    <div class="brand-block">
-      <span class="app-logo">✓</span>
-      <div>
-        <h1>WorkFlow Pro</h1>
-        <small id="brandTenantLabel">Demo Bouw BV</small>
+        <div class="login-form-header">
+          <h2 class="login-welcome">Welkom terug!</h2>
+          <p class="login-welcome-sub">Log in bij WorkFlow Pro</p>
+        </div>
+
+        <form id="loginForm" class="login-card">
+          <div class="login-field">
+            <label class="login-label">E-mail</label>
+            <input class="login-input" name="email" type="email" required autocomplete="username" value="admin@demobouw.be" placeholder="naam@bedrijf.be">
+          </div>
+          <div class="login-field">
+            <label class="login-label" style="position:relative">
+              Wachtwoord
+              <a href="#" class="login-forgot" style="position:absolute;right:0;top:0;font-size:0.75rem">Vergeten?</a>
+            </label>
+            <input class="login-input" name="password" type="password" required autocomplete="current-password" placeholder="••••••••••••">
+          </div>
+          <div class="login-field">
+            <label class="login-label">Tenant code</label>
+            <input class="login-input login-input-mono" name="tenantCode" autocomplete="organization" value="DEMOBouw" placeholder="DEMOBOUW">
+          </div>
+          <div id="loginNotice" class="login-notice"></div>
+          <button class="login-btn" type="submit">
+            Inloggen
+            <svg viewBox="0 0 20 20" fill="currentColor" style="width:16px;height:16px"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+          </button>
+        </form>
+
+        <div class="login-demo-section">
+          <div class="login-demo-divider"><span>Of start uw demo als</span></div>
+          <div class="login-demo-roles">
+            <button class="login-role-btn" type="button" onclick="document.querySelector('[name=email]').value='admin@demobouw.be';document.querySelector('[name=tenantCode]').value='DEMOBouw';document.querySelector('[name=password]').focus()">
+              <span style="font-size:1.25rem">🏢</span>
+              <div><strong style="font-size:0.8125rem;color:#334155">Admin</strong><div style="font-size:0.7rem;color:#94a3b8;margin-top:1px">Volledig beheer</div></div>
+            </button>
+            <button class="login-role-btn" type="button" onclick="document.querySelector('[name=email]').value='manager@demobouw.be';document.querySelector('[name=tenantCode]').value='DEMOBouw';document.querySelector('[name=password]').focus()">
+              <span style="font-size:1.25rem">👷</span>
+              <div><strong style="font-size:0.8125rem;color:#334155">Manager</strong><div style="font-size:0.7rem;color:#94a3b8;margin-top:1px">Team &amp; planning</div></div>
+            </button>
+            <button class="login-role-btn" type="button" onclick="document.querySelector('[name=email]').value='jan@demobouw.be';document.querySelector('[name=tenantCode]').value='DEMOBouw';document.querySelector('[name=password]').focus()">
+              <span style="font-size:1.25rem">🔧</span>
+              <div><strong style="font-size:0.8125rem;color:#334155">Medewerker</strong><div style="font-size:0.7rem;color:#94a3b8;margin-top:1px">Mobiele view</div></div>
+            </button>
+            <button class="login-role-btn" type="button" onclick="document.querySelector('[name=email]').value='superadmin@workflowpro.app';document.querySelector('[name=tenantCode]').value='';document.querySelector('[name=password]').focus()">
+              <span style="font-size:1.25rem">🛡️</span>
+              <div><strong style="font-size:0.8125rem;color:#334155">Super Admin</strong><div style="font-size:0.7rem;color:#94a3b8;margin-top:1px">Platform beheer</div></div>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
-
-    <nav class="view-tabs" aria-label="Hoofdnavigatie">
-      <button id="viewStart" class="tab active" type="button"><span>⌂</span>Werkruimte</button>
-      <button id="viewNotifications" class="tab" type="button"><span>◇</span>Actiecentrum</button>
-      <button id="viewPlanning" class="tab" type="button"><span>□</span>Planning</button>
-      <button id="viewWorkorders" class="tab" type="button"><span>▤</span>Werkbonnen</button>
-      <button id="viewOps" class="tab" type="button"><span>◷</span>Tijd</button>
-      <button id="viewBilling" class="tab" type="button"><span>€</span>Onkosten</button>
-      <button id="viewAssets" class="tab" type="button"><span>▧</span>Wagenpark</button>
-      <button id="viewStock" class="tab" type="button"><span>▦</span>Stock</button>
-      <button id="viewVerlof" class="tab" type="button"><span>☀</span>Verlof</button>
-      <button id="viewReports" class="tab" type="button"><span>▥</span>Rapportage</button>
-      <button id="viewMobile" class="tab internal-tab" type="button"><span>▣</span>Mobile</button>
-      <button id="viewIntegrations" class="tab" type="button"><span>✣</span>Integraties</button>
-      <button id="viewAdmin" class="tab" type="button"><span>⚙</span>Instellingen</button>
-      <button id="viewPortal" class="tab internal-tab" type="button"><span>◉</span>Portal</button>
-      <button id="viewSales" class="tab internal-tab" type="button"><span>↗</span>Sales</button>
-      <button id="viewDemo" class="tab dev-tab" type="button"><span>▦</span>Demo</button>
-      <button id="viewStatus" class="tab dev-tab" type="button"><span>●</span>Status</button>
-      <button id="viewJson" class="tab dev-tab" type="button"><span>{ }</span>JSON</button>
-      <button id="viewApi" class="tab dev-tab" type="button"><span>⌁</span>API docs</button>
-    </nav>
-
-    <div class="sidebar-footer">
-      <button class="environment-chip" type="button"><span></span>Live omgeving</button>
-      <span id="sessionState" class="pill muted">Niet ingelogd</span>
-    </div>
-  </header>
-
-  <section class="appbar" aria-label="Globale acties">
-    <label class="tenant-select">
-      <span>Tenant</span>
-      <select aria-label="Tenant">
-        <option>Demo Bouw BV</option>
-      </select>
-    </label>
-    <label class="global-search">
-      <span>Zoeken</span>
-      <input type="search" placeholder="Zoek klant, werf, werkbon, medewerker...">
-    </label>
-    <div class="session">
-      <button id="login" class="secondary-action" type="button">Opnieuw inloggen</button>
-      <button id="loginSuper" class="dev-tab" type="button">Super admin</button>
-      <button class="icon-button" type="button" aria-label="Help">?</button>
-    </div>
   </section>
 
-  <main>
-    <div id="customerStartPage">
-      <section class="start-hero">
-        <div>
-          <p class="eyebrow">Klant activatie</p>
-          <h2 id="startTenantName">Live gaan met WorkFlow Pro</h2>
-          <p id="startIntro">Login om de snelste route naar een werkende klantomgeving te laden.</p>
-        </div>
-        <div class="start-score">
-          <span id="startActivationScore">0%</span>
-          <small>activatie klaar</small>
-        </div>
-      </section>
-
-      <section class="start-next">
-        <div>
-          <p class="eyebrow">Volgende actie</p>
-          <h2 id="startNextTitle">Start met demo-login</h2>
-          <p id="startNextDetail">Daarna tonen we exact welke klantstap eerst nodig is.</p>
-        </div>
-        <button id="startNextAction" type="button">Login demo admin</button>
-      </section>
-
-      <section id="startCards" class="metric-grid"></section>
-      <section id="startSections" class="start-grid"></section>
-    </div>
-
-    <div id="demoPage" class="hidden">
-      <section class="overview">
-        <div class="intro">
-          <h2>Planning, werkbonnen, tijd en kosten in een veilige flow.</h2>
-          <p id="introText">Start de demo om de productie-foundation te controleren met echte endpoints.</p>
-        </div>
-        <div class="score">
-          <span id="readinessScore">0%</span>
-          <small>Golden path klaar</small>
-        </div>
-      </section>
-
-      <section class="metric-grid" aria-label="Status">
-        <article class="metric">
-          <span class="metric-label">API</span>
-          <strong id="apiStatus">Laden</strong>
-          <small id="apiDetail">Serverstatus wordt opgehaald</small>
-        </article>
-        <article class="metric">
-          <span class="metric-label">Modules</span>
-          <strong id="moduleCount">-</strong>
-          <small>Actieve backendmodules</small>
-        </article>
-        <article class="metric">
-          <span class="metric-label">Tenant</span>
-          <strong id="tenantName">Demo klant</strong>
-          <small id="tenantPlan">Business trial</small>
-        </article>
-        <article class="metric">
-          <span class="metric-label">Mobiel</span>
-          <strong id="mobileDate">-</strong>
-          <small id="mobileUser">Vandaag-flow</small>
-        </article>
-      </section>
-
-      <section class="ai-suggestion" aria-label="AI suggestie">
-        <div>
-          <p class="eyebrow">AI suggestie</p>
-          <h2 id="aiSuggestionTitle">Volgende beste stap</h2>
-          <p id="aiSuggestionText">Ik kijk mee naar de status en toon hier zo meteen de meest nuttige actie.</p>
-          <small id="aiSuggestionMeta" class="ai-meta">Gebaseerd op live appstatus.</small>
-        </div>
-        <div class="ai-actions">
-          <button id="aiSuggestionPrimary" type="button">Start demo</button>
-          <button id="aiSuggestionSecondary" class="secondary-action" type="button">Bekijk status</button>
-        </div>
-      </section>
-
-      <section class="workspace">
-        <article class="panel">
-          <div class="panel-head">
-            <div>
-              <p class="eyebrow">Onboarding</p>
-              <h2>Golden path</h2>
-            </div>
-            <button id="demo" type="button" disabled>Maak demo golden path</button>
-          </div>
-          <div id="steps" class="steps"></div>
-        </article>
-
-        <article class="panel">
-          <div class="panel-head">
-            <div>
-              <p class="eyebrow">Vandaag</p>
-              <h2>Veldmedewerker</h2>
-            </div>
-          </div>
-          <div id="todayList" class="today-list"></div>
-        </article>
-      </section>
-
-      <section class="panel">
-        <div class="panel-head">
-          <div>
-            <p class="eyebrow">Beschikbaar</p>
-            <h2>Productmodules</h2>
-          </div>
-        </div>
-        <div id="modules" class="module-grid"></div>
-      </section>
-    </div>
-
-    <div id="planningPage" class="hidden">
-      <section class="product-shell">
-        <aside class="product-sidebar" aria-label="Productnavigatie">
-          <div class="product-brand">
-            <span class="brand-mark">WF</span>
-            <div>
-              <strong>WorkFlow Pro</strong>
-              <small>Demo Bouw BV</small>
-            </div>
-          </div>
-          <nav class="side-nav">
-            <button type="button">Werkruimte</button>
-            <button type="button">Actiecentrum</button>
-            <button class="active" type="button">Planning</button>
-            <button type="button" data-jump-view="workorders">Werkbonnen</button>
-            <button type="button">Tijd</button>
-            <button type="button">Onkosten</button>
-            <button type="button">Stock</button>
-            <button type="button">Rapportage</button>
-          </nav>
-        </aside>
-
-        <section class="product-main">
-          <div class="commandbar">
-            <label class="command-search">
-              <span>Zoeken</span>
-              <input type="search" placeholder="Zoek klant, werf, werkbon...">
-            </label>
-            <span class="tenant-chip">Demo Bouw BV</span>
-            <button class="icon-button" type="button" aria-label="Notificaties">!</button>
-          </div>
-
-          <div class="page-title-row">
-            <div>
-              <p class="eyebrow">Weekplanning</p>
-              <h2>Planning</h2>
-              <p class="page-subtitle">Capaciteit, conflicten en gekoppelde werkbonnen in een rustig overzicht.</p>
-            </div>
-            <div class="action-row">
-              <button class="secondary-action" type="button">Filters</button>
-              <button type="button">Nieuwe shift</button>
-            </div>
-          </div>
-
-          <div class="view-switch" aria-label="Planningweergave">
-            <button type="button">Dag</button>
-            <button class="active" type="button">Week</button>
-            <button type="button">Maand</button>
-          </div>
-
-          <div id="planningExperience" class="planning-experience"></div>
-        </section>
-      </section>
-    </div>
-
-    <div id="workordersPage" class="hidden">
-      <section class="product-shell">
-        <aside class="product-sidebar" aria-label="Productnavigatie">
-          <div class="product-brand">
-            <span class="brand-mark">WF</span>
-            <div>
-              <strong>WorkFlow Pro</strong>
-              <small>Demo Bouw BV</small>
-            </div>
-          </div>
-          <nav class="side-nav">
-            <button type="button">Werkruimte</button>
-            <button type="button">Actiecentrum</button>
-            <button type="button" data-jump-view="planning">Planning</button>
-            <button class="active" type="button">Werkbonnen</button>
-            <button type="button">Tijd</button>
-            <button type="button">Onkosten</button>
-            <button type="button">Stock</button>
-            <button type="button">Rapportage</button>
-          </nav>
-        </aside>
-
-        <section class="product-main">
-          <div class="commandbar">
-            <label class="command-search">
-              <span>Zoeken</span>
-              <input type="search" placeholder="Zoek werkbon, klant, werf...">
-            </label>
-            <span class="tenant-chip">Demo Bouw BV</span>
-            <button class="icon-button" type="button" aria-label="Notificaties">!</button>
-          </div>
-
-          <div class="page-title-row">
-            <div>
-              <p class="eyebrow">Uitvoering</p>
-              <h2>Werkbonnen</h2>
-              <p class="page-subtitle">Van eerste opdracht tot review, materiaal, uren en facturatie.</p>
-            </div>
-            <div class="action-row">
-              <button class="secondary-action" type="button">Importeer</button>
-              <button type="button">Nieuwe werkbon</button>
-            </div>
-          </div>
-
-          <div class="view-switch" aria-label="Werkbonfilter">
-            <button class="active" type="button">Alles</button>
-            <button type="button">Te starten</button>
-            <button type="button">Bezig</button>
-            <button type="button">Review</button>
-            <button type="button">Facturatie</button>
-          </div>
-
-          <div id="workorderExperience" class="workorder-experience"></div>
-        </section>
-      </section>
-    </div>
-
-    <div id="opsPage" class="hidden">
-      <section class="panel">
-        <div class="panel-head">
-          <div>
-            <p class="eyebrow">Tijd & onkosten</p>
-            <h2>Uren, onkosten en finance export</h2>
-          </div>
-          <button id="refreshOps" type="button">Vernieuw data</button>
-        </div>
-
-        <div id="opsNotice" class="notice">Login met de demo admin om operationele data te beheren.</div>
-        <div id="opsFocus" class="ops-focus"></div>
-
-        <div class="ops-tools">
-          <form id="kboForm" class="ops-tool setup-only">
-            <h3>KBO onboarding</h3>
-            <label>BTW/KBO nummer<input name="vat" required value="BE0897225572"></label>
-            <button type="submit">KBO toepassen</button>
-          </form>
-
-          <form id="clockForm" class="ops-tool">
-            <h3>Tijdregistratie</h3>
-            <label>Medewerker<select name="userId" id="clockUser" required></select></label>
-            <label>Werf<select name="venueId" id="clockVenue"></select></label>
-            <div class="button-row">
-              <button id="clockIn" type="button">Clock in</button>
-              <button id="clockOut" type="button">Clock out</button>
-            </div>
-          </form>
-
-          <div class="ops-tool report-tool">
-            <h3>Managementrapport</h3>
-            <div id="reportCards" class="report-grid"></div>
-          </div>
-        </div>
-
-        <form id="employeeImportForm" class="ops-form import-form setup-only">
-          <div>
-            <h3>Medewerkers importeren</h3>
-            <p>CSV met kolommen naam,email,rol,telefoon,functie. Komma of puntkomma mag. Bestaande e-mails worden bijgewerkt.</p>
-          </div>
-          <label>CSV bestand<input id="employeeImportFile" name="csvFile" type="file" accept=".csv,text/csv"></label>
-          <label>CSV inhoud<textarea name="csv" required>naam,email,rol,telefoon,functie
-Jan Janssens,jan.janssens@demobouw.be,employee,0470123456,Technieker
-Lina Peeters,lina.peeters@demobouw.be,planner,0470654321,Planner</textarea></label>
-          <label>Tijdelijk wachtwoord<input name="defaultPassword" type="password" required autocomplete="new-password" placeholder="Minstens 12 tekens met cijfer en symbool"></label>
-          <button type="submit">CSV importeren</button>
-          <div id="importResult" class="import-result">Nog geen import uitgevoerd.</div>
-        </form>
-
-        <form id="permissionForm" class="ops-form permission-form setup-only">
-          <div>
-            <h3>Rollen en rechten</h3>
-            <p>Kies een medewerker en geef alleen de modules die nodig zijn voor de job.</p>
-          </div>
-          <label>Medewerker<select name="userId" id="permissionUser" required></select></label>
-          <label>Rol
-            <select name="role" id="permissionRole">
-              <option value="employee">Veldmedewerker</option>
-              <option value="planner">Planner</option>
-              <option value="tenant_admin">Admin</option>
-            </select>
-          </label>
-          <div id="permissionChecks" class="permission-checks"></div>
-          <button type="submit">Rechten opslaan</button>
-        </form>
-
-        <div class="ops-grid">
-          <form id="employeeForm" class="ops-form setup-only">
-            <h3>Medewerker</h3>
-            <label>Naam<input name="name" required placeholder="bv. Sara Peeters"></label>
-            <label>E-mail<input name="email" type="email" required placeholder="sara@klant.be"></label>
-            <label>Tijdelijk wachtwoord<input name="password" type="password" required autocomplete="new-password" placeholder="Minstens 12 tekens met cijfer en symbool"></label>
-            <label>Rol
-              <select name="role">
-                <option value="employee">Veldmedewerker</option>
-                <option value="planner">Planner</option>
-                <option value="tenant_admin">Admin</option>
-              </select>
-            </label>
-            <button type="submit">Medewerker toevoegen</button>
-          </form>
-
-          <form id="venueForm" class="ops-form setup-only">
-            <h3>Werf</h3>
-            <label>Naam<input name="name" required placeholder="bv. Werf Antwerpen"></label>
-            <label>Code<input name="code" placeholder="ANT-01"></label>
-            <label>Adres<input name="address" placeholder="Straat 1, Antwerpen"></label>
-            <button type="submit">Werf toevoegen</button>
-          </form>
-
-          <form id="planningForm" class="ops-form setup-only">
-            <h3>Planning</h3>
-            <label>Medewerker<select name="userId" id="planningUser" required></select></label>
-            <label>Werf<select name="venueId" id="planningVenue" required></select></label>
-            <label>Datum<input name="date" type="date" required></label>
-            <div class="form-row">
-              <label>Start<input name="start" type="time" required value="08:00"></label>
-              <label>Einde<input name="end" type="time" required value="16:30"></label>
-            </div>
-            <label>Project<input name="project" placeholder="Onderhoud klant"></label>
-            <button type="submit">Planning toevoegen</button>
-          </form>
-
-          <form id="workorderForm" class="ops-form setup-only">
-            <h3>Werkbon</h3>
-            <label>Titel<input name="title" required placeholder="Installatie controleren"></label>
-            <label>Medewerker<select name="userId" id="workorderUser" required></select></label>
-            <label>Werf<select name="venueId" id="workorderVenue" required></select></label>
-            <label>Status
-              <select name="status">
-                <option>Nieuw</option>
-                <option>Bezig</option>
-                <option>Voltooid</option>
-              </select>
-            </label>
-            <label>Checklist<textarea name="checklistText" placeholder="Een taak per lijn"></textarea></label>
-            <button type="submit">Werkbon toevoegen</button>
-          </form>
-
-          <form id="expenseForm" class="ops-form">
-            <h3>Onkost</h3>
-            <label>Titel<input name="title" required placeholder="Parking werf"></label>
-            <label>Bedrag<input name="amount" type="number" min="0" step="0.01" required placeholder="12.50"></label>
-            <label>Categorie<input name="category" required placeholder="Parking"></label>
-            <label>Medewerker<select name="userId" id="expenseUser" required></select></label>
-            <button type="submit">Onkost indienen</button>
-          </form>
-        </div>
-      </section>
-
-      <section class="ops-lists">
-        <article class="panel setup-only">
-          <div class="panel-head">
-            <h2>Medewerkers</h2>
-            <button class="export-link" data-export="users" type="button">CSV export</button>
-          </div>
-          <div id="employeeRows" class="data-list"></div>
-        </article>
-        <article class="panel setup-only">
-          <div class="panel-head">
-            <h2>Planning</h2>
-            <button class="export-link" data-export="planning" type="button">CSV export</button>
-          </div>
-          <div id="planningRows" class="data-list"></div>
-        </article>
-        <article class="panel setup-only">
-          <div class="panel-head">
-            <h2>Werkbonnen</h2>
-            <button class="export-link" data-export="workorders" type="button">CSV export</button>
-          </div>
-          <div id="workorderRows" class="data-list"></div>
-        </article>
-        <article class="panel">
-          <div class="panel-head">
-            <h2>Onkosten</h2>
-            <button class="export-link" data-export="expenses" type="button">CSV export</button>
-          </div>
-          <div id="expenseRows" class="data-list"></div>
-        </article>
-      </section>
-    </div>
-
-    <div id="billingPage" class="hidden">
-      <section class="panel">
-        <div class="panel-head">
-          <div>
-            <p class="eyebrow">Billing + compliance</p>
-            <h2>Betaling, facturen en wettelijke flows</h2>
-          </div>
-          <button id="refreshBilling" type="button">Vernieuw billing</button>
-        </div>
-
-        <div id="billingNotice" class="notice">Login met de demo admin om billing te beheren.</div>
-
-        <div id="billingCards" class="metric-grid"></div>
-        <div id="pricingQuote" class="pricing-quote"></div>
-        <div id="billingFocus" class="billing-focus"></div>
-
-        <div class="billing-grid">
-          <form id="paymentForm" class="ops-form">
-            <h3>Betaalmethode</h3>
-            <button id="setupIntent" type="button">Stripe SetupIntent</button>
-            <label>Payment method token<input name="paymentMethodRef" value="pm_card_visa_mock" required></label>
-            <button type="submit">Token opslaan</button>
-          </form>
-
-          <form id="invoiceForm" class="ops-form">
-            <h3>Factuur</h3>
-            <label>Omschrijving<input name="line" value="WorkFlow Pro jaarlicentie" required></label>
-            <label>Bedrag<input name="amount" type="number" min="0" step="0.01" value="1200" required></label>
-            <label>Korting %<input name="discountPct" type="number" min="0" max="100" step="1" value="0"></label>
-            <button type="submit">Factuurconcept maken</button>
-          </form>
-
-          <form id="dpaForm" class="ops-form">
-            <h3>DPA</h3>
-            <label>Versie<input name="version" value="2026-04" required></label>
-            <label>Bedrijfsnaam<input name="companyName" value="Demo Bouwgroep NV"></label>
-            <button type="submit">DPA accepteren</button>
-          </form>
-
-          <form id="gdprForm" class="ops-form">
-            <h3>GDPR verzoek</h3>
-            <label>Type
-              <select name="type">
-                <option value="export">Export</option>
-                <option value="delete">Delete</option>
-              </select>
-            </label>
-            <label>Betrokkene<input name="subjectEmail" type="email" placeholder="persoon@klant.be" required></label>
-            <button type="submit">Verzoek registreren</button>
-          </form>
-
-          <form id="contractForm" class="ops-form">
-            <h3>Contractstatus</h3>
-            <label>Actie
-              <select name="action">
-                <option value="send_quote">Offerte verzonden</option>
-                <option value="activate">Activeer contract</option>
-                <option value="mark_past_due">Markeer achterstallig</option>
-                <option value="renew">Vernieuw contract</option>
-                <option value="cancel">Stop contract</option>
-                <option value="start_trial">Start trial</option>
-              </select>
-            </label>
-            <label>Reden<input name="reason" placeholder="bv. Getekende offerte ontvangen"></label>
-            <button type="submit">Status wijzigen</button>
-          </form>
-        </div>
-      </section>
-
-      <section class="ops-lists">
-        <article class="panel">
-          <div class="panel-head">
-            <h2>Facturen</h2>
-          </div>
-          <div id="invoiceRows" class="data-list"></div>
-        </article>
-        <article class="panel">
-          <div class="panel-head">
-            <h2>Compliance</h2>
-          </div>
-          <div id="complianceRows" class="data-list"></div>
-        </article>
-        <article class="panel">
-          <div class="panel-head">
-            <h2>Peppol events</h2>
-          </div>
-          <div id="peppolEventRows" class="data-list"></div>
-        </article>
-        <article class="panel">
-          <div class="panel-head">
-            <h2>Stripe events</h2>
-          </div>
-          <div id="stripeEventRows" class="data-list"></div>
-        </article>
-        <article class="panel">
-          <div class="panel-head">
-            <h2>Contract events</h2>
-          </div>
-          <div id="contractRows" class="data-list"></div>
-        </article>
-      </section>
-    </div>
-
-    <div id="stockPage" class="hidden"></div>
-    <div id="verlofPage" class="hidden"></div>
-    <div id="wagenparkPage" class="hidden"></div>
-
-    <div id="assetsPage" class="hidden">
-      <section class="panel asset-shell">
-        <div class="panel-head">
-          <div>
-            <p class="eyebrow">Stock & wagenpark</p>
-            <h2>Voorraad, bestellingen en onderhoud</h2>
-          </div>
-          <button id="refreshAssets" type="button">Vernieuw assets</button>
-        </div>
-
-        <div id="assetNotice" class="notice">Login met de demo admin om stock en wagenpark te beheren.</div>
-        <div id="assetCards" class="metric-grid"></div>
-        <div id="assetFocus" class="asset-focus"></div>
-
-        <div class="asset-forms">
-          <form id="stockForm" class="ops-form">
-            <h3>Artikel toevoegen</h3>
-            <label>Artikel<input name="name" required placeholder="Veiligheidsschoenen maat 43"></label>
-            <label>SKU<input name="sku" placeholder="VS-43"></label>
-            <label>Locatie<input name="location" placeholder="Magazijn Antwerpen"></label>
-            <div class="form-row">
-              <label>Voorraad<input name="quantity" type="number" min="0" step="1" value="8"></label>
-              <label>Minimum<input name="minLevel" type="number" min="0" step="1" value="12"></label>
-            </div>
-            <button type="submit">Artikel opslaan</button>
-          </form>
-
-          <form id="vehicleForm" class="ops-form">
-            <h3>Voertuig toevoegen</h3>
-            <label>Voertuig<input name="model" required placeholder="Ford Transit Custom"></label>
-            <label>Kenteken<input name="plate" required placeholder="1-ABC-123"></label>
-            <label>Bestuurder<select name="driverId" id="vehicleDriver"></select></label>
-            <div class="form-row">
-              <label>Kilometerstand<input name="mileage" type="number" min="0" step="1" value="58420"></label>
-              <label>Volgende service<input name="nextService" type="date"></label>
-            </div>
-            <button type="submit">Voertuig opslaan</button>
-          </form>
-        </div>
-      </section>
-
-      <section class="asset-grid">
-        <article class="panel">
-          <div class="panel-head">
-            <h2>Voorraad overzicht</h2>
-            <button class="export-link" data-export="stock" type="button">CSV export</button>
-          </div>
-          <div id="stockRows" class="data-list"></div>
-        </article>
-        <article class="panel">
-          <div class="panel-head">
-            <h2>Wagenpark overzicht</h2>
-            <button class="export-link" data-export="vehicles" type="button">CSV export</button>
-          </div>
-          <div id="vehicleRows" class="data-list"></div>
-        </article>
-      </section>
-    </div>
-
-    <div id="reportsPage" class="hidden">
-      <section class="panel report-dashboard-shell">
-        <div class="panel-head">
-          <div>
-            <p class="eyebrow">Rapportage</p>
-            <h2>Inzichten en prestaties</h2>
-          </div>
-          <div class="button-row">
-            <button id="refreshReportsDashboard" type="button">Vernieuw</button>
-            <button class="secondary-action" data-export="expenses" type="button">Exporteren</button>
-          </div>
-        </div>
-
-        <div id="reportNotice" class="notice">Login met de demo admin om rapportage te laden.</div>
-        <div id="reportDashboardCards" class="metric-grid"></div>
-        <div id="reportDashboardFocus" class="report-dashboard-focus"></div>
-      </section>
-
-      <section class="report-dashboard-grid">
-        <article class="panel">
-          <div class="panel-head">
-            <h2>Uren per werf</h2>
-          </div>
-          <div id="reportVenueBars" class="bar-list"></div>
-        </article>
-        <article class="panel">
-          <div class="panel-head">
-            <h2>Werkbonstatus</h2>
-          </div>
-          <div id="reportWorkorderStatus" class="donut-panel"></div>
-        </article>
-        <article class="panel">
-          <div class="panel-head">
-            <h2>Stock risico</h2>
-          </div>
-          <div id="reportStockRisk" class="data-list"></div>
-        </article>
-        <article class="panel">
-          <div class="panel-head">
-            <h2>Projectoverzicht</h2>
-          </div>
-          <div id="reportProjectRows" class="data-list"></div>
-        </article>
-      </section>
-    </div>
-
-    <div id="mobilePage" class="hidden">
-      <section class="mobile-shell">
-        <div class="mobile-hero">
-          <div>
-            <p class="eyebrow">Mobile first</p>
-            <h2>Vandaag op de baan</h2>
-            <p id="mobileIntro">Login om de mobiele dagplanning, werkbonnen en offline wachtrij te laden.</p>
-          </div>
-          <div class="button-row">
-            <button id="syncMobileQueue" type="button">Sync wachtrij</button>
-            <button id="refreshMobile" type="button">Vernieuw mobiel</button>
-          </div>
-        </div>
-
-        <div class="mobile-status">
-          <article class="metric">
-            <span class="metric-label">PWA</span>
-            <strong id="pwaStatus">Controle</strong>
-            <small id="pwaDetail">Manifest en service worker</small>
-          </article>
-          <article class="metric">
-            <span class="metric-label">Offline queue</span>
-            <strong id="queueCount">0</strong>
-            <small>Acties klaar voor sync</small>
-          </article>
-          <article class="metric">
-            <span class="metric-label">Vandaag</span>
-            <strong id="mobileTodayDate">-</strong>
-            <small id="mobileTodayUser">Veldteam</small>
-          </article>
-          <article class="metric">
-            <span class="metric-label">Laatste sync</span>
-            <strong id="mobileLastSync">Nog niet</strong>
-            <small id="mobileSyncDetail">0 acties verwerkt</small>
-          </article>
-        </div>
-
-        <div class="mobile-grid">
-          <article class="panel">
-            <div class="panel-head">
-              <h2>Planning</h2>
-            </div>
-            <div id="mobileShiftRows" class="data-list"></div>
-          </article>
-
-          <article class="panel">
-            <div class="panel-head">
-              <h2>Werkbonnen</h2>
-            </div>
-            <div id="mobileWorkorderRows" class="data-list"></div>
-          </article>
-        </div>
-      </section>
-    </div>
-
-    <div id="integrationsPage" class="hidden">
-      <section class="panel">
-        <div class="panel-head">
-          <div>
-            <p class="eyebrow">Integratiecentrum</p>
-            <h2>ERP, boekhouding en field mapping</h2>
-          </div>
-          <button id="refreshIntegrations" type="button">Vernieuw integraties</button>
-        </div>
-
-        <div id="integrationNotice" class="notice">Login met de demo admin om integraties te beheren.</div>
-        <div id="integrationFocus" class="integration-focus"></div>
-
-        <div class="billing-grid">
-          <form id="integrationForm" class="ops-form">
-            <h3>Koppeling</h3>
-            <label>Provider
-              <select name="provider">
-                <option value="robaws">Robaws</option>
-                <option value="exact">Exact Online</option>
-                <option value="generic">Generic REST</option>
-              </select>
-            </label>
-            <label>Label<input name="label" value="Robaws test"></label>
-            <label>API basis URL<input name="baseUrl" placeholder="https://api.partner.be"></label>
-            <label>API key<input name="apiKey" value="test-secret-key"></label>
-            <button type="submit">Koppeling bewaren</button>
-          </form>
-
-          <form id="mappingForm" class="ops-form">
-            <h3>Field mapping</h3>
-            <label>Integratie<select name="integrationId" id="mappingIntegration"></select></label>
-            <label>Mappings<textarea name="mappingText" placeholder="workorders.title => project.name"></textarea></label>
-            <small>Gebruik één mapping per lijn: lokaal veld =&gt; extern veld. Beide kanten zijn verplicht.</small>
-            <button type="submit">Mapping opslaan</button>
-          </form>
-
-          <article class="ops-form">
-            <h3>Sync status</h3>
-            <div id="integrationCards" class="data-list"></div>
-          </article>
-        </div>
-      </section>
-
-      <section class="ops-lists">
-        <article class="panel">
-          <div class="panel-head">
-            <h2>Koppelingen</h2>
-          </div>
-          <div id="integrationRows" class="data-list"></div>
-        </article>
-        <article class="panel">
-          <div class="panel-head">
-            <h2>Sync logs</h2>
-          </div>
-          <div id="syncLogRows" class="data-list"></div>
-        </article>
-      </section>
-    </div>
-
-    <div id="notificationsPage" class="hidden">
-      <section class="panel action-center-shell">
-        <div class="panel-head">
-          <div>
-            <p class="eyebrow">Actiecentrum</p>
-            <h2>Prioriteiten en opvolging</h2>
-          </div>
-          <div class="button-row">
-            <button id="refreshNotifications" type="button">Vernieuw</button>
-            <button id="generateReminders" type="button">Genereer reminders</button>
-          </div>
-        </div>
-
-        <div id="notificationNotice" class="notice">Login met de demo admin om notificaties te beheren.</div>
-        <div id="notificationCards" class="metric-grid"></div>
-        <div id="notificationFocus" class="action-center-focus"></div>
-
-        <form id="notificationForm" class="ops-form notification-form action-center-form">
-          <h3>Nieuwe notificatie</h3>
-          <label>Type
-            <select name="type">
-              <option value="planning">Planning</option>
-              <option value="workorder">Werkbon</option>
-              <option value="billing">Billing</option>
-              <option value="info">Info</option>
-            </select>
-          </label>
-          <label>Kanaal
-            <select name="channel">
-              <option value="in_app">In-app</option>
-              <option value="email">E-mail</option>
-              <option value="sms">SMS</option>
-            </select>
-          </label>
-          <label>Doelgroep<input name="audience" value="admins"></label>
-          <label>Titel<input name="title" required value="Nieuwe reminder"></label>
-          <label>Bericht<textarea name="body" required>Actie gevraagd in WorkFlow Pro.</textarea></label>
-          <label>Prioriteit
-            <select name="priority">
-              <option value="low">Laag</option>
-              <option value="normal">Normaal</option>
-              <option value="high">Hoog</option>
-            </select>
-          </label>
-          <button type="submit">Notificatie aanmaken</button>
-        </form>
-      </section>
-
-      <section class="panel">
-        <div class="panel-head">
-          <h2>Notificatiecentrum</h2>
-        </div>
-        <div id="notificationRows" class="data-list"></div>
-      </section>
-    </div>
-
-    <div id="adminPage" class="hidden">
-      <section class="panel">
-        <div class="panel-head">
-          <div>
-            <p class="eyebrow">Admin & status</p>
-            <h2>Monitoring, audit en backups</h2>
-          </div>
-          <div class="button-row">
-            <button id="refreshAdmin" type="button">Vernieuw admin</button>
-            <button id="createBackup" type="button">Backup maken</button>
-          </div>
-        </div>
-
-        <div id="adminNotice" class="notice">Login met de demo admin om adminstatus te laden.</div>
-        <div id="goLiveFocus" class="go-live-focus"></div>
-        <div id="setupFocus" class="setup-focus"></div>
-        <div id="adminFocus" class="admin-focus"></div>
-        <div id="adminCards" class="metric-grid"></div>
-      </section>
-
-      <section class="panel support-panel">
-        <div class="panel-head">
-          <div>
-            <p class="eyebrow">Consent</p>
-            <h2>Supporttoegang</h2>
-          </div>
-          <button id="endSupportAccess" type="button">Support sluiten</button>
-        </div>
-
-        <div id="supportAccessStatus" class="notice">Nog geen supportstatus geladen.</div>
-        <form id="supportAccessForm" class="ops-form support-form">
-          <label>Reden<input name="reason" required value="Support op vraag van klant"></label>
-          <label>Geldig tot<input name="expiresAt" type="datetime-local"></label>
-          <button type="submit">Supporttoegang openen</button>
-        </form>
-      </section>
-
-      <section class="panel support-panel">
-        <div class="panel-head">
-          <div>
-            <p class="eyebrow">Account security</p>
-            <h2>MFA setup</h2>
-          </div>
-          <button id="startMfaSetup" type="button">Start MFA</button>
-        </div>
-        <div id="mfaStatus" class="notice">Login om MFA voor je account te beheren.</div>
-        <form id="mfaVerifyForm" class="ops-form support-form">
-          <label>MFA code<input name="code" inputmode="numeric" maxlength="6" placeholder="123456"></label>
-          <button type="submit">MFA bevestigen</button>
-        </form>
-        <div id="mfaRiskRows" class="data-list"></div>
-      </section>
-
-      <section class="panel api-key-panel">
-        <div class="panel-head">
-          <div>
-            <p class="eyebrow">Connecties</p>
-            <h2>Tenant API keys</h2>
-          </div>
-          <div class="button-row">
-            <button id="runApiKeyGovernance" type="button">Check governance</button>
-            <button id="refreshApiKeys" type="button">Vernieuw keys</button>
-          </div>
-        </div>
-
-        <form id="apiKeyForm" class="ops-form api-key-form">
-          <label>Label<input name="label" required value="ERP test key"></label>
-          <label>Scopes<textarea name="scopes" required>read,planning,workorders,integrations</textarea></label>
-          <div class="import-result">Gebruik minstens read of write, plus planning, workorders, billing of integrations.</div>
-          <label>Vervalt op<input id="apiKeyExpiresAt" name="expiresAt" type="date"></label>
-          <button type="submit">API key maken</button>
-          <div id="apiKeyToken" class="import-result">Nieuwe keys worden één keer volledig getoond.</div>
-        </form>
-        <div class="notice">Governance controleert scope, vervaldatum, gebruik en geweigerde requests. Roteren kan scopes corrigeren en toont de nieuwe token eenmalig.</div>
-        <div id="apiKeyGovernanceRows" class="data-list"></div>
-        <div id="apiKeyRows" class="data-list"></div>
-      </section>
-
-      <section class="panel admin-tenants">
-        <div class="panel-head">
-          <div>
-            <p class="eyebrow">Super admin</p>
-            <h2>Klanten en tenants</h2>
-          </div>
-          <button id="refreshTenants" type="button">Vernieuw tenants</button>
-        </div>
-
-        <form id="tenantForm" class="ops-form tenant-form">
-          <h3>Nieuwe klant</h3>
-          <label>Klantnaam<input name="name" required placeholder="bv. Installatiebedrijf Janssens"></label>
-          <label>Plan
-            <select name="plan">
-              <option value="business">Business</option>
-              <option value="starter">Starter</option>
-              <option value="enterprise">Enterprise</option>
-            </select>
-          </label>
-          <label>Status
-            <select name="status">
-              <option value="trial">Trial</option>
-              <option value="active">Actief</option>
-              <option value="paused">Gepauzeerd</option>
-            </select>
-          </label>
-          <label>Billing e-mail<input name="billingEmail" type="email" placeholder="finance@klant.be"></label>
-          <label>Admin naam<input name="adminName" placeholder="Klant Admin"></label>
-          <label>Admin e-mail<input name="adminEmail" type="email" placeholder="admin@klant.be"></label>
-          <button type="submit">Tenant aanmaken</button>
-        </form>
-
-        <div id="tenantRows" class="data-list tenant-list"></div>
-      </section>
-
-      <section class="ops-lists">
-        <article class="panel">
-          <div class="panel-head">
-            <h2>Production readiness</h2>
-          </div>
-          <div id="productionReadinessRows" class="data-list"></div>
-        </article>
-        <article class="panel">
-          <div class="panel-head">
-            <h2>Production config</h2>
-          </div>
-          <div id="productionConfigRows" class="data-list"></div>
-        </article>
-        <article class="panel">
-          <div class="panel-head">
-            <div>
-              <p class="eyebrow">Pilot + sales + productie</p>
-              <h2>Go-live gate</h2>
-            </div>
-          </div>
-          <div id="goLiveRows" class="data-list"></div>
-        </article>
-        <article class="panel">
-          <div class="panel-head">
-            <div>
-              <p class="eyebrow">Roadmap controle</p>
-              <h2>Fase go/no-go</h2>
-            </div>
-          </div>
-          <div id="roadmapRows" class="data-list"></div>
-        </article>
-        <article class="panel">
-          <div class="panel-head">
-            <div>
-              <p class="eyebrow">Status artifacts</p>
-              <h2>Readinessrapporten</h2>
-            </div>
-            <button id="generateReports" type="button">Genereer rapporten</button>
-          </div>
-          <div id="reportRows" class="data-list"></div>
-          <pre id="reportPreview" class="json-preview">Kies een readinessrapport om de inhoud te bekijken.</pre>
-        </article>
-        <article class="panel">
-          <div class="panel-head">
-            <h2>Geblokkeerde accounts</h2>
-          </div>
-          <div id="lockedUserRows" class="data-list"></div>
-        </article>
-        <article class="panel">
-          <div class="panel-head">
-            <h2>Laatste audit-events</h2>
-          </div>
-          <form id="auditFilterForm" class="ops-form">
-            <label>Area<input name="area" placeholder="api_keys"></label>
-            <label>Actie<input name="action" placeholder="api_key_governance_checked"></label>
-            <label>Actor<input name="actor" placeholder="admin@..."></label>
-            <label>Vanaf<input name="since" type="datetime-local"></label>
-            <label>Limit<input name="limit" type="number" min="1" max="500" value="50"></label>
-            <button type="submit">Filter audit</button>
-            <button id="exportAuditCsv" type="button">Export CSV</button>
-            <button id="resetAuditFilter" type="button">Reset audit</button>
-          </form>
-          <div id="auditFilterNotice" class="notice">Toont standaard de laatste audit-events.</div>
-          <div id="adminAuditRows" class="data-list"></div>
-        </article>
-        <article class="panel">
-          <div class="panel-head">
-            <h2>Foutregistratie</h2>
-          </div>
-          <form id="errorFilterForm" class="ops-form">
-            <label>Status<input name="status" type="number" placeholder="500"></label>
-            <label>Methode<input name="method" placeholder="GET"></label>
-            <label>Pad<input name="path" placeholder="/api/..."></label>
-            <label>Vanaf<input name="since" type="datetime-local"></label>
-            <label>Limit<input name="limit" type="number" min="1" max="500" value="50"></label>
-            <button type="submit">Filter fouten</button>
-            <button id="exportErrorsCsv" type="button">Export CSV</button>
-            <button id="resetErrorFilter" type="button">Reset fouten</button>
-          </form>
-          <div id="errorFilterNotice" class="notice">Toont standaard de laatste fout-events.</div>
-          <div id="adminErrorRows" class="data-list"></div>
-        </article>
-        <article class="panel">
-          <div class="panel-head">
-            <h2>Rate limiting</h2>
-          </div>
-          <div class="notice">Toont actieve buckets en policies voor API-bescherming. Dit is runtime-informatie zonder gebruikersdata.</div>
-          <div id="rateLimitRows" class="data-list"></div>
-        </article>
-        <article class="panel">
-          <div class="panel-head">
-            <h2>Database migraties</h2>
-          </div>
-          <div id="migrationRows" class="data-list"></div>
-        </article>
-        <article class="panel">
-          <div class="panel-head">
-            <h2>Backups</h2>
-          </div>
-          <div id="backupHealthRows" class="data-list"></div>
-          <div id="backupPreview" class="notice">Kies een backup voor preview of restore.</div>
-          <div id="backupRows" class="data-list"></div>
-        </article>
-      </section>
-    </div>
-
-    <div id="portalPage" class="hidden">
-      <section class="portal-hero">
-        <div>
-          <p class="eyebrow">Customer portal</p>
-          <h2 id="portalTenantName">Klantportaal</h2>
-          <p id="portalIntro">Login om klantstatus, onboarding, hulp en release notes te laden.</p>
-        </div>
-        <button id="refreshPortal" type="button">Vernieuw portal</button>
-      </section>
-
-      <section id="portalCards" class="metric-grid"></section>
-      <section id="portalFocus" class="portal-focus"></section>
-
-      <section class="panel">
-        <div class="panel-head">
-          <div>
-            <p class="eyebrow">Pilot launch</p>
-            <h2>Pilot KPI's</h2>
-          </div>
-          <div class="button-row">
-            <button id="generateDecisionReport" type="button">Genereer rapport</button>
-            <span id="pilotScore" class="pill">0%</span>
-          </div>
-        </div>
-        <div id="pilotKpiRows" class="module-grid"></div>
-        <div id="decisionReportPreview" class="notice">Nog geen beslissersrapport gegenereerd.</div>
-      </section>
-
-      <section class="portal-grid">
-        <article class="panel">
-          <div class="panel-head">
-            <div>
-              <p class="eyebrow">Onboarding</p>
-              <h2>Activeringschecklist</h2>
-            </div>
-            <span id="portalOnboardingScore" class="pill">0%</span>
-          </div>
-          <div id="portalSteps" class="steps"></div>
-        </article>
-
-        <article class="panel">
-          <div class="panel-head">
-            <div>
-              <p class="eyebrow">Helpcentrum</p>
-              <h2>Veelgebruikte gidsen</h2>
-            </div>
-          </div>
-          <div id="helpRows" class="data-list"></div>
-        </article>
-      </section>
-
-      <section class="panel">
-        <div class="panel-head">
-          <div>
-            <p class="eyebrow">Pilot support</p>
-            <h2>Supporttickets</h2>
-          </div>
-          <button id="refreshSupportTickets" type="button">Vernieuw tickets</button>
-        </div>
-        <form id="supportTicketForm" class="ops-form support-ticket-form">
-          <label>Titel<input name="title" required placeholder="bv. Foto upload traag op werf"></label>
-          <label>Categorie
-            <select name="category">
-              <option value="question">Vraag</option>
-              <option value="bug">Bug</option>
-              <option value="onboarding">Onboarding</option>
-              <option value="billing">Billing</option>
-            </select>
-          </label>
-          <label>Prioriteit
-            <select name="priority">
-              <option value="normal">Normaal</option>
-              <option value="high">Hoog</option>
-            </select>
-          </label>
-          <label>Beschrijving<textarea name="description" required placeholder="Beschrijf wat er gebeurde"></textarea></label>
-          <button type="submit">Ticket aanmaken</button>
-        </form>
-        <div id="supportTicketCards" class="metric-grid"></div>
-        <div id="supportTicketRows" class="data-list"></div>
-      </section>
-
-      <section class="panel">
-        <div class="panel-head">
-          <div>
-            <p class="eyebrow">Product updates</p>
-            <h2>Release notes</h2>
-          </div>
-        </div>
-        <div id="releaseRows" class="release-list"></div>
-      </section>
-    </div>
-
-    <div id="salesPage" class="hidden">
-      <section class="portal-hero">
-        <div>
-          <p class="eyebrow">Commercial launch</p>
-          <h2>Sales pipeline</h2>
-          <p id="salesIntro">Volg leads, demo calls en betalende klanten voor de gecontroleerde verkoopstart.</p>
-        </div>
-        <button id="refreshSales" type="button">Vernieuw sales</button>
-      </section>
-
-      <section id="salesCards" class="metric-grid"></section>
-      <section id="salesFocus" class="sales-focus"></section>
-      <section class="panel">
-        <div class="panel-head">
-          <div>
-            <p class="eyebrow">Launch gate</p>
-            <h2>Commercial readiness</h2>
-          </div>
-        </div>
-        <div id="salesLaunchRows" class="data-list"></div>
-      </section>
-
-      <section class="panel">
-        <div class="panel-head">
-          <div>
-            <p class="eyebrow">Nieuwe lead</p>
-            <h2>Demo of prospect toevoegen</h2>
-          </div>
-        </div>
-        <form id="salesLeadForm" class="ops-form support-ticket-form">
-          <label>Bedrijf<input name="company" required placeholder="bv. Janssens Technieken"></label>
-          <label>Contact e-mail<input name="contactEmail" type="email" required placeholder="naam@bedrijf.be"></label>
-          <label>Sector
-            <select name="sector">
-              <option value="bouw">Bouw</option>
-              <option value="installatie">Installatie</option>
-              <option value="logistiek">Logistiek</option>
-              <option value="schoonmaak">Schoonmaak</option>
-            </select>
-          </label>
-          <label>Seats<input name="seats" type="number" min="1" value="12"></label>
-          <label>Partner
-            <select id="salesPartnerSelect" name="partnerId">
-              <option value="">Direct kanaal</option>
-            </select>
-          </label>
-          <label>Volgende actie<input name="nextActionAt" type="date"></label>
-          <button type="submit">Lead toevoegen</button>
-        </form>
-      </section>
-
-      <section class="panel">
-        <div class="panel-head">
-          <div>
-            <p class="eyebrow">Partnerkanaal</p>
-            <h2>Boekhouders en ERP consultants</h2>
-          </div>
-        </div>
-        <form id="partnerForm" class="ops-form support-ticket-form">
-          <label>Partnernaam<input name="name" required placeholder="bv. Accountancy Peeters"></label>
-          <label>Contact e-mail<input name="contactEmail" type="email" required placeholder="partner@bedrijf.be"></label>
-          <label>Type
-            <select name="type">
-              <option value="accountant">Boekhouder</option>
-              <option value="erp_consultant">ERP consultant</option>
-              <option value="implementation">Implementatiepartner</option>
-            </select>
-          </label>
-          <label>Regio<input name="region" placeholder="bv. Antwerpen"></label>
-          <button type="submit">Partner toevoegen</button>
-        </form>
-        <div id="partnerRows" class="data-list"></div>
-      </section>
-
-      <section class="panel">
-        <div class="panel-head">
-          <div>
-            <p class="eyebrow">Pipeline</p>
-            <h2>Opportuniteiten</h2>
-          </div>
-        </div>
-        <div id="salesRows" class="data-list"></div>
-      </section>
-    </div>
-
-    <div id="jsonPage" class="hidden">
-      <section class="panel">
-        <div class="panel-head">
-          <div>
-            <p class="eyebrow">Debug</p>
-            <h2>Ruwe API responses</h2>
-          </div>
-          <button id="refreshJson" type="button">Vernieuw JSON</button>
-        </div>
-        <div class="json-grid">
-          <article class="json-card">
-            <h3>API status</h3>
-            <pre id="jsonHealth">Laden...</pre>
-          </article>
-          <article class="json-card">
-            <h3>Modules</h3>
-            <pre id="jsonModules">Login om modules te laden.</pre>
-          </article>
-          <article class="json-card">
-            <h3>Golden path</h3>
-            <pre id="jsonGolden">Login om readiness te laden.</pre>
-          </article>
-          <article class="json-card">
-            <h3>Mobile today</h3>
-            <pre id="jsonToday">Login om vandaag-flow te laden.</pre>
-          </article>
-        </div>
-      </section>
-    </div>
-
-    <div id="statusPage" class="hidden">
-      <section class="panel">
-        <div class="panel-head">
-          <div>
-            <p class="eyebrow">Publieke status</p>
-            <h2>Statuspagina</h2>
-          </div>
-          <div class="button-row">
-            <span id="statusBadge" class="pill muted">Laden</span>
-            <button id="refreshStatus" type="button">Vernieuw status</button>
-          </div>
-        </div>
-        <section class="metric-grid" aria-label="Publieke platformstatus">
-          <article class="metric">
-            <span class="metric-label">Platform</span>
-            <strong id="statusPlatform">-</strong>
-            <small id="statusGenerated">Laatste controle</small>
-          </article>
-          <article class="metric">
-            <span class="metric-label">Release</span>
-            <strong id="statusRelease">-</strong>
-            <small id="statusChannel">Kanaal</small>
-          </article>
-          <article class="metric">
-            <span class="metric-label">Storage</span>
-            <strong id="statusStorage">-</strong>
-            <small id="statusMigrations">Migraties</small>
-          </article>
-          <article class="metric">
-            <span class="metric-label">Readiness</span>
-            <strong id="statusReadiness">-</strong>
-            <small id="statusBlockers">Production blockers</small>
-          </article>
-        </section>
-        <section id="statusFocus" class="status-focus"></section>
-        <div class="ops-lists">
-          <article>
-            <h3>Componenten</h3>
-            <div id="statusModules" class="data-list"></div>
-          </article>
-          <article>
-            <h3>Publieke JSON</h3>
-            <pre id="statusJson">Laden...</pre>
-          </article>
-        </div>
-      </section>
-    </div>
-
-    <div id="apiPage" class="hidden">
-      <section class="panel api-docs">
-        <div class="panel-head">
-          <div>
-            <p class="eyebrow">Connecties</p>
-            <h2>API-documentatie</h2>
-          </div>
-          <span class="pill">Foundation API</span>
-        </div>
-
-        <section class="api-focus">
-          <article class="api-focus-card primary">
-            <p class="eyebrow">Partner quickstart</p>
-            <h3>Veilig koppelen in vier stappen</h3>
-            <p>Gebruik OpenAPI, maak een tenant API key, beperk scopes per module en controleer sync/audit na elke wijziging.</p>
-          </article>
-          <article class="api-focus-card">
-            <span>1</span>
-            <strong>OpenAPI</strong>
-            <small>GET /api/openapi.json</small>
-          </article>
-          <article class="api-focus-card">
-            <span>2</span>
-            <strong>API key</strong>
-            <small>X-API-Key met read + module scope</small>
-          </article>
-          <article class="api-focus-card">
-            <span>3</span>
-            <strong>Tenant scope</strong>
-            <small>Elke call blijft tenant-scoped</small>
-          </article>
-        </section>
-
-        <div class="api-layout">
-          <aside class="api-index">
-            <a href="#auth">Authenticatie</a>
-            <a href="#openapi">OpenAPI</a>
-            <a href="#status-api">Status</a>
-            <a href="#connection-rules">Connectieregels</a>
-            <a href="#tenant">Tenant-scope</a>
-            <a href="#core">Core modules</a>
-            <a href="#kbo">KBO</a>
-            <a href="#billing">Billing</a>
-            <a href="#operations">Operations</a>
-            <a href="#integrations">Integraties</a>
-            <a href="#notifications-api">Notificaties</a>
-            <a href="#admin-api">Admin</a>
-            <a href="#reports-api">Rapporten</a>
-            <a href="#portal-api">Portal</a>
-            <a href="#sales-api">Sales</a>
-            <a href="#api-keys-api">API keys</a>
-            <a href="#mobile">Mobile today</a>
-            <a href="#audit">Audit & fouten</a>
-          </aside>
-
-          <div class="api-content">
-            <section id="openapi" class="api-section">
-              <h3>OpenAPI catalog</h3>
-              <p>Externe ontwikkelaars kunnen de machine-readable API-catalog gebruiken voor toekomstige koppelingen.</p>
-              <pre>GET /api/openapi.json</pre>
-            </section>
-
-            <section id="status-api" class="api-section">
-              <h3>Statuspagina</h3>
-              <p>Publieke healthinformatie zonder tenantdata. Geschikt voor uptime checks, statuspagina en externe monitoring.</p>
-              <pre>GET /api/status</pre>
-            </section>
-
-            <section id="auth" class="api-section">
-              <h3>Authenticatie</h3>
-              <p>Interactieve schermen gebruiken een bearer token uit de login-response. Externe koppelingen gebruiken tenant API keys via X-API-Key.</p>
-              <pre>POST /api/auth/login
-Content-Type: application/json
-
-{
-  "email": "admin@demobouw.be",
-  "password": "jouw-sterke-wachtwoord",
-  "mfaCode": "123456"
-}</pre>
-              <pre>Authorization: Bearer &lt;token&gt;</pre>
-              <pre>X-API-Key: wfp_...
-
-GET requests werken met read en modulescopes.
-POST, PATCH en andere writes vereisen ook de scope "write".</pre>
-              <pre>POST /api/me/mfa/setup
-POST /api/me/mfa/verify
-
-{
-  "code": "123456"
-}</pre>
-              <p>Na MFA-activatie geeft de verify-response recovery codes eenmalig terug. Die kunnen later als MFA-code gebruikt worden en worden server-side verbruikt.</p>
-            </section>
-
-            <section id="connection-rules" class="api-section">
-              <h3>Connectieregels</h3>
-              <p>Gebruik API keys alleen voor server-to-server koppelingen. Adminacties zoals keybeheer, rapportgeneratie, backup restore en support consent vereisen een interactieve adminlogin.</p>
-              <pre>Headers:
-Authorization: Bearer &lt;token&gt;
-X-API-Key: wfp_...
-Content-Type: application/json</pre>
-              <pre>Scopes:
-read - data lezen
-write - data wijzigen
-planning - planning endpoints
-workorders - werkbon endpoints
-billing - facturatie endpoints
-integrations - koppelingen en sync</pre>
-              <pre>Rate limiting:
-Publieke en API-routes worden begrensd per IP/route.
-Elke API-key houdt usage count, lastUsedAt en lastEndpoint bij.</pre>
-            </section>
-
-            <section id="tenant" class="api-section">
-              <h3>Tenant-scope</h3>
-              <p>Tenant-admins krijgen alleen data van hun eigen tenant. Super-admins mogen tenantbeheer gebruiken.</p>
-              <pre>GET /api/admin/tenants
-POST /api/admin/tenants
-PATCH /api/admin/tenants/&lt;tenantId&gt;
-Authorization: Bearer &lt;super_admin_token&gt;</pre>
-              <pre>{
-  "name": "Nieuwe KMO",
-  "plan": "business",
-  "status": "trial",
-  "billingEmail": "finance@klant.be",
-  "adminName": "Klant Admin",
-  "adminEmail": "admin@klant.be"
-}</pre>
-            </section>
-
-            <section id="core" class="api-section">
-              <h3>Core modules</h3>
-              <p>De module-API gebruikt dezelfde structuur voor lijst, aanmaak en update.</p>
-              <pre>GET /api/modules
-GET /api/modules/users?tenantId=t_demo
-POST /api/modules/planning?tenantId=t_demo
-PATCH /api/modules/workorders/&lt;id&gt;</pre>
-              <pre>{
-  "tenantId": "t_demo",
-  "title": "Onderhoud werf A",
-  "status": "Bezig"
-}</pre>
-              <pre>PATCH /api/modules/users/&lt;userId&gt;
-
-{
-  "role": "planner",
-  "permissions": ["planning", "workorders", "clockings"]
-}</pre>
-            </section>
-
-            <section id="kbo" class="api-section">
-              <h3>KBO</h3>
-              <p>KBO lookup haalt bedrijfsgegevens op en kan ze toepassen op de klantenfiche.</p>
-              <pre>POST /api/kbo/lookup
-POST /api/tenants/t_demo/kbo/apply
-
-{
-  "vat": "BE0897225572"
-}</pre>
-            </section>
-
-            <section id="billing" class="api-section">
-              <h3>Billing</h3>
-              <p>Kaartgegevens worden niet lokaal opgeslagen. De app bewaart alleen providerreferenties.</p>
-              <pre>POST /api/tenants/t_demo/billing/setup-intent
-GET /api/tenants/t_demo/billing/summary
-GET /api/tenants/t_demo/billing/quote
-POST /api/tenants/t_demo/billing/contract-state
-POST /api/tenants/t_demo/billing/payment-method
-POST /api/tenants/t_demo/billing/invoices
-POST /api/tenants/t_demo/billing/peppol/&lt;invoiceId&gt;
-POST /api/tenants/t_demo/billing/payment-failed
-POST /api/tenants/t_demo/billing/failed-payments/&lt;paymentId&gt;/dunning
-POST /api/webhooks/stripe
-POST /api/tenants/t_demo/compliance/dpa
-POST /api/tenants/t_demo/compliance/gdpr-requests
-POST /api/tenants/t_demo/compliance/gdpr-requests/&lt;requestId&gt;/process</pre>
-            </section>
-
-            <section id="operations" class="api-section">
-              <h3>Operations</h3>
-              <p>Operationele koppelingen kunnen tijdregistratie, rapportage en onkostenapproval gebruiken.</p>
-              <pre>GET /api/tenants/t_demo/management-report
-POST /api/tenants/t_demo/imports/employees
-POST /api/tenants/t_demo/clock/in
-POST /api/tenants/t_demo/clock/out
-POST /api/tenants/t_demo/expenses/&lt;expenseId&gt;/approve</pre>
-              <pre>{
-  "csv": "naam,email,rol\nSara Peeters,sara@klant.be,employee",
-  "defaultPassword": "Vervang-Dit!2026"
-}</pre>
-            </section>
-
-            <section id="mobile" class="api-section">
-              <h3>Mobile today</h3>
-              <p>Mobiele clients gebruiken dit als startscherm voor planning, werkbonnen en offline hints.</p>
-              <pre>GET /api/tenants/t_demo/mobile/today
-POST /api/tenants/t_demo/mobile/sync
-POST /api/tenants/t_demo/mobile/workorders/&lt;id&gt;/complete
-POST /api/tenants/t_demo/mobile/workorders/&lt;id&gt;/photo
-POST /api/tenants/t_demo/mobile/workorders/&lt;id&gt;/signature</pre>
-              <pre>{
-  "items": [
-    {
-      "id": "client-generated-uuid",
-      "action": "photo",
-      "workorderId": "wo_123",
-      "payload": { "name": "werf.jpg", "type": "image/jpeg", "size": 420000 }
-    }
-  ]
-}</pre>
-              <p>Gebruik per offline actie een stabiele id. De server bewaart verwerkte ids per tenant en negeert dubbele sync-pogingen.</p>
-            </section>
-
-            <section id="integrations" class="api-section">
-              <h3>Integraties</h3>
-              <p>Integraties gebruiken versleutelde secrets, field mapping en traceerbare sync logs.</p>
-              <p>Elke integratie geeft ook een syncSummary terug met laatste status, aantal successen, fouten, retries en aandachtstatus.</p>
-              <p>Een sync zonder geldige secret wordt als failed gelogd en zet de integratie op error, zodat pilots foutieve credentials meteen zien.</p>
-              <p>Field mappings worden server-side gevalideerd: local en remote veld zijn verplicht, richting is push, pull of both.</p>
-              <p>Een sync met ontbrekende of ongeldige field mapping wordt geblokkeerd en als failed gelogd.</p>
-              <p>Retry vereist een bestaande failed sync log en is idempotent: een reeds opgeloste failed sync krijgt geen dubbele retry-log.</p>
-              <pre>GET /api/tenants/t_demo/integrations
-POST /api/tenants/t_demo/integrations/connect
-POST /api/tenants/t_demo/integrations/&lt;id&gt;/mapping
-POST /api/tenants/t_demo/integrations/&lt;id&gt;/sync
-POST /api/tenants/t_demo/integrations/&lt;id&gt;/retry</pre>
-            </section>
-
-            <section id="admin-api" class="api-section">
-              <h3>Admin en status</h3>
-              <p>Status en backups maken de tenant beheerbaar tijdens pilots en productievoorbereiding.</p>
-              <pre>GET /api/status
-GET /api/tenants/t_demo/admin/status
-POST /api/tenants/t_demo/admin/users/&lt;userId&gt;/unlock
-GET /api/tenants/t_demo/admin/backups
-POST /api/tenants/t_demo/admin/backups
-GET /api/tenants/t_demo/admin/backups/&lt;backupId&gt;/preview
-POST /api/tenants/t_demo/admin/backups/&lt;backupId&gt;/restore</pre>
-              <pre>{
-  "storage": {
-    "adapter": "json",
-    "schemaVersion": 6,
-    "latestSchemaVersion": 6,
-    "migrations": "up-to-date"
-  },
-  "productionReadiness": {
-    "score": 44,
-    "blockers": 4,
-    "checks": [
-      {
-        "key": "api_key_expiry",
-        "priority": "P0",
-        "status": "ready"
-      },
-      {
-        "key": "api_key_governance",
-        "priority": "P1",
-        "status": "open"
-      },
-      {
-        "key": "integration_credentials",
-        "priority": "P1",
-        "status": "open"
-      },
-      {
-        "key": "integration_sync_health",
-        "priority": "P1",
-        "status": "ready"
-      },
-      {
-        "key": "integration_mapping_health",
-        "priority": "P1",
-        "status": "ready"
-      },
-      {
-        "key": "support_sla",
-        "priority": "P1",
-        "status": "ready"
-      }
-    ]
-  },
-  "apiKeyRisk": {
-    "expired": 0,
-    "noExpiry": 1,
-    "neverUsed": 1,
-    "expiringSoon": 0,
-    "deniedRequests": 2,
-    "repeatedDenials": 0
-  },
-  "integrationRisk": {
-    "missingSecrets": 1,
-    "syncFailures": 1,
-    "retryableFailures": 1,
-    "invalidMappings": 0,
-    "mappingsNeedAttention": 0,
-    "errorCodes": {
-      "missing_secret": 1,
-      "invalid_mapping": 0
-    },
-    "needsAttention": 1
-  },
-  "supportRisk": {
-    "slaBreached": 0,
-    "slaRisk": 0,
-    "criticalOpen": 0
-  }
-}</pre>
-              <pre>{
-  "confirm": "RESTORE"
-}</pre>
-              <p>Adminstatus bevat ook rate limiting, error tracking en de laatste fout-events.</p>
-            </section>
-
-            <section id="reports-api" class="api-section">
-              <h3>Readinessrapporten</h3>
-              <p>Rapporten tonen dezelfde production, pilot en sales gates als de Admin UI. Genereren vereist een interactieve adminlogin en wordt geaudit.</p>
-              <pre>GET /api/tenants/t_demo/go-live
-GET /api/tenants/t_demo/roadmap
-GET /api/tenants/t_demo/reports
-GET /api/tenants/t_demo/reports/&lt;reportId&gt;
-POST /api/tenants/t_demo/reports/generate</pre>
-              <pre>{
-  "strictProduction": true,
-  "minPilotScore": 80
-}</pre>
-            </section>
-
-            <section id="portal-api" class="api-section">
-              <h3>Customer portal</h3>
-              <p>Het klantportaal bundelt status, onboarding, billing-samenvatting, helpartikels en release notes.</p>
-              <p>Klant Start gebruikt een compacte activatiepayload waarmee nieuwe klanten snel naar KBO, team, planning, mobiel en billing gestuurd worden.</p>
-              <p>Pilot KPI's bevatten ook kritieke bug-SLA en een action per KPI, zodat open KPI's direct als onboardingtaak opgevolgd kunnen worden.</p>
-              <pre>GET /api/tenants/t_demo/customer-start
-GET /api/tenants/t_demo/portal
-GET /api/releases
-GET /api/tenants/t_demo/pilot/kpis
-POST /api/tenants/t_demo/pilot/decision-report
-PATCH /api/tenants/t_demo/portal/onboarding/&lt;stepKey&gt;
-GET /api/tenants/t_demo/support-tickets
-POST /api/tenants/t_demo/support-tickets
-PATCH /api/tenants/t_demo/support-tickets/&lt;ticketId&gt;</pre>
-              <pre>{
-  "activation": {
-    "percent": 78,
-    "currentPhase": "core_operations"
-  },
-  "workspace": {
-    "liveStatus": {
-      "ready": true,
-      "label": "Dagelijkse flow klaar",
-      "blockers": []
-    },
-    "priorityActions": []
-  }
-}</pre>
-            </section>
-
-            <section id="sales-api" class="api-section">
-              <h3>Sales pipeline</h3>
-              <p>Sales endpoints meten launch-KPI's zoals qualified leads, demo calls en betalende klanten.</p>
-              <pre>GET /api/modules/sales?tenantId=t_demo
-POST /api/modules/sales?tenantId=t_demo
-GET /api/tenants/t_demo/sales/summary
-POST /api/tenants/t_demo/sales/&lt;leadId&gt;/advance
-GET /api/modules/partners?tenantId=t_demo
-POST /api/modules/partners?tenantId=t_demo
-PATCH /api/modules/partners/&lt;partnerId&gt;?tenantId=t_demo
-POST /api/tenants/t_demo/partners/&lt;partnerId&gt;/notes</pre>
-            </section>
-
-            <section id="api-keys-api" class="api-section">
-              <h3>API keys</h3>
-              <p>Tenant API keys worden gehashed opgeslagen. Externe systemen sturen de token mee via X-API-Key.</p>
-              <p>De admin ziet usage count, laatste gebruiktijd en laatste endpoint. Zo blijven toekomstige connecties traceerbaar zonder tokenwaarden opnieuw te tonen.</p>
-              <p>Nieuwe keys krijgen standaard een vervaldatum na 90 dagen. Een datum in het verleden wordt geweigerd.</p>
-              <p>Elke key moet minstens read of write hebben en minstens een concrete module-scope zoals planning, workorders, billing of integrations.</p>
-              <p>Rotatie kan scopes herstellen voor legacy keys. Zonder nieuwe vervaldatum krijgt de geroteerde key opnieuw 90 dagen geldigheid.</p>
-              <pre>GET /api/tenants/t_demo/api-keys
-POST /api/tenants/t_demo/api-keys
-GET /api/tenants/t_demo/api-keys/governance?strict=true
-POST /api/tenants/t_demo/api-keys/governance/run
-POST /api/tenants/t_demo/api-keys/&lt;keyId&gt;/rotate
-POST /api/tenants/t_demo/api-keys/&lt;keyId&gt;/revoke</pre>
-              <pre>{
-  "label": "ERP test key",
-  "scopes": ["read", "planning", "workorders", "integrations"],
-  "expiresAt": "2026-12-31T23:00:00.000Z"
-}</pre>
-              <pre>GET /api/modules/workorders?tenantId=t_demo
-X-API-Key: wfp_...
-
-POST requests vereisen ook de scope "write".</pre>
-            </section>
-
-            <section id="notifications-api" class="api-section">
-              <h3>Notificaties</h3>
-              <p>Reminders en alerts worden tenant-scoped opgeslagen en auditeerbaar verwerkt. Supportescalaties krijgen een sourceRef zodat dezelfde open blocker niet dubbel wordt aangemaakt.</p>
-              <pre>GET /api/tenants/t_demo/notifications
-POST /api/tenants/t_demo/notifications
-POST /api/tenants/t_demo/notifications/reminders
-POST /api/tenants/t_demo/notifications/&lt;id&gt;/read</pre>
-            </section>
-
-            <section id="audit" class="api-section">
-              <h3>Audit, fouten en supporttoegang</h3>
-              <p>Kritieke acties worden gelogd. Supporttoegang heeft expliciete start/einde-acties. Foutregistratie is filterbaar zonder stacktraces in responses.</p>
-              <pre>GET /api/audit?tenantId=t_demo&amp;area=api_keys&amp;limit=50
-GET /api/audit?tenantId=t_demo&amp;area=api_keys&amp;format=csv
-GET /api/errors?tenantId=t_demo&amp;status=500&amp;limit=50
-GET /api/errors?tenantId=t_demo&amp;path=/api&amp;format=csv
-GET /api/audit?action=support_access_granted
-POST /api/tenants/t_demo/support-access
-POST /api/tenants/t_demo/support-access/end</pre>
-              <pre>{
-  "reason": "Support op vraag van klant",
-  "expiresAt": "2026-04-29T16:00:00.000Z"
-}</pre>
-            </section>
-          </div>
-        </div>
-      </section>
-    </div>
-  </main>
-  </div><!-- /#legacyShell -->
-
-  <!-- ── Role-based Platform Shells ───────────────────────── -->
+  <!-- ══════════════════════════════════════════════════════════
+       LEGACY STUB — Minimale container voor main.js compatibiliteit
+       Verborgen na login; platform shells nemen het over.
+  ══════════════════════════════════════════════════════════ -->
+  <div id="legacyShell" style="display:none" aria-hidden="true">
+    <span id="sessionState" data-role=""></span>
+    <span id="brandTenantLabel"></span>
+    <button id="demo" type="button" style="display:none" disabled></button>
+    <button id="login" type="button" style="display:none"></button>
+    <button id="loginSuper" type="button" style="display:none" class="dev-tab"></button>
+    <div id="appToast" style="display:none"></div>
+    <!-- Minimal form stubs voor main.js initialisatie (datum-velden etc.) -->
+    <form id="planningForm" style="display:none"><input name="date" type="date"><input name="userId"><input name="venueId"><input name="start" type="time" value="08:00"><input name="end" type="time" value="16:30"><input name="project"></form>
+    <form id="vehicleForm" style="display:none"><input name="model"><input name="plate"><input name="nextService" type="date"><input name="mileage" type="number"></form>
+    <input id="apiKeyExpiresAt" type="date" style="display:none">
+    <form id="clockForm" style="display:none"><select id="clockUser"></select><select id="clockVenue"></select></form>
+    <button id="clockIn" type="button" style="display:none"></button>
+    <button id="clockOut" type="button" style="display:none"></button>
+    <form id="employeeForm" style="display:none"><input name="name"><input name="email" type="email"><input name="password" type="password"><select name="role"></select></form>
+    <form id="venueForm" style="display:none"><input name="name"><input name="code"><input name="address"></form>
+    <form id="workorderForm" style="display:none"><input name="title"><select id="workorderUser"></select><select id="workorderVenue"></select><select name="status"></select><textarea name="checklistText"></textarea></form>
+    <form id="expenseForm" style="display:none"><input name="title"><input name="amount" type="number"><input name="category"><select id="expenseUser"></select></form>
+    <form id="stockForm" style="display:none"><input name="name"><input name="sku"><input name="location"><input name="quantity" type="number"><input name="minLevel" type="number"></form>
+    <form id="vehicleMileageForm" style="display:none"></form>
+    <form id="notificationForm" style="display:none"><select name="type"></select><select name="channel"></select><input name="audience"><input name="title"><textarea name="body"></textarea><select name="priority"></select></form>
+    <form id="integrationForm" style="display:none"><select name="provider"></select><input name="label"><input name="baseUrl"><input name="apiKey"></form>
+    <form id="mappingForm" style="display:none"><select id="mappingIntegration"></select><textarea name="mappingText"></textarea></form>
+    <form id="kboForm" style="display:none"><input name="vat"></form>
+    <form id="apiKeyForm" style="display:none"><input name="label"><textarea name="scopes"></textarea><input id="apiKeyExpiresAtInner" name="expiresAt" type="date"></form>
+    <div id="apiKeyToken" style="display:none"></div>
+    <form id="tenantForm" style="display:none"><input name="name"><select name="plan"></select><select name="status"></select><input name="billingEmail" type="email"><input name="adminName"><input name="adminEmail" type="email"></form>
+    <form id="invoiceForm" style="display:none"><input name="line"><input name="amount" type="number"><input name="discountPct" type="number"></form>
+    <form id="paymentForm" style="display:none"><input name="paymentMethodRef"></form>
+    <button id="setupIntent" type="button" style="display:none"></button>
+    <form id="dpaForm" style="display:none"><input name="version"><input name="companyName"></form>
+    <form id="contractForm" style="display:none"><select name="action"></select><input name="reason"></form>
+    <form id="gdprForm" style="display:none"><select name="type"></select><input name="subjectEmail" type="email"></form>
+    <form id="employeeImportForm" style="display:none"><input id="employeeImportFile" type="file"><textarea name="csv"></textarea><input name="defaultPassword" type="password"></form>
+    <form id="permissionForm" style="display:none"><select id="permissionUser"></select><select id="permissionRole"></select><div id="permissionChecks"></div></form>
+    <form id="supportAccessForm" style="display:none"><input name="reason"><input name="expiresAt" type="datetime-local"></form>
+    <button id="endSupportAccess" type="button" style="display:none"></button>
+    <button id="startMfaSetup" type="button" style="display:none"></button>
+    <form id="mfaVerifyForm" style="display:none"><input name="code" inputmode="numeric" maxlength="6"></form>
+    <div id="mfaStatus" style="display:none"></div>
+    <button id="createBackup" type="button" style="display:none"></button>
+    <button id="generateReports" type="button" style="display:none"></button>
+    <button id="refreshAdmin" type="button" style="display:none"></button>
+    <button id="refreshOps" type="button" style="display:none"></button>
+    <button id="refreshBilling" type="button" style="display:none"></button>
+    <button id="refreshAssets" type="button" style="display:none"></button>
+    <button id="refreshReportsDashboard" type="button" style="display:none"></button>
+    <button id="refreshMobile" type="button" style="display:none"></button>
+    <button id="refreshIntegrations" type="button" style="display:none"></button>
+    <button id="refreshNotifications" type="button" style="display:none"></button>
+    <button id="refreshPortal" type="button" style="display:none"></button>
+    <button id="refreshSales" type="button" style="display:none"></button>
+    <button id="refreshStatus" type="button" style="display:none"></button>
+    <button id="refreshJson" type="button" style="display:none"></button>
+    <button id="refreshTenants" type="button" style="display:none"></button>
+    <button id="refreshApiKeys" type="button" style="display:none"></button>
+    <button id="runApiKeyGovernance" type="button" style="display:none"></button>
+    <button id="generateDecisionReport" type="button" style="display:none"></button>
+    <button id="generateReminders" type="button" style="display:none"></button>
+    <button id="syncMobileQueue" type="button" style="display:none"></button>
+    <form id="auditFilterForm" style="display:none"><input name="area"><input name="action"><input name="actor"><input name="since" type="datetime-local"><input name="limit" type="number"></form>
+    <button id="exportAuditCsv" type="button" style="display:none"></button>
+    <button id="resetAuditFilter" type="button" style="display:none"></button>
+    <form id="errorFilterForm" style="display:none"><input name="status" type="number"><input name="method"><input name="path"><input name="since" type="datetime-local"><input name="limit" type="number"></form>
+    <button id="exportErrorsCsv" type="button" style="display:none"></button>
+    <button id="resetErrorFilter" type="button" style="display:none"></button>
+    <form id="salesLeadForm" style="display:none"><input name="company"><input name="contactEmail" type="email"><select name="sector"></select><input name="seats" type="number"><select id="salesPartnerSelect" name="partnerId"></select><input name="nextActionAt" type="date"></form>
+    <form id="partnerForm" style="display:none"><input name="name"><input name="contactEmail" type="email"><select name="type"></select><input name="region"></form>
+    <button id="refreshSupportTickets" type="button" style="display:none"></button>
+    <form id="supportTicketForm" style="display:none"><input name="title"><select name="category"></select><select name="priority"></select><textarea name="description"></textarea></form>
+    <div id="importResult" style="display:none"></div>
+    <div id="apiKeyGovernanceRows" style="display:none"></div>
+    <!-- AI suggestion stubs -->
+    <button id="aiSuggestionPrimary" type="button" style="display:none"></button>
+    <button id="aiSuggestionSecondary" type="button" style="display:none"></button>
+    <span id="aiSuggestionMeta" style="display:none"></span>
+    <!-- Start page stubs -->
+    <button id="startNextAction" type="button" style="display:none"></button>
+    <span id="statusBadge" style="display:none"></span>
+    <!-- New domain screens stubs -->
+    <button id="addCustomerBtn" type="button" style="display:none"></button>
+    <button id="addEmployeeBtn" type="button" style="display:none"></button>
+    <button id="addExpenseBtn" type="button" style="display:none"></button>
+    <button id="createInvoiceBtn" type="button" style="display:none"></button>
+    <button id="exportClockings" type="button" style="display:none"></button>
+    <button id="refreshCustomers" type="button" style="display:none"></button>
+    <button id="refreshEmployees" type="button" style="display:none"></button>
+    <button id="refreshClockings" type="button" style="display:none"></button>
+    <button id="refreshExpenses" type="button" style="display:none"></button>
+    <button id="refreshInvoices" type="button" style="display:none"></button>
+    <form id="customerForm" style="display:none"><input name="name"><input name="email" type="email"><input name="phone"><input name="vatNumber"><input name="address"><select name="sector"></select></form>
+    <form id="employeeAddForm" style="display:none"><input name="name"><input name="email" type="email"><input name="password" type="password"><select name="role"></select></form>
+    <form id="expenseSubmitForm" style="display:none"></form>
+    <form id="invoiceCreateForm" style="display:none"></form>
+    <form id="clockManualForm" style="display:none"></form>
+    <select id="clockInUser" style="display:none"></select>
+    <select id="clockManualUser" style="display:none"></select>
+    <select id="permissionUserEmp" style="display:none"></select>
+    <select id="invoiceCustomer" style="display:none"></select>
+    <select id="expenseUser" style="display:none"></select>
+    <select id="expenseVenue" style="display:none"></select>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       PLATFORM SHELLS — worden gevuld door de platform JS files
+  ══════════════════════════════════════════════════════════ -->
   <div id="platform-superadmin" class="wfp-platform hidden"></div>
   <div id="platform-admin"      class="wfp-platform hidden"></div>
   <div id="platform-manager"    class="wfp-platform hidden"></div>
   <div id="platform-employee"   class="wfp-platform hidden"></div>
 
+  <!-- Scripts -->
   <script src="/js/app-config.js"></script>
   <script src="/js/app-state.js"></script>
   <script src="/js/api-client.js"></script>
@@ -1786,6 +292,7 @@ POST /api/tenants/t_demo/support-access/end</pre>
   <script src="/js/modules/integrations.js"></script>
   <script src="/js/modules/action-center.js"></script>
   <script src="/js/modules/mobile.js"></script>
+  <script src="/js/modules/domain-screens.js"></script>
   <script src="/main.js"></script>
   <script src="/planning-calendar.js"></script>
   <script src="/workorder-detail.js"></script>
