@@ -42,6 +42,16 @@ function applyKbo(store, tenant, vat, actor) {
 }
 
 function createDemoGoldenPath(store, tenant, actor) {
+  // Vervolledig KBO-onboarding zodat de golden-path "kbo"-stap echt slaagt
+  // (vereist vat + companyNumber + straat/stad in invoiceProfile).
+  const ip = tenant.invoiceProfile || {};
+  const kboComplete = !!(ip.vat && ip.companyNumber && (ip.street || ip.city));
+  if (!kboComplete) {
+    // Gebruik bestaande VAT als die een volledige fixture-match geeft, anders de demo-fixture.
+    const candidate = ip.vat && lookupKbo(ip.vat).street ? ip.vat : "BE0123456789";
+    applyKbo(store, tenant, candidate, actor);
+    tenant = (store.data.tenants || []).find(t => t.id === tenant.id) || tenant;
+  }
   const venue = store.insert("venues", {
     id: `venue_${Date.now()}`,
     tenantId: tenant.id,
