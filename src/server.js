@@ -70,6 +70,7 @@ const { listAuditEvents } = require("./modules/audit");
 const { sendMail, setRuntimeConfig } = require("./lib/mailer");
 const { loadPlatformConfig, publicPlatformConfig, savePlatformConfig } = require("./modules/platform-config");
 const { createPaymentLink, markInvoicePaidById } = require("./modules/payments");
+const { buildUbl, validatePeppol, sendPeppolInvoice } = require("./modules/peppol-invoice");
 const {
   leaveSubmittedToAdmin,
   leaveReviewedToEmployee,
@@ -2081,6 +2082,31 @@ http.createServer(async (req, res) => {
         });
         store.audit({ actor: user.email, tenantId, action: "invoice_created", area: "facturen", detail: `${number} — €${total.toFixed(2)}` });
         sendJson(res, 201, { ok: true, invoice });
+        return;
+      }
+      // Peppol e-facturatie verzenden
+      const invoicePeppolMatch = action.match(/^facturen\/([^/]+)\/peppol$/);
+      if (invoicePeppolMatch && req.method === "POST") {
+        assertCan(user, "billing");
+        const inv = store.get("invoices", invoicePeppolMatch[1]);
+        if (!inv || inv.tenantId !== tenantId) return sendJson(res, 404, { ok: false, error: "Factuur niet gevonden" });
+        try {
+          const result = await sendPeppolInvoice(store, tenant, inv);
+          sendJson(res, 200, { ok: true, ...result });
+        } catch (e) {
+          sendJson(res, e.status || 400, { ok: false, error: e.message, errors: e.errors || [] });
+        }
+        return;
+      }
+      // UBL-XML downloaden / bekijken
+      const invoiceUblMatch = action.match(/^facturen\/([^/]+)\/ubl$/);
+      if (invoiceUblMatch && req.method === "GET") {
+        assertCan(user, "billing");
+        const inv = store.get("invoices", invoiceUblMatch[1]);
+        if (!inv || inv.tenantId !== tenantId) return sendJson(res, 404, { ok: false, error: "Factuur niet gevonden" });
+        const xml = inv.ublXml || buildUbl(inv, tenant);
+        res.writeHead(200, { "Content-Type": "application/xml; charset=utf-8", "Content-Disposition": `attachment; filename="${(inv.number||inv.id)}.xml"` });
+        res.end(xml);
         return;
       }
       // Betaallink genereren (Stripe Checkout of mock-fallback)

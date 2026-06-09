@@ -3897,6 +3897,10 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
             <td style="white-space:nowrap;display:flex;gap:6px;">
               <button class="adm-btn adm-btn-secondary adm-btn-sm inv-edit" data-id="${inv.id}">✏</button>
               <button class="adm-btn adm-btn-secondary adm-btn-sm inv-pdf" data-id="${inv.id}" title="PDF / Afdrukken">📄</button>
+              ${inv.peppolStatus === "delivered" || inv.peppolStatus === "sent"
+                ? `<span class="adm-status adm-status-active" title="Peppol: ${esc(inv.peppolReference||"")}">📧 Peppol ✓</span>`
+                : `<button class="adm-btn adm-btn-secondary adm-btn-sm inv-peppol" data-id="${inv.id}" title="Verstuur via Peppol e-facturatie">📧 Peppol</button>`}
+              <button class="adm-btn adm-btn-secondary adm-btn-sm inv-ubl" data-id="${inv.id}" title="UBL-XML downloaden">⬇ UBL</button>
               ${["open","overdue"].includes(inv.status) ? `<button class="adm-btn adm-btn-secondary adm-btn-sm inv-paylink" data-id="${inv.id}" title="Betaallink genereren">💳 Link</button>` : ""}
               ${["open","overdue"].includes(inv.status) ? `<button class="adm-btn adm-btn-success adm-btn-sm inv-paid" data-id="${inv.id}" title="Markeer als betaald">✓ Betaald</button>` : ""}
             </td>
@@ -3916,6 +3920,35 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
           let tenant = {};
           try { const t = await api("GET", "/settings"); tenant = t.tenant || {}; } catch(_){}
           printInvoicePDF(inv, tenant);
+        });
+      });
+      document.querySelectorAll(".inv-peppol").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          btn.disabled = true; const old = btn.textContent; btn.textContent = "Versturen…";
+          try {
+            const d = await api("POST", `/facturen/${btn.dataset.id}/peppol`, {});
+            const via = d.provider === "mock" ? "mock-transport" : d.provider;
+            window.showToast && window.showToast(`Verstuurd via Peppol (${via}) — status: ${d.status} · ref ${d.reference}`, "success");
+            renderFacturen();
+          } catch(e) {
+            const extra = (e.errors && e.errors.length) ? "\n\n• " + e.errors.join("\n• ") : "";
+            window.showToast && window.showToast("Peppol: " + e.message, "error");
+            if (extra) alert("Peppol-validatie:" + extra);
+            btn.disabled = false; btn.textContent = old;
+          }
+        });
+      });
+      document.querySelectorAll(".inv-ubl").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          try {
+            const tok = localStorage.getItem("wfp_token") || "";
+            const r = await fetch(`/api/tenants/${tenantId()}/facturen/${btn.dataset.id}/ubl`, { headers: { Authorization: "Bearer " + tok } });
+            if (!r.ok) throw new Error("HTTP " + r.status);
+            const xml = await r.text();
+            const inv = rows.find(i => i.id === btn.dataset.id);
+            const blob = new Blob([xml], { type: "application/xml" });
+            const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = (inv?.number || btn.dataset.id) + ".xml"; a.click();
+          } catch(e) { window.showToast && window.showToast("UBL-download fout: "+e.message, "error"); }
         });
       });
       document.querySelectorAll(".inv-paylink").forEach(btn => {
