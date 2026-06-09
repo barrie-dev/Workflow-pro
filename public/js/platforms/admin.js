@@ -183,8 +183,9 @@
       <!-- Search -->
       <div class="adm-search-box">
         <svg class="adm-search-icon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-        <input type="text" class="adm-search-input" id="admGlobalSearch" placeholder="Zoek klant, werkbon, medewerker…" autocomplete="off">
+        <input type="text" class="adm-search-input" id="admGlobalSearch" placeholder="Zoek klant, werkbon, factuur, medewerker…" autocomplete="off">
         <span class="adm-search-kbd">⌘K</span>
+        <div class="adm-search-results" id="admSearchResults"></div>
       </div>
       <!-- Right actions -->
       <div class="adm-topbar-right">
@@ -338,6 +339,25 @@
   background:#F1F5F9; border:1px solid #E2E8F0; border-radius:4px;
   padding:1px 5px; font-family:monospace; pointer-events:none;
 }
+.adm-search-results {
+  position:absolute; left:0; right:0; top:calc(100% + 6px);
+  background:#fff; border:1px solid #E2E8F0; border-radius:10px;
+  box-shadow:0 8px 32px rgba(0,0,0,.12); z-index:500;
+  max-height:380px; overflow-y:auto; display:none; padding:4px;
+}
+.adm-search-results.open { display:block; }
+.adm-search-item {
+  display:flex; align-items:center; gap:10px; padding:8px 10px;
+  border-radius:7px; cursor:pointer;
+}
+.adm-search-item:hover, .adm-search-item.active { background:#F1F5F9; }
+.adm-search-type {
+  font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.4px;
+  color:#2563EB; background:#EFF6FF; border-radius:4px; padding:2px 6px; flex-shrink:0; min-width:74px; text-align:center;
+}
+.adm-search-label { font-size:13px; color:#0F172A; font-weight:500; }
+.adm-search-sub { font-size:11.5px; color:#94A3B8; }
+.adm-search-empty { padding:16px; text-align:center; font-size:12.5px; color:#94A3B8; }
 
 /* Right topbar area */
 .adm-topbar-right { display:flex; align-items:center; gap:8px; margin-left:auto; }
@@ -4391,6 +4411,44 @@ ${enrolled.map(e => `
       const cn = document.getElementById("admCompanyName");
       if (cn) cn.textContent = "WorkFlow Pro";
     });
+
+    // ── Globale zoek ─────────────────────────────────────────
+    (function wireSearch(){
+      const input = document.getElementById("admGlobalSearch");
+      const box   = document.getElementById("admSearchResults");
+      if (!input || !box) return;
+      let timer = null, lastQ = "";
+      const close = () => { box.classList.remove("open"); box.innerHTML = ""; };
+      const render = (results, q) => {
+        if (!results.length) { box.innerHTML = `<div class="adm-search-empty">Geen resultaten voor "${esc(q)}"</div>`; box.classList.add("open"); return; }
+        box.innerHTML = results.map(r => `
+          <div class="adm-search-item" data-view="${esc(r.view)}">
+            <span class="adm-search-type">${esc(r.type)}</span>
+            <div style="min-width:0;flex:1;">
+              <div class="adm-search-label" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(r.label)}</div>
+              ${r.sub ? `<div class="adm-search-sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(r.sub)}</div>` : ""}
+            </div>
+          </div>`).join("");
+        box.classList.add("open");
+        box.querySelectorAll(".adm-search-item").forEach(el => {
+          el.addEventListener("click", () => { close(); input.value = ""; switchView(el.dataset.view); });
+        });
+      };
+      input.addEventListener("input", () => {
+        const q = input.value.trim();
+        if (timer) clearTimeout(timer);
+        if (q.length < 2) { close(); return; }
+        timer = setTimeout(async () => {
+          lastQ = q;
+          try {
+            const d = await api("GET", `/search?q=${encodeURIComponent(q)}`);
+            if (input.value.trim() === lastQ) render(d.results || [], q);
+          } catch(_) { close(); }
+        }, 220);
+      });
+      input.addEventListener("keydown", e => { if (e.key === "Escape") { close(); input.blur(); } });
+      document.addEventListener("click", e => { if (!e.target.closest(".adm-search-box")) close(); });
+    })();
 
     // ── Notification bell ────────────────────────────────────
     const bellBtn   = document.getElementById("admBellBtn");

@@ -18,6 +18,7 @@ const {
   resetLoginFailures,
   assertTenant,
   assertCan,
+  can,
   assertOwn,
   assertSuperAdmin,
   assertAdminMfa,
@@ -747,6 +748,44 @@ http.createServer(async (req, res) => {
       if (action === "roadmap" && req.method === "GET") {
         assertCan(user, "tenants");
         sendJson(res, 200, { ok: true, roadmap: roadmapStatus(store, tenant) });
+        return;
+      }
+      // GET /search?q= — globale zoek over klanten, werkbonnen, facturen, medewerkers
+      if (action === "search" && req.method === "GET") {
+        const q = String(url.searchParams.get("q") || "").trim().toLowerCase();
+        if (q.length < 2) { sendJson(res, 200, { ok: true, results: [] }); return; }
+        const match = (...vals) => vals.some(v => String(v || "").toLowerCase().includes(q));
+        const results = [];
+        if (can(user, "customers")) {
+          for (const c of store.list("customers", tenantId)) {
+            if (match(c.name, c.contactName, c.email, c.vatNumber)) {
+              results.push({ type: "Klant", view: "customers", id: c.id, label: c.name || "Klant", sub: c.email || c.vatNumber || "" });
+            }
+          }
+        }
+        if (can(user, "workorders")) {
+          for (const w of store.list("workorders", tenantId)) {
+            if (match(w.number, w.title, w.clientName, w.userName)) {
+              results.push({ type: "Werkbon", view: "workorders", id: w.id, label: `${w.number ? w.number + " · " : ""}${w.title || "Werkbon"}`, sub: w.clientName || w.status || "" });
+            }
+          }
+        }
+        if (can(user, "billing")) {
+          for (const inv of store.list("invoices", tenantId)) {
+            if (match(inv.number, inv.customerName, inv.customerVatNumber)) {
+              results.push({ type: "Factuur", view: "facturen", id: inv.id, label: `${inv.number || "Factuur"} · ${inv.customerName || ""}`, sub: `€ ${Number(inv.total || 0).toFixed(2)} — ${inv.status || ""}` });
+            }
+          }
+        }
+        if (can(user, "employees")) {
+          for (const u of store.list("users", tenantId)) {
+            if (u.role === "super_admin") continue;
+            if (match(u.name, u.email, u.function)) {
+              results.push({ type: "Medewerker", view: "employees", id: u.id, label: u.name || u.email, sub: u.function || u.role || "" });
+            }
+          }
+        }
+        sendJson(res, 200, { ok: true, results: results.slice(0, 25) });
         return;
       }
       if (action === "reports" && req.method === "GET") {
