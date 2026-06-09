@@ -43,7 +43,7 @@
     {
       "mfaEnabled": false,
       "mfaEnforced": false,
-      "lastLoginAt": "2026-06-09T18:12:54.159Z",
+      "lastLoginAt": "2026-06-09T19:32:49.213Z",
       "failedLoginCount": 0,
       "lockedUntil": null,
       "id": "u_admin",
@@ -235,7 +235,50 @@
   ],
   "notifications": [],
   "integrations": [],
-  "invoices": [],
+  "invoices": [
+    {
+      "id": "inv_1781033375716_2bb5b61bf236d",
+      "tenantId": "t_demo",
+      "number": "2026-001",
+      "customerId": null,
+      "customerName": "Acme NV",
+      "customerAddress": "",
+      "customerVatNumber": "BE0123456789",
+      "status": "open",
+      "invoiceDate": "2026-06-09",
+      "dueDate": "2026-07-09",
+      "lines": [
+        {
+          "description": "Installatie",
+          "qty": 2,
+          "unitPrice": 500,
+          "vatRate": 21,
+          "lineSubtotal": 1000,
+          "lineVat": 210,
+          "lineTotal": 1210
+        },
+        {
+          "description": "Materiaal",
+          "qty": 1,
+          "unitPrice": 300,
+          "vatRate": 6,
+          "lineSubtotal": 300,
+          "lineVat": 18,
+          "lineTotal": 318
+        }
+      ],
+      "subtotal": 1300,
+      "vatAmount": 228,
+      "total": 1528,
+      "notes": "Op basis van offerte OFF-2026-001",
+      "quoteId": "quote_1781033375541_b778dbf793aac",
+      "paidAt": null,
+      "sentAt": null,
+      "createdBy": "admin@demobouw.be",
+      "createdAt": "2026-06-09T19:29:35.716Z",
+      "updatedAt": "2026-06-09T19:29:35.716Z"
+    }
+  ],
   "paymentMethods": [],
   "files": [],
   "secrets": [],
@@ -856,6 +899,116 @@
       "tenantId": null,
       "action": "login",
       "area": "auth"
+    },
+    {
+      "id": "audit_1781032443444_6544e75437b628",
+      "at": "2026-06-09T19:14:03.444Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1781033140497_9dde8ad97ad36",
+      "at": "2026-06-09T19:25:40.497Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1781033152124_35ef193c9a025",
+      "at": "2026-06-09T19:25:52.124Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1781033375518_b57c1c7d162968",
+      "at": "2026-06-09T19:29:35.518Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1781033375558_a32df5425267c8",
+      "at": "2026-06-09T19:29:35.558Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "quote_created",
+      "area": "offertes",
+      "detail": "OFF-2026-001 — €1528.00"
+    },
+    {
+      "id": "audit_1781033375620_aa19517c98eb9",
+      "at": "2026-06-09T19:29:35.620Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "quote_sent",
+      "area": "offertes",
+      "detail": "OFF-2026-001"
+    },
+    {
+      "id": "audit_1781033375679_8c55ef0ac29f08",
+      "at": "2026-06-09T19:29:35.679Z",
+      "actor": "Acme NV",
+      "tenantId": "t_demo",
+      "action": "quote_aanvaard_public",
+      "area": "offertes",
+      "detail": "OFF-2026-001"
+    },
+    {
+      "id": "audit_1781033375758_bebf9232bf31b",
+      "at": "2026-06-09T19:29:35.758Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "quote_to_invoice",
+      "area": "offertes",
+      "detail": "OFF-2026-001 → 2026-001"
+    },
+    {
+      "id": "audit_1781033394632_55b93f8166a2",
+      "at": "2026-06-09T19:29:54.633Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1781033394690_e8f249d44b10a",
+      "at": "2026-06-09T19:29:54.690Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "quote_created",
+      "area": "offertes",
+      "detail": "OFF-2026-002 — €6222.00"
+    },
+    {
+      "id": "audit_1781033394716_13bb59584f6",
+      "at": "2026-06-09T19:29:54.716Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "quote_sent",
+      "area": "offertes",
+      "detail": "OFF-2026-002"
+    },
+    {
+      "id": "audit_1781033518792_5ac8f5430330d8",
+      "at": "2026-06-09T19:31:58.792Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1781033569216_f7f9d37d14b79",
+      "at": "2026-06-09T19:32:49.216Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
     }
   ],
   "errorEvents": [
@@ -938,6 +1091,26 @@
       "status": 500,
       "message": "store.status is not a function",
       "stack": "TypeError: store.status is not a function\n    at Server.<anonymous> (C:\\Users\\ABMS Consultancy\\Documents\\New project\\WorkFlowPro-fullstack\\src\\server.js:256:33)\n    at Server.emit (node:events:508:28)\n    at parserOnIncoming (node:_http_server:1210:12)"
+    },
+    {
+      "id": "error_1781033140752_4de9226cf9f5f8",
+      "at": "2026-06-09T19:25:40.752Z",
+      "tenantId": "t_demo",
+      "method": "POST",
+      "path": "/api/tenants/t_demo/offertes",
+      "status": 500,
+      "message": "Cannot read properties of undefined (reading 'push')",
+      "stack": "TypeError: Cannot read properties of undefined (reading 'push')\n    at Store.insert (C:\\Users\\ABMS Consultancy\\Documents\\New project\\WorkFlowPro-fullstack\\src\\lib\\store.js:382:27)\n    at Server.<anonymous> (C:\\Users\\ABMS Consultancy\\Documents\\New project\\WorkFlowPro-fullstack\\src\\server.js:2051:29)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)"
+    },
+    {
+      "id": "error_1781033152173_5eef440d8bf228",
+      "at": "2026-06-09T19:25:52.173Z",
+      "tenantId": "t_demo",
+      "method": "POST",
+      "path": "/api/tenants/t_demo/offertes",
+      "status": 500,
+      "message": "Cannot read properties of undefined (reading 'push')",
+      "stack": "TypeError: Cannot read properties of undefined (reading 'push')\n    at Store.insert (C:\\Users\\ABMS Consultancy\\Documents\\New project\\WorkFlowPro-fullstack\\src\\lib\\store.js:382:27)\n    at Server.<anonymous> (C:\\Users\\ABMS Consultancy\\Documents\\New project\\WorkFlowPro-fullstack\\src\\server.js:2051:29)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)"
     }
   ],
   "apiKeys": [],
@@ -969,6 +1142,98 @@
       "version": 6,
       "name": "support-escalation-notification-shape",
       "appliedAt": "2026-05-12T17:53:36.349Z"
+    }
+  ],
+  "quotes": [
+    {
+      "id": "quote_1781033375541_b778dbf793aac",
+      "tenantId": "t_demo",
+      "number": "OFF-2026-001",
+      "customerId": null,
+      "customerName": "Acme NV",
+      "customerAddress": "",
+      "customerVatNumber": "BE0123456789",
+      "status": "aanvaard",
+      "quoteDate": "2026-06-09",
+      "validUntil": "2026-07-09",
+      "lines": [
+        {
+          "description": "Installatie",
+          "qty": 2,
+          "unitPrice": 500,
+          "vatRate": 21,
+          "lineSubtotal": 1000,
+          "lineVat": 210,
+          "lineTotal": 1210
+        },
+        {
+          "description": "Materiaal",
+          "qty": 1,
+          "unitPrice": 300,
+          "vatRate": 6,
+          "lineSubtotal": 300,
+          "lineVat": 18,
+          "lineTotal": 318
+        }
+      ],
+      "subtotal": 1300,
+      "vatAmount": 228,
+      "total": 1528,
+      "notes": "",
+      "publicToken": "655c400d0f406f4770f838cc7f148751",
+      "sentAt": "2026-06-09T19:29:35.604Z",
+      "acceptedAt": "2026-06-09T19:29:35.674Z",
+      "rejectedAt": null,
+      "invoiceId": "inv_1781033375716_2bb5b61bf236d",
+      "workorderId": null,
+      "createdBy": "admin@demobouw.be",
+      "createdAt": "2026-06-09T19:29:35.543Z",
+      "updatedAt": "2026-06-09T19:29:35.734Z"
+    },
+    {
+      "id": "quote_1781033394676_576eff78d04eb8",
+      "tenantId": "t_demo",
+      "number": "OFF-2026-002",
+      "customerId": null,
+      "customerName": "Bouwwerken Janssens BV",
+      "customerAddress": "",
+      "customerVatNumber": "",
+      "status": "verzonden",
+      "quoteDate": "2026-06-09",
+      "validUntil": "2026-07-09",
+      "lines": [
+        {
+          "description": "Renovatie badkamer",
+          "qty": 1,
+          "unitPrice": 4500,
+          "vatRate": 6,
+          "lineSubtotal": 4500,
+          "lineVat": 270,
+          "lineTotal": 4770
+        },
+        {
+          "description": "Materiaal",
+          "qty": 1,
+          "unitPrice": 1200,
+          "vatRate": 21,
+          "lineSubtotal": 1200,
+          "lineVat": 252,
+          "lineTotal": 1452
+        }
+      ],
+      "subtotal": 5700,
+      "vatAmount": 522,
+      "total": 6222,
+      "notes": "",
+      "publicToken": "016229b5c4e5bde2b3e4180c3c012f63",
+      "sentAt": "2026-06-09T19:29:54.705Z",
+      "acceptedAt": null,
+      "rejectedAt": null,
+      "invoiceId": null,
+      "workorderId": null,
+      "createdBy": "admin@demobouw.be",
+      "createdAt": "2026-06-09T19:29:54.676Z",
+      "updatedAt": "2026-06-09T19:29:54.705Z"
     }
   ]
 }

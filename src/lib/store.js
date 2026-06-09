@@ -66,6 +66,7 @@ const REQUIRED_COLLECTIONS = [
   "messages",
   "notifications",
   "integrations",
+  "quotes",
   "invoices",
   "paymentMethods",
   "files",

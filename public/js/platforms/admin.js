@@ -114,6 +114,11 @@
         <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
         <span>Klanten</span>
       </a>
+      <a class="adm-nav-item" data-view="offertes" href="#">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13zM10.5 11.5l1.4 1.4 2.6-2.6.7.7-3.3 3.3-2.1-2.1z"/></svg>
+        <span>Offertes</span>
+        <span class="adm-nav-badge" id="admOfferteBadge" style="display:none;background:#F59E0B">0</span>
+      </a>
       <a class="adm-nav-item" data-view="facturen" href="#">
         <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
         <span>Facturen</span>
@@ -552,6 +557,7 @@ table.adm-table { width:100%; border-collapse:collapse; font-size:13px; }
       if (_currentView === "employees") openEmployeeDrawer(null);
       if (_currentView === "messages") openMessageDrawer();
       if (_currentView === "customers") openCustomerDrawer(null);
+      if (_currentView === "offertes") openOfferteDrawer(null);
       if (_currentView === "facturen") openFactuurDrawer(null);
       if (_currentView === "venues") openVenueDrawer(null);
       if (_currentView === "vehicles") openVehicleDrawer(null);
@@ -564,14 +570,14 @@ table.adm-table { width:100%; border-collapse:collapse; font-size:13px; }
     dashboard: "Dashboard", employees: "Medewerkers", planning: "Planning",
     clocking: "Prikklok", leaves: "Verlof", expenses: "Onkosten",
     workorders: "Werkbonnen", messages: "Berichten", reports: "Rapportages",
-    customers: "Klanten", facturen: "Facturen", venues: "Locaties", vehicles: "Voertuigen",
+    customers: "Klanten", offertes: "Offertes", facturen: "Facturen", venues: "Locaties", vehicles: "Voertuigen",
     stock: "Stock", billing: "Facturatie",
     roadmap: "Roadmap", audit: "Audittrail", settings: "Instellingen"
   };
 
   const VIEW_BTN_LABEL = {
     employees: "+ Medewerker", messages: "+ Bericht", customers: "+ Klant",
-    facturen: "+ Factuur", venues: "+ Locatie", vehicles: "+ Voertuig", stock: "+ Artikel"
+    offertes: "+ Offerte", facturen: "+ Factuur", venues: "+ Locatie", vehicles: "+ Voertuig", stock: "+ Artikel"
   };
 
   function switchView(view) {
@@ -601,6 +607,7 @@ table.adm-table { width:100%; border-collapse:collapse; font-size:13px; }
       reports: renderReports,
       customers: renderCustomers,
       venues: renderVenues,
+      offertes: renderOffertes,
       facturen: renderFacturen,
       vehicles: renderVehicles,
       stock: renderStock,
@@ -3624,6 +3631,196 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
     draft:   { label:"Concept",  css:"adm-status-pending" },
     sent:    { label:"Verstuurd",css:"adm-status-pending" }
   };
+
+  // ── Offertes ───────────────────────────────────────────────
+  const QUOTE_STATUS = {
+    concept:   { label:"Concept",   css:"adm-status-pending" },
+    verzonden: { label:"Verzonden", css:"adm-status-open" },
+    aanvaard:  { label:"Aanvaard",  css:"adm-status-goedgekeurd" },
+    geweigerd: { label:"Geweigerd", css:"adm-status-geweigerd" },
+    verlopen:  { label:"Verlopen",  css:"adm-status-inactive" }
+  };
+
+  async function renderOffertes() {
+    const content = document.getElementById("admContent");
+    try {
+      const data = await api("GET", "/offertes");
+      const rows = data.quotes || [];
+
+      const openCount = rows.filter(r => r.status === "verzonden").length;
+      const badge = document.getElementById("admOfferteBadge");
+      if (badge) { badge.textContent = openCount; badge.style.display = openCount ? "" : "none"; }
+
+      const acceptedVal = rows.filter(r => r.status === "aanvaard").reduce((s,q)=>s+Number(q.total||0),0);
+      const openVal     = rows.filter(r => r.status === "verzonden").reduce((s,q)=>s+Number(q.total||0),0);
+      const filterSel = content.querySelector?.("#qStatusFilter")?.value || "";
+      const filtered = filterSel ? rows.filter(r => r.status === filterSel) : rows;
+
+      content.innerHTML = `
+<div class="adm-kpis" style="margin-bottom:16px">
+  <div class="adm-kpi adm-kpi-amber"><div class="adm-kpi-label">Openstaand</div><div class="adm-kpi-value" style="font-size:18px">${fmtEurInv(openVal)}</div><div class="adm-kpi-sub">${openCount} verzonden</div></div>
+  <div class="adm-kpi adm-kpi-green"><div class="adm-kpi-label">Aanvaard</div><div class="adm-kpi-value" style="font-size:18px">${fmtEurInv(acceptedVal)}</div><div class="adm-kpi-sub">${rows.filter(r=>r.status==="aanvaard").length} offertes</div></div>
+  <div class="adm-kpi adm-kpi-blue"><div class="adm-kpi-label">Conversie</div><div class="adm-kpi-value">${rows.length?Math.round(rows.filter(r=>r.status==="aanvaard").length/rows.length*100):0}%</div><div class="adm-kpi-sub">aanvaard / totaal</div></div>
+  <div class="adm-kpi adm-kpi-purple"><div class="adm-kpi-label">Totaal offertes</div><div class="adm-kpi-value">${rows.length}</div><div class="adm-kpi-sub">alle statussen</div></div>
+</div>
+<div class="adm-card">
+  <div class="adm-card-header">
+    <h3 class="adm-card-title">Offertes <span style="background:#fef3c7;color:#92400e;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${filtered.length}</span></h3>
+    <select id="qStatusFilter" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;">
+      <option value="">Alle statussen</option>
+      ${["concept","verzonden","aanvaard","geweigerd","verlopen"].map(s=>`<option value="${s}" ${filterSel===s?"selected":""}>${QUOTE_STATUS[s].label}</option>`).join("")}
+    </select>
+  </div>
+  ${filtered.length === 0
+    ? `<div class="adm-empty"><div class="adm-empty-icon">📋</div><div class="adm-empty-text">Geen offertes — klik "+ Offerte" om te starten</div></div>`
+    : `<div class="adm-table-wrap"><table class="adm-table">
+        <thead><tr><th>Nr.</th><th>Datum</th><th>Klant</th><th>Geldig tot</th><th>Bedrag</th><th>Status</th><th>Acties</th></tr></thead>
+        <tbody>${filtered.slice().sort((a,b)=>(b.quoteDate||"").localeCompare(a.quoteDate||"")).map(q => {
+          const st = QUOTE_STATUS[q.status] || { label:q.status, css:"adm-status-pending" };
+          const canConvert = q.status === "aanvaard";
+          return `<tr>
+            <td style="font-family:monospace;font-weight:600">${esc(q.number||"")}</td>
+            <td>${q.quoteDate?new Date(q.quoteDate).toLocaleDateString("nl-BE"):"—"}</td>
+            <td><strong>${esc(q.customerName||"—")}</strong></td>
+            <td style="${q.status==="verlopen"?"color:#ef4444;font-weight:600":""}">${q.validUntil?new Date(q.validUntil).toLocaleDateString("nl-BE"):"—"}</td>
+            <td style="font-weight:600">${fmtEurInv(q.total)}</td>
+            <td><span class="adm-status ${st.css}">${st.label}</span>${q.invoiceId?`<div style="font-size:10px;color:#94a3b8">→ gefactureerd</div>`:""}</td>
+            <td style="white-space:nowrap;display:flex;gap:5px;flex-wrap:wrap;">
+              <button class="adm-btn adm-btn-secondary adm-btn-sm q-edit" data-id="${q.id}" title="Bewerk">✏</button>
+              ${["concept","verzonden"].includes(q.status)?`<button class="adm-btn adm-btn-secondary adm-btn-sm q-send" data-id="${q.id}" title="Versturen + link">📤</button>`:""}
+              ${canConvert && !q.invoiceId?`<button class="adm-btn adm-btn-success adm-btn-sm q-toinv" data-id="${q.id}" title="Naar factuur">→ Factuur</button>`:""}
+              ${canConvert && !q.workorderId?`<button class="adm-btn adm-btn-secondary adm-btn-sm q-towo" data-id="${q.id}" title="Naar werkbon">→ Werkbon</button>`:""}
+            </td>
+          </tr>`;
+        }).join("")}</tbody>
+      </table></div>`}
+</div>`;
+
+      document.getElementById("qStatusFilter")?.addEventListener("change", () => renderOffertes());
+      content.querySelectorAll(".q-edit").forEach(b => b.addEventListener("click", () => openOfferteDrawer(rows.find(q => q.id === b.dataset.id))));
+      content.querySelectorAll(".q-send").forEach(b => b.addEventListener("click", async () => {
+        try {
+          const d = await api("POST", `/offertes/${b.dataset.id}/send`, {});
+          const url = d.acceptUrl || "";
+          try { await navigator.clipboard.writeText(url); } catch(_){}
+          window.showToast && window.showToast("Offerte verzonden ✓ — accepteer-link gekopieerd", "success");
+          renderOffertes();
+        } catch(e){ window.showToast && window.showToast("Fout: "+e.message, "error"); }
+      }));
+      content.querySelectorAll(".q-toinv").forEach(b => b.addEventListener("click", async () => {
+        if(!confirm("Offerte omzetten naar factuur?")) return;
+        try { const d = await api("POST", `/offertes/${b.dataset.id}/convert`, { target:"invoice" }); window.showToast && window.showToast("Factuur "+(d.invoice?.number||"")+" aangemaakt ✓","success"); renderOffertes(); }
+        catch(e){ window.showToast && window.showToast("Fout: "+e.message,"error"); }
+      }));
+      content.querySelectorAll(".q-towo").forEach(b => b.addEventListener("click", async () => {
+        if(!confirm("Offerte omzetten naar werkbon?")) return;
+        try { const d = await api("POST", `/offertes/${b.dataset.id}/convert`, { target:"workorder" }); window.showToast && window.showToast("Werkbon "+(d.workorder?.number||"")+" aangemaakt ✓","success"); renderOffertes(); }
+        catch(e){ window.showToast && window.showToast("Fout: "+e.message,"error"); }
+      }));
+    } catch(e) { content.innerHTML = `<div style="padding:20px;color:#dc2626">Fout: ${e.message}</div>`; }
+  }
+
+  async function openOfferteDrawer(quote) {
+    let customers = [];
+    try { const d = await api("GET", "/customers"); customers = d.customers || []; } catch(_){}
+    const today = new Date().toISOString().slice(0,10);
+    const valid30 = new Date(Date.now()+30*86400000).toISOString().slice(0,10);
+    const lines0 = quote?.lines || [{ description:"", qty:1, unitPrice:0, vatRate:21 }];
+    const isEdit = !!quote;
+    document.getElementById("admDrawerTitle").textContent = isEdit ? `Offerte ${quote.number}` : "Nieuwe offerte";
+
+    const lineRow = (l) => `<div class="q-line-row" style="display:grid;grid-template-columns:1fr 60px 90px 60px 24px;gap:6px;align-items:center;margin-bottom:8px;">
+        <input placeholder="Omschrijving" value="${esc(l.description||"")}" class="q-line-desc" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;" ${isEdit?"disabled":""}>
+        <input type="number" min="1" value="${l.qty||1}" class="q-line-qty" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;text-align:right;" ${isEdit?"disabled":""}>
+        <input type="number" min="0" step="0.01" value="${Number(l.unitPrice||0).toFixed(2)}" class="q-line-price" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;text-align:right;" ${isEdit?"disabled":""}>
+        <select class="q-line-vat" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;" ${isEdit?"disabled":""}>
+          ${[0,6,12,21].map(v=>`<option value="${v}" ${(l.vatRate==v||(v==21&&l.vatRate==null))?"selected":""}>${v}%</option>`).join("")}
+        </select>
+        <button type="button" class="q-line-del" style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:16px;padding:0;" ${isEdit?"disabled":""}>&times;</button>
+      </div>`;
+
+    document.getElementById("admDrawerBody").innerHTML = `
+<form id="qForm">
+  <div class="adm-form-group"><label>Klant *</label>
+    <select name="customerId" id="qCustSel" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;" ${isEdit?"disabled":""}>
+      <option value="">— Handmatig invullen —</option>
+      ${customers.map(c=>`<option value="${c.id}" ${quote?.customerId===c.id?"selected":""}>${esc(c.name)}</option>`).join("")}
+    </select>
+  </div>
+  <div class="adm-form-group"><label>Klantnaam *</label>
+    <input name="customerName" value="${esc(quote?.customerName||"")}" placeholder="Bedrijfsnaam NV" required ${isEdit?"disabled":""}>
+  </div>
+  <div class="adm-form-row">
+    <div class="adm-form-group"><label>BTW-nummer</label><input name="customerVatNumber" value="${esc(quote?.customerVatNumber||"")}" placeholder="BE0000.000.000" ${isEdit?"disabled":""}></div>
+    <div class="adm-form-group"><label>Adres</label><input name="customerAddress" value="${esc(quote?.customerAddress||"")}" placeholder="Straat, gemeente" ${isEdit?"disabled":""}></div>
+  </div>
+  <div class="adm-form-row">
+    <div class="adm-form-group"><label>Offertedatum</label><input type="date" name="quoteDate" value="${quote?.quoteDate||today}" ${isEdit?"disabled":""}></div>
+    <div class="adm-form-group"><label>Geldig tot</label><input type="date" name="validUntil" value="${quote?.validUntil||valid30}" ${isEdit?"disabled":""}></div>
+  </div>
+  <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px;">Offerteregels</div>
+  <div id="qLines">${lines0.map(lineRow).join("")}</div>
+  ${!isEdit?`<button type="button" class="adm-btn adm-btn-secondary adm-btn-sm" id="qAddLine" style="margin-bottom:16px;">+ Regel toevoegen</button>`:""}
+  <div style="background:#f8fafc;border-radius:10px;padding:12px;margin-bottom:16px;">
+    <div style="display:flex;justify-content:space-between;font-size:13px;color:#64748b;margin-bottom:4px;"><span>Subtotaal</span><span id="qSubtotal">€0,00</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:13px;color:#64748b;margin-bottom:4px;"><span>BTW</span><span id="qVat">€0,00</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;border-top:1px solid #e2e8f0;padding-top:8px;margin-top:4px;"><span>Totaal</span><span id="qTotal">€0,00</span></div>
+  </div>
+  <div class="adm-form-group"><label>Opmerkingen</label>
+    <textarea name="notes" rows="2" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px" ${isEdit?"disabled":""}>${esc(quote?.notes||"")}</textarea>
+  </div>
+  <div id="qFormErr" style="display:none;background:#fef2f2;color:#dc2626;border-radius:8px;padding:8px;font-size:12px;margin-bottom:8px;"></div>
+  <div class="adm-form-actions" style="flex-wrap:wrap;gap:8px;">
+    <button type="button" class="adm-btn adm-btn-secondary" id="qCancel">Sluiten</button>
+    ${isEdit && !["aanvaard"].includes(quote.status)?`<button type="button" class="adm-btn adm-btn-danger adm-btn-sm" id="qDelete">🗑 Verwijderen</button>`:""}
+    ${!isEdit?`<button type="submit" class="adm-btn adm-btn-primary">Aanmaken</button>`:""}
+  </div>
+</form>`;
+
+    function recalc() {
+      let sub=0, vat=0;
+      document.querySelectorAll(".q-line-row").forEach(r=>{
+        const q=Number(r.querySelector(".q-line-qty").value||0), p=Number(r.querySelector(".q-line-price").value||0), v=Number(r.querySelector(".q-line-vat").value||21);
+        sub+=q*p; vat+=q*p*v/100;
+      });
+      document.getElementById("qSubtotal").textContent=fmtEurInv(sub);
+      document.getElementById("qVat").textContent=fmtEurInv(vat);
+      document.getElementById("qTotal").textContent=fmtEurInv(sub+vat);
+    }
+    function bind() {
+      document.querySelectorAll(".q-line-qty,.q-line-price,.q-line-vat").forEach(el=>el.addEventListener("input",recalc));
+      document.querySelectorAll(".q-line-del").forEach(b=>b.addEventListener("click",()=>{ if(document.querySelectorAll(".q-line-row").length<=1)return; b.closest(".q-line-row").remove(); recalc(); }));
+    }
+    bind(); recalc();
+    document.getElementById("qCustSel")?.addEventListener("change", e => {
+      const c = customers.find(x=>x.id===e.target.value);
+      if(c){ document.querySelector("[name=customerName]").value=c.name||""; document.querySelector("[name=customerVatNumber]").value=c.vatNumber||""; document.querySelector("[name=customerAddress]").value=c.address||""; }
+    });
+    document.getElementById("qAddLine")?.addEventListener("click", () => {
+      const div=document.createElement("div"); div.innerHTML=lineRow({description:"",qty:1,unitPrice:0,vatRate:21});
+      document.getElementById("qLines").appendChild(div.firstElementChild); bind(); recalc();
+    });
+    openDrawer();
+    document.getElementById("qCancel").addEventListener("click", closeDrawer);
+    document.getElementById("qDelete")?.addEventListener("click", async () => {
+      if(!confirm(`Offerte ${quote.number} verwijderen?`)) return;
+      try { await api("DELETE", `/offertes/${quote.id}`); closeDrawer(); renderOffertes(); }
+      catch(err){ const e=document.getElementById("qFormErr"); if(e){e.textContent=err.message;e.style.display="";} }
+    });
+    document.getElementById("qForm")?.addEventListener("submit", async e => {
+      e.preventDefault();
+      const errEl=document.getElementById("qFormErr");
+      const body=Object.fromEntries(new FormData(e.target).entries());
+      body.lines=Array.from(document.querySelectorAll(".q-line-row")).map(r=>({
+        description:r.querySelector(".q-line-desc").value,
+        qty:Number(r.querySelector(".q-line-qty").value||1),
+        unitPrice:Number(r.querySelector(".q-line-price").value||0),
+        vatRate:Number(r.querySelector(".q-line-vat").value||21)
+      }));
+      try { await api("POST", "/offertes", body); closeDrawer(); renderOffertes(); window.showToast && window.showToast("Offerte aangemaakt ✓","success"); }
+      catch(err){ if(errEl){errEl.textContent=err.message;errEl.style.display="";} }
+    });
+  }
 
   async function renderFacturen() {
     const content = document.getElementById("admContent");

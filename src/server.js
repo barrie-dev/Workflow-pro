@@ -168,6 +168,72 @@ function handleError(req, res, error, tenantId = null) {
   sendJson(res, status, { ok: false, error: error.message || "Server error" });
 }
 
+function publicQuotePage() {
+  // Self-contained publieke offerte-pagina. Leest token uit de URL en praat
+  // met /api/public/quote/:token. Geen login, geen externe assets.
+  return `<!DOCTYPE html><html lang="nl"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Offerte — WorkFlow Pro</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Inter,system-ui,Arial,sans-serif;background:#F0F4F8;color:#0F172A;padding:24px;line-height:1.5}
+.wrap{max-width:680px;margin:0 auto}
+.card{background:#fff;border:1px solid #E2E8F0;border-radius:14px;box-shadow:0 4px 16px rgba(0,0,0,.05);overflow:hidden}
+.hd{background:#0B1929;color:#fff;padding:22px 24px}
+.hd h1{font-size:20px;font-weight:800}.hd .sub{color:#94A3B8;font-size:13px;margin-top:2px}
+.body{padding:24px}
+.meta{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:13px;color:#64748B;margin-bottom:18px}
+table{width:100%;border-collapse:collapse;margin-bottom:16px;font-size:13px}
+th{text-align:left;padding:8px 10px;background:#F8FAFC;color:#64748B;font-size:11px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid #E2E8F0}
+td{padding:9px 10px;border-bottom:1px solid #F1F5F9}.num{text-align:right;font-variant-numeric:tabular-nums}
+.tot{margin-left:auto;width:240px}.tot .row{display:flex;justify-content:space-between;padding:4px 0;font-size:13px}
+.tot .grand{font-weight:800;font-size:16px;border-top:2px solid #0F172A;padding-top:8px;margin-top:4px}
+.actions{display:flex;gap:10px;margin-top:22px}
+button{flex:1;padding:13px;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+.accept{background:#10B981;color:#fff}.reject{background:#fff;color:#64748B;border:1.5px solid #E2E8F0}
+.banner{padding:14px 18px;border-radius:10px;font-weight:600;font-size:14px;text-align:center;margin-top:8px}
+.ok{background:#D1FAE5;color:#065F46}.warn{background:#FEF3C7;color:#92400E}.muted{color:#94A3B8;text-align:center;padding:40px}
+.foot{text-align:center;font-size:11px;color:#94A3B8;margin-top:18px}
+</style></head><body>
+<div class="wrap"><div class="card">
+  <div class="hd"><h1 id="coName">Offerte</h1><div class="sub" id="coNr"></div></div>
+  <div class="body" id="body"><div class="muted">Laden…</div></div>
+</div><div class="foot">Aangeboden via WorkFlow Pro</div></div>
+<script>
+const token = location.pathname.split("/").filter(Boolean).pop();
+const eur = n => new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR"}).format(Number(n||0));
+const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+async function load(){
+  try{
+    const d = await (await fetch("/api/public/quote/"+token)).json();
+    if(!d.ok){ document.getElementById("body").innerHTML='<div class="muted">Offerte niet gevonden.</div>'; return; }
+    const q=d.quote, c=d.company;
+    document.getElementById("coName").textContent=c.name||"Offerte";
+    document.getElementById("coNr").textContent="Offerte "+esc(q.number)+(c.vat?" · "+esc(c.vat):"");
+    const done = q.status==="aanvaard"||q.status==="geweigerd";
+    const expired = q.status==="verlopen";
+    document.getElementById("body").innerHTML=
+      '<div class="meta"><span>Datum: '+esc(q.quoteDate||"—")+'</span><span>Geldig tot: '+esc(q.validUntil||"—")+'</span></div>'+
+      '<table><thead><tr><th>Omschrijving</th><th class="num">Aantal</th><th class="num">Prijs</th><th class="num">Btw</th><th class="num">Totaal</th></tr></thead><tbody>'+
+      (q.lines||[]).map(l=>'<tr><td>'+esc(l.description)+'</td><td class="num">'+esc(l.qty)+'</td><td class="num">'+eur(l.unitPrice)+'</td><td class="num">'+esc(l.vatRate)+'%</td><td class="num">'+eur(l.lineTotal)+'</td></tr>').join("")+
+      '</tbody></table>'+
+      '<div class="tot"><div class="row"><span>Subtotaal</span><span>'+eur(q.subtotal)+'</span></div><div class="row"><span>Btw</span><span>'+eur(q.vatAmount)+'</span></div><div class="row grand"><span>Totaal</span><span>'+eur(q.total)+'</span></div></div>'+
+      (q.notes?'<p style="font-size:13px;color:#64748B;margin-top:14px">'+esc(q.notes)+'</p>':"")+
+      (done? '<div class="banner '+(q.status==="aanvaard"?"ok":"warn")+'">'+(q.status==="aanvaard"?"✅ Offerte aanvaard — bedankt!":"Offerte geweigerd")+'</div>'
+        : expired? '<div class="banner warn">Deze offerte is verlopen. Neem contact op voor een nieuwe.</div>'
+        : '<div class="actions"><button class="accept" onclick="decide(\\'accept\\')">✓ Offerte aanvaarden</button><button class="reject" onclick="decide(\\'reject\\')">Weigeren</button></div>');
+  }catch(e){ document.getElementById("body").innerHTML='<div class="muted">Er ging iets mis. Probeer later opnieuw.</div>'; }
+}
+async function decide(decision){
+  if(decision==="accept" && !confirm("Offerte aanvaarden?")) return;
+  if(decision==="reject" && !confirm("Offerte weigeren?")) return;
+  const d = await (await fetch("/api/public/quote/"+token,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({decision})})).json();
+  load();
+}
+load();
+</script></body></html>`;
+}
+
 function serveStatic(req, res) {
   const url = new URL(req.url, config.appUrl);
   const file = url.pathname === "/" ? "index.html" : url.pathname.replace(/^\/+/, "");
@@ -307,6 +373,44 @@ http.createServer(async (req, res) => {
       const result = processStripeWebhook(store, event);
       sendJson(res, 200, { ok: true, signature: signature.mode, result });
       return;
+    }
+
+    // ── Publieke offerte-acceptatie (geen login) ──────────────────────────────
+    const pubQuoteMatch = url.pathname.match(/^\/api\/public\/quote\/([a-f0-9]+)$/);
+    if (pubQuoteMatch && req.method === "GET") {
+      const token = pubQuoteMatch[1];
+      let found = null, foundTenant = null;
+      for (const t of store.data.tenants || []) {
+        const q = store.list("quotes", t.id).find(x => x.publicToken === token);
+        if (q) { found = q; foundTenant = t; break; }
+      }
+      if (!found) return sendJson(res, 404, { ok: false, error: "Offerte niet gevonden" });
+      const today = new Date().toISOString().slice(0, 10);
+      const status = (found.status === "verzonden" && found.validUntil && found.validUntil < today) ? "verlopen" : found.status;
+      sendJson(res, 200, { ok: true, quote: {
+        number: found.number, customerName: found.customerName,
+        quoteDate: found.quoteDate, validUntil: found.validUntil,
+        lines: found.lines, subtotal: found.subtotal, vatAmount: found.vatAmount, total: found.total,
+        notes: found.notes, status
+      }, company: { name: foundTenant.name || "WorkFlow Pro", vat: foundTenant.invoiceProfile?.vat || "" } });
+      return;
+    }
+    if (pubQuoteMatch && req.method === "POST") {
+      const token = pubQuoteMatch[1];
+      const body = await readBody(req).catch(() => ({}));
+      for (const t of store.data.tenants || []) {
+        const q = store.list("quotes", t.id).find(x => x.publicToken === token);
+        if (q) {
+          if (["aanvaard", "geweigerd"].includes(q.status)) return sendJson(res, 409, { ok: false, error: "Offerte is al verwerkt" });
+          const decision = body.decision === "reject" ? "geweigerd" : "aanvaard";
+          const patch = { status: decision, updatedAt: new Date().toISOString() };
+          if (decision === "aanvaard") patch.acceptedAt = new Date().toISOString(); else patch.rejectedAt = new Date().toISOString();
+          store.update("quotes", q.id, patch);
+          store.audit({ actor: q.customerName || "klant", tenantId: t.id, action: `quote_${decision}_public`, area: "offertes", detail: q.number });
+          return sendJson(res, 200, { ok: true, status: decision });
+        }
+      }
+      return sendJson(res, 404, { ok: false, error: "Offerte niet gevonden" });
     }
 
     if (url.pathname === "/api/auth/login" && req.method === "POST") {
@@ -1912,6 +2016,151 @@ http.createServer(async (req, res) => {
         return;
       }
 
+      // ── Offertes (quotes) ─────────────────────────────────────────────────────
+      if (action === "offertes" && req.method === "GET") {
+        assertCan(user, "billing");
+        const today = new Date().toISOString().slice(0, 10);
+        const rows = store.list("quotes", tenantId).map(q => {
+          if (q.status === "verzonden" && q.validUntil && q.validUntil < today) return { ...q, status: "verlopen" };
+          return q;
+        });
+        sendJson(res, 200, { ok: true, quotes: rows });
+        return;
+      }
+      if (action === "offertes" && req.method === "POST") {
+        assertCan(user, "billing");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        if (!body.customerName && !body.customerId) return sendJson(res, 400, { ok: false, error: "Klant is verplicht" });
+        if (!Array.isArray(body.lines) || !body.lines.length) return sendJson(res, 400, { ok: false, error: "Minimaal 1 offerteregel vereist" });
+        const existing = store.list("quotes", tenantId);
+        const year = new Date().getFullYear();
+        const seq = existing.filter(q => String(q.number || "").startsWith(`OFF-${year}-`)).length + 1;
+        const number = `OFF-${year}-${String(seq).padStart(3, "0")}`;
+        const lines = body.lines.map(l => {
+          const qty = Number(l.qty || 1);
+          const unitPrice = Number(l.unitPrice || 0);
+          const vatRate = Number(l.vatRate ?? 21);
+          const lineSubtotal = qty * unitPrice;
+          const lineVat = lineSubtotal * vatRate / 100;
+          return { description: l.description || "", qty, unitPrice, vatRate, lineSubtotal, lineVat, lineTotal: lineSubtotal + lineVat };
+        });
+        const subtotal = lines.reduce((s, l) => s + l.lineSubtotal, 0);
+        const vatAmount = lines.reduce((s, l) => s + l.lineVat, 0);
+        const total = subtotal + vatAmount;
+        const quote = store.insert("quotes", {
+          id: `quote_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+          tenantId,
+          number,
+          customerId: body.customerId || null,
+          customerName: body.customerName || "",
+          customerAddress: body.customerAddress || "",
+          customerVatNumber: body.customerVatNumber || "",
+          status: "concept",
+          quoteDate: body.quoteDate || new Date().toISOString().slice(0, 10),
+          validUntil: body.validUntil || new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
+          lines, subtotal, vatAmount, total,
+          notes: body.notes || "",
+          publicToken: crypto.randomBytes(16).toString("hex"),
+          sentAt: null, acceptedAt: null, rejectedAt: null,
+          invoiceId: null, workorderId: null,
+          createdBy: user.email,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+        store.audit({ actor: user.email, tenantId, action: "quote_created", area: "offertes", detail: `${number} — €${total.toFixed(2)}` });
+        sendJson(res, 201, { ok: true, quote });
+        return;
+      }
+      const quoteSendMatch = action.match(/^offertes\/([^/]+)\/send$/);
+      if (quoteSendMatch && req.method === "POST") {
+        assertCan(user, "billing");
+        const q = store.get("quotes", quoteSendMatch[1]);
+        if (!q || q.tenantId !== tenantId) return sendJson(res, 404, { ok: false, error: "Offerte niet gevonden" });
+        const updated = store.update("quotes", q.id, { status: q.status === "concept" ? "verzonden" : q.status, sentAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+        const acceptUrl = `${config.appUrl}/offerte/${q.publicToken}`;
+        // E-mail (log-fallback tot echte provider geconfigureerd is)
+        try {
+          const cust = q.customerId ? store.get("customers", q.customerId) : null;
+          const to = cust?.email;
+          if (to) sendMail({ to, subject: `Offerte ${q.number} van ${tenant.name || "WorkFlow Pro"}`, text: `Bekijk en aanvaard je offerte: ${acceptUrl}`, html: `<p>Beste,</p><p>Uw offerte <strong>${q.number}</strong> (totaal €${q.total.toFixed(2)}) staat klaar.</p><p><a href="${acceptUrl}">Bekijk en aanvaard de offerte</a></p>` });
+        } catch (_) {}
+        store.audit({ actor: user.email, tenantId, action: "quote_sent", area: "offertes", detail: q.number });
+        sendJson(res, 200, { ok: true, quote: updated, acceptUrl });
+        return;
+      }
+      const quoteConvertMatch = action.match(/^offertes\/([^/]+)\/convert$/);
+      if (quoteConvertMatch && req.method === "POST") {
+        assertCan(user, "billing");
+        const body = await readBody(req);
+        const q = store.get("quotes", quoteConvertMatch[1]);
+        if (!q || q.tenantId !== tenantId) return sendJson(res, 404, { ok: false, error: "Offerte niet gevonden" });
+        if (body.target === "workorder") {
+          const wos = store.list("workorders", tenantId);
+          const yr = new Date().getFullYear();
+          const woNum = `WO-${yr}-${String(wos.filter(w => (w.number||"").startsWith(`WO-${yr}-`)).length + 1).padStart(3, "0")}`;
+          const wo = store.insert("workorders", {
+            id: `wo_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+            tenantId, number: woNum,
+            title: `Uit offerte ${q.number}`,
+            clientName: q.customerName, customerId: q.customerId || null,
+            status: "open", priority: "normaal",
+            description: (q.lines || []).map(l => `${l.qty}× ${l.description}`).join("\n"),
+            quoteId: q.id, createdBy: user.id, createdAt: new Date().toISOString()
+          });
+          store.update("quotes", q.id, { workorderId: wo.id, updatedAt: new Date().toISOString() });
+          store.audit({ actor: user.email, tenantId, action: "quote_to_workorder", area: "offertes", detail: `${q.number} → ${woNum}` });
+          sendJson(res, 201, { ok: true, workorder: wo });
+          return;
+        }
+        // default: naar factuur
+        const inv = store.list("invoices", tenantId);
+        const yr = new Date().getFullYear();
+        const invNum = `${yr}-${String(inv.filter(i => String(i.number||"").startsWith(String(yr))).length + 1).padStart(3, "0")}`;
+        const invoice = store.insert("invoices", {
+          id: `inv_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+          tenantId, number: invNum,
+          customerId: q.customerId || null, customerName: q.customerName,
+          customerAddress: q.customerAddress, customerVatNumber: q.customerVatNumber,
+          status: "open",
+          invoiceDate: new Date().toISOString().slice(0, 10),
+          dueDate: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
+          lines: q.lines, subtotal: q.subtotal, vatAmount: q.vatAmount, total: q.total,
+          notes: `Op basis van offerte ${q.number}`, quoteId: q.id,
+          paidAt: null, sentAt: null, createdBy: user.email,
+          createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
+        });
+        store.update("quotes", q.id, { invoiceId: invoice.id, updatedAt: new Date().toISOString() });
+        store.audit({ actor: user.email, tenantId, action: "quote_to_invoice", area: "offertes", detail: `${q.number} → ${invNum}` });
+        sendJson(res, 201, { ok: true, invoice });
+        return;
+      }
+      const quoteItemMatch = action.match(/^offertes\/([^/]+)$/);
+      if (quoteItemMatch && req.method === "PATCH") {
+        assertCan(user, "billing");
+        const body = await readBody(req);
+        const q = store.get("quotes", quoteItemMatch[1]);
+        if (!q || q.tenantId !== tenantId) return sendJson(res, 404, { ok: false, error: "Offerte niet gevonden" });
+        const patch = { updatedAt: new Date().toISOString() };
+        ["status", "notes", "validUntil", "quoteDate", "customerAddress", "customerVatNumber"].forEach(k => { if (body[k] !== undefined) patch[k] = body[k]; });
+        if (body.status === "aanvaard" && !q.acceptedAt) patch.acceptedAt = new Date().toISOString();
+        if (body.status === "geweigerd" && !q.rejectedAt) patch.rejectedAt = new Date().toISOString();
+        const updated = store.update("quotes", q.id, patch);
+        store.audit({ actor: user.email, tenantId, action: `quote_${patch.status||"updated"}`, area: "offertes", detail: q.number });
+        sendJson(res, 200, { ok: true, quote: updated });
+        return;
+      }
+      if (quoteItemMatch && req.method === "DELETE") {
+        assertCan(user, "billing");
+        assertInteractiveUser(user);
+        const q = store.get("quotes", quoteItemMatch[1]);
+        if (!q || q.tenantId !== tenantId) return sendJson(res, 404, { ok: false, error: "Offerte niet gevonden" });
+        store.remove("quotes", q.id);
+        store.audit({ actor: user.email, tenantId, action: "quote_deleted", area: "offertes", detail: q.number });
+        sendJson(res, 200, { ok: true });
+        return;
+      }
+
       // ── Locaties / Venues ─────────────────────────────────────────────────────
       if (action === "venues" && req.method === "GET") {
         assertCan(user, "venues");
@@ -2334,6 +2583,13 @@ http.createServer(async (req, res) => {
 
     if (url.pathname.startsWith("/api/")) {
       sendJson(res, 404, { ok: false, error: "Unknown API route" });
+      return;
+    }
+
+    // Publieke offerte-pagina (self-contained, geen login)
+    if (url.pathname.startsWith("/offerte/")) {
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      res.end(publicQuotePage());
       return;
     }
 
