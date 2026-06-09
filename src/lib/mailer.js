@@ -20,6 +20,25 @@ const https = require("https");
 const EMAIL_PROVIDER = (process.env.EMAIL_PROVIDER || "log").toLowerCase();
 const EMAIL_FROM     = process.env.EMAIL_FROM || "WorkFlow Pro <noreply@workflowpro.app>";
 
+// Runtime-config (gezet door de server vanuit de platform-config in de DB).
+// Heeft voorrang op env-vars zodat de super-admin sleutels live kan wijzigen.
+let RUNTIME = null;
+function setRuntimeConfig(emailCfg) {
+  if (!emailCfg) { RUNTIME = null; return; }
+  RUNTIME = {
+    provider: String(emailCfg.provider || "").toLowerCase() || null,
+    apiKey: emailCfg.apiKey || null,
+    from: emailCfg.from || null,
+  };
+}
+function activeProvider() { return (RUNTIME && RUNTIME.provider) || EMAIL_PROVIDER; }
+function activeFrom() { return (RUNTIME && RUNTIME.from) || EMAIL_FROM; }
+function activeKey() { return (RUNTIME && RUNTIME.apiKey) || null; }
+function realKey(envName) {
+  const k = activeKey() || process.env[envName];
+  return (k && !/DUMMY/.test(k)) ? k : null;
+}
+
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 function jsonPost(hostname, path, headers, body) {
@@ -67,10 +86,10 @@ async function sendViaLog(mail) {
 }
 
 async function sendViaResend(mail) {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) throw new Error("RESEND_API_KEY is niet geconfigureerd");
+  const key = realKey("RESEND_API_KEY");
+  if (!key) throw new Error("RESEND_API_KEY is niet geconfigureerd (nog dummy)");
   return jsonPost("api.resend.com", "/emails", { Authorization: `Bearer ${key}` }, {
-    from: mail.from || EMAIL_FROM,
+    from: mail.from || activeFrom(),
     to: Array.isArray(mail.to) ? mail.to : [mail.to],
     subject: mail.subject,
     html: mail.html,
@@ -79,8 +98,8 @@ async function sendViaResend(mail) {
 }
 
 async function sendViaSendGrid(mail) {
-  const key = process.env.SENDGRID_API_KEY;
-  if (!key) throw new Error("SENDGRID_API_KEY is niet geconfigureerd");
+  const key = realKey("SENDGRID_API_KEY");
+  if (!key) throw new Error("SENDGRID_API_KEY is niet geconfigureerd (nog dummy)");
   const to = Array.isArray(mail.to) ? mail.to : [mail.to];
   return jsonPost("api.sendgrid.com", "/v3/mail/send", { Authorization: `Bearer ${key}` }, {
     personalizations: [{ to: to.map(e => ({ email: e })) }],
@@ -105,16 +124,18 @@ async function sendMail(mail) {
     throw new Error("sendMail: 'to' en 'subject' zijn verplicht");
   }
 
+  const provider = activeProvider();
   try {
-    switch (EMAIL_PROVIDER) {
+    switch (provider) {
       case "resend":    return await sendViaResend(mail);
       case "sendgrid":  return await sendViaSendGrid(mail);
       default:          return await sendViaLog(mail);   // "log" + onbekende waarden
     }
   } catch (err) {
-    // E-mail-fouten loggen maar NOOIT de request laten crashen
-    console.error(`[mailer] Verzenden mislukt (${EMAIL_PROVIDER}): ${err.message}`);
-    return { ok: false, provider: EMAIL_PROVIDER, error: err.message };
+    // E-mail-fouten loggen maar NOOIT de request laten crashen; val terug op log
+    console.error(`[mailer] Verzenden mislukt (${provider}): ${err.message} — fallback naar log`);
+    await sendViaLog(mail).catch(() => {});
+    return { ok: false, provider, error: err.message };
   }
 }
 
@@ -169,4 +190,4 @@ function wrapHtml(title, bodyHtml) {
 </html>`;
 }
 
-module.exports = { sendMail, wrapHtml, EMAIL_FROM };
+module.exports = { sendMail, wrapHtml, EMAIL_FROM, setRuntimeConfig };

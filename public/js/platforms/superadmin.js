@@ -243,6 +243,9 @@
 
       <div class="sa-nav-divider"></div>
       <div class="sa-nav-section">Systeem</div>
+      <button class="sa-nav-item" data-view="integrations">
+        <svg viewBox="0 0 24 24"><path d="M22 7h-7V2H9v5H2v15h20V7zM11 4h2v3h-2V4zm9 16H4V9h16v11zM9 13h2v2H9v-2zm4 0h2v2h-2v-2z"/></svg>Integraties
+      </button>
       <button class="sa-nav-item" data-view="system">
         <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>Systeem
         <span class="nav-badge" id="navBadgeErrors" style="display:none">0</span>
@@ -294,7 +297,7 @@
         _view = btn.dataset.view;
         document.getElementById("saTopTitle").textContent = {
           dashboard:"Dashboard", tenants:"Tenants", users:"Gebruikers",
-          billing:"Facturatie / MRR", system:"Systeem", support:"Support",
+          billing:"Facturatie / MRR", integrations:"Integraties", system:"Systeem", support:"Support",
           audit:"Audit Log", settings:"Instellingen"
         }[_view] || _view;
         document.getElementById("saTopActions").innerHTML = "";
@@ -316,7 +319,7 @@
   }
 
   // ── Router ─────────────────────────────────────────────────
-  const VIEWS = { dashboard, tenants, users, billing, system, support, audit, settings };
+  const VIEWS = { dashboard, tenants, users, billing, integrations, system, support, audit, settings };
   function renderView() { (VIEWS[_view] || dashboard)(); }
 
   // ══════════════════════════════════════════════════════════
@@ -970,6 +973,95 @@ ${locked?`<div class="sa-alert alert-warn">⚠️ Account is vergrendeld na teve
   // ══════════════════════════════════════════════════════════
   // VIEW: Instellingen
   // ══════════════════════════════════════════════════════════
+  async function integrations() {
+    const c = content(); c.innerHTML = loader();
+    try {
+      const d = await api("/api/admin/integrations");
+      const cfg = d.config || {};
+      const statusPill = ok => ok ? badge("Geconfigureerd","badge-green") : badge("Dummy","badge-orange");
+      c.innerHTML = `
+<div class="sa-card">
+  <div class="sa-card-head"><div class="sa-card-title">Integraties &amp; API-sleutels</div><div class="sa-card-sub">Beheer hier de echte sleutels. Standaard staan dummy-waarden ingesteld zodat niets crasht.</div></div>
+  <div style="padding:16px;display:flex;flex-direction:column;gap:8px">
+    <div style="font-size:12px;color:#92400e;background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:10px 12px">
+      ⚠️ Geheime sleutels worden gemaskeerd getoond. Laat een veld op de gemaskeerde waarde staan om het ongewijzigd te laten; typ een nieuwe waarde om te overschrijven.
+    </div>
+  </div>
+</div>
+
+<form id="saIntegrationsForm">
+  <div class="sa-card">
+    <div class="sa-card-head"><div class="sa-card-title">💳 Stripe — betalingen</div><div class="sa-card-sub">${statusPill(cfg.stripe?.configured)} ${cfg.stripe?.mode?badge(cfg.stripe.mode, cfg.stripe.mode==="live"?"badge-green":"badge-blue"):""}</div></div>
+    <div style="padding:16px;display:grid;gap:12px">
+      <label class="sa-fld"><span>Secret key</span><input name="stripe.secretKey" value="${esc(cfg.stripe?.secretKey||"")}" placeholder="sk_live_..."></label>
+      <label class="sa-fld"><span>Webhook secret</span><input name="stripe.webhookSecret" value="${esc(cfg.stripe?.webhookSecret||"")}" placeholder="whsec_..."></label>
+    </div>
+  </div>
+
+  <div class="sa-card">
+    <div class="sa-card-head"><div class="sa-card-title">📧 Peppol — e-facturatie (BE)</div><div class="sa-card-sub">${statusPill(cfg.peppol?.configured)}</div></div>
+    <div style="padding:16px;display:grid;gap:12px">
+      <label class="sa-fld"><span>Provider</span>
+        <select name="peppol.provider">
+          ${["mock","billit","digiteal","unifiedpost"].map(p=>`<option value="${p}" ${cfg.peppol?.provider===p?"selected":""}>${p}</option>`).join("")}
+        </select>
+      </label>
+      <label class="sa-fld"><span>API-sleutel</span><input name="peppol.apiKey" value="${esc(cfg.peppol?.apiKey||"")}" placeholder="peppol_..."></label>
+    </div>
+  </div>
+
+  <div class="sa-card">
+    <div class="sa-card-head"><div class="sa-card-title">✉️ E-mail — verzending</div><div class="sa-card-sub">${statusPill(cfg.email?.configured)}</div></div>
+    <div style="padding:16px;display:grid;gap:12px">
+      <label class="sa-fld"><span>Provider</span>
+        <select name="email.provider">
+          ${["log","resend","sendgrid"].map(p=>`<option value="${p}" ${cfg.email?.provider===p?"selected":""}>${p}</option>`).join("")}
+        </select>
+      </label>
+      <label class="sa-fld"><span>API-sleutel</span><input name="email.apiKey" value="${esc(cfg.email?.apiKey||"")}" placeholder="re_... (Resend) / SG... (SendGrid)"></label>
+      <label class="sa-fld"><span>Afzender</span><input name="email.from" value="${esc(cfg.email?.from||"")}" placeholder="WorkFlow Pro &lt;noreply@bedrijf.be&gt;"></label>
+    </div>
+  </div>
+
+  <div class="sa-card">
+    <div class="sa-card-head"><div class="sa-card-title">🏢 KBO — bedrijfsopzoeking</div><div class="sa-card-sub">${statusPill(cfg.kbo?.configured)}</div></div>
+    <div style="padding:16px;display:grid;gap:12px">
+      <label class="sa-fld"><span>Provider</span>
+        <select name="kbo.provider">
+          ${["mock","cbe-open-data"].map(p=>`<option value="${p}" ${cfg.kbo?.provider===p?"selected":""}>${p}</option>`).join("")}
+        </select>
+      </label>
+      <label class="sa-fld"><span>API-sleutel (optioneel)</span><input name="kbo.apiKey" value="${esc(cfg.kbo?.apiKey||"")}" placeholder="optioneel"></label>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:10px;align-items:center;margin:4px 0 24px">
+    <button type="submit" class="sa-btn btn-primary">Opslaan</button>
+    <span id="saIntStatus" style="font-size:13px"></span>
+  </div>
+</form>
+<style>
+.sa-fld{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:600;color:#334155}
+.sa-fld input,.sa-fld select{padding:9px 11px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;font-weight:400}
+.sa-fld input:focus,.sa-fld select:focus{outline:none;border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.12)}
+</style>`;
+
+      document.getElementById("saIntegrationsForm").addEventListener("submit", async e => {
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        const body = { stripe:{}, peppol:{}, email:{}, kbo:{} };
+        for (const [k,v] of fd.entries()) { const [s,f]=k.split("."); if(body[s]) body[s][f]=v; }
+        const st = document.getElementById("saIntStatus");
+        st.textContent = "Opslaan…"; st.style.color = "#64748b";
+        try {
+          await api("/api/admin/integrations", { method:"PUT", body: JSON.stringify(body) });
+          st.textContent = "✓ Opgeslagen"; st.style.color = "#15803d";
+          setTimeout(() => integrations(), 700);
+        } catch(err) { st.textContent = "Fout: "+err.message; st.style.color = "#dc2626"; }
+      });
+    } catch(e) { content().innerHTML = err(e); }
+  }
+
   async function settings() {
     const c = content(); c.innerHTML = loader();
     try {

@@ -67,7 +67,8 @@ const { salesSummary, salesLaunchReadiness, advanceLead, addPartnerNote } = requ
 const { goLiveReadiness } = require("./modules/go-live");
 const { listReports, getReport, generateStatusBundle } = require("./modules/reports");
 const { listAuditEvents } = require("./modules/audit");
-const { sendMail } = require("./lib/mailer");
+const { sendMail, setRuntimeConfig } = require("./lib/mailer");
+const { loadPlatformConfig, publicPlatformConfig, savePlatformConfig } = require("./modules/platform-config");
 const {
   leaveSubmittedToAdmin,
   leaveReviewedToEmployee,
@@ -476,6 +477,26 @@ http.createServer(async (req, res) => {
 
     // Platform-brede MFA-afdwinging (super_admin): schrijft alle admin-accounts
     // (tenant_admin + super_admin) zonder MFA in. Retourneert secrets + recovery codes.
+    // Platform-integraties (super-admin console): Stripe / Peppol / e-mail / KBO
+    if (url.pathname === "/api/admin/integrations" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertSuperAdmin(user);
+      sendJson(res, 200, { ok: true, config: publicPlatformConfig(store) });
+      return;
+    }
+    if (url.pathname === "/api/admin/integrations" && req.method === "PUT") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertSuperAdmin(user);
+      const body = await readBody(req);
+      const config2 = savePlatformConfig(store, body, user);
+      // Pas e-mailconfig meteen toe op de mailer
+      try { setRuntimeConfig(loadPlatformConfig(store).email); } catch (_) {}
+      sendJson(res, 200, { ok: true, config: config2 });
+      return;
+    }
+
     if (url.pathname === "/api/admin/mfa/enforce" && req.method === "POST") {
       const user = actor(req);
       if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
@@ -2603,6 +2624,9 @@ http.createServer(async (req, res) => {
   console.log(`  Opslag    : ${config.storageAdapter}`);
   console.log(`  Versie    : ${config.appVersion} (${config.commitSha})`);
   console.log(`  MFA-eis   : ${process.env.REQUIRE_ADMIN_MFA === "false" ? "uitgeschakeld (dev)" : "verplicht voor admins"}`);
+
+  // Pas opgeslagen e-mailconfig toe op de mailer (DB overschrijft env)
+  try { setRuntimeConfig(loadPlatformConfig(store).email); } catch (_) {}
 
   // Auto-backup bij opstarten (max 1 per dag per tenant)
   setImmediate(() => {
