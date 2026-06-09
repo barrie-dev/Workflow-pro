@@ -14,6 +14,7 @@ const {
   safeUser,
   createMfaSetup,
   verifyMfaSetup,
+  enforceMfa,
   resetLoginFailures,
   assertTenant,
   assertCan,
@@ -365,6 +366,20 @@ http.createServer(async (req, res) => {
       const body = await readBody(req);
       const result = verifyMfaSetup(store, user, body.code);
       sendJson(res, 200, { ok: true, user: result.user, recoveryCodes: result.recoveryCodes });
+      return;
+    }
+
+    // Platform-brede MFA-afdwinging (super_admin): schrijft alle admin-accounts
+    // (tenant_admin + super_admin) zonder MFA in. Retourneert secrets + recovery codes.
+    if (url.pathname === "/api/admin/mfa/enforce" && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertSuperAdmin(user);
+      const admins = (store.data.users || []).filter(u =>
+        ["tenant_admin", "super_admin"].includes(u.role) && u.active !== false && !(u.mfaEnabled && u.mfaEnforced)
+      );
+      const enrolled = admins.map(u => enforceMfa(store, u));
+      sendJson(res, 200, { ok: true, enrolled, count: enrolled.length });
       return;
     }
 
@@ -897,6 +912,20 @@ http.createServer(async (req, res) => {
         return;
       }
       // POST /admin/backfill — data quality fixes (nummers, notificaties, etc.)
+      // MFA verplichten voor alle beheerders van deze tenant (self-service).
+      // Retourneert per beheerder de secret/otpauth + recovery codes.
+      if (action === "admin/mfa/enforce" && req.method === "POST") {
+        assertCan(user, "settings");
+        assertInteractiveUser(user);
+        const admins = store.list("users", tenantId).filter(u =>
+          u.role === "tenant_admin" && u.active !== false && !(u.mfaEnabled && u.mfaEnforced)
+        );
+        const enrolled = admins.map(u => enforceMfa(store, u));
+        store.audit({ actor: user.email, tenantId, action: "mfa_enforced_all", area: "settings", detail: `${enrolled.length} beheerders` });
+        sendJson(res, 200, { ok: true, enrolled, count: enrolled.length });
+        return;
+      }
+
       if (action === "admin/backfill" && req.method === "POST") {
         assertCan(user, "settings");
         const results = {};

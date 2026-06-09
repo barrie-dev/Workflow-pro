@@ -24,8 +24,10 @@ targets.forEach(email => {
   if (user) {
     user.passwordHash = hashPassword(newPass);
     user.mfaEnabled = false;
+    user.mfaEnforced = false;
     user.mfaSecret = null;
     user.mfaPendingSecret = null;
+    user.recoveryCodes = [];
     user.loginAttempts = 0;
     user.lockedUntil = null;
     console.log("✓ Reset:", email);

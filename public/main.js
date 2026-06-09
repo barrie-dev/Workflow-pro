@@ -2541,18 +2541,23 @@ async function submitLoginForm(form) {
   try {
     // Stap 1: authenticeer en haal token op
     const payload = { email: data.email, password: data.password };
+    if (data.mfaCode && data.mfaCode.trim()) payload.mfaCode = data.mfaCode.trim();
     const result = await api("/api/auth/login", { method: "POST", body: JSON.stringify(payload) });
 
     if (!result.ok && !result.token) {
       throw new Error(result.error || "Inloggen mislukt");
     }
 
-    if (result.mfaRequired) {
-      const code = window.prompt("Voer uw MFA-code in:");
-      if (!code) return;
-      const result2 = await api("/api/auth/login", { method: "POST", body: JSON.stringify({ ...payload, mfaCode: code }) });
-      if (!result2.token) throw new Error(result2.error || "MFA verificatie mislukt");
-      Object.assign(result, result2);
+    // MFA vereist → toon inline codeveld (geen prompt). Tweede submit stuurt de code mee.
+    if (result.mfaRequired && !data.mfaCode) {
+      const mfaField = el("loginMfaField");
+      if (mfaField) {
+        mfaField.style.display = "";
+        const input = mfaField.querySelector("input");
+        if (input) { input.value = ""; setTimeout(() => input.focus(), 50); }
+      }
+      el("loginNotice").textContent = "Voer je authenticator-code in om in te loggen.";
+      return;
     }
 
     // Stap 2: token opslaan en state zetten

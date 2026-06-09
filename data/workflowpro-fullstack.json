@@ -19,36 +19,79 @@
   ],
   "users": [
     {
-      "mfaEnabled": false,
-      "mfaEnforced": false,
-      "lastLoginAt": "2026-05-28T20:14:16.112Z",
+      "mfaEnabled": true,
+      "mfaEnforced": true,
+      "lastLoginAt": "2026-06-09T18:12:53.183Z",
       "failedLoginCount": 0,
       "lockedUntil": null,
       "id": "u_super",
       "tenantId": null,
       "name": "Super Admin",
       "email": "super@workflowpro.be",
-      "passwordHash": "842d8f6b4b07874777af4c229c25c1a0:cc1269ac1a4f75e50d5f034bf42cee48a0492e3af83e9197419632827d2c2bd2",
+      "passwordHash": "e0e9d9d198549be4c58725c3fbca18ed:0f46113124247f71c89a2efee6a29f5c4eefe255503b8c27574de586fdbd5aab",
       "role": "super_admin",
       "permissions": [
         "*"
       ],
       "active": true,
-      "mfaSecret": null,
-      "mfaPendingSecret": null,
-      "loginAttempts": 0
+      "mfaSecret": "t3O6BTy0LiIPIE+mpvbcqFv2amrWcvRqyFlTZX6HqwsWmFlhQiRGYrB8qrHCjKAc4O3ZPWJJf5eEuSSI",
+      "mfaPendingSecret": "",
+      "loginAttempts": 0,
+      "recoveryCodes": [
+        {
+          "hash": "9059c6252decf5b2d88ad96702fe70b6:b62f8c7127aebd5e7de7609048644b8c109c37c4466279df92d21a997ac30e23",
+          "usedAt": null,
+          "createdAt": "2026-06-09T18:12:53.270Z"
+        },
+        {
+          "hash": "8af04d139e3c5ade3bd7e31932d06d96:fe9bf6a2cbde5936bbe965780fb123736a5fc48ae46faa367c22d597df1bdd5d",
+          "usedAt": null,
+          "createdAt": "2026-06-09T18:12:53.318Z"
+        },
+        {
+          "hash": "3fabd30ce07943a747a28855b400166c:c324791e4e2f41162b1d9aed620fc9aa648aea50d15aa5994a9308a857915e19",
+          "usedAt": null,
+          "createdAt": "2026-06-09T18:12:53.358Z"
+        },
+        {
+          "hash": "17a1fddaa8c6a6f0f7b83362b78b6de2:28528630eaddc70316176cd7fdca56bb72a9a6d124301c5def35de5621420aac",
+          "usedAt": null,
+          "createdAt": "2026-06-09T18:12:53.403Z"
+        },
+        {
+          "hash": "97c3b4e9188663a31c5773af01589676:d9484af10b033d106f7011497737491fa7174cc40b8222fdb2410f286763f883",
+          "usedAt": null,
+          "createdAt": "2026-06-09T18:12:53.444Z"
+        },
+        {
+          "hash": "d46c8ec873ccfa0bb89c50366768dbe8:43e568f67e3b73c828d5cc8842876126fd5697e499ef1edde0981398a5fc18ac",
+          "usedAt": null,
+          "createdAt": "2026-06-09T18:12:53.489Z"
+        },
+        {
+          "hash": "d76b4a7bd7c3ac3c77d52164920a5908:d894e1271138c31ac0141c0ed8e5a5e76a68cdd62346779215b90453ba2014d6",
+          "usedAt": null,
+          "createdAt": "2026-06-09T18:12:53.535Z"
+        },
+        {
+          "hash": "0807e8753a64b70397ba6ed541a11f9b:0dbdeaa00bc416daa5f3e608eb28307977081dc2137fbec3ac4464fa485064b4",
+          "usedAt": null,
+          "createdAt": "2026-06-09T18:12:53.584Z"
+        }
+      ],
+      "updatedAt": "2026-06-09T18:12:53.584Z"
     },
     {
-      "mfaEnabled": false,
-      "mfaEnforced": false,
-      "lastLoginAt": "2026-06-09T17:00:45.319Z",
+      "mfaEnabled": true,
+      "mfaEnforced": true,
+      "lastLoginAt": "2026-06-09T18:12:54.159Z",
       "failedLoginCount": 0,
       "lockedUntil": null,
       "id": "u_admin",
       "tenantId": "t_demo",
       "name": "Tenant Admin",
       "email": "admin@demobouw.be",
-      "passwordHash": "f14f23b6bb336067471f9af6f75abefe:edd78e3b34b1ab39bbcffcfcf3280b802e27f78c319a7d43606362e58ca3162b",
+      "passwordHash": "6af18de96d5d3b6a726d6461bddb5450:04724a58a567594443b0e94ef4b6efb55d5da64d3944631dca5fbfcb0c93fe6e",
       "role": "tenant_admin",
       "permissions": [
         "tenants",
@@ -70,23 +113,65 @@
         "leaves"
       ],
       "active": true,
-      "updatedAt": "2026-06-09T16:10:11.302Z",
+      "updatedAt": "2026-06-09T18:12:54.127Z",
       "failedLogins": 0,
-      "mfaSecret": null,
-      "mfaPendingSecret": null,
-      "loginAttempts": 0
+      "mfaSecret": "S981Fg/YnPR6ByHxYfu55V9RuxFgWcvHTVN3scCsyixywqeK5Vu2n/a5zslbOgvzjmNYiejPd8s/BC15",
+      "mfaPendingSecret": "",
+      "loginAttempts": 0,
+      "recoveryCodes": [
+        {
+          "hash": "b63373aa3ce09c8736ff09ab80ee6c21:955c244b485e8eba22f5dd732af16332ca9ecd8a4e14bcc408d92ce9ec7bd730",
+          "usedAt": "2026-06-09T18:12:54.127Z",
+          "createdAt": "2026-06-09T18:12:53.675Z"
+        },
+        {
+          "hash": "4f8e904602aba54ead88dd760d310360:b62dd756fbcc5ddfe1fdba3c02db134b73f238a4021430b1953fb2c2f3f0e58e",
+          "usedAt": null,
+          "createdAt": "2026-06-09T18:12:53.718Z"
+        },
+        {
+          "hash": "16135ee823abe201ad78374e836d8a8b:fda95a11f42993b9c12f85e839331679204de354876a263a3dc3dcb5bc866592",
+          "usedAt": null,
+          "createdAt": "2026-06-09T18:12:53.759Z"
+        },
+        {
+          "hash": "36303576f6fdc6c4ce612807a0d7585e:ed68048033fde05e3728e3a35eee333b983927a33319f2a5806ebbc87917d16b",
+          "usedAt": null,
+          "createdAt": "2026-06-09T18:12:53.800Z"
+        },
+        {
+          "hash": "b6e6944d3e9f5e8ceb8f71f9d15eea72:415bd7e76cad32b634c148e1e76256662fb21b76f6f9e156a74866e5d2d367cb",
+          "usedAt": null,
+          "createdAt": "2026-06-09T18:12:53.843Z"
+        },
+        {
+          "hash": "fc43d7c02fd02b6200440f4d755e031e:9193b768b68352f774d3f112222bfbb17b083f5b72c71d9a4f799eb714d1faab",
+          "usedAt": null,
+          "createdAt": "2026-06-09T18:12:53.887Z"
+        },
+        {
+          "hash": "fc180a02f62005aa270b90dfa140c6d5:abf2edb44117ab028a299d9e1930d4d8aaf3931e19051ce49c7ffb37b187ed11",
+          "usedAt": null,
+          "createdAt": "2026-06-09T18:12:53.926Z"
+        },
+        {
+          "hash": "b31eaff0febebb6b775e54a24baded3f:434634859f151a4bff2cbcb9943a03424881187f58dfe035efb02c2f5103bf5c",
+          "usedAt": null,
+          "createdAt": "2026-06-09T18:12:53.965Z"
+        }
+      ]
     },
     {
       "mfaEnabled": false,
       "mfaEnforced": false,
-      "lastLoginAt": "2026-05-12T18:01:17.711Z",
+      "lastLoginAt": "2026-06-09T17:14:29.261Z",
       "failedLoginCount": 0,
       "lockedUntil": null,
       "id": "u_manager",
       "tenantId": "t_demo",
       "name": "Thomas De Smedt",
       "email": "manager@demobouw.be",
-      "passwordHash": "57ccd702bc0cff13ad11505ebfbe780b:242a793268b5cb607cd4278f2d4da07032504daba55434e4fc68e4db22dbea69",
+      "passwordHash": "168f419b7bf9fddf989ec339ec260af8:8db372a831df9bef3b158ca9a0cdb57f7e11e6d65becdd5fa4ba92ddd279dd88",
       "role": "manager",
       "permissions": [
         "employees",
@@ -105,19 +190,20 @@
       "active": true,
       "mfaSecret": null,
       "mfaPendingSecret": null,
-      "loginAttempts": 0
+      "loginAttempts": 0,
+      "recoveryCodes": []
     },
     {
       "mfaEnabled": false,
       "mfaEnforced": false,
-      "lastLoginAt": "2026-05-12T18:01:17.856Z",
+      "lastLoginAt": "2026-06-09T17:15:13.286Z",
       "failedLoginCount": 0,
       "lockedUntil": null,
       "id": "u_emp1",
       "tenantId": "t_demo",
       "name": "Jan Janssen",
       "email": "jan@demobouw.be",
-      "passwordHash": "7ed661483148ca88a3ba30f2bdfbe67c:3a25edda270f6c0bd51a5e620f9ec5fd6b10f92507ba40adb46f0410d307e7e7",
+      "passwordHash": "65c13647bd6977600a4e849c3b25aef4:e7cf995c075022d3be96f15e2ac329cb55972762ea32559203970896ed231c82",
       "role": "employee",
       "permissions": [
         "own:planning",
@@ -132,7 +218,8 @@
       "active": true,
       "mfaSecret": null,
       "mfaPendingSecret": null,
-      "loginAttempts": 0
+      "loginAttempts": 0,
+      "recoveryCodes": []
     },
     {
       "mfaEnabled": false,
@@ -144,7 +231,7 @@
       "tenantId": "t_demo",
       "name": "Sara Peeters",
       "email": "sara@demobouw.be",
-      "passwordHash": "52da3001304be10367bae8c2540fc282:58f407c9d59d30aa0d297da4236ee9874d26119387ba341fc07d0133017f3b8b",
+      "passwordHash": "206c2676c8d0169132b10408b9f6e7f6:177d86b5e91fc350b2788236e5124c8ea9049c4d9952d60aab4c936576f09073",
       "role": "employee",
       "permissions": [
         "own:planning",
@@ -159,7 +246,8 @@
       "active": true,
       "mfaSecret": null,
       "mfaPendingSecret": null,
-      "loginAttempts": 0
+      "loginAttempts": 0,
+      "recoveryCodes": []
     }
   ],
   "roles": [
@@ -668,6 +756,179 @@
       "actor": "admin@demobouw.be",
       "tenantId": "t_demo",
       "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1781025269263_e0bba5fc652718",
+      "at": "2026-06-09T17:14:29.263Z",
+      "actor": "manager@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1781025313288_4a592c62ca755",
+      "at": "2026-06-09T17:15:13.288Z",
+      "actor": "jan@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1781025400692_2a42af0140e7f8",
+      "at": "2026-06-09T17:16:40.692Z",
+      "actor": "super@workflowpro.be",
+      "tenantId": null,
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1781027890364_fc2d2e09ea2e68",
+      "at": "2026-06-09T17:58:10.364Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1781027890626_e3d35d1762ec5",
+      "at": "2026-06-09T17:58:10.626Z",
+      "actor": "super@workflowpro.be",
+      "tenantId": null,
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1781027891017_0435803797f9d8",
+      "at": "2026-06-09T17:58:11.017Z",
+      "actor": "super@workflowpro.be",
+      "tenantId": null,
+      "action": "mfa_enforced",
+      "area": "auth",
+      "detail": "u_super"
+    },
+    {
+      "id": "audit_1781027891383_baa7e0ba829cd",
+      "at": "2026-06-09T17:58:11.383Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "mfa_enforced",
+      "area": "auth",
+      "detail": "u_admin"
+    },
+    {
+      "id": "audit_1781028415043_f9708f776c4ed8",
+      "at": "2026-06-09T18:06:55.043Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "mfa_required",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1781028452038_b12fe8f60425d8",
+      "at": "2026-06-09T18:07:32.038Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "mfa_required",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1781028662851_56245283fa7ad8",
+      "at": "2026-06-09T18:11:02.851Z",
+      "actor": "super@workflowpro.be",
+      "tenantId": null,
+      "action": "mfa_required",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1781028674034_fb609cfd093718",
+      "at": "2026-06-09T18:11:14.034Z",
+      "actor": "super@workflowpro.be",
+      "tenantId": null,
+      "action": "mfa_required",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1781028694594_2f675504479bc8",
+      "at": "2026-06-09T18:11:34.594Z",
+      "actor": "super@workflowpro.be",
+      "tenantId": null,
+      "action": "mfa_required",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1781028694661_60f12369ed013",
+      "at": "2026-06-09T18:11:34.661Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "mfa_required",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1781028773094_e628fce4957048",
+      "at": "2026-06-09T18:12:53.094Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1781028773187_44fdbdf3f037d8",
+      "at": "2026-06-09T18:12:53.187Z",
+      "actor": "super@workflowpro.be",
+      "tenantId": null,
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1781028773588_35959f2e811e8",
+      "at": "2026-06-09T18:12:53.588Z",
+      "actor": "super@workflowpro.be",
+      "tenantId": null,
+      "action": "mfa_enforced",
+      "area": "auth",
+      "detail": "u_super"
+    },
+    {
+      "id": "audit_1781028773969_6482242bd47c98",
+      "at": "2026-06-09T18:12:53.969Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "mfa_enforced",
+      "area": "auth",
+      "detail": "u_admin"
+    },
+    {
+      "id": "audit_1781028774030_a93fc3f050a0c8",
+      "at": "2026-06-09T18:12:54.030Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "mfa_required",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1781028774135_905adcbbcebb28",
+      "at": "2026-06-09T18:12:54.135Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "mfa_recovery_code_used",
+      "area": "auth",
+      "detail": "u_admin"
+    },
+    {
+      "id": "audit_1781028774186_44e1e2fb09c248",
+      "at": "2026-06-09T18:12:54.186Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1781028801765_2ee357f4b007f",
+      "at": "2026-06-09T18:13:21.765Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "mfa_required",
       "area": "auth"
     }
   ],

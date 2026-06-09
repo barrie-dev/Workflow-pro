@@ -184,6 +184,27 @@ function consumeRecoveryCode(store, user, code) {
   return { ok: true };
 }
 
+// Admin-geïnitieerde MFA-afdwinging: genereert een secret, schakelt MFA
+// direct in + enforced, en maakt recovery codes. Retourneert de secret +
+// otpauth + recovery codes zodat de beheerder ze meteen kan opslaan/scannen.
+function enforceMfa(store, user) {
+  const secret = base32Encode(crypto.randomBytes(20));
+  const issuer = "WorkFlow Pro";
+  const label = `${issuer}:${user.email}`;
+  const otpauth = `otpauth://totp/${encodeURIComponent(label)}?secret=${secret}&issuer=${encodeURIComponent(issuer)}&digits=6&period=30`;
+  const recoveryCodes = createRecoveryCodes();
+  store.update("users", user.id, {
+    mfaSecret: encryptSecret(secret),
+    mfaPendingSecret: "",
+    mfaEnabled: true,
+    mfaEnforced: true,
+    recoveryCodes: recoveryCodes.map(value => ({ hash: hashPassword(value), usedAt: null, createdAt: new Date().toISOString() })),
+    updatedAt: new Date().toISOString()
+  });
+  store.audit({ actor: user.email, tenantId: user.tenantId, action: "mfa_enforced", area: "auth", detail: user.id });
+  return { id: user.id, email: user.email, name: user.name || user.email, secret, otpauth, recoveryCodes };
+}
+
 function createMfaSetup(store, user) {
   const secret = base32Encode(crypto.randomBytes(20));
   const issuer = "WorkFlow Pro";
@@ -308,6 +329,7 @@ module.exports = {
   safeUser,
   createMfaSetup,
   verifyMfaSetup,
+  enforceMfa,
   resetLoginFailures,
   can,
   assertTenant,

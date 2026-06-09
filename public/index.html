@@ -130,6 +130,11 @@
             <label class="login-label">Tenant code</label>
             <input class="login-input login-input-mono" name="tenantCode" autocomplete="organization" value="DEMOBouw" placeholder="DEMOBOUW">
           </div>
+          <div class="login-field" id="loginMfaField" style="display:none">
+            <label class="login-label">🛡️ Authenticator-code</label>
+            <input class="login-input login-input-mono" name="mfaCode" inputmode="numeric" autocomplete="one-time-code" maxlength="20" placeholder="6-cijferige code of recovery code" style="letter-spacing:2px;text-align:center">
+            <span class="login-forgot" style="cursor:default;color:#94a3b8">Open je authenticator-app of gebruik een recovery code</span>
+          </div>
           <div id="loginNotice" class="login-notice"></div>
           <button class="login-btn" type="submit">
             Inloggen

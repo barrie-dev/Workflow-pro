@@ -4132,8 +4132,10 @@ ${billing.status === "trial" ? `<div style="background:#fffbeb;border:1px solid 
       <div id="admMfaStatus" style="margin-bottom:12px;font-size:13px;color:#64748b;">Status laden…</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="adm-btn adm-btn-primary" id="admMfaSetup">🔐 MFA instellen</button>
+        <button class="adm-btn adm-btn-secondary" id="admMfaEnforce">🛡️ MFA verplichten voor beheerders</button>
         <button class="adm-btn adm-btn-secondary" id="admMfaDisable" style="display:none;">MFA uitschakelen</button>
       </div>
+      <div style="font-size:11.5px;color:#94A3B8;margin-top:8px;">MFA verplichten schakelt 2FA in voor álle beheerders. Bij de volgende login is een authenticator-code vereist. Bewaar de getoonde codes goed.</div>
       <div id="admMfaWizard" style="display:none;margin-top:16px;background:#f8fafc;border-radius:10px;padding:16px;"></div>
     </div>
   </div>
@@ -4254,6 +4256,48 @@ ${billing.status === "trial" ? `<div style="background:#fffbeb;border:1px solid 
           } catch(err) {
             if(errEl){errEl.textContent="Ongeldige code. Probeer opnieuw.";errEl.style.display="";}
           }
+        });
+      } catch(e) { wizard.innerHTML = `<div style="color:#dc2626;font-size:13px;">Fout: ${e.message}</div>`; }
+    });
+
+    // MFA verplichten voor alle beheerders
+    document.getElementById("admMfaEnforce")?.addEventListener("click", async () => {
+      if (!confirm("MFA verplicht maken voor álle beheerders van deze organisatie?\n\nBij de volgende login is een authenticator-code vereist. Bewaar de getoonde secrets en recovery codes zorgvuldig — ze worden maar één keer getoond.")) return;
+      const wizard = document.getElementById("admMfaWizard");
+      if (!wizard) return;
+      wizard.style.display = "block";
+      wizard.innerHTML = `<div style="font-size:13px;color:#64748b;">MFA inschakelen…</div>`;
+      try {
+        const d = await api("POST", "/admin/mfa/enforce");
+        const enrolled = d.enrolled || [];
+        if (!enrolled.length) {
+          wizard.innerHTML = `<div style="color:#10b981;font-weight:600;font-size:14px;">✅ Alle beheerders hebben al MFA actief.</div>`;
+          return;
+        }
+        wizard.innerHTML = `
+<div style="font-size:14px;font-weight:700;margin-bottom:4px;color:#0F172A;">🛡️ MFA verplicht — ${enrolled.length} beheerder(s) ingeschreven</div>
+<div style="font-size:12px;color:#92400e;background:#FEF3C7;border:1px solid #FDE68A;border-radius:8px;padding:10px 12px;margin:10px 0;">
+  ⚠️ Bewaar onderstaande gegevens nu. Ze worden niet opnieuw getoond. Voeg de sleutel toe aan een authenticator-app (Google Authenticator, Authy…).
+</div>
+${enrolled.map(e => `
+  <div style="border:1px solid #E2E8F0;border-radius:10px;padding:12px;margin-bottom:10px;">
+    <div style="font-weight:600;font-size:13px;color:#0F172A;margin-bottom:6px;">${esc(e.name||e.email)} <span style="color:#94A3B8;font-weight:400;">· ${esc(e.email)}</span></div>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(e.otpauth||"")}" alt="QR" style="width:96px;height:96px;border:3px solid #E2E8F0;border-radius:8px;" onerror="this.style.display='none'">
+      <div style="flex:1;min-width:180px;">
+        <div style="font-size:11px;color:#94A3B8;text-transform:uppercase;letter-spacing:.4px;">Geheime sleutel</div>
+        <div style="font-family:monospace;background:#F1F5F9;padding:6px 10px;border-radius:6px;font-size:12px;word-break:break-all;margin:3px 0 8px;">${esc(e.secret||"")}</div>
+        <div style="font-size:11px;color:#94A3B8;text-transform:uppercase;letter-spacing:.4px;">Recovery codes</div>
+        <div style="font-family:monospace;font-size:11.5px;color:#374151;line-height:1.7;">${(e.recoveryCodes||[]).map(c=>esc(c)).join(" &nbsp; ")}</div>
+      </div>
+    </div>
+  </div>`).join("")}
+<button class="adm-btn adm-btn-primary adm-btn-sm" id="admMfaEnforceDone" style="margin-top:4px;">Ik heb alles opgeslagen</button>`;
+        document.getElementById("admMfaEnforceDone")?.addEventListener("click", () => {
+          wizard.style.display = "none";
+          const statusEl = document.getElementById("admMfaStatus");
+          if (statusEl) statusEl.innerHTML = `<span style="color:#10b981;font-weight:600;">✅ MFA verplicht voor beheerders</span>`;
+          window.showToast && window.showToast("MFA verplicht ingesteld voor beheerders ✓", "success");
         });
       } catch(e) { wizard.innerHTML = `<div style="color:#dc2626;font-size:13px;">Fout: ${e.message}</div>`; }
     });
