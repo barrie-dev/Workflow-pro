@@ -280,7 +280,7 @@
         {w:'1fr', text: shortDate(r.date || r.startTime)},
         {w:'2fr', text: r.project || r.venueId || '—'},
         {w:'0.8fr', text: r.startTime ? r.startTime.slice(0,5) : '—'},
-        {w:'0.8fr', text: r.endTime ? r.endTime.slice(0,5) : <span style="color:var(--wf-orange)">Open</span>},
+        {w:'0.8fr', html: r.endTime ? escHtml(r.endTime.slice(0,5)) : '<span style="color:var(--wf-orange)">Open</span>'},
         {w:'0.8fr', html: `<span style="font-weight:600">${escHtml(uren)}</span>`},
         {w:'1fr', html: badge(r.endTime ? 'Voltooid' : 'Open')}
       ]);
