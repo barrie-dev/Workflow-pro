@@ -1007,6 +1007,15 @@ ${locked?`<div class="sa-alert alert-warn">⚠️ Account is vergrendeld na teve
 </div>
 
 <div class="sa-card">
+  <div class="sa-card-head"><div class="sa-card-title">Beveiliging — MFA verplichten</div></div>
+  <div style="padding:16px">
+    <p style="font-size:13px;color:#64748b;margin:0 0 12px">Schakelt 2FA in voor álle beheerders (tenant-admins + super-admins) die nog geen MFA hebben. Bij hun volgende login is een authenticator-code vereist. De secrets en recovery codes worden hieronder éénmalig getoond.</p>
+    <button id="saMfaEnforce" class="sa-btn btn-primary">🛡️ MFA verplichten voor alle beheerders</button>
+    <div id="saMfaResult" style="margin-top:14px"></div>
+  </div>
+</div>
+
+<div class="sa-card">
   <div class="sa-card-head"><div class="sa-card-title">Productie checklist</div></div>
   <div style="padding:16px;display:flex;flex-direction:column;gap:10px">
     ${checklist([
@@ -1019,6 +1028,44 @@ ${locked?`<div class="sa-alert alert-warn">⚠️ Account is vergrendeld na teve
     ])}
   </div>
 </div>`;
+
+      document.getElementById("saMfaEnforce")?.addEventListener("click", async () => {
+        if (!confirm("MFA verplicht maken voor álle beheerders?\n\nBij de volgende login is een authenticator-code vereist. Bewaar de getoonde secrets en recovery codes — ze worden maar één keer getoond.")) return;
+        const btn = document.getElementById("saMfaEnforce");
+        const out = document.getElementById("saMfaResult");
+        btn.disabled = true; btn.textContent = "Bezig…";
+        try {
+          const d = await api("/api/admin/mfa/enforce", { method: "POST", body: "{}" });
+          const enrolled = d.enrolled || [];
+          if (!enrolled.length) {
+            out.innerHTML = `<div style="color:#15803d;font-weight:600;font-size:13px">✅ Alle beheerders hebben al MFA actief.</div>`;
+            btn.textContent = "🛡️ MFA verplichten voor alle beheerders"; btn.disabled = false;
+            return;
+          }
+          out.innerHTML = `
+<div style="font-size:12px;color:#92400e;background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:10px 12px;margin-bottom:10px">
+  ⚠️ Bewaar onderstaande gegevens nu. Ze worden niet opnieuw getoond. Voeg de sleutel toe aan een authenticator-app.
+</div>
+${enrolled.map(e => `
+  <div style="border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin-bottom:10px">
+    <div style="font-weight:600;font-size:13px;color:#0f172a;margin-bottom:6px">${esc(e.name||e.email)} <span style="color:#94a3b8;font-weight:400">· ${esc(e.email)}</span></div>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=${encodeURIComponent(e.otpauth||"")}" alt="QR" style="width:96px;height:96px;border:3px solid #e2e8f0;border-radius:8px" onerror="this.style.display='none'">
+      <div style="flex:1;min-width:180px">
+        <div style="font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px">Geheime sleutel</div>
+        <div class="mono" style="background:#f1f5f9;padding:6px 10px;border-radius:6px;font-size:12px;word-break:break-all;margin:3px 0 8px">${esc(e.secret||"")}</div>
+        <div style="font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px">Recovery codes</div>
+        <div class="mono" style="font-size:11.5px;color:#374151;line-height:1.7">${(e.recoveryCodes||[]).map(c=>esc(c)).join(" &nbsp; ")}</div>
+      </div>
+    </div>
+  </div>`).join("")}
+<div style="color:#15803d;font-weight:600;font-size:13px;margin-top:4px">✅ ${enrolled.length} beheerder(s) ingeschreven — Foundation-MFA voldaan.</div>`;
+          btn.textContent = "Ingeschreven ✓";
+        } catch(e) {
+          out.innerHTML = `<div style="color:#dc2626;font-size:13px">Fout: ${esc(e.message)}</div>`;
+          btn.textContent = "🛡️ MFA verplichten voor alle beheerders"; btn.disabled = false;
+        }
+      });
     } catch(e) { content().innerHTML = err(e); }
   }
 
