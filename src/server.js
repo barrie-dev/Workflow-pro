@@ -69,6 +69,7 @@ const { listReports, getReport, generateStatusBundle } = require("./modules/repo
 const { listAuditEvents } = require("./modules/audit");
 const { sendMail, setRuntimeConfig } = require("./lib/mailer");
 const { loadPlatformConfig, publicPlatformConfig, savePlatformConfig } = require("./modules/platform-config");
+const { createPaymentLink, markInvoicePaidById } = require("./modules/payments");
 const {
   leaveSubmittedToAdmin,
   leaveReviewedToEmployee,
@@ -235,6 +236,49 @@ load();
 </script></body></html>`;
 }
 
+function publicPayPage() {
+  // Mock-betaalpagina (geen echte Stripe). Toont factuur + "Betaal nu (demo)".
+  return `<!DOCTYPE html><html lang="nl"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>Betaling — WorkFlow Pro</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:Inter,system-ui,Arial,sans-serif;background:#F0F4F8;color:#0F172A;padding:24px;line-height:1.5}
+.wrap{max-width:480px;margin:0 auto}.card{background:#fff;border:1px solid #E2E8F0;border-radius:14px;box-shadow:0 4px 16px rgba(0,0,0,.05);overflow:hidden}
+.hd{background:#0B1929;color:#fff;padding:22px 24px}.hd h1{font-size:18px;font-weight:800}.hd .sub{color:#94A3B8;font-size:13px;margin-top:2px}
+.body{padding:24px}.amount{font-size:34px;font-weight:800;text-align:center;margin:8px 0 4px}.muted{text-align:center;color:#94A3B8;font-size:13px;margin-bottom:20px}
+button{width:100%;padding:14px;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;background:#10B981;color:#fff;font-family:inherit}
+.demo{font-size:11px;color:#94A3B8;text-align:center;margin-top:12px}
+.banner{padding:14px 18px;border-radius:10px;font-weight:600;font-size:14px;text-align:center;background:#D1FAE5;color:#065F46}
+.foot{text-align:center;font-size:11px;color:#94A3B8;margin-top:18px}
+</style></head><body>
+<div class="wrap"><div class="card">
+  <div class="hd"><h1 id="coName">Betaling</h1><div class="sub" id="coNr"></div></div>
+  <div class="body" id="body"><div class="muted">Laden…</div></div>
+</div><div class="foot">Beveiligde betaling via WorkFlow Pro</div></div>
+<script>
+const token = location.pathname.split("/").filter(Boolean).pop();
+const eur = n => new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR"}).format(Number(n||0));
+const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+async function load(){
+  try{
+    const d = await (await fetch("/api/public/pay/"+token)).json();
+    if(!d.ok){ document.getElementById("body").innerHTML='<div class="muted">Factuur niet gevonden.</div>'; return; }
+    const inv=d.invoice;
+    document.getElementById("coName").textContent=d.company.name||"Betaling";
+    document.getElementById("coNr").textContent="Factuur "+esc(inv.number);
+    if(inv.status==="paid"){ document.getElementById("body").innerHTML='<div class="banner">✅ Deze factuur is reeds betaald — bedankt!</div>'; return; }
+    document.getElementById("body").innerHTML=
+      '<div class="amount">'+eur(inv.total)+'</div><div class="muted">Factuur '+esc(inv.number)+' · '+esc(inv.customerName||"")+'</div>'+
+      '<button onclick="pay()">Betaal nu</button><div class="demo">Demo-betaling — markeert de factuur als betaald.</div>';
+  }catch(e){ document.getElementById("body").innerHTML='<div class="muted">Er ging iets mis.</div>'; }
+}
+async function pay(){
+  const d = await (await fetch("/api/public/pay/"+token,{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"})).json();
+  load();
+}
+load();
+</script></body></html>`;
+}
+
 function serveStatic(req, res) {
   const url = new URL(req.url, config.appUrl);
   const file = url.pathname === "/" ? "index.html" : url.pathname.replace(/^\/+/, "");
@@ -371,6 +415,17 @@ http.createServer(async (req, res) => {
       } catch (error) {
         return sendJson(res, 400, { ok: false, error: "Invalid JSON body" });
       }
+      // Klantfactuur betaald via Checkout? (metadata.wfp_invoice_id)
+      const obj = event?.data?.object || {};
+      const invId = obj.metadata?.wfp_invoice_id || (obj.client_reference_id && String(obj.client_reference_id).startsWith("inv_") ? obj.client_reference_id : null);
+      if (["checkout.session.completed", "checkout.session.async_payment_succeeded"].includes(event.type) && invId) {
+        const paid = markInvoicePaidById(store, invId, "stripe");
+        if (paid) {
+          createNotification(store, { id: paid.tenantId }, { type: "payment", channel: "in_app", audience: "admins", title: "Factuur betaald", body: `${paid.number} (€${Number(paid.total||0).toFixed(2)}) is betaald via Stripe.`, priority: "normal", sourceRef: `invoice:${paid.id}:paid` }, { email: "stripe-webhook" });
+        }
+        sendJson(res, 200, { ok: true, signature: signature.mode, invoicePaid: !!paid });
+        return;
+      }
       const result = processStripeWebhook(store, event);
       sendJson(res, 200, { ok: true, signature: signature.mode, result });
       return;
@@ -412,6 +467,25 @@ http.createServer(async (req, res) => {
         }
       }
       return sendJson(res, 404, { ok: false, error: "Offerte niet gevonden" });
+    }
+
+    // ── Publieke mock-betaling (geen login) ───────────────────────────────────
+    const pubPayMatch = url.pathname.match(/^\/api\/public\/pay\/([a-f0-9]+)$/);
+    if (pubPayMatch && (req.method === "GET" || req.method === "POST")) {
+      const token = pubPayMatch[1];
+      let inv = null, invTenant = null;
+      for (const t of store.data.tenants || []) {
+        const found = store.list("invoices", t.id).find(x => x.payToken === token);
+        if (found) { inv = found; invTenant = t; break; }
+      }
+      if (!inv) return sendJson(res, 404, { ok: false, error: "Factuur niet gevonden" });
+      if (req.method === "GET") {
+        return sendJson(res, 200, { ok: true, invoice: { number: inv.number, customerName: inv.customerName, total: inv.total, status: inv.status, invoiceDate: inv.invoiceDate, dueDate: inv.dueDate, lines: inv.lines }, company: { name: invTenant.name || "WorkFlow Pro" } });
+      }
+      if (inv.status === "paid") return sendJson(res, 409, { ok: false, error: "Factuur is al betaald" });
+      const paid = markInvoicePaidById(store, inv.id, "mock");
+      createNotification(store, { id: invTenant.id }, { type: "payment", channel: "in_app", audience: "admins", title: "Factuur betaald", body: `${paid.number} (€${Number(paid.total||0).toFixed(2)}) is betaald.`, priority: "normal", sourceRef: `invoice:${paid.id}:paid` }, { email: "mock-pay" });
+      return sendJson(res, 200, { ok: true, status: "paid" });
     }
 
     if (url.pathname === "/api/auth/login" && req.method === "POST") {
@@ -2009,6 +2083,17 @@ http.createServer(async (req, res) => {
         sendJson(res, 201, { ok: true, invoice });
         return;
       }
+      // Betaallink genereren (Stripe Checkout of mock-fallback)
+      const invoicePayMatch = action.match(/^facturen\/([^/]+)\/payment-link$/);
+      if (invoicePayMatch && req.method === "POST") {
+        assertCan(user, "billing");
+        const inv = store.get("invoices", invoicePayMatch[1]);
+        if (!inv || inv.tenantId !== tenantId) return sendJson(res, 404, { ok: false, error: "Factuur niet gevonden" });
+        const link = await createPaymentLink(store, tenant, inv);
+        store.audit({ actor: user.email, tenantId, action: "payment_link_created", area: "facturen", detail: `${inv.number} (${link.provider})` });
+        sendJson(res, 200, { ok: true, url: link.url, provider: link.provider });
+        return;
+      }
       const invoiceItemMatch = action.match(/^facturen\/([^/]+)$/);
       if (invoiceItemMatch && req.method === "PATCH") {
         assertCan(user, "billing");
@@ -2611,6 +2696,12 @@ http.createServer(async (req, res) => {
     if (url.pathname.startsWith("/offerte/")) {
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
       res.end(publicQuotePage());
+      return;
+    }
+    // Publieke (mock) betaalpagina
+    if (url.pathname.startsWith("/betaal/")) {
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      res.end(publicPayPage());
       return;
     }
 

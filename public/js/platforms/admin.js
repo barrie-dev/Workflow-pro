@@ -3897,6 +3897,7 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
             <td style="white-space:nowrap;display:flex;gap:6px;">
               <button class="adm-btn adm-btn-secondary adm-btn-sm inv-edit" data-id="${inv.id}">✏</button>
               <button class="adm-btn adm-btn-secondary adm-btn-sm inv-pdf" data-id="${inv.id}" title="PDF / Afdrukken">📄</button>
+              ${["open","overdue"].includes(inv.status) ? `<button class="adm-btn adm-btn-secondary adm-btn-sm inv-paylink" data-id="${inv.id}" title="Betaallink genereren">💳 Link</button>` : ""}
               ${["open","overdue"].includes(inv.status) ? `<button class="adm-btn adm-btn-success adm-btn-sm inv-paid" data-id="${inv.id}" title="Markeer als betaald">✓ Betaald</button>` : ""}
             </td>
           </tr>`;
@@ -3915,6 +3916,19 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
           let tenant = {};
           try { const t = await api("GET", "/settings"); tenant = t.tenant || {}; } catch(_){}
           printInvoicePDF(inv, tenant);
+        });
+      });
+      document.querySelectorAll(".inv-paylink").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          btn.disabled = true; const old = btn.textContent; btn.textContent = "…";
+          try {
+            const d = await api("POST", `/facturen/${btn.dataset.id}/payment-link`, {});
+            let copied = false;
+            try { await navigator.clipboard.writeText(d.url); copied = true; } catch(_){}
+            const via = d.provider === "stripe" ? "Stripe" : "demo";
+            window.showToast && window.showToast(`Betaallink (${via}) ${copied?"gekopieerd ✓":"aangemaakt"}: ${d.url}`, "success");
+          } catch(e) { window.showToast && window.showToast("Fout: "+e.message, "error"); }
+          btn.disabled = false; btn.textContent = old;
         });
       });
       document.querySelectorAll(".inv-paid").forEach(btn => {
