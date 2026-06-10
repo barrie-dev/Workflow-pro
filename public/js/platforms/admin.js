@@ -4171,7 +4171,8 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
   <div style="display:flex;gap:8px;flex-wrap:wrap;">
     <button class="adm-btn adm-btn-secondary adm-btn-sm" id="rmRefresh">🔄 Vernieuwen</button>
     <button class="adm-btn adm-btn-secondary adm-btn-sm" id="rmBackfill" title="Herstel datakwaliteit: werkbon-nummers, notificatie-userId, verlof-dagen">🔧 Data repareren</button>
-    <button class="adm-btn adm-btn-secondary adm-btn-sm" id="rmDemoData" title="Laad voorbeelddata om pilot-KPIs te halen">🎲 Pilotdata laden</button>
+    <button class="adm-btn adm-btn-secondary adm-btn-sm" id="rmDemoData" title="Vult alle schermen met realistische voorbeelddata (klanten, offertes, facturen, planning, klok…)">🎲 Demodata laden</button>
+    <button class="adm-btn adm-btn-secondary adm-btn-sm" id="rmDemoClear" title="Verwijdert alle geladen demodata weer">🧹 Demodata wissen</button>
   </div>
 </div>
 
@@ -4226,14 +4227,27 @@ ${phases.map(p => {
         } catch(e) { window.showToast && window.showToast("Fout: "+e.message,"error"); btn.disabled=false; btn.textContent="🔧 Data repareren"; }
       });
       document.getElementById("rmDemoData")?.addEventListener("click", async () => {
-        if (!confirm("Dit laadt voorbeelddata (shifts, werkbonnen, klokregistraties) om de pilot-KPIs te halen. Doorgaan?")) return;
+        if (!confirm("Dit vult álle schermen met realistische voorbeelddata: klanten, offertes, facturen, werkbonnen, planning, klokregistraties, verlof, onkosten, stock en voertuigen.\n\nJe kunt het achteraf weer wissen met 'Demodata wissen'. Doorgaan?")) return;
         const btn = document.getElementById("rmDemoData");
         btn.disabled = true; btn.textContent = "Laden…";
         try {
-          await api("POST", "/golden-path/demo");
-          window.showToast && window.showToast("Pilotdata geladen ✓ — roadmap ververst", "success");
+          const r = await api("POST", "/demo/seed");
+          const total = Object.values(r.counts||{}).reduce((a,b)=>a+b,0);
+          window.showToast && window.showToast(`Demodata geladen ✓ (${total} records over ${Object.keys(r.counts||{}).length} modules)`, "success");
+          switchView("dashboard");
+        } catch(e) { window.showToast && window.showToast("Fout: "+e.message, "error"); }
+        btn.disabled = false; btn.textContent = "🎲 Demodata laden";
+      });
+      document.getElementById("rmDemoClear")?.addEventListener("click", async () => {
+        if (!confirm("Alle geladen demodata verwijderen? Eigen ingevoerde data blijft staan.")) return;
+        const btn = document.getElementById("rmDemoClear");
+        btn.disabled = true; btn.textContent = "Wissen…";
+        try {
+          const r = await api("POST", "/demo/clear");
+          window.showToast && window.showToast(`Demodata gewist ✓ (${r.removed} records)`, "success");
           renderRoadmap();
-        } catch(e) { window.showToast && window.showToast("Fout: "+e.message, "error"); btn.disabled = false; btn.textContent = "🎲 Pilotdata laden"; }
+        } catch(e) { window.showToast && window.showToast("Fout: "+e.message, "error"); }
+        btn.disabled = false; btn.textContent = "🧹 Demodata wissen";
       });
     } catch(e) { content.innerHTML = `<div style="padding:20px;color:#dc2626">Fout: ${e.message}</div>`; }
   }

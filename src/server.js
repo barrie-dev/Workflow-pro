@@ -70,6 +70,7 @@ const { listAuditEvents } = require("./modules/audit");
 const { sendMail, setRuntimeConfig } = require("./lib/mailer");
 const { loadPlatformConfig, publicPlatformConfig, savePlatformConfig } = require("./modules/platform-config");
 const { createPaymentLink, markInvoicePaidById } = require("./modules/payments");
+const { seedDemoData, clearDemoData } = require("./modules/demo-seed");
 const { buildUbl, validatePeppol, sendPeppolInvoice } = require("./modules/peppol-invoice");
 const {
   leaveSubmittedToAdmin,
@@ -1215,6 +1216,23 @@ http.createServer(async (req, res) => {
         });
         store.audit({ actor: user.email, tenantId, action: "wo_numbers_backfilled", area: "workorders", detail: `${wos.length} werkbonnen genummerd` });
         sendJson(res, 200, { ok: true, updated: wos.length });
+        return;
+      }
+      // Rijke demodata laden/verwijderen (alle schermen gevuld). Ook in productie
+      // toegestaan: tenant-scoped voorbeelddata, gemarkeerd en weer verwijderbaar.
+      if (action === "demo/seed" && req.method === "POST") {
+        assertCan(user, "settings");
+        assertInteractiveUser(user);
+        const result = seedDemoData(store, tenant, user);
+        sendJson(res, 200, { ok: true, ...result });
+        return;
+      }
+      if (action === "demo/clear" && req.method === "POST") {
+        assertCan(user, "settings");
+        assertInteractiveUser(user);
+        const removed = clearDemoData(store, tenantId);
+        store.audit({ actor: user.email, tenantId, action: "demo_cleared", area: "demo", detail: String(removed) });
+        sendJson(res, 200, { ok: true, removed });
         return;
       }
       if (action === "golden-path/demo" && req.method === "POST") {
