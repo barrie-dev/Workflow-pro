@@ -447,6 +447,9 @@
   width:36px; height:36px; border-radius:9px; display:grid; place-items:center;
 }
 .adm-kpi-icon svg { width:18px; height:18px; fill:#fff; }
+.adm-kpi-link { cursor:pointer; transition:transform .12s, box-shadow .12s; }
+.adm-kpi-link:hover { transform:translateY(-2px); box-shadow:0 6px 18px rgba(15,23,42,.10); }
+.adm-row-link { cursor:pointer; }
 .adm-kpi-blue  { border-top:3px solid #2563EB; } .adm-kpi-blue .adm-kpi-icon  { background:#2563EB; }
 .adm-kpi-green { border-top:3px solid #10B981; } .adm-kpi-green .adm-kpi-icon { background:#10B981; }
 .adm-kpi-amber { border-top:3px solid #F59E0B; } .adm-kpi-amber .adm-kpi-icon { background:#F59E0B; }
@@ -632,31 +635,31 @@ table.adm-table { width:100%; border-collapse:collapse; font-size:13px; }
     const content = document.getElementById("admContent");
     content.innerHTML = `
 <div class="adm-kpis">
-  <div class="adm-kpi adm-kpi-blue">
+  <div class="adm-kpi adm-kpi-blue adm-kpi-link" data-goto="employees" title="Naar medewerkers">
     <div class="adm-kpi-icon"><svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg></div>
     <div class="adm-kpi-label">Team</div>
     <div class="adm-kpi-value">${dash.team ?? "—"}</div>
     <div class="adm-kpi-sub">Actieve medewerkers</div>
   </div>
-  <div class="adm-kpi adm-kpi-green">
+  <div class="adm-kpi adm-kpi-green adm-kpi-link" data-goto="clocking" title="Naar prikklok">
     <div class="adm-kpi-icon"><svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg></div>
     <div class="adm-kpi-label">Ingeklokt</div>
     <div class="adm-kpi-value">${dash.clockedIn ?? "—"}</div>
     <div class="adm-kpi-sub">Van ${dash.team ?? "?"} medewerkers</div>
   </div>
-  <div class="adm-kpi adm-kpi-amber">
+  <div class="adm-kpi adm-kpi-amber adm-kpi-link" data-goto="leaves" title="Naar verlof">
     <div class="adm-kpi-icon"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg></div>
     <div class="adm-kpi-label">Verlof aanvragen</div>
     <div class="adm-kpi-value">${dash.pendingLeaves ?? "—"}</div>
     <div class="adm-kpi-sub">Wacht op goedkeuring</div>
   </div>
-  <div class="adm-kpi adm-kpi-red">
+  <div class="adm-kpi adm-kpi-red adm-kpi-link" data-goto="expenses" title="Naar onkosten">
     <div class="adm-kpi-icon"><svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg></div>
     <div class="adm-kpi-label">Onkosten</div>
     <div class="adm-kpi-value">${dash.pendingExpenses ?? "—"}</div>
     <div class="adm-kpi-sub">Te verwerken</div>
   </div>
-  <div class="adm-kpi adm-kpi-purple">
+  <div class="adm-kpi adm-kpi-purple adm-kpi-link" data-goto="workorders" title="Naar werkbonnen">
     <div class="adm-kpi-icon"><svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg></div>
     <div class="adm-kpi-label">Werkbonnen</div>
     <div class="adm-kpi-value">${dash.openWorkorders ?? "—"}</div>
@@ -674,7 +677,7 @@ table.adm-table { width:100%; border-collapse:collapse; font-size:13px; }
         <thead><tr><th>Medewerker</th><th>Status</th><th>Ingepland</th></tr></thead>
         <tbody>
           ${(dash.teamList || []).slice(0,8).map(u => `
-          <tr>
+          <tr class="adm-row-link adm-dash-team" data-id="${esc(u.id||"")}" title="Open medewerker">
             <td><span class="adm-avatar">${(u.name||"?")[0]}</span> ${u.name||u.email}</td>
             <td>${u.absent ? '<span class="adm-status adm-status-inactive">Afwezig</span>' : u.clockedIn ? '<span class="adm-status adm-status-active">Ingeklokt</span>' : '<span class="adm-status adm-status-pending">Niet geklokt</span>'}</td>
             <td>${u.planned ? "✓" : "—"}</td>
@@ -734,6 +737,21 @@ ${(() => {
 })()}`;
 
     document.getElementById("admViewAllLeaves")?.addEventListener("click", e => { e.preventDefault(); switchView("leaves"); });
+
+    // KPI-kaarten → doorklikken naar de juiste view
+    document.querySelectorAll(".adm-kpi-link").forEach(card => {
+      card.addEventListener("click", () => switchView(card.dataset.goto));
+    });
+    // Teamrij → medewerker openen (bewerken)
+    document.querySelectorAll(".adm-dash-team").forEach(row => {
+      row.addEventListener("click", async () => {
+        try {
+          const d = await api("GET", "/employees?includeInactive=true");
+          const emp = (d.employees || []).find(u => u.id === row.dataset.id);
+          if (emp) openEmployeeDrawer(emp); else switchView("employees");
+        } catch (_) { switchView("employees"); }
+      });
+    });
     document.querySelectorAll(".adm-action-item").forEach(el => {
       el.addEventListener("click", () => switchView(el.dataset.view));
       el.addEventListener("mouseenter", () => el.style.background = "#f8fafc");
@@ -882,7 +900,7 @@ ${(() => {
     return `<table class="adm-table">
       <thead><tr><th></th><th>Naam</th><th>E-mail</th><th>Functie</th><th>Rol</th><th>Status</th><th>Acties</th></tr></thead>
       <tbody>${employees.map(u => `
-        <tr>
+        <tr class="adm-row-link adm-emp-row" data-id="${esc(u.id)}" title="Open medewerker">
           <td><span class="adm-avatar" style="background:${u.active===false?"#f1f5f9":"#e0e7ff"};color:${u.active===false?"#94a3b8":"#4f46e5"}">${(u.name||u.email||"?")[0].toUpperCase()}</span></td>
           <td><div style="font-weight:600;color:${u.active===false?"#94a3b8":"#0f172a"}">${esc(u.name||"—")}</div><div style="font-size:11px;color:#94a3b8">${esc(u.phone||"")}</div></td>
           <td style="font-size:12px">${esc(u.email)}</td>
@@ -899,6 +917,13 @@ ${(() => {
   }
 
   function bindEmpActions() {
+    document.querySelectorAll(".adm-emp-row").forEach(row => {
+      row.addEventListener("click", e => {
+        if (e.target.closest("button")) return;
+        const emp = _state.employees.find(u => u.id === row.dataset.id);
+        if (emp) openEmployeeDrawer(emp);
+      });
+    });
     document.querySelectorAll(".adm-edit-emp").forEach(btn => {
       btn.addEventListener("click", () => {
         const emp = _state.employees.find(u => u.id === btn.dataset.id);
@@ -1395,7 +1420,7 @@ ${emp ? `
     ${clocks.map(c => {
       const hours = c.clockedOut ? ((new Date(c.clockedOut) - new Date(c.clockedIn)) / 3600000).toFixed(1) : "—";
       const noOut = !c.clockedOut;
-      return `<tr>
+      return `<tr class="${noOut ? "" : "adm-row-link clk-row"}" data-id="${esc(c.id)}" ${noOut ? "" : 'title="Open correctie"'}>
         <td style="font-weight:500">${esc(c.userName || c.userId)}</td>
         <td>${c.clockedIn ? new Date(c.clockedIn).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}) : "—"}</td>
         <td>${c.clockedOut ? new Date(c.clockedOut).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}) : '<span style="color:#f59e0b">Niet uitgeklokt</span>'}</td>
@@ -1416,9 +1441,15 @@ ${emp ? `
           catch(e) { alert(e.message); btn.disabled = false; }
         });
       });
-      // Wire edit buttons
+      // Wire edit buttons + rij-klik
       document.querySelectorAll(".clk-edit").forEach(btn => {
-        btn.addEventListener("click", () => openClockEditDrawer(btn.dataset.id, clocks));
+        btn.addEventListener("click", e => { e.stopPropagation(); openClockEditDrawer(btn.dataset.id, clocks); });
+      });
+      document.querySelectorAll(".clk-row").forEach(row => {
+        row.addEventListener("click", e => {
+          if (e.target.closest("button")) return;
+          openClockEditDrawer(row.dataset.id, clocks);
+        });
       });
 
     } catch(e) {
@@ -2098,7 +2129,7 @@ ${emp ? `
       <thead><tr><th>#</th><th>Titel</th><th>Medewerker</th><th>Klant</th><th>Status</th><th>Prioriteit</th><th>Datum</th><th>Acties</th></tr></thead>
       <tbody>
         ${workorders.map(w => `
-        <tr>
+        <tr class="adm-row-link adm-wo-row" data-id="${w.id}" title="Open werkbon">
           <td style="font-family:monospace;font-size:12px;">${w.number || w.id.slice(-4)}</td>
           <td>${esc(w.title || "—")}</td>
           <td>${esc(w.userName || w.userId || "—")}</td>
@@ -2129,7 +2160,10 @@ ${emp ? `
 
     document.getElementById("admNewWO")?.addEventListener("click", () => openWorkorderDrawer(null, allWorkorders));
     document.querySelectorAll(".adm-wo-edit").forEach(btn => {
-      btn.addEventListener("click", () => openWorkorderDrawer(allWorkorders.find(w => w.id === btn.dataset.id), allWorkorders));
+      btn.addEventListener("click", e => { e.stopPropagation(); openWorkorderDrawer(allWorkorders.find(w => w.id === btn.dataset.id), allWorkorders); });
+    });
+    document.querySelectorAll(".adm-wo-row").forEach(row => {
+      row.addEventListener("click", () => openWorkorderDrawer(allWorkorders.find(w => w.id === row.dataset.id), allWorkorders));
     });
   }
 
@@ -3196,17 +3230,24 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
         <tbody id="venTbody">${buildVenRows(rows)}</tbody>
       </table></div>`}
 </div>`;
+      const wireVenRows = () => {
+        document.querySelectorAll(".ven-row").forEach(row => row.addEventListener("click", e => {
+          if (e.target.closest("button")) return;
+          openVenueDrawer(rows.find(x => x.id === row.dataset.id));
+        }));
+        document.querySelectorAll(".ven-edit").forEach(b => b.addEventListener("click", () => openVenueDrawer(rows.find(x => x.id === b.dataset.id))));
+      };
       document.getElementById("venSearch")?.addEventListener("input", e => {
         const q = e.target.value.toLowerCase();
         const tb = document.getElementById("venTbody");
         if (tb) tb.innerHTML = buildVenRows(rows.filter(r => `${r.name} ${r.address||""}`.toLowerCase().includes(q)));
-        document.querySelectorAll(".ven-edit").forEach(b => b.addEventListener("click", () => openVenueDrawer(rows.find(x => x.id === b.dataset.id))));
+        wireVenRows();
       });
-      document.querySelectorAll(".ven-edit").forEach(b => b.addEventListener("click", () => openVenueDrawer(rows.find(x => x.id === b.dataset.id))));
+      wireVenRows();
     } catch(e) { content.innerHTML = `<div style="padding:20px;color:#dc2626">Fout: ${e.message}</div>`; }
   }
   function buildVenRows(rows) {
-    return rows.map(v => `<tr>
+    return rows.map(v => `<tr class="adm-row-link ven-row" data-id="${v.id}" title="Open locatie">
       <td><strong>${esc(v.name)}</strong></td>
       <td>${esc(v.address||"—")}</td>
       <td>${esc(v.contactName||"—")}</td>
@@ -3282,7 +3323,7 @@ ${alerts.length ? `<div style="background:#fef3c7;border:1px solid #fde68a;borde
     ? `<div class="adm-empty"><div class="adm-empty-icon">🚗</div><div class="adm-empty-text">Geen voertuigen geregistreerd</div></div>`
     : `<div class="adm-table-wrap"><table class="adm-table">
         <thead><tr><th>Naam / Kenteken</th><th>Merk / Model</th><th>Chauffeur</th><th>KM-stand</th><th>Status</th><th>Volgende service</th><th>Acties</th></tr></thead>
-        <tbody>${vehicles.map(v => `<tr>
+        <tbody>${vehicles.map(v => `<tr class="adm-row-link veh-row" data-id="${v.id}" title="Open voertuig">
           <td><strong>${esc(v.name||v.plate||"—")}</strong><br><span style="font-size:11px;color:#94a3b8;font-family:monospace">${esc(v.plate||"")}</span></td>
           <td>${esc(v.brand||"")} ${esc(v.model||"")}</td>
           <td>${esc(v.driverName||v.driverId||"—")}</td>
@@ -3296,6 +3337,10 @@ ${alerts.length ? `<div style="background:#fef3c7;border:1px solid #fde68a;borde
         </tr>`).join("")}</tbody>
       </table></div>`}
 </div>`;
+      document.querySelectorAll(".veh-row").forEach(row => row.addEventListener("click", e => {
+        if (e.target.closest("button")) return;
+        openVehicleDrawer(vehicles.find(x => x.id === row.dataset.id));
+      }));
       document.querySelectorAll(".veh-edit").forEach(b => b.addEventListener("click", () => openVehicleDrawer(vehicles.find(x => x.id === b.dataset.id))));
       document.querySelectorAll(".veh-km").forEach(b => b.addEventListener("click", () => openMileageDrawer(b.dataset.id)));
     } catch(e) { content.innerHTML = `<div style="padding:20px;color:#dc2626">Fout: ${e.message}</div>`; }
@@ -3425,7 +3470,7 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
   function buildStockRows(rows) {
     return rows.map(i => {
       const low = i.minQuantity && Number(i.quantity||0) <= Number(i.minQuantity||0);
-      return `<tr style="${low?"background:#fef2f2":""}">
+      return `<tr class="adm-row-link st-row" data-id="${i.id}" title="Open artikel" style="${low?"background:#fef2f2":""}">
         <td><strong>${esc(i.name)}</strong>${low?` <span style="background:#fee2e2;color:#dc2626;border-radius:4px;padding:1px 5px;font-size:10px">LAAG</span>`:""}</td>
         <td style="font-family:monospace;font-size:12px">${esc(i.sku||"—")}</td>
         <td>${esc(i.category||"—")}</td>
@@ -3441,6 +3486,10 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
     }).join("");
   }
   function wireStockBtns(items) {
+    document.querySelectorAll(".st-row").forEach(row => row.addEventListener("click", e => {
+      if (e.target.closest("button")) return;
+      openStockDrawer(items.find(x => x.id === row.dataset.id));
+    }));
     document.querySelectorAll(".st-edit").forEach(b => b.addEventListener("click", () => openStockDrawer(items.find(x => x.id === b.dataset.id))));
     document.querySelectorAll(".st-mut").forEach(b => b.addEventListener("click", () => openMutationDrawer(b.dataset.id)));
   }
@@ -3678,7 +3727,7 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
         <tbody>${filtered.slice().sort((a,b)=>(b.quoteDate||"").localeCompare(a.quoteDate||"")).map(q => {
           const st = QUOTE_STATUS[q.status] || { label:q.status, css:"adm-status-pending" };
           const canConvert = q.status === "aanvaard";
-          return `<tr>
+          return `<tr class="adm-row-link q-row" data-id="${q.id}" title="Open offerte">
             <td style="font-family:monospace;font-weight:600">${esc(q.number||"")}</td>
             <td>${q.quoteDate?new Date(q.quoteDate).toLocaleDateString("nl-BE"):"—"}</td>
             <td><strong>${esc(q.customerName||"—")}</strong></td>
@@ -3697,6 +3746,10 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
 </div>`;
 
       document.getElementById("qStatusFilter")?.addEventListener("change", () => renderOffertes());
+      content.querySelectorAll(".q-row").forEach(row => row.addEventListener("click", e => {
+        if (e.target.closest("button")) return;
+        openOfferteDrawer(rows.find(q => q.id === row.dataset.id));
+      }));
       content.querySelectorAll(".q-edit").forEach(b => b.addEventListener("click", () => openOfferteDrawer(rows.find(q => q.id === b.dataset.id))));
       content.querySelectorAll(".q-send").forEach(b => b.addEventListener("click", async () => {
         try {
@@ -3887,7 +3940,7 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
         <thead><tr><th>Nr.</th><th>Datum</th><th>Klant</th><th>Vervaldatum</th><th>Bedrag</th><th>Status</th><th>Acties</th></tr></thead>
         <tbody>${filtered.slice().sort((a,b) => (b.invoiceDate||"").localeCompare(a.invoiceDate||"")).map(inv => {
           const st = INV_STATUS[inv.status] || { label: inv.status, css: "adm-status-pending" };
-          return `<tr>
+          return `<tr class="adm-row-link inv-row" data-id="${inv.id}" title="Open factuur">
             <td style="font-family:monospace;font-weight:600">${esc(inv.number||inv.id.slice(-6))}</td>
             <td>${inv.invoiceDate ? new Date(inv.invoiceDate).toLocaleDateString("nl-BE") : "—"}</td>
             <td><strong>${esc(inv.customerName||"—")}</strong>${inv.customerVatNumber?`<div style="font-size:11px;color:#94a3b8">${esc(inv.customerVatNumber)}</div>`:""}</td>
@@ -3910,6 +3963,13 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
 </div>`;
 
       document.getElementById("invStatusFilter")?.addEventListener("change", () => renderFacturen());
+      // Rij-klik → factuur openen (knoppen in de rij behouden hun eigen actie)
+      document.querySelectorAll(".inv-row").forEach(row => {
+        row.addEventListener("click", e => {
+          if (e.target.closest("button")) return;
+          openFactuurDrawer(rows.find(i => i.id === row.dataset.id));
+        });
+      });
       document.querySelectorAll(".inv-edit").forEach(btn => {
         btn.addEventListener("click", () => openFactuurDrawer(rows.find(i => i.id === btn.dataset.id)));
       });
