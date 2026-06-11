@@ -81,21 +81,53 @@ const allowedApiKeyScopes = ["read", "write", "planning", "workorders", "billing
 const moduleApiKeyScopes = ["planning", "workorders", "billing", "integrations"];
 const viewConfig = window.WorkFlowProConfig?.views || {};
 
-function showToast(message, good = true) {
-  let toast = el("appToast");
-  if (!toast) {
-    toast = document.createElement("div");
-    toast.id = "appToast";
-    toast.className = "app-toast";
-    toast.setAttribute("role", "status");
-    document.body.appendChild(toast);
+/**
+ * Toast-meldingen. type: "success" | "error" | "warning" | "info"
+ * (boolean blijft werken voor oude aanroepen: true=success, false=error).
+ * Fouten blijven langer staan; meerdere toasts stapelen netjes.
+ */
+function showToast(message, type = "success") {
+  if (type === true) type = "success";
+  if (type === false) type = "error";
+  if (!["success", "error", "warning", "info"].includes(type)) type = "info";
+
+  let host = document.getElementById("appToastHost");
+  if (!host) {
+    host = document.createElement("div");
+    host.id = "appToastHost";
+    host.setAttribute("role", "status");
+    host.setAttribute("aria-live", "polite");
+    document.body.appendChild(host);
   }
-  toast.textContent = message;
-  toast.classList.toggle("bad", !good);
-  toast.classList.add("visible");
-  window.clearTimeout(showToast.timeout);
-  showToast.timeout = window.setTimeout(() => toast.classList.remove("visible"), 3200);
+
+  const icons = { success: "✓", error: "✕", warning: "⚠", info: "ℹ" };
+  const toast = document.createElement("div");
+  toast.className = `app-toast2 app-toast2-${type}`;
+  toast.innerHTML = `<span class="app-toast2-icon">${icons[type]}</span><span class="app-toast2-msg"></span><button class="app-toast2-x" aria-label="Sluiten">×</button>`;
+  toast.querySelector(".app-toast2-msg").textContent = String(message || "");
+  toast.querySelector(".app-toast2-x").addEventListener("click", () => dismiss());
+  host.appendChild(toast);
+  while (host.children.length > 4) host.removeChild(host.firstChild);
+
+  requestAnimationFrame(() => toast.classList.add("visible"));
+  const ttl = type === "error" ? 7000 : type === "warning" ? 5000 : 3500;
+  const timer = setTimeout(dismiss, ttl);
+  function dismiss() {
+    clearTimeout(timer);
+    toast.classList.remove("visible");
+    setTimeout(() => toast.remove(), 250);
+  }
 }
+
+// Dubbel-submit preventie: blokkeer de submit-knop van élk formulier kort
+// na een submit zodat dubbelklikken geen dubbele records aanmaakt.
+document.addEventListener("submit", event => {
+  const btn = event.target && event.target.querySelector ? event.target.querySelector("[type=submit]") : null;
+  if (btn && !btn.disabled) {
+    btn.disabled = true;
+    setTimeout(() => { btn.disabled = false; }, 2000);
+  }
+}, true);
 
 function setShellAuthenticated(authenticated) {
   document.body.classList.toggle("guest", !authenticated);

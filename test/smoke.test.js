@@ -56,3 +56,35 @@ test("onbekende API-route geeft nette 404 JSON", async () => {
   const d = await r.json();
   assert.equal(d.ok, false);
 });
+
+// ── Rechten: rollen mogen alleen hun eigen domein ──────────────
+async function login(email, password) {
+  const r = await fetch(`${BASE}/api/auth/login`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  return r.json();
+}
+
+test("rechten: admin kan medewerkers lezen, employee niet", async () => {
+  const admin = await login("admin@demobouw.be", "Demo2026!");
+  assert.ok(admin.token, "admin-login moet slagen (reset-demo-passwords)");
+  const okR = await fetch(`${BASE}/api/tenants/t_demo/employees`, { headers: { Authorization: `Bearer ${admin.token}` } });
+  assert.equal(okR.status, 200, "admin → employees = 200");
+
+  const emp = await login("jan@demobouw.be", "Demo2026!");
+  assert.ok(emp.token, "employee-login moet slagen");
+  const denyR = await fetch(`${BASE}/api/tenants/t_demo/employees`, { headers: { Authorization: `Bearer ${emp.token}` } });
+  assert.equal(denyR.status, 403, "employee → employees = 403");
+});
+
+test("rechten: employee mag geen platform-admin endpoints", async () => {
+  const emp = await login("jan@demobouw.be", "Demo2026!");
+  const r = await fetch(`${BASE}/api/admin/stats`, { headers: { Authorization: `Bearer ${emp.token}` } });
+  assert.equal(r.status, 403, "employee → /api/admin/stats = 403");
+});
+
+test("rechten: zonder token overal 401", async () => {
+  const r = await fetch(`${BASE}/api/tenants/t_demo/facturen`);
+  assert.equal(r.status, 401);
+});

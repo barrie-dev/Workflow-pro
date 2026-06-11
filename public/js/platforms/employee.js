@@ -816,13 +816,13 @@ ${(() => {
           await api("POST", "/me/clock/out");
           window.showToast && window.showToast("Uitgeklokt ✓", "success");
           renderToday();
-        } catch(e) { alert(e.message); }
+        } catch(e) { window.showToast(e.message, "error"); }
       } else {
         try {
           await api("POST", "/me/clock/in");
           window.showToast && window.showToast("Ingeklokt ✓", "success");
           renderToday();
-        } catch(e) { alert(e.message); }
+        } catch(e) { window.showToast(e.message, "error"); }
       }
     });
     document.getElementById("empActWO")?.addEventListener("click", () => switchView("workorders"));
@@ -1068,7 +1068,7 @@ ${data.absentNow ? `<div style="background:#fef3c7;border-radius:10px;padding:12
           await api("DELETE", `/me/leaves/${btn.dataset.id}`);
           window.showToast && window.showToast("Aanvraag ingetrokken", "success");
           renderLeaves();
-        } catch(e) { alert(e.message); btn.disabled = false; btn.textContent = "Intrekken"; }
+        } catch(e) { window.showToast(e.message, "error"); btn.disabled = false; btn.textContent = "Intrekken"; }
       });
     });
   }
@@ -1125,7 +1125,7 @@ ${data.absentNow ? `<div style="background:#fef3c7;border-radius:10px;padding:12
           await api("DELETE", `/me/expenses/${btn.dataset.id}`);
           window.showToast && window.showToast("Declaratie verwijderd", "success");
           renderExpenses();
-        } catch(e) { alert(e.message); btn.disabled = false; btn.textContent = "✕"; }
+        } catch(e) { window.showToast(e.message, "error"); btn.disabled = false; btn.textContent = "✕"; }
       });
     });
   }
@@ -1171,14 +1171,14 @@ ${data.absentNow ? `<div style="background:#fef3c7;border-radius:10px;padding:12
       btn.addEventListener("click", async () => {
         btn.disabled = true; btn.textContent = "…";
         try { await api("PATCH", `/me/workorders/${btn.dataset.id}`, { status: "in_progress" }); renderWorkorders(); }
-        catch(e) { alert(e.message); btn.disabled = false; btn.textContent = "▶ Start"; }
+        catch(e) { window.showToast(e.message, "error"); btn.disabled = false; btn.textContent = "▶ Start"; }
       });
     });
     main.querySelectorAll(".emp-wo-done").forEach(btn => {
       btn.addEventListener("click", async () => {
         btn.disabled = true; btn.textContent = "…";
         try { await api("PATCH", `/me/workorders/${btn.dataset.id}`, { status: "Voltooid" }); renderWorkorders(); }
-        catch(e) { alert(e.message); btn.disabled = false; btn.textContent = "✓ Voltooid"; }
+        catch(e) { window.showToast(e.message, "error"); btn.disabled = false; btn.textContent = "✓ Voltooid"; }
       });
     });
 
@@ -1280,14 +1280,14 @@ ${data.absentNow ? `<div style="background:#fef3c7;border-radius:10px;padding:12
         await api("PATCH", `/me/workorders/${wo.id}`, { status: "in_progress" });
         window.showToast && window.showToast("Werkbon gestart ▶", "success");
         close(); renderWorkorders();
-      } catch(e) { alert(e.message); }
+      } catch(e) { window.showToast(e.message, "error"); }
     });
 
     // Photo upload (stores as base64 on workorder)
     document.getElementById("woPhotoInput")?.addEventListener("change", async e => {
       const file = e.target.files[0]; if (!file) return;
       const preview = document.getElementById("woPhotoPreview");
-      if (file.size > 3 * 1024 * 1024) { alert("Foto max 3MB"); return; }
+      if (file.size > 3 * 1024 * 1024) { window.showToast("Foto is te groot (max 3MB)", "warning"); return; }
       const reader = new FileReader();
       reader.onload = async (ev) => {
         const b64 = ev.target.result;
@@ -1297,7 +1297,7 @@ ${data.absentNow ? `<div style="background:#fef3c7;border-radius:10px;padding:12
           await api("PATCH", `/me/workorders/${wo.id}`, { photos: [...existing, b64] });
           window.showToast && window.showToast("Foto opgeslagen ✓", "success");
           wo.photos = [...existing, b64];
-        } catch(err) { alert("Upload fout: "+err.message); }
+        } catch(err) { window.showToast("Upload fout: "+err.message, "error"); }
       };
       reader.readAsDataURL(file);
     });
@@ -1322,7 +1322,7 @@ ${data.absentNow ? `<div style="background:#fef3c7;border-radius:10px;padding:12
           await api("PATCH", `/me/workorders/${wo.id}`, { status: "Voltooid", completionNote: note||undefined });
           window.showToast && window.showToast("Werkbon voltooid ✓", "success");
           close(); renderWorkorders();
-        } catch(e) { alert(e.message); }
+        } catch(e) { window.showToast(e.message, "error"); }
       });
     });
   }

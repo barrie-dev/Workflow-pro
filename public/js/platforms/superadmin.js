@@ -494,11 +494,11 @@
     const t = _cache.tenants.find(x=>x.id===id);
     if (!confirm(`Tenant "${t?.name||id}" pauzeren?`)) return;
     try { await api(`/api/admin/tenants/${id}/suspend`,{method:"POST"}); tenants(); }
-    catch(e) { alert(e.message); }
+    catch(e) { window.showToast(e.message, "error"); }
   }
   async function doActivate(id) {
     try { await api(`/api/admin/tenants/${id}/activate`,{method:"POST"}); tenants(); }
-    catch(e) { alert(e.message); }
+    catch(e) { window.showToast(e.message, "error"); }
   }
 
   function tenantDetailDrawer(id) {
@@ -540,11 +540,11 @@
     document.getElementById("drawerSuspend")?.addEventListener("click", async e => {
       if (!confirm("Pauzeren?")) return;
       try { await api(`/api/admin/tenants/${e.target.dataset.id}/suspend`,{method:"POST"}); closeDrawer(); tenants(); }
-      catch(ex) { alert(ex.message); }
+      catch(ex) { window.showToast(ex.message, "error"); }
     });
     document.getElementById("drawerActivate")?.addEventListener("click", async e => {
       try { await api(`/api/admin/tenants/${e.target.dataset.id}/activate`,{method:"POST"}); closeDrawer(); tenants(); }
-      catch(ex) { alert(ex.message); }
+      catch(ex) { window.showToast(ex.message, "error"); }
     });
     // Plan buttons
     document.querySelectorAll("[id^=planBtn_]").forEach(btn => {
@@ -552,7 +552,7 @@
         try {
           await api(`/api/admin/tenants/${t.id}`,{method:"PATCH",body:JSON.stringify({plan:btn.dataset.plan})});
           closeDrawer(); tenants();
-        } catch(ex) { alert(ex.message); }
+        } catch(ex) { window.showToast(ex.message, "error"); }
       });
     });
   }
@@ -589,7 +589,7 @@
       const btn = document.getElementById("submitNewTenant");
       btn.disabled = true; btn.textContent = "Bezig…";
       try { await api("/api/admin/tenants",{method:"POST",body:JSON.stringify(body)}); closeDrawer(); tenants(); }
-      catch(e) { btn.disabled=false; btn.textContent="Tenant aanmaken"; alert(e.message); }
+      catch(e) { btn.disabled=false; btn.textContent="Tenant aanmaken"; window.showToast(e.message, "error"); }
     });
   }
 
@@ -658,13 +658,13 @@
             if (act==="detail") { userDetailDrawer(uid, tmap); return; }
             if (act==="deactivate") {
               if (!confirm("Gebruiker deactiveren?")) return;
-              try { await api(`/api/admin/users/${uid}`,{method:"PATCH",body:JSON.stringify({active:false})}); users(); } catch(e){alert(e.message);}
+              try { await api(`/api/admin/users/${uid}`,{method:"PATCH",body:JSON.stringify({active:false})}); users(); } catch(e){window.showToast(e.message, "error");}
             }
             if (act==="activate") {
-              try { await api(`/api/admin/users/${uid}`,{method:"PATCH",body:JSON.stringify({active:true})}); users(); } catch(e){alert(e.message);}
+              try { await api(`/api/admin/users/${uid}`,{method:"PATCH",body:JSON.stringify({active:true})}); users(); } catch(e){window.showToast(e.message, "error");}
             }
             if (act==="unlock") {
-              try { await api(`/api/admin/users/${uid}/unlock`,{method:"POST"}); users(); } catch(e){alert(e.message);}
+              try { await api(`/api/admin/users/${uid}/unlock`,{method:"POST"}); users(); } catch(e){window.showToast(e.message, "error");}
             }
           });
         });
@@ -715,17 +715,17 @@ ${locked?`<div class="sa-alert alert-warn">⚠️ Account is vergrendeld na teve
       try {
         const r = await api(`/api/admin/users/${uid}/reset-password`,{method:"POST"});
         document.getElementById("pwResetResult").innerHTML = `<div class="sa-alert alert-success" style="margin-top:10px">✅ Tijdelijk wachtwoord: <strong style="font-family:monospace">${esc(r.tempPassword)}</strong><br><small>Geef dit eenmalig door aan de gebruiker.</small></div>`;
-      } catch(e) { alert(e.message); btn.disabled=false; btn.textContent="🔑 Wachtwoord resetten"; }
+      } catch(e) { window.showToast(e.message, "error"); btn.disabled=false; btn.textContent="🔑 Wachtwoord resetten"; }
     });
     document.getElementById("drawerUnlock")?.addEventListener("click", async () => {
-      try { await api(`/api/admin/users/${uid}/unlock`,{method:"POST"}); closeDrawer(); users(); } catch(e){alert(e.message);}
+      try { await api(`/api/admin/users/${uid}/unlock`,{method:"POST"}); closeDrawer(); users(); } catch(e){window.showToast(e.message, "error");}
     });
     document.getElementById("drawerDeactivate")?.addEventListener("click", async () => {
       if (!confirm("Gebruiker deactiveren?")) return;
-      try { await api(`/api/admin/users/${uid}`,{method:"PATCH",body:JSON.stringify({active:false})}); closeDrawer(); users(); } catch(e){alert(e.message);}
+      try { await api(`/api/admin/users/${uid}`,{method:"PATCH",body:JSON.stringify({active:false})}); closeDrawer(); users(); } catch(e){window.showToast(e.message, "error");}
     });
     document.getElementById("drawerActivate")?.addEventListener("click", async () => {
-      try { await api(`/api/admin/users/${uid}`,{method:"PATCH",body:JSON.stringify({active:true})}); closeDrawer(); users(); } catch(e){alert(e.message);}
+      try { await api(`/api/admin/users/${uid}`,{method:"PATCH",body:JSON.stringify({active:true})}); closeDrawer(); users(); } catch(e){window.showToast(e.message, "error");}
     });
   }
 

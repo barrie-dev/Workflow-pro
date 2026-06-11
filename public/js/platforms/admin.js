@@ -889,7 +889,7 @@ ${(() => {
           } catch(e) { errors.push(`${email}: ${e.message}`); }
         }
         const msg = `Import klaar: ${imported.length} aangemaakt${errors.length?`, ${errors.length} fouten`:""}.\n${errors.slice(0,5).join("\n")}`;
-        alert(msg); renderEmployees();
+        window.showToast(msg, "info"); renderEmployees();
       };
       input.click();
     });
@@ -939,7 +939,7 @@ ${(() => {
         try {
           await api("PATCH", `/employees/${btn.dataset.id}`, { active: !isActive });
           renderEmployees();
-        } catch(e) { alert(e.message); btn.disabled = false; }
+        } catch(e) { window.showToast(e.message, "error"); btn.disabled = false; }
       });
     });
   }
@@ -1010,11 +1010,11 @@ ${emp ? `
     document.getElementById("admEmpPwReset")?.addEventListener("click", async () => {
       const newPw = prompt("Nieuw tijdelijk wachtwoord (min. 8 tekens):");
       if (!newPw) return;
-      if (newPw.length < 8) { alert("Wachtwoord moet minstens 8 tekens zijn."); return; }
+      if (newPw.length < 8) { window.showToast("Wachtwoord moet minstens 8 tekens zijn.", "warning"); return; }
       try {
         await api("PATCH", `/employees/${emp.id}`, { newPassword: newPw });
-        alert(`Wachtwoord van ${emp.name||emp.email} is gewijzigd.`);
-      } catch(e) { alert(e.message); }
+        window.showToast(`Wachtwoord van ${emp.name||emp.email} is gewijzigd.`, "success");
+      } catch(e) { window.showToast(e.message, "error"); }
     });
 
     document.getElementById("admEmpToggle")?.addEventListener("click", async () => {
@@ -1023,7 +1023,7 @@ ${emp ? `
       try {
         await api("PATCH", `/employees/${emp.id}`, { active: !isActive });
         closeDrawer(); renderEmployees();
-      } catch(e) { alert(e.message); }
+      } catch(e) { window.showToast(e.message, "error"); }
     });
 
     document.getElementById("admEmpForm").addEventListener("submit", async e => {
@@ -1300,7 +1300,7 @@ ${emp ? `
           try {
             await api("DELETE", `/planning/${shift.id}`);
             closeDrawer(); renderPlanning();
-          } catch(err) { alert(err.message); }
+          } catch(err) { window.showToast(err.message, "error"); }
         });
       }
 
@@ -1330,7 +1330,7 @@ ${emp ? `
           submitBtn.disabled = false; submitBtn.textContent = isEdit ? "Opslaan" : "Aanmaken";
         }
       });
-    }).catch(err => alert(err.message));
+    }).catch(err => window.showToast(err.message, "error"));
   }
 
   // ── Clocking ───────────────────────────────────────────────
@@ -1438,7 +1438,7 @@ ${emp ? `
           const now = new Date().toISOString();
           btn.disabled = true;
           try { await api("PATCH", `/clocks/${btn.dataset.id}`, { clockedOut: now, status: "out" }); loadClockData(); }
-          catch(e) { alert(e.message); btn.disabled = false; }
+          catch(e) { window.showToast(e.message, "error"); btn.disabled = false; }
         });
       });
       // Wire edit buttons + rij-klik
@@ -1515,9 +1515,9 @@ ${emp ? `
         try {
           await api("POST", "/clocks/manual", body);
           closeDrawer(); loadClockData();
-        } catch(err) { alert(err.message); }
+        } catch(err) { window.showToast(err.message, "error"); }
       });
-    }).catch(e => alert(e.message));
+    }).catch(e => window.showToast(e.message, "error"));
   }
 
   function openClockEditDrawer(clockId, clocks) {
@@ -2279,10 +2279,10 @@ ${emp ? `
           renderWorkorders();
         } catch (err) {
           if (errEl) { errEl.textContent = err.message; errEl.style.display = "block"; }
-          else alert(err.message);
+          else window.showToast(err.message, "error");
         }
       });
-    }).catch(err => alert(err.message));
+    }).catch(err => window.showToast(err.message, "error"));
   }
 
   // ── Messages ───────────────────────────────────────────────
@@ -2360,7 +2360,7 @@ ${emp ? `
         try {
           await api("DELETE", `/messages/${btn.dataset.id}`);
           renderMessages();
-        } catch(e) { alert(e.message); btn.disabled = false; btn.textContent = "🗑"; }
+        } catch(e) { window.showToast(e.message, "error"); btn.disabled = false; btn.textContent = "🗑"; }
       });
     });
   }
@@ -2443,7 +2443,7 @@ ${emp ? `
           submitBtn.disabled = false; submitBtn.textContent = "Verzenden";
         }
       });
-    }).catch(err => alert(err.message));
+    }).catch(err => window.showToast(err.message, "error"));
   }
 
   // ── Reports ────────────────────────────────────────────────
@@ -3207,7 +3207,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
         closeDrawer(); renderCustomers();
       } catch(err) {
         if (errEl) { errEl.textContent = err.message; errEl.style.display = "block"; }
-        else alert(err.message);
+        else window.showToast(err.message, "error");
       }
     });
   }
@@ -3300,7 +3300,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
         closeDrawer(); renderVenues();
       } catch(err) {
         if (errEl) { errEl.textContent = err.message; errEl.style.display = "block"; }
-        else alert(err.message);
+        else window.showToast(err.message, "error");
       }
     });
   }
@@ -3386,7 +3386,7 @@ ${alerts.length ? `<div style="background:#fef3c7;border:1px solid #fde68a;borde
       document.getElementById("vehDelete").addEventListener("click", async () => {
         if (!confirm(`Voertuig "${vehicle.name||vehicle.plate}" permanent verwijderen?`)) return;
         try { await api("DELETE", `/vehicles/${vehicle.id}`); closeDrawer(); renderVehicles(); }
-        catch(err) { alert(err.message); }
+        catch(err) { window.showToast(err.message, "error"); }
       });
     }
     document.getElementById("vehForm").addEventListener("submit", async e => {
@@ -3398,7 +3398,7 @@ ${alerts.length ? `<div style="background:#fef3c7;border:1px solid #fde68a;borde
         if (vehicle) await api("PATCH", `/vehicles/${vehicle.id}`, body);
         else await api("POST", "/vehicles", body);
         closeDrawer(); renderVehicles();
-      } catch(err) { alert(err.message); }
+      } catch(err) { window.showToast(err.message, "error"); }
     });
   }
   function openMileageDrawer(vehicleId) {
@@ -3426,7 +3426,7 @@ ${alerts.length ? `<div style="background:#fef3c7;border:1px solid #fde68a;borde
       try {
         await api("POST", `/vehicles/${vehicleId}/mileage`, body);
         closeDrawer(); renderVehicles();
-      } catch(err) { alert(err.message); }
+      } catch(err) { window.showToast(err.message, "error"); }
     });
   }
 
@@ -3525,7 +3525,7 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
       document.getElementById("stDelete").addEventListener("click", async () => {
         if (!confirm(`Artikel "${item.name}" permanent verwijderen? Alle stockhistorie gaat verloren.`)) return;
         try { await api("DELETE", `/stock/${item.id}`); closeDrawer(); renderStock(); }
-        catch(err) { alert(err.message); }
+        catch(err) { window.showToast(err.message, "error"); }
       });
     }
     document.getElementById("stForm").addEventListener("submit", async e => {
@@ -3538,7 +3538,7 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
         if (item) await api("PATCH", `/stock/${item.id}`, body);
         else await api("POST", "/stock", body);
         closeDrawer(); renderStock();
-      } catch(err) { alert(err.message); }
+      } catch(err) { window.showToast(err.message, "error"); }
     });
   }
   function openMutationDrawer(itemId) {
@@ -3563,7 +3563,7 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
       try {
         await api("POST", `/stock/${itemId}/mutations`, body);
         closeDrawer(); renderStock();
-      } catch(err) { alert(err.message); }
+      } catch(err) { window.showToast(err.message, "error"); }
     });
   }
 
@@ -3994,7 +3994,7 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
           } catch(e) {
             const extra = (e.errors && e.errors.length) ? "\n\n• " + e.errors.join("\n• ") : "";
             window.showToast && window.showToast("Peppol: " + e.message, "error");
-            if (extra) alert("Peppol-validatie:" + extra);
+            if (extra) window.showToast("Peppol-validatie:" + extra, "warning");
             btn.disabled = false; btn.textContent = old;
           }
         });
@@ -4660,7 +4660,7 @@ ${enrolled.map(e => `
             const blob = new Blob([JSON.stringify(pv, null, 2)], { type: "application/json" });
             const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
             a.download = `backup-${backup.id}.json`; a.click();
-          } catch(e2) { alert("Download fout: "+e2.message); }
+          } catch(e2) { window.showToast("Download fout: "+e2.message, "error"); }
         });
       } catch(e) { if(resultEl) resultEl.innerHTML = `<div style="color:#dc2626;font-size:13px;">Fout: ${e.message}</div>`; }
     });

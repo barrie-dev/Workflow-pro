@@ -509,7 +509,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
           try {
             await api("DELETE", `/planning/${shift.id}`);
             close(); renderPlanning();
-          } catch(err) { alert(err.message); }
+          } catch(err) { window.showToast(err.message, "error"); }
         });
       }
 
@@ -530,7 +530,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
         }
       });
     }).catch(() => {
-      alert("Teamleden konden niet geladen worden.");
+      window.showToast("Teamleden konden niet geladen worden.", "error");
     });
   }
 
@@ -646,7 +646,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
           const now = new Date().toISOString();
           await api("PATCH", `/clocks/${btn.dataset.id}`, { clockedOut: now, status: "out" });
           renderClocking();
-        } catch(e) { alert(e.message); btn.disabled = false; btn.textContent = "⏹ Uitkloppen"; }
+        } catch(e) { window.showToast(e.message, "error"); btn.disabled = false; btn.textContent = "⏹ Uitkloppen"; }
       });
     });
   }
@@ -1126,7 +1126,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
       btn.addEventListener("click", async e => {
         e.stopPropagation();
         try { await api("PATCH", `/workorders/${btn.dataset.id}`, { status: "done" }); renderWorkorders(); }
-        catch(e2) { alert(e2.message); }
+        catch(e2) { window.showToast(e2.message, "error"); }
       });
     });
     document.querySelectorAll(".wo-detail").forEach(btn => {
@@ -1299,7 +1299,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
           btn.disabled = false; btn.textContent = "Aanmaken";
         }
       });
-    }).catch(() => alert("Team kon niet geladen worden."));
+    }).catch(() => window.showToast("Team kon niet geladen worden.", "error"));
   }
 
   // ── Berichten ──────────────────────────────────────────────
@@ -1498,7 +1498,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
         try {
           await api("DELETE", `/vehicles/${vehicle.id}`);
           close(); renderVehicles();
-        } catch(e) { alert(e.message); }
+        } catch(e) { window.showToast(e.message, "error"); }
       });
     }
 
