@@ -88,3 +88,26 @@ test("rechten: zonder token overal 401", async () => {
   const r = await fetch(`${BASE}/api/tenants/t_demo/facturen`);
   assert.equal(r.status, 401);
 });
+
+// ── Validatie: junk-data wordt geweigerd ────────────────────────
+test("validatie: onkost met bedrag 0 of negatief → 400", async () => {
+  const emp = await login("jan@demobouw.be", "Demo2026!");
+  for (const amount of [0, -5, "abc"]) {
+    const r = await fetch(`${BASE}/api/tenants/t_demo/me/expenses`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${emp.token}` },
+      body: JSON.stringify({ amount, category: "test", description: "junk" }),
+    });
+    assert.equal(r.status, 400, `bedrag ${amount} moet 400 geven`);
+  }
+});
+
+test("validatie: shift met eindtijd vóór starttijd → 400", async () => {
+  const admin = await login("admin@demobouw.be", "Demo2026!");
+  const r = await fetch(`${BASE}/api/tenants/t_demo/planning`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${admin.token}` },
+    body: JSON.stringify({ userId: "u_emp1", date: "2027-01-04", start: "17:00", end: "08:00" }),
+  });
+  assert.equal(r.status, 400);
+});

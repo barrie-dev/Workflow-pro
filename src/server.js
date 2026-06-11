@@ -1839,13 +1839,16 @@ http.createServer(async (req, res) => {
       // me/expenses POST — medewerker dient onkosten in
       if (action === "me/expenses" && req.method === "POST") {
         const body = await readBody(req);
+        const amount = Number(body.amount);
+        if (!Number.isFinite(amount) || amount <= 0) return sendJson(res, 400, { ok: false, error: "Bedrag moet groter zijn dan €0" });
+        if (amount > 100000) return sendJson(res, 400, { ok: false, error: "Bedrag is onrealistisch hoog — controleer de invoer" });
         const row = store.insert("expenses", {
           id: `exp_${Date.now()}_${require("crypto").randomBytes(4).toString("hex")}`,
           tenantId,
           userId: user.id,
           userName: user.name || user.email,
           date: body.date || new Date().toISOString().slice(0, 10),
-          amount: Number(body.amount || 0),
+          amount,
           category: body.category || "overig",
           description: body.description || "",
           status: "ingediend",
@@ -1962,6 +1965,7 @@ http.createServer(async (req, res) => {
         if (!body.date)   return sendJson(res, 400, { ok: false, error: "Datum is verplicht" });
         if (!body.start)  return sendJson(res, 400, { ok: false, error: "Starttijd is verplicht" });
         if (!body.end)    return sendJson(res, 400, { ok: false, error: "Eindtijd is verplicht" });
+        if (String(body.end) <= String(body.start)) return sendJson(res, 400, { ok: false, error: "Eindtijd moet na de starttijd liggen" });
         const shift = store.insert("shifts", {
           id: `shift_${Date.now()}_${Math.random().toString(16).slice(2)}`,
           tenantId,
