@@ -2138,7 +2138,7 @@ ${emp ? `
           <td><span style="font-size:12px;">${w.priority==="hoog"?"🔴":w.priority==="laag"?"🟢":"🟡"} ${esc(w.priority||"normaal")}</span></td>
           <td>${w.scheduledDate || w.createdAt?.slice(0,10) || "—"}</td>
           <td><button class="adm-btn adm-btn-secondary adm-btn-sm adm-wo-edit" data-id="${w.id}">✏</button></td>
-        </tr>`).join("") || `<tr><td colspan="8" class="adm-empty">${_woFilterStatus||_woFilterUser||_woFilterSearch ? "Geen resultaten voor deze filters" : "Geen werkbonnen"}</td></tr>`}
+        </tr>`).join("") || `<tr><td colspan="8" class="adm-empty">${_woFilterStatus||_woFilterUser||_woFilterSearch ? "Geen resultaten voor deze filters" : `Nog geen werkbonnen.<br><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewWO" style="margin-top:10px">+ Eerste werkbon aanmaken</button>`}</td></tr>`}
       </tbody>
     </table>
   </div>
@@ -2159,6 +2159,7 @@ ${emp ? `
     });
 
     document.getElementById("admNewWO")?.addEventListener("click", () => openWorkorderDrawer(null, allWorkorders));
+    document.getElementById("admEmptyNewWO")?.addEventListener("click", () => openWorkorderDrawer(null, allWorkorders));
     document.querySelectorAll(".adm-wo-edit").forEach(btn => {
       btn.addEventListener("click", e => { e.stopPropagation(); openWorkorderDrawer(allWorkorders.find(w => w.id === btn.dataset.id), allWorkorders); });
     });

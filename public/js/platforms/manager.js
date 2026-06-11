@@ -164,6 +164,8 @@
 .mgr-btn-sm { padding:4px 10px; font-size:12px; }
 .mgr-kpis { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:14px; margin-bottom:20px; }
 .mgr-kpi { background:#fff; border-radius:12px; padding:14px 16px; border:1px solid #e2e8f0; }
+.mgr-kpi-link { cursor:pointer; transition:transform .12s, box-shadow .12s; }
+.mgr-kpi-link:hover { transform:translateY(-2px); box-shadow:0 6px 18px rgba(15,23,42,.10); }
 .mgr-kpi-label { font-size:11px; color:#64748b; text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px; }
 .mgr-kpi-value { font-size:28px; font-weight:700; color:#0f172a; }
 .mgr-kpi-sub { font-size:11px; color:#94a3b8; margin-top:2px; }
@@ -249,32 +251,32 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
 
     content.innerHTML = `
 <div class="mgr-kpis">
-  <div class="mgr-kpi">
+  <div class="mgr-kpi mgr-kpi-link" data-goto="team" title="Naar team">
     <div class="mgr-kpi-label">Team</div>
     <div class="mgr-kpi-value">${dash.team ?? "—"}</div>
     <div class="mgr-kpi-sub">Medewerkers</div>
   </div>
-  <div class="mgr-kpi">
+  <div class="mgr-kpi mgr-kpi-link" data-goto="clocking" title="Naar prikklok">
     <div class="mgr-kpi-label">Ingeklokt</div>
     <div class="mgr-kpi-value" style="color:#10b981">${dash.clockedIn ?? "—"}</div>
     <div class="mgr-kpi-sub">Nu actief</div>
   </div>
-  <div class="mgr-kpi">
+  <div class="mgr-kpi mgr-kpi-link" data-goto="leaves" title="Naar verlof">
     <div class="mgr-kpi-label">Afwezig</div>
     <div class="mgr-kpi-value" style="color:#f59e0b">${dash.absentToday ?? "—"}</div>
     <div class="mgr-kpi-sub">Vandaag</div>
   </div>
-  <div class="mgr-kpi">
+  <div class="mgr-kpi mgr-kpi-link" data-goto="leaves" title="Naar verlof">
     <div class="mgr-kpi-label">Verlof</div>
     <div class="mgr-kpi-value" style="color:#f59e0b">${dash.pendingLeaves ?? "—"}</div>
     <div class="mgr-kpi-sub">Te verwerken</div>
   </div>
-  <div class="mgr-kpi">
+  <div class="mgr-kpi mgr-kpi-link" data-goto="expenses" title="Naar onkosten">
     <div class="mgr-kpi-label">Onkosten</div>
     <div class="mgr-kpi-value" style="color:#ef4444">${dash.pendingExpenses ?? "—"}</div>
     <div class="mgr-kpi-sub">Te verwerken</div>
   </div>
-  <div class="mgr-kpi">
+  <div class="mgr-kpi mgr-kpi-link" data-goto="workorders" title="Naar werkbonnen">
     <div class="mgr-kpi-label">Werkbonnen</div>
     <div class="mgr-kpi-value" style="color:#8b5cf6">${dash.openWorkorders ?? "—"}</div>
     <div class="mgr-kpi-sub">Open</div>
@@ -306,6 +308,10 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
 </div>`;
 
     document.getElementById("mgrViewTeam")?.addEventListener("click", () => switchView("team"));
+    // KPI-kaarten → doorklikken
+    document.querySelectorAll(".mgr-kpi-link").forEach(card => {
+      card.addEventListener("click", () => switchView(card.dataset.goto));
+    });
   }
 
   // ── Team ───────────────────────────────────────────────────

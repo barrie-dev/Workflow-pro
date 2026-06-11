@@ -2,15 +2,14 @@
  * WorkFlow Pro – Service Worker (PWA)
  *
  * Strategie:
- *  - App Shell (HTML/CSS/JS/fonts): Cache-first + stale-while-revalidate
- *  - API-calls  (/api/**):         Network-first + fallback naar cache
- *  - Navigatieverzoeken:           index.html als offline-fallback
- *  - Push-notificaties:            Voorbereid (Web Push API)
- *
- * Versie ophogen bij elke release om de oude cache te busten.
+ *  - Code (HTML/CSS/JS):    NETWORK-FIRST — elke deploy is direct zichtbaar;
+ *                           cache dient enkel als offline-fallback.
+ *  - Overige assets:        Cache-first (iconen, fonts, afbeeldingen).
+ *  - API-calls (/api/**):   Network-first + fallback naar cache.
+ *  - Navigatieverzoeken:    index.html als offline-fallback.
  */
 
-const CACHE_VERSION = "wfp-v3";
+const CACHE_VERSION = "wfp-v4";
 const SHELL_CACHE   = `${CACHE_VERSION}-shell`;
 const API_CACHE     = `${CACHE_VERSION}-api`;
 
@@ -63,16 +62,47 @@ self.addEventListener("fetch", event => {
 
   if (url.pathname.startsWith("/api/")) {
     event.respondWith(networkFirstApi(request, url));
+  } else if (isCode(url, request)) {
+    // HTML/CSS/JS: altijd vers van het netwerk — deploys direct zichtbaar.
+    event.respondWith(networkFirstShell(request));
   } else {
     event.respondWith(cacheFirstShell(request));
   }
 });
 
-// ── Cache-first (app shell) ────────────────────────────────────
+function isCode(url, request) {
+  return request.mode === "navigate"
+    || /\.(html|css|js)$/.test(url.pathname)
+    || url.pathname === "/";
+}
+
+// ── Network-first (code: HTML/CSS/JS) ──────────────────────────
+async function networkFirstShell(request) {
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      const cache = await caches.open(SHELL_CACHE);
+      cache.put(request, response.clone());
+    }
+    return response;
+  } catch {
+    const cached = await caches.match(request);
+    if (cached) return cached;
+    if (request.mode === "navigate") {
+      const fallback = await caches.match("/index.html");
+      if (fallback) return fallback;
+    }
+    return new Response("WorkFlow Pro is offline. Controleer je internetverbinding.", {
+      status: 503,
+      headers: { "Content-Type": "text/plain; charset=utf-8" }
+    });
+  }
+}
+
+// ── Cache-first (statische assets: iconen, fonts, afbeeldingen) ─
 async function cacheFirstShell(request) {
   const cached = await caches.match(request);
   if (cached) {
-    // Stale-while-revalidate: refresh op achtergrond
     refreshInBackground(SHELL_CACHE, request);
     return cached;
   }
@@ -84,15 +114,7 @@ async function cacheFirstShell(request) {
     }
     return response;
   } catch {
-    // Navigatieverzoeken: geef index.html als offline-fallback
-    if (request.mode === "navigate") {
-      const fallback = await caches.match("/index.html");
-      if (fallback) return fallback;
-    }
-    return new Response("WorkFlow Pro is offline. Controleer je internetverbinding.", {
-      status: 503,
-      headers: { "Content-Type": "text/plain; charset=utf-8" }
-    });
+    return new Response("Offline", { status: 503, headers: { "Content-Type": "text/plain; charset=utf-8" } });
   }
 }
 
