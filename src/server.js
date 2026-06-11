@@ -523,7 +523,8 @@ http.createServer(async (req, res) => {
       if (!body.currentPassword) return sendJson(res, 400, { ok: false, error: "Huidig wachtwoord is verplicht" });
       if (!body.newPassword) return sendJson(res, 400, { ok: false, error: "Nieuw wachtwoord is verplicht" });
       if (!verifyPassword(body.currentPassword, user.passwordHash)) {
-        return sendJson(res, 401, { ok: false, error: "Huidig wachtwoord is onjuist" });
+        // 400 (geen 401): gebruiker ís geauthenticeerd; dit is invoervalidatie.
+        return sendJson(res, 400, { ok: false, error: "Huidig wachtwoord is onjuist" });
       }
       assertStrongPassword(body.newPassword);
       store.update("users", user.id, { passwordHash: hashPassword(body.newPassword) });

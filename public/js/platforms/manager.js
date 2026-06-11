@@ -25,7 +25,15 @@
       body: body ? JSON.stringify(body) : undefined
     }).then(async r => {
       const data = await r.json();
-      if (!r.ok) throw Object.assign(new Error(data.error || "API fout"), { status: r.status, data });
+      if (!r.ok) {
+        // Sessie verlopen → netjes terug naar login (behalve op /auth/-paden zelf)
+        if (r.status === 401 && !fullPath.startsWith("/auth/")) {
+          localStorage.removeItem("wfp_token");
+          window.showToast && window.showToast("Je sessie is verlopen — log opnieuw in.", "warning");
+          setTimeout(() => location.reload(), 1200);
+        }
+        throw Object.assign(new Error(data.error || "API fout"), { status: r.status, data });
+      }
       return data;
     });
   }

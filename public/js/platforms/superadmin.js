@@ -23,7 +23,15 @@
       headers: { "Content-Type":"application/json", Authorization:`Bearer ${token()}`, ...(opts.headers||{}) }
     });
     const d = await r.json();
-    if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
+    if (!r.ok) {
+      // Sessie verlopen → netjes terug naar login (behalve op /auth/-paden zelf)
+      if (r.status === 401 && !path.startsWith("/api/auth/")) {
+        localStorage.removeItem("wfp_token");
+        window.showToast && window.showToast("Je sessie is verlopen — log opnieuw in.", "warning");
+        setTimeout(() => location.reload(), 1200);
+      }
+      throw new Error(d.error || `HTTP ${r.status}`);
+    }
     return d;
   }
 
