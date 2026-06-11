@@ -479,6 +479,14 @@ table.adm-table { width:100%; border-collapse:collapse; font-size:13px; }
 .adm-table tr:last-child td { border-bottom:none; }
 .adm-table tbody tr:hover td { background:#F8FAFC; }
 
+/* ── Planning grid: eerste kolom sticky bij horizontaal scrollen ── */
+.adm-plan-table { min-width:760px; }
+.adm-plan-table th:first-child, .adm-plan-table td:first-child {
+  position:sticky; left:0; background:#fff; z-index:2;
+  box-shadow:2px 0 4px rgba(15,23,42,.05);
+}
+.adm-plan-table thead th:first-child { background:#F8FAFC; z-index:3; }
+
 /* ── Status badges ── */
 .adm-status { display:inline-flex; align-items:center; padding:3px 9px; border-radius:999px; font-size:11px; font-weight:600; }
 .adm-status-active,.adm-status-goedgekeurd,.adm-status-approved,.adm-status-paid { background:#D1FAE5; color:#065F46; }
@@ -573,6 +581,20 @@ table.adm-table { width:100%; border-collapse:collapse; font-size:13px; }
       if (_currentView === "venues") openVenueDrawer(null);
       if (_currentView === "vehicles") openVehicleDrawer(null);
       if (_currentView === "stock") openStockDrawer(null);
+    });
+
+    // Lege-staat CTA's (gedelegeerd: overleeft elke re-render)
+    document.getElementById("admContent").addEventListener("click", e => {
+      const ctas = {
+        admEmptyNewCust:  () => openCustomerDrawer(null),
+        admEmptyNewVen:   () => openVenueDrawer(null),
+        admEmptyNewVeh:   () => openVehicleDrawer(null),
+        admEmptyNewStock: () => openStockDrawer(null),
+        admEmptyNewQuote: () => openOfferteDrawer(null),
+        admEmptyNewInv:   () => openFactuurDrawer(null),
+      };
+      const fn = ctas[e.target && e.target.id];
+      if (fn) fn();
     });
   }
 
@@ -1118,7 +1140,7 @@ ${emp ? `
     </div>
   </div>
   <div class="adm-card-body adm-table-wrap">
-    <table class="adm-table">
+    <table class="adm-table adm-plan-table">
       <thead><tr><th>Medewerker</th>${days.map(d => {
         const dayName = new Date(d).toLocaleDateString("nl-BE",{weekday:"short",day:"numeric",month:"numeric"});
         return `<th style="${d===today?"color:#0ea5e9;font-weight:700;background:#f0f9ff":""}">${dayName}</th>`;
@@ -2952,7 +2974,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
     <input id="custSearch" placeholder="Zoek naam, e-mail…" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;min-width:200px;">
   </div>
   ${rows.length === 0
-    ? `<div class="adm-empty"><div class="adm-empty-icon">🏢</div><div class="adm-empty-text">Nog geen klanten — klik "+ Klant" om te starten</div></div>`
+    ? `<div class="adm-empty"><div class="adm-empty-icon">🏢</div><div class="adm-empty-text">Nog geen klanten</div><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewCust" style="margin-top:12px">+ Eerste klant aanmaken</button></div>`
     : `<div class="adm-table-wrap"><table class="adm-table">
         <thead><tr><th>Naam</th><th>Contactpersoon</th><th>E-mail</th><th>Telefoon</th><th>BTW-nr</th><th>Acties</th></tr></thead>
         <tbody id="custTbody">${buildCustRows(rows)}</tbody>
@@ -3233,7 +3255,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
     <input id="venSearch" placeholder="Zoek locatie…" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;min-width:180px;">
   </div>
   ${rows.length === 0
-    ? `<div class="adm-empty"><div class="adm-empty-icon">📍</div><div class="adm-empty-text">Nog geen locaties — klik "+ Locatie"</div></div>`
+    ? `<div class="adm-empty"><div class="adm-empty-icon">📍</div><div class="adm-empty-text">Nog geen locaties</div><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewVen" style="margin-top:12px">+ Eerste locatie aanmaken</button></div>`
     : `<div class="adm-table-wrap"><table class="adm-table">
         <thead><tr><th>Naam</th><th>Adres</th><th>Contactpersoon</th><th>Telefoon</th><th>Actief</th><th>Acties</th></tr></thead>
         <tbody id="venTbody">${buildVenRows(rows)}</tbody>
@@ -3329,7 +3351,7 @@ ${alerts.length ? `<div style="background:#fef3c7;border:1px solid #fde68a;borde
     <h3 class="adm-card-title">Voertuigen <span style="background:#e0e7ff;color:#4f46e5;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${vehicles.length}</span></h3>
   </div>
   ${vehicles.length === 0
-    ? `<div class="adm-empty"><div class="adm-empty-icon">🚗</div><div class="adm-empty-text">Geen voertuigen geregistreerd</div></div>`
+    ? `<div class="adm-empty"><div class="adm-empty-icon">🚗</div><div class="adm-empty-text">Nog geen voertuigen</div><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewVeh" style="margin-top:12px">+ Eerste voertuig aanmaken</button></div>`
     : `<div class="adm-table-wrap"><table class="adm-table">
         <thead><tr><th>Naam / Kenteken</th><th>Merk / Model</th><th>Chauffeur</th><th>KM-stand</th><th>Status</th><th>Volgende service</th><th>Acties</th></tr></thead>
         <tbody>${vehicles.map(v => `<tr class="adm-row-link veh-row" data-id="${v.id}" title="Open voertuig">
@@ -3461,7 +3483,7 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
     <input id="stSearch" placeholder="Zoek artikel…" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;min-width:160px;">
   </div>
   ${items.length === 0
-    ? `<div class="adm-empty"><div class="adm-empty-icon">📦</div><div class="adm-empty-text">Geen stockartikelen</div></div>`
+    ? `<div class="adm-empty"><div class="adm-empty-icon">📦</div><div class="adm-empty-text">Nog geen stockartikelen</div><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewStock" style="margin-top:12px">+ Eerste artikel aanmaken</button></div>`
     : `<div class="adm-table-wrap"><table class="adm-table">
         <thead><tr><th>Artikel</th><th>SKU</th><th>Categorie</th><th>Hoeveelheid</th><th>Eenheid</th><th>Min. stock</th><th>Prijs/stuk</th><th>Acties</th></tr></thead>
         <tbody id="stTbody">${buildStockRows(items)}</tbody>
@@ -3730,7 +3752,7 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
     </select>
   </div>
   ${filtered.length === 0
-    ? `<div class="adm-empty"><div class="adm-empty-icon">📋</div><div class="adm-empty-text">Geen offertes — klik "+ Offerte" om te starten</div></div>`
+    ? `<div class="adm-empty"><div class="adm-empty-icon">📋</div><div class="adm-empty-text">Nog geen offertes</div><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewQuote" style="margin-top:12px">+ Eerste offerte aanmaken</button></div>`
     : `<div class="adm-table-wrap"><table class="adm-table">
         <thead><tr><th>Nr.</th><th>Datum</th><th>Klant</th><th>Geldig tot</th><th>Bedrag</th><th>Status</th><th>Acties</th></tr></thead>
         <tbody>${filtered.slice().sort((a,b)=>(b.quoteDate||"").localeCompare(a.quoteDate||"")).map(q => {
@@ -3944,7 +3966,7 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
     </div>
   </div>
   ${filtered.length === 0
-    ? `<div class="adm-empty"><div class="adm-empty-icon">🧾</div><div class="adm-empty-text">Geen facturen — klik "+ Factuur" om te starten</div></div>`
+    ? `<div class="adm-empty"><div class="adm-empty-icon">🧾</div><div class="adm-empty-text">Nog geen facturen</div><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewInv" style="margin-top:12px">+ Eerste factuur aanmaken</button></div>`
     : `<div class="adm-table-wrap"><table class="adm-table">
         <thead><tr><th>Nr.</th><th>Datum</th><th>Klant</th><th>Vervaldatum</th><th>Bedrag</th><th>Status</th><th>Acties</th></tr></thead>
         <tbody>${filtered.slice().sort((a,b) => (b.invoiceDate||"").localeCompare(a.invoiceDate||"")).map(inv => {
