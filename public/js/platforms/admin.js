@@ -804,8 +804,8 @@ ${(() => {
   <h3 class="adm-card-title">🎯 Pilot voortgang <span style="font-size:12px;font-weight:400;color:#64748b;">${doneCount}/${steps.length} stappen</span></h3>
   <div style="display:flex;align-items:center;gap:12px;">
     <div style="font-size:18px;font-weight:700;color:${pct===100?"#10b981":pct>50?"#f59e0b":"#6366f1"};">${pct}%</div>
-    <button class="adm-btn adm-btn-secondary adm-btn-sm" onclick="event.stopPropagation();document.getElementById('admGpSteps').classList.toggle('hidden')">Details</button>
-    <button class="adm-btn adm-btn-secondary adm-btn-sm" onclick="event.stopPropagation();" id="admGpRoadmap">Roadmap →</button>
+    <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admGpDetails">Details</button>
+    <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admGpRoadmap">Roadmap →</button>
   </div>
 </div>
 <div style="height:8px;background:#f1f5f9;border-radius:4px;overflow:hidden;margin:-8px 20px 0;">
@@ -818,7 +818,8 @@ ${(() => {
   </div>`).join("")}
 </div>`;
         gpEl.appendChild(gpDiv);
-        document.getElementById("admGpRoadmap")?.addEventListener("click", () => switchView("roadmap"));
+        document.getElementById("admGpRoadmap")?.addEventListener("click", e => { e.stopPropagation(); switchView("roadmap"); });
+        document.getElementById("admGpDetails")?.addEventListener("click", e => { e.stopPropagation(); document.getElementById("admGpSteps")?.classList.toggle("hidden"); });
       }
     }
 
@@ -2983,7 +2984,10 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
       function wireCustButtons() {
         document.querySelectorAll(".cust-view").forEach(b => b.addEventListener("click", () => renderCustomerDetail(b.dataset.id)));
         document.querySelectorAll(".cust-edit").forEach(b => b.addEventListener("click", () => openCustomerDrawer(rows.find(x => x.id === b.dataset.id))));
-        document.querySelectorAll(".cust-detail-row").forEach(row => row.addEventListener("click", () => renderCustomerDetail(row.dataset.id)));
+        document.querySelectorAll(".cust-detail-row").forEach(row => row.addEventListener("click", e => {
+          if (e.target.closest("button") || e.target.closest("a")) return;
+          renderCustomerDetail(row.dataset.id);
+        }));
       }
       document.getElementById("custSearch")?.addEventListener("input", e => {
         const q = e.target.value.toLowerCase();
@@ -2998,12 +3002,12 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
     return rows.map(c => `<tr style="cursor:pointer;" class="cust-detail-row" data-id="${c.id}">
       <td><strong>${esc(c.name)}</strong></td>
       <td>${esc(c.contactName||"—")}</td>
-      <td><a href="mailto:${esc(c.email||"")}" style="color:#4f46e5" onclick="event.stopPropagation()">${esc(c.email||"—")}</a></td>
+      <td><a href="mailto:${esc(c.email||"")}" style="color:#4f46e5">${esc(c.email||"—")}</a></td>
       <td>${esc(c.phone||"—")}</td>
       <td style="font-family:monospace;font-size:12px">${esc(c.vatNumber||"—")}</td>
       <td style="white-space:nowrap">
-        <button class="adm-btn adm-btn-primary adm-btn-sm cust-view" data-id="${c.id}" onclick="event.stopPropagation()">🔍 Detail</button>
-        <button class="adm-btn adm-btn-secondary adm-btn-sm cust-edit" data-id="${c.id}" onclick="event.stopPropagation()">✏</button>
+        <button class="adm-btn adm-btn-primary adm-btn-sm cust-view" data-id="${c.id}">🔍 Detail</button>
+        <button class="adm-btn adm-btn-secondary adm-btn-sm cust-edit" data-id="${c.id}">✏</button>
       </td>
     </tr>`).join("");
   }
@@ -4491,7 +4495,7 @@ ${billing.status === "trial" ? `<div style="background:#fffbeb;border:1px solid 
           <span>${esc(tenant.billingEmail || "—")}</span>
         </div>
         <hr style="border:none;border-top:1px solid #f1f5f9;margin:4px 0;">
-        <button class="adm-btn adm-btn-secondary" onclick="window.location='#billing'" style="width:100%;">Factuurgeschiedenis bekijken</button>
+        <button class="adm-btn adm-btn-secondary" id="admSettingsToBilling" style="width:100%;">Factuurgeschiedenis bekijken</button>
       </div>
     </div>
   </div>
@@ -4553,6 +4557,8 @@ ${billing.status === "trial" ? `<div style="background:#fffbeb;border:1px solid 
     });
 
     // Change password
+    document.getElementById("admSettingsToBilling")?.addEventListener("click", () => switchView("billing"));
+
     document.getElementById("admPwForm").addEventListener("submit", async e => {
       e.preventDefault();
       const msgEl = document.getElementById("admPwMsg");
@@ -4595,14 +4601,13 @@ ${billing.status === "trial" ? `<div style="background:#fffbeb;border:1px solid 
       try {
         const data = await api("POST", "/me/mfa/setup");
         const setup = data.setup || {};
-        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(setup.otpauth||"")}`;
         wizard.innerHTML = `
 <div style="font-size:14px;font-weight:600;margin-bottom:12px;">MFA instellen — stap 1 van 2</div>
-<p style="font-size:13px;color:#64748b;margin-bottom:12px;">Scan de QR-code met Google Authenticator, Authy of een andere TOTP-app:</p>
-<div style="text-align:center;margin-bottom:14px;">
-  <img src="${qrUrl}" alt="QR Code" style="border:4px solid #e2e8f0;border-radius:8px;width:180px;height:180px;" onerror="this.style.display='none'">
-  <div style="margin-top:8px;font-size:11px;color:#94a3b8;">Kan de QR-code niet scannen? Gebruik de handmatige sleutel:</div>
-  <div style="font-family:monospace;background:#f1f5f9;padding:8px 12px;border-radius:6px;font-size:13px;margin-top:4px;word-break:break-all;">${esc(setup.secret||"")}</div>
+<p style="font-size:13px;color:#64748b;margin-bottom:10px;">Voeg dit account toe in Google Authenticator, Authy of een andere TOTP-app via <strong>handmatige invoer</strong>:</p>
+<div style="margin-bottom:14px;">
+  <div style="font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;">Geheime sleutel</div>
+  <div style="font-family:monospace;background:#f1f5f9;padding:10px 12px;border-radius:8px;font-size:15px;margin-top:4px;word-break:break-all;letter-spacing:1px;text-align:center;">${esc(setup.secret||"")}</div>
+  <div style="font-size:11px;color:#94a3b8;margin-top:6px;">Type: tijdgebaseerd (TOTP) · 6 cijfers · 30s. Accountnaam: je e-mailadres.</div>
 </div>
 <div style="font-size:14px;font-weight:600;margin-bottom:8px;">Stap 2: bevestig met code</div>
 <div style="display:flex;gap:8px;">
@@ -4652,7 +4657,6 @@ ${enrolled.map(e => `
   <div style="border:1px solid #E2E8F0;border-radius:10px;padding:12px;margin-bottom:10px;">
     <div style="font-weight:600;font-size:13px;color:#0F172A;margin-bottom:6px;">${esc(e.name||e.email)} <span style="color:#94A3B8;font-weight:400;">· ${esc(e.email)}</span></div>
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-      <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(e.otpauth||"")}" alt="QR" style="width:96px;height:96px;border:3px solid #E2E8F0;border-radius:8px;" onerror="this.style.display='none'">
       <div style="flex:1;min-width:180px;">
         <div style="font-size:11px;color:#94A3B8;text-transform:uppercase;letter-spacing:.4px;">Geheime sleutel</div>
         <div style="font-family:monospace;background:#F1F5F9;padding:6px 10px;border-radius:6px;font-size:12px;word-break:break-all;margin:3px 0 8px;">${esc(e.secret||"")}</div>

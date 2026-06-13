@@ -323,6 +323,19 @@
       window.WorkFlowProPlatformRouter?.showLogin();
     });
 
+    // Gedelegeerde handler (CSP blokkeert inline onclick in gerenderde HTML):
+    // data-nav → navigeer naar view, data-action="refresh" → herlaad huidige view.
+    document.getElementById("platform-superadmin").addEventListener("click", e => {
+      const navEl = e.target.closest("[data-nav]");
+      if (navEl) {
+        const target = document.querySelector(`.sa-nav-item[data-view="${navEl.dataset.nav}"]`);
+        if (target) target.click();
+        return;
+      }
+      const actEl = e.target.closest("[data-action='refresh']");
+      if (actEl) renderView();
+    });
+
     renderView();
   }
 
@@ -383,14 +396,14 @@
   <div class="sa-card">
     <div class="sa-card-head">
       <div class="sa-card-title">Recente tenants</div>
-      <button class="sa-btn btn-ghost sm" onclick="document.querySelector('[data-view=tenants]').click()">Alle →</button>
+      <button class="sa-btn btn-ghost sm" data-nav="tenants">Alle →</button>
     </div>
     <div id="dashTenantList"><div class="sa-loader">…</div></div>
   </div>
   <div class="sa-card">
     <div class="sa-card-head">
       <div class="sa-card-title">Open support tickets</div>
-      <button class="sa-btn btn-ghost sm" onclick="document.querySelector('[data-view=support]').click()">Alle →</button>
+      <button class="sa-btn btn-ghost sm" data-nav="support">Alle →</button>
     </div>
     ${openTickets.length ? openTickets.slice(0,5).map(t=>`
     <div style="padding:10px 16px;border-bottom:1px solid #f8fafc;display:flex;align-items:center;gap:10px">
@@ -417,7 +430,7 @@
             <td>${badge(t.status, statusColor[t.status])}</td>
             <td>${t.counts?.users||0}</td>
           </tr>`).join("")}</tbody>
-        </table></div>` : `<div class="sa-empty"><div class="sa-empty-icon">🏢</div>Geen tenants — <button class="sa-btn btn-primary sm" style="margin-top:8px" onclick="document.querySelector('[data-view=tenants]').click()">+ Aanmaken</button></div>`;
+        </table></div>` : `<div class="sa-empty"><div class="sa-empty-icon">🏢</div>Geen tenants — <button class="sa-btn btn-primary sm" style="margin-top:8px" data-nav="tenants">+ Aanmaken</button></div>`;
       } catch(_) {}
     } catch(e) { content().innerHTML = err(e); }
   }
@@ -838,7 +851,7 @@ ${locked?`<div class="sa-alert alert-warn">⚠️ Account is vergrendeld na teve
 <div class="sa-card">
   <div class="sa-card-head">
     <div class="sa-card-title">Server errors ${badge_e(errors.length)}</div>
-    <button class="sa-btn btn-secondary sm" onclick="system()">↻ Vernieuwen</button>
+    <button class="sa-btn btn-secondary sm" data-action="refresh">↻ Vernieuwen</button>
   </div>
   ${errors.length ? `
   <div class="sa-tbl-wrap">
@@ -1150,7 +1163,6 @@ ${enrolled.map(e => `
   <div style="border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin-bottom:10px">
     <div style="font-weight:600;font-size:13px;color:#0f172a;margin-bottom:6px">${esc(e.name||e.email)} <span style="color:#94a3b8;font-weight:400">· ${esc(e.email)}</span></div>
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-      <img src="https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=${encodeURIComponent(e.otpauth||"")}" alt="QR" style="width:96px;height:96px;border:3px solid #e2e8f0;border-radius:8px" onerror="this.style.display='none'">
       <div style="flex:1;min-width:180px">
         <div style="font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px">Geheime sleutel</div>
         <div class="mono" style="background:#f1f5f9;padding:6px 10px;border-radius:6px;font-size:12px;word-break:break-all;margin:3px 0 8px">${esc(e.secret||"")}</div>

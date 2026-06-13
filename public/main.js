@@ -2642,6 +2642,15 @@ document.getElementById("langEN")?.addEventListener("click", () => {
   showToast("De Engelstalige interface komt binnenkort. De app is momenteel in het Nederlands.", "info");
 });
 
+// Demo-rol knoppen (CSP blokkeert inline onclick → hier via addEventListener)
+document.querySelectorAll(".login-role-btn[data-demo-email]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const emailInput = el("loginForm").elements.email;
+    emailInput.value = btn.dataset.demoEmail;
+    el("loginForm").elements.password.focus();
+  });
+});
+
 el("loginSuper").addEventListener("click", () => {
   el("loginForm").elements.email.value = "super@workflowpro.be";
   el("loginForm").elements.password.focus();

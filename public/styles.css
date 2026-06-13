@@ -496,6 +496,24 @@ body.authenticated #loginPage {
   margin-top: 1.5rem;
 }
 
+/* Inklapbare demo-sectie (bewust secundair t.o.v. echte login) */
+.login-demo-summary {
+  cursor: pointer;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: #64748B;
+  list-style: none;
+  padding: 8px;
+  border-radius: 8px;
+  transition: background .12s;
+  user-select: none;
+}
+.login-demo-summary::-webkit-details-marker { display: none; }
+.login-demo-summary::before { content: "▸ "; color: #94A3B8; }
+details[open] .login-demo-summary::before { content: "▾ "; }
+.login-demo-summary:hover { background: #F1F5F9; color: #2563EB; }
+.login-demo-section .login-demo-roles { margin-top: 14px; }
+
 .login-demo-divider {
   position: relative;
   text-align: center;
