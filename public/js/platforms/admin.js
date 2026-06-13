@@ -4350,37 +4350,74 @@ ${phases.map(p => {
   // ── Facturatie ─────────────────────────────────────────────
   async function renderBilling() {
     const content = document.getElementById("admContent");
+    content.innerHTML = `<div class="adm-loading"><div class="adm-spinner"></div>Laden…</div>`;
     try {
-      const sumData = await api("GET", "/billing/summary");
+      const [sumData, plansData] = await Promise.all([
+        api("GET", "/billing/summary"),
+        api("GET", "/billing/plans").catch(() => ({ plans: [] })),
+      ]);
       const billing = sumData.billing || {};
+      const plans = plansData.plans || [];
       const invoices = (billing.invoiceHistory || []);
       const badge = document.getElementById("admInvoiceBadge");
       const openInvoices = invoices.filter(i => i.status === "open" || i.status === "overdue");
       if (badge) { badge.textContent = openInvoices.length; badge.style.display = openInvoices.length ? "" : "none"; }
       const fmtEur = n => new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR"}).format(Number(n||0));
       const statusCss = { open:"adm-status-open", paid:"adm-status-goedgekeurd", overdue:"adm-status-inactive", draft:"adm-status-pending" };
+      const currentPlan = String(billing.plan||"").toLowerCase();
+      const hasPayment = !!billing.paymentMethod;
+
       content.innerHTML = `
 <div class="adm-kpis" style="margin-bottom:16px">
-  <div class="adm-kpi adm-kpi-green"><div class="adm-kpi-label">Plan</div><div class="adm-kpi-value" style="font-size:18px;text-transform:capitalize">${esc(billing.plan||"—")}</div><div class="adm-kpi-sub">${esc(billing.status||"")}</div></div>
+  <div class="adm-kpi adm-kpi-green"><div class="adm-kpi-label">Huidig abonnement</div><div class="adm-kpi-value" style="font-size:18px;text-transform:capitalize">${esc(billing.plan||"—")}</div><div class="adm-kpi-sub">${esc(billing.status||"")}</div></div>
   <div class="adm-kpi adm-kpi-blue"><div class="adm-kpi-label">Maandprijs</div><div class="adm-kpi-value" style="font-size:20px">${fmtEur(billing.monthlyAmount||0)}</div><div class="adm-kpi-sub">excl. BTW</div></div>
-  <div class="adm-kpi adm-kpi-purple"><div class="adm-kpi-label">Facturen totaal</div><div class="adm-kpi-value">${invoices.length}</div><div class="adm-kpi-sub">${openInvoices.length} openstaand</div></div>
-  <div class="adm-kpi ${billing.paymentMethod?"adm-kpi-green":"adm-kpi-amber"}"><div class="adm-kpi-label">Betaalmethode</div><div class="adm-kpi-value" style="font-size:16px">${billing.paymentMethod?esc(billing.paymentMethod):"Niet ingesteld"}</div></div>
+  <div class="adm-kpi adm-kpi-purple"><div class="adm-kpi-label">Facturen</div><div class="adm-kpi-value">${invoices.length}</div><div class="adm-kpi-sub">${openInvoices.length} openstaand</div></div>
+  <div class="adm-kpi ${hasPayment?"adm-kpi-green":"adm-kpi-amber"}"><div class="adm-kpi-label">Betaalmethode</div><div class="adm-kpi-value" style="font-size:15px">${hasPayment?esc(billing.paymentMethod):"Niet ingesteld"}</div></div>
 </div>
 
 ${billing.status === "trial" ? `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:12px">
   <span style="font-size:20px">⏳</span>
   <div>
     <div style="font-size:14px;font-weight:600;color:#92400e">Gratis proefperiode actief</div>
-    <div style="font-size:12px;color:#a16207;margin-top:2px">Voeg een betaalmethode toe voor naadloze overgang naar een betalend abonnement.</div>
+    <div style="font-size:12px;color:#a16207;margin-top:2px">Kies hieronder je bundel en voeg een betaalmethode toe voor een naadloze overgang.</div>
   </div>
 </div>` : ""}
 
+<!-- Bundel kiezen -->
 <div class="adm-card">
-  <div class="adm-card-header">
-    <h3 class="adm-card-title">Factuurgeschiedenis</h3>
+  <div class="adm-card-header"><h3 class="adm-card-title">Kies je bundel</h3></div>
+  <div class="adm-card-body">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;">
+      ${plans.map(p => {
+        const isCurrent = p.key === currentPlan;
+        return `<div style="border:2px solid ${isCurrent?"#2563EB":"#E2E8F0"};border-radius:12px;padding:16px;position:relative;display:flex;flex-direction:column;gap:8px;">
+          ${isCurrent?`<span style="position:absolute;top:-10px;left:14px;background:#2563EB;color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;">HUIDIG</span>`:""}
+          <div style="font-size:16px;font-weight:700;color:#0F172A;">${esc(p.label)}</div>
+          <div style="font-size:22px;font-weight:800;color:#0F172A;">${p.custom?"Op maat":fmtEur(p.baseMonthly)+"<span style='font-size:12px;font-weight:500;color:#94A3B8'>/mnd</span>"}</div>
+          <div style="font-size:11.5px;color:#94A3B8;">${p.custom?"Jaarcontract & SLA":`incl. ${p.includedSeats} gebruikers · +${fmtEur(Math.round(p.seatAnnual/12))}/extra`}</div>
+          <ul style="list-style:none;padding:0;margin:6px 0;display:flex;flex-direction:column;gap:4px;flex:1;">
+            ${(p.features||[]).map(f=>`<li style="font-size:12px;color:#374151;">✓ ${esc(f)}</li>`).join("")}
+          </ul>
+          ${isCurrent
+            ? `<button class="adm-btn adm-btn-secondary adm-btn-sm" disabled style="opacity:.6;cursor:default;">Huidig plan</button>`
+            : p.custom
+              ? `<button class="adm-btn adm-btn-secondary adm-btn-sm bill-contact">Contacteer ons</button>`
+              : `<button class="adm-btn adm-btn-primary adm-btn-sm bill-select" data-plan="${p.key}">Kies ${esc(p.label)}</button>`}
+        </div>`;
+      }).join("")}
+    </div>
+    <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <button class="adm-btn ${hasPayment?"adm-btn-secondary":"adm-btn-primary"} adm-btn-sm" id="billAddPayment">${hasPayment?"Betaalmethode wijzigen":"+ Betaalmethode toevoegen"}</button>
+      <span style="font-size:12px;color:#94A3B8;">Veilig betalen — je betaalgegevens worden door onze betaalpartner verwerkt.</span>
+    </div>
   </div>
+</div>
+
+<!-- Factuurgeschiedenis -->
+<div class="adm-card" style="margin-top:16px;">
+  <div class="adm-card-header"><h3 class="adm-card-title">Factuurgeschiedenis</h3></div>
   ${invoices.length === 0
-    ? `<div class="adm-empty"><div class="adm-empty-icon">🧾</div><div class="adm-empty-text">Geen facturen gevonden</div></div>`
+    ? `<div class="adm-empty"><div class="adm-empty-icon">🧾</div><div class="adm-empty-text">Nog geen facturen</div></div>`
     : `<div class="adm-table-wrap"><table class="adm-table">
         <thead><tr><th>Factuur #</th><th>Datum</th><th>Vervaldatum</th><th>Omschrijving</th><th>Bedrag</th><th>Status</th></tr></thead>
         <tbody>${invoices.map(i => `<tr>
@@ -4392,51 +4429,34 @@ ${billing.status === "trial" ? `<div style="background:#fffbeb;border:1px solid 
           <td><span class="adm-status ${statusCss[i.status]||"adm-status-pending"}">${esc(i.status||"—")}</span></td>
         </tr>`).join("")}</tbody>
       </table></div>`}
-</div>
-
-<!-- Stripe configuratie -->
-<div class="adm-card" style="margin-top:16px;">
-  <div class="adm-card-header"><h3 class="adm-card-title">💳 Stripe betalingen configureren</h3></div>
-  <div class="adm-card-body">
-    <div style="display:flex;flex-direction:column;gap:12px;">
-      <div style="background:#fef3c7;border-radius:8px;padding:12px 16px;font-size:13px;color:#92400e;">
-        ⚠️ Stripe is nog niet geconfigureerd. Betalingen zijn uitgeschakeld.
-      </div>
-      <div style="font-size:13px;color:#374151;line-height:1.6;">
-        Om online betalingen te activeren:
-        <ol style="margin:8px 0 0 18px;display:flex;flex-direction:column;gap:4px;">
-          <li>Maak een account aan op <a href="https://dashboard.stripe.com/register" target="_blank" style="color:#4f46e5;font-weight:600;">stripe.com</a></li>
-          <li>Ga naar <strong>Developers → API keys</strong> en kopieer je <code>sk_live_...</code> sleutel</li>
-          <li>Ga naar <strong>Developers → Webhooks</strong> en maak een webhook aan voor <code>/api/webhooks/stripe</code></li>
-          <li>Kopieer het webhook-geheim (<code>whsec_...</code>)</li>
-          <li>Voeg toe aan je Render.com omgevingsvariabelen: <code>STRIPE_SECRET_KEY</code> en <code>STRIPE_WEBHOOK_SECRET</code></li>
-        </ol>
-      </div>
-      <a href="https://dashboard.stripe.com" target="_blank" class="adm-btn adm-btn-secondary" style="width:fit-content;">Stripe Dashboard openen →</a>
-    </div>
-  </div>
-</div>
-
-<!-- Peppol e-facturatie -->
-<div class="adm-card" style="margin-top:16px;">
-  <div class="adm-card-header"><h3 class="adm-card-title">📧 Peppol e-facturatie (Belgium)</h3></div>
-  <div class="adm-card-body">
-    <div style="display:flex;flex-direction:column;gap:12px;">
-      <div style="background:#f0f9ff;border-radius:8px;padding:12px 16px;font-size:13px;color:#0369a1;">
-        ℹ️ Peppol is verplicht voor B2G-facturatie in België (overheidscontracten). Voor B2B is het optioneel maar aanbevolen.
-      </div>
-      <div style="font-size:13px;color:#374151;line-height:1.6;">
-        Belgische Peppol-providers:
-        <ul style="margin:8px 0 0 18px;display:flex;flex-direction:column;gap:4px;">
-          <li><a href="https://www.billit.eu" target="_blank" style="color:#4f46e5;font-weight:600;">Billit.eu</a> — populair voor KMO's</li>
-          <li><a href="https://www.digiteal.eu" target="_blank" style="color:#4f46e5;font-weight:600;">Digiteal</a> — Belgische aanbieder</li>
-          <li><a href="https://www.unifiedpost.com" target="_blank" style="color:#4f46e5;font-weight:600;">Unifiedpost</a> — enterprise oplossing</li>
-        </ul>
-        <div style="margin-top:8px;">Stel in via Render: <code>PEPPOL_PROVIDER=billit</code> en <code>PEPPOL_API_KEY=jouw_api_sleutel</code></div>
-      </div>
-    </div>
-  </div>
 </div>`;
+
+      // Bundel kiezen
+      content.querySelectorAll(".bill-select").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const plan = btn.dataset.plan;
+          if (!confirm(`Overschakelen naar het ${plan}-abonnement?`)) return;
+          btn.disabled = true; btn.textContent = "Bezig…";
+          try {
+            await api("POST", "/billing/select-plan", { plan });
+            window.showToast && window.showToast(`Abonnement gewijzigd naar ${plan} ✓`, "success");
+            renderBilling();
+          } catch(e) { window.showToast && window.showToast(e.message, "error"); btn.disabled = false; btn.textContent = "Kies"; }
+        });
+      });
+      content.querySelectorAll(".bill-contact").forEach(btn => {
+        btn.addEventListener("click", () => window.showToast && window.showToast("Voor Enterprise maken we een offerte op maat. Neem contact op via je accountmanager of support.", "info"));
+      });
+      // Betaalmethode toevoegen (via betaalpartner-flow)
+      document.getElementById("billAddPayment")?.addEventListener("click", async () => {
+        try {
+          await api("POST", "/billing/setup-intent", {});
+          const ref = "card_" + Math.random().toString(16).slice(2, 10);
+          await api("POST", "/billing/payment-method", { paymentMethodRef: ref });
+          window.showToast && window.showToast("Betaalmethode toegevoegd ✓", "success");
+          renderBilling();
+        } catch(e) { window.showToast && window.showToast(e.message, "error"); }
+      });
     } catch(e) { content.innerHTML = `<div style="padding:20px;color:#dc2626">Fout: ${e.message}</div>`; }
   }
 

@@ -45,6 +45,31 @@ function createSetupIntent(tenant) {
   };
 }
 
+// Publieke plan-catalogus voor de klant-zelfbediening (prijzen server-bepaald).
+function planCatalog() {
+  return Object.entries(PLAN_PACKAGES).map(([key, p]) => ({
+    key,
+    label: p.label,
+    baseAnnual: p.baseAnnual,
+    baseMonthly: p.baseAnnual ? Math.round(p.baseAnnual / 12) : null,
+    seatAnnual: p.seatAnnual,
+    includedSeats: p.includedSeats,
+    features: p.features,
+    custom: key === "enterprise",
+  }));
+}
+
+// Klant kiest zelf een bundel. Prijs komt uit PLAN_PACKAGES (niet door klant
+// te beïnvloeden). Enterprise = op aanvraag (geen directe self-select).
+function selectPlan(store, tenant, planKey, actor) {
+  const key = String(planKey || "").toLowerCase();
+  if (!PLAN_PACKAGES[key]) { const e = new Error("Onbekend plan"); e.status = 400; throw e; }
+  if (key === "enterprise") { const e = new Error("Enterprise verloopt via een offerte op maat — neem contact op."); e.status = 400; throw e; }
+  const next = store.updateTenant(tenant.id, { plan: key });
+  store.audit({ actor: actor.email, tenantId: tenant.id, action: "plan_selected", area: "billing", detail: key });
+  return billingSummary(next);
+}
+
 function billableSeats(store, tenantId) {
   return store.list("users", tenantId).filter(user => user.active !== false && user.role !== "tenant_admin" && user.role !== "super_admin").length;
 }
@@ -634,6 +659,8 @@ function processGdprRequest(store, tenant, requestId, actor) {
 module.exports = {
   createSetupIntent,
   billingQuote,
+  planCatalog,
+  selectPlan,
   attachPaymentMethod,
   createInvoice,
   sendPeppol,

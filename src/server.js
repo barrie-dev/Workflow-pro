@@ -37,6 +37,8 @@ const { lookupKbo } = require("./modules/kbo");
 const {
   createSetupIntent,
   billingQuote,
+  planCatalog,
+  selectPlan,
   attachPaymentMethod,
   createInvoice,
   sendPeppol,
@@ -1302,6 +1304,18 @@ http.createServer(async (req, res) => {
       if (action === "billing/quote" && req.method === "GET") {
         assertCan(user, "billing");
         sendJson(res, 200, { ok: true, quote: billingQuote(store, tenant) });
+        return;
+      }
+      if (action === "billing/plans" && req.method === "GET") {
+        assertCan(user, "billing");
+        sendJson(res, 200, { ok: true, plans: planCatalog() });
+        return;
+      }
+      if (action === "billing/select-plan" && req.method === "POST") {
+        assertCan(user, "billing");
+        assertInteractiveUser(user);
+        const body = await readBody(req);
+        sendJson(res, 200, { ok: true, billing: selectPlan(store, tenant, body.plan, user) });
         return;
       }
       if (action === "billing/contract-state" && req.method === "POST") {
