@@ -44,11 +44,16 @@
   const CSS = `
 <style>
 #platform-superadmin{font-family:'Inter',system-ui,-apple-system,sans-serif;height:100vh;overflow:hidden}
-#platform-superadmin *{box-sizing:border-box;margin:0;padding:0}
+/* box-sizing globally; margin/padding reset only on text elements so class-based spacing is preserved.
+   A blanket star-selector margin/padding reset here has ID-specificity and would clobber every .sa- padding. */
+#platform-superadmin *{box-sizing:border-box}
+#platform-superadmin h1,#platform-superadmin h2,#platform-superadmin h3,#platform-superadmin h4,#platform-superadmin p,#platform-superadmin figure,#platform-superadmin ul,#platform-superadmin ol{margin:0;padding:0}
+#platform-superadmin ul,#platform-superadmin ol{list-style:none}
+#platform-superadmin button{margin:0}
 
 /* Layout */
-.sa-layout{display:flex;height:100vh;background:#f1f5f9}
-.sa-sidebar{width:248px;min-width:248px;background:#0f172a;display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0;transition:transform .2s}
+.sa-layout{display:flex;height:100vh;background:#F0F4F8}
+.sa-sidebar{width:248px;min-width:248px;background:#0B1929;display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0;transition:transform .2s}
 .sa-main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
 .sa-topbar{height:56px;background:#fff;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;padding:0 20px;gap:12px;flex-shrink:0}
 .sa-topbar-title{font-size:15px;font-weight:600;color:#0f172a;flex:1}
@@ -57,9 +62,9 @@
 
 /* Sidebar brand */
 .sa-brand{display:flex;align-items:center;gap:12px;padding:18px 16px 16px;border-bottom:1px solid rgba(255,255,255,.06)}
-.sa-brand-mark{width:38px;height:38px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:10px;display:grid;place-items:center;font-weight:800;font-size:13px;color:#fff;flex-shrink:0;box-shadow:0 2px 8px rgba(99,102,241,.4)}
+.sa-brand-mark{width:38px;height:38px;background:#2563EB;border-radius:10px;display:grid;place-items:center;font-weight:800;font-size:13px;color:#fff;flex-shrink:0;box-shadow:0 2px 8px rgba(37,99,235,.4)}
 .sa-brand-name{font-size:14px;font-weight:700;color:#f1f5f9;line-height:1.2}
-.sa-brand-sub{font-size:11px;color:#6366f1;font-weight:600;letter-spacing:.5px;text-transform:uppercase}
+.sa-brand-sub{font-size:11px;color:#60a5fa;font-weight:600;letter-spacing:.5px;text-transform:uppercase}
 
 /* Nav */
 .sa-nav{padding:10px 8px;flex:1}
@@ -67,17 +72,17 @@
 .sa-nav-item{display:flex;align-items:center;gap:10px;width:100%;padding:8.5px 12px;border:none;background:none;border-radius:8px;color:#64748b;font-size:13px;font-weight:500;cursor:pointer;text-align:left;transition:all .12s;position:relative;white-space:nowrap}
 .sa-nav-item svg{width:17px;height:17px;flex-shrink:0;fill:currentColor;opacity:.8}
 .sa-nav-item:hover{background:rgba(255,255,255,.06);color:#cbd5e1}
-.sa-nav-item.active{background:linear-gradient(90deg,rgba(99,102,241,.25),rgba(99,102,241,.1));color:#a5b4fc;font-weight:600}
-.sa-nav-item.active svg{opacity:1;color:#818cf8}
+.sa-nav-item.active{background:rgba(37,99,235,.25);color:#fff;font-weight:600;border-left:2px solid #2563EB;padding-left:10px}
+.sa-nav-item.active svg{opacity:1;color:#fff}
 .sa-nav-item .nav-badge{margin-left:auto;background:#ef4444;color:#fff;border-radius:99px;font-size:10px;padding:1px 5px;font-weight:700;min-width:18px;text-align:center}
 .sa-nav-divider{height:1px;background:rgba(255,255,255,.06);margin:6px 10px}
 
 /* Sidebar footer */
 .sa-sidebar-footer{padding:12px;border-top:1px solid rgba(255,255,255,.06)}
 .sa-user-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
-.sa-user-av{width:32px;height:32px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
+.sa-user-av{width:32px;height:32px;background:#2563EB;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
 .sa-user-nm{font-size:12px;font-weight:600;color:#e2e8f0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.sa-user-rl{font-size:10px;color:#6366f1;font-weight:600;text-transform:uppercase}
+.sa-user-rl{font-size:10px;color:#60a5fa;font-weight:600;text-transform:uppercase}
 .sa-btn-logout{width:100%;padding:7px;border:1px solid rgba(255,255,255,.08);background:transparent;color:#64748b;border-radius:8px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .12s}
 .sa-btn-logout:hover{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.3);color:#f87171}
 .sa-btn-logout svg{width:14px;height:14px;fill:currentColor}
@@ -85,20 +90,20 @@
 /* Page header */
 .sa-page-head{display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap}
 .sa-page-head h1{font-size:19px;font-weight:700;color:#0f172a}
-.sa-page-head .cnt{background:#e0e7ff;color:#4f46e5;border-radius:99px;font-size:12px;padding:2px 9px;font-weight:700;vertical-align:middle;margin-left:6px}
+.sa-page-head .cnt{background:#dbeafe;color:#1d4ed8;border-radius:99px;font-size:12px;padding:2px 9px;font-weight:700;vertical-align:middle;margin-left:6px}
 .sa-spacer{flex:1}
 
 /* KPI cards */
 .sa-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:13px;margin-bottom:22px}
-.sa-kpi{background:#fff;border-radius:12px;padding:17px 18px;border:1px solid #e2e8f0;position:relative;overflow:hidden;cursor:default}
-.sa-kpi::after{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--kpi-color,#4f46e5);border-radius:3px 3px 0 0}
+.sa-kpi{background:#fff;border-radius:12px;padding:17px 18px;border:1px solid #e2e8f0;position:relative;overflow:hidden;cursor:default;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.sa-kpi::after{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--kpi-color,#2563EB);border-radius:3px 3px 0 0}
 .sa-kpi-label{font-size:11.5px;color:#64748b;font-weight:500;margin-bottom:5px}
 .sa-kpi-value{font-size:27px;font-weight:800;color:#0f172a;line-height:1.1}
 .sa-kpi-sub{font-size:11px;color:#94a3b8;margin-top:3px}
-.kpi-indigo{--kpi-color:#6366f1}
+.kpi-indigo{--kpi-color:#2563EB}
 .kpi-blue{--kpi-color:#3b82f6}
 .kpi-green{--kpi-color:#10b981}
-.kpi-purple{--kpi-color:#8b5cf6}
+.kpi-purple{--kpi-color:#7c3aed}
 .kpi-orange{--kpi-color:#f59e0b}
 .kpi-red{--kpi-color:#ef4444}
 .kpi-teal{--kpi-color:#14b8a6}
@@ -139,8 +144,8 @@
 /* Buttons */
 .sa-btn{padding:7px 14px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;border:1.5px solid transparent;display:inline-flex;align-items:center;gap:5px;transition:all .12s;white-space:nowrap}
 .sa-btn svg{width:14px;height:14px;fill:currentColor}
-.btn-primary{background:#4f46e5;color:#fff;border-color:#4f46e5}
-.btn-primary:hover{background:#4338ca}
+.btn-primary{background:#2563EB;color:#fff;border-color:#2563EB}
+.btn-primary:hover{background:#1D4ED8;border-color:#1D4ED8}
 .btn-secondary{background:#fff;color:#374151;border-color:#e2e8f0}
 .btn-secondary:hover{background:#f8fafc;border-color:#cbd5e1}
 .btn-danger{background:#fff;color:#dc2626;border-color:#fecaca}
@@ -155,7 +160,7 @@
 /* Filters */
 .sa-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
 .sa-filters input,.sa-filters select{padding:6.5px 11px;border:1px solid #e2e8f0;border-radius:8px;font-size:12.5px;color:#374151;background:#fff}
-.sa-filters input:focus,.sa-filters select:focus{outline:none;border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.1)}
+.sa-filters input:focus,.sa-filters select:focus{outline:none;border-color:#2563EB;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
 
 /* Empty / loader / error */
 .sa-empty{padding:36px;text-align:center;color:#94a3b8;font-size:13px}
@@ -177,7 +182,7 @@
 .sa-field{display:flex;flex-direction:column;gap:5px}
 .sa-field label{font-size:11.5px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.4px}
 .sa-field input,.sa-field select,.sa-field textarea{padding:8px 11px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;color:#0f172a;background:#fff;width:100%}
-.sa-field input:focus,.sa-field select:focus,.sa-field textarea:focus{outline:none;border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.1)}
+.sa-field input:focus,.sa-field select:focus,.sa-field textarea:focus{outline:none;border-color:#2563EB;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
 .sa-field .hint{font-size:11px;color:#94a3b8}
 .sa-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 
@@ -1064,7 +1069,7 @@ ${locked?`<div class="sa-alert alert-warn">⚠️ Account is vergrendeld na teve
 <style>
 .sa-fld{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:600;color:#334155}
 .sa-fld input,.sa-fld select{padding:9px 11px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;font-weight:400}
-.sa-fld input:focus,.sa-fld select:focus{outline:none;border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.12)}
+.sa-fld input:focus,.sa-fld select:focus{outline:none;border-color:#2563EB;box-shadow:0 0 0 3px rgba(37,99,235,.12)}
 </style>`;
 
       document.getElementById("saIntegrationsForm").addEventListener("submit", async e => {

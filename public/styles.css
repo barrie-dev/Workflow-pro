@@ -1277,7 +1277,7 @@ table.wfp-table tbody tr:hover td { background: var(--gray-50); }
 /* ═══════════════════════════════════════════════════
    BUTTONS
 ═══════════════════════════════════════════════════ */
-button:not(.wfp-nav-btn):not(.wfp-tab):not(.view-switch button):not(.login-btn):not(.login-role-btn):not(.lpv-lang-btn):not(.wfp-primary-btn):not(.wfp-icon-btn) {
+button:not(.wfp-nav-btn):not(.wfp-tab):not(.view-switch button):not(.login-btn):not(.login-role-btn):not(.lpv-lang-btn):not(.wfp-primary-btn):not(.wfp-icon-btn):not(.sa-btn):not(.sa-nav-item):not(.sa-btn-logout):not(.sa-menu-toggle):not(.sa-drawer-close) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1295,7 +1295,7 @@ button:not(.wfp-nav-btn):not(.wfp-tab):not(.view-switch button):not(.login-btn):
   white-space: nowrap;
 }
 
-button:not(.wfp-nav-btn):not(.wfp-tab):not(.view-switch button):not(.login-btn):not(.login-role-btn):not(.lpv-lang-btn):not(.wfp-primary-btn):not(.wfp-icon-btn):hover {
+button:not(.wfp-nav-btn):not(.wfp-tab):not(.view-switch button):not(.login-btn):not(.login-role-btn):not(.lpv-lang-btn):not(.wfp-primary-btn):not(.wfp-icon-btn):not(.sa-btn):not(.sa-nav-item):not(.sa-btn-logout):not(.sa-menu-toggle):not(.sa-drawer-close):hover {
   background: var(--gray-50);
 }
 
