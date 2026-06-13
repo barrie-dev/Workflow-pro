@@ -2631,6 +2631,17 @@ el("login").addEventListener("click", () => {
   setShellAuthenticated(false);
 });
 
+// Wachtwoord vergeten — eerlijke uitleg i.p.v. dode link (geen e-mail reset flow)
+document.getElementById("loginForgot")?.addEventListener("click", event => {
+  event.preventDefault();
+  showToast("Wachtwoord vergeten? Vraag je beheerder om het te resetten via Medewerkers. Beheerders nemen contact op met support.", "info");
+});
+
+// Taalkeuze — EN is voorbereid maar nog niet beschikbaar (eerlijk i.p.v. dode knop)
+document.getElementById("langEN")?.addEventListener("click", () => {
+  showToast("De Engelstalige interface komt binnenkort. De app is momenteel in het Nederlands.", "info");
+});
+
 el("loginSuper").addEventListener("click", () => {
   el("loginForm").elements.email.value = "super@workflowpro.be";
   el("loginForm").elements.password.focus();

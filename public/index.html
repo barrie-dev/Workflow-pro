@@ -105,8 +105,8 @@
     <div class="login-panel">
       <div class="login-panel-inner">
         <div class="login-panel-lang">
-          <button class="lpv-lang-btn active" type="button">NL</button>
-          <button class="lpv-lang-btn" type="button">EN</button>
+          <button class="lpv-lang-btn active" type="button" id="langNL">NL</button>
+          <button class="lpv-lang-btn" type="button" id="langEN" title="Engelstalige interface komt binnenkort">EN</button>
         </div>
 
         <div class="login-form-header">
@@ -122,7 +122,7 @@
           <div class="login-field">
             <label class="login-label" style="position:relative">
               Wachtwoord
-              <a href="#" class="login-forgot" style="position:absolute;right:0;top:0;font-size:0.75rem">Vergeten?</a>
+              <a href="#" id="loginForgot" class="login-forgot" style="position:absolute;right:0;top:0;font-size:0.75rem">Vergeten?</a>
             </label>
             <input class="login-input" name="password" type="password" required autocomplete="current-password" placeholder="••••••••••••">
           </div>
@@ -162,6 +162,12 @@
               <div><strong style="font-size:0.8125rem;color:#334155">Super Admin</strong><div style="font-size:0.7rem;color:#94a3b8;margin-top:1px">Platform beheer</div></div>
             </button>
           </div>
+        </div>
+
+        <div class="login-legal">
+          <a href="/privacy.html" target="_blank" rel="noopener">Privacybeleid</a>
+          <span aria-hidden="true">·</span>
+          <a href="/voorwaarden.html" target="_blank" rel="noopener">Algemene voorwaarden</a>
         </div>
       </div>
     </div>
