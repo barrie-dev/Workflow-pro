@@ -111,3 +111,41 @@ test("validatie: shift met eindtijd vóór starttijd → 400", async () => {
   });
   assert.equal(r.status, 400);
 });
+
+// ── Entitlements: module-gating per pakket ──────────────────────
+test("entitlements: business-tenant heeft planning (200) maar niet integraties (403)", async () => {
+  const admin = await login("admin@demobouw.be", "Demo2026!");
+  // Positief: planning zit in business (generieke module-route serveert GET).
+  const ok = await fetch(`${BASE}/api/modules/planning?tenantId=t_demo`, { headers: { Authorization: `Bearer ${admin.token}` } });
+  assert.equal(ok.status, 200, "planning zit in business → 200");
+  // Negatief: integraties niet in business → 403 op zowel module-route als dispatcher.
+  const denyMod = await fetch(`${BASE}/api/modules/integrations?tenantId=t_demo`, { headers: { Authorization: `Bearer ${admin.token}` } });
+  assert.equal(denyMod.status, 403, "integraties niet in business (module-route) → 403");
+  assert.equal((await denyMod.json()).code, "module_disabled");
+  const deny = await fetch(`${BASE}/api/tenants/t_demo/integrations`, { headers: { Authorization: `Bearer ${admin.token}` } });
+  assert.equal(deny.status, 403, "integraties niet in business (dispatcher) → 403");
+  assert.equal((await deny.json()).ok, false);
+});
+
+test("entitlements: /api/me geeft entitlements met views", async () => {
+  const admin = await login("admin@demobouw.be", "Demo2026!");
+  const d = await (await fetch(`${BASE}/api/me`, { headers: { Authorization: `Bearer ${admin.token}` } })).json();
+  assert.ok(d.entitlements, "me bevat entitlements");
+  assert.ok(Array.isArray(d.entitlements.views) && d.entitlements.views.includes("dashboard"), "views bevat kern");
+  assert.ok(d.entitlements.modules.includes("planning"));
+});
+
+test("entitlements: super-admin catalogus + bundels endpoints", async () => {
+  const su = await login("super@workflowpro.be", "Demo2026!");
+  assert.ok(su.token, "super-admin login moet slagen");
+  const cat = await (await fetch(`${BASE}/api/admin/catalog`, { headers: { Authorization: `Bearer ${su.token}` } })).json();
+  assert.ok(cat.modules.length > 0 && cat.core.length > 0, "catalogus geladen");
+  const bun = await (await fetch(`${BASE}/api/admin/bundles`, { headers: { Authorization: `Bearer ${su.token}` } })).json();
+  assert.ok(bun.bundles.some(b => b.key === "business"), "bundels bevatten business");
+});
+
+test("entitlements: super-admin omzeilt module-gating", async () => {
+  const su = await login("super@workflowpro.be", "Demo2026!");
+  const r = await fetch(`${BASE}/api/tenants/t_demo/integrations`, { headers: { Authorization: `Bearer ${su.token}` } });
+  assert.equal(r.status, 200, "super-admin → integraties = 200 ondanks pakket");
+});

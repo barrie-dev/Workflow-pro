@@ -253,6 +253,9 @@
       <button class="sa-nav-item" data-view="billing">
         <svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>Facturatie / MRR
       </button>
+      <button class="sa-nav-item" data-view="modules">
+        <svg viewBox="0 0 24 24"><path d="M4 4h7v7H4V4zm9 0h7v7h-7V4zM4 13h7v7H4v-7zm9 0h7v7h-7v-7z"/></svg>Modules &amp; Bundels
+      </button>
 
       <div class="sa-nav-divider"></div>
       <div class="sa-nav-section">Systeem</div>
@@ -310,7 +313,7 @@
         _view = btn.dataset.view;
         document.getElementById("saTopTitle").textContent = {
           dashboard:"Dashboard", tenants:"Tenants", users:"Gebruikers",
-          billing:"Facturatie / MRR", integrations:"Integraties", system:"Systeem", support:"Support",
+          billing:"Facturatie / MRR", modules:"Modules & Bundels", integrations:"Integraties", system:"Systeem", support:"Support",
           audit:"Audit Log", settings:"Instellingen"
         }[_view] || _view;
         document.getElementById("saTopActions").innerHTML = "";
@@ -345,7 +348,7 @@
   }
 
   // ── Router ─────────────────────────────────────────────────
-  const VIEWS = { dashboard, tenants, users, billing, integrations, system, support, audit, settings };
+  const VIEWS = { dashboard, tenants, users, billing, modules, integrations, system, support, audit, settings };
   function renderView() { (VIEWS[_view] || dashboard)(); }
 
   // ══════════════════════════════════════════════════════════
@@ -994,6 +997,213 @@ ${locked?`<div class="sa-alert alert-warn">⚠️ Account is vergrendeld na teve
         a.click();
       });
     } catch(e) { content().innerHTML = err(e); }
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // VIEW: Modules & Bundels
+  // ══════════════════════════════════════════════════════════
+  let _modTab = "bundles";
+  async function modules() {
+    const c = content(); c.innerHTML = loader();
+    try {
+      const [cat, bun, ten] = await Promise.all([
+        api("/api/admin/catalog"),
+        api("/api/admin/bundles"),
+        api("/api/admin/tenants"),
+      ]);
+      const catalog = cat.modules || [];
+      const groups = [...new Set(catalog.map(m => m.group))];
+      const bundles = bun.bundles || [];
+      const tenants = ten.tenants || [];
+
+      // Module/submodule keuzeraster. selSubs = { modKey: [subKey] }
+      function grid(prefix, selMods, selSubs, opts) {
+        const showSubs = !opts || opts.subs !== false;
+        return groups.map(g => `
+          <div style="margin-bottom:12px">
+            <div style="font-size:10.5px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin:8px 0 5px">${esc(g)}</div>
+            ${catalog.filter(m => m.group === g).map(m => {
+              const on = selMods.includes(m.key);
+              const subs = m.submodules || [];
+              return `
+              <div style="border:1px solid #e2e8f0;border-radius:9px;padding:9px 11px;margin-bottom:7px;background:${on ? "#f8fbff" : "#fff"}">
+                <label style="display:flex;align-items:center;gap:9px;font-size:13px;font-weight:600;color:#0f172a;cursor:pointer">
+                  <input type="checkbox" class="${prefix}-mod" data-key="${m.key}" ${on ? "checked" : ""} style="width:16px;height:16px">
+                  ${esc(m.label)}
+                </label>
+                ${showSubs && subs.length ? `<div class="${prefix}-subwrap" data-mod="${m.key}" style="margin:7px 0 0 25px;display:${on ? "flex" : "none"};flex-wrap:wrap;gap:4px 16px">
+                  ${subs.map(s => {
+                    const son = (selSubs[m.key] || []).includes(s.key);
+                    return `<label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#475569;cursor:pointer">
+                      <input type="checkbox" class="${prefix}-sub" data-mod="${m.key}" data-sub="${s.key}" ${son ? "checked" : ""}> ${esc(s.label)}</label>`;
+                  }).join("")}
+                </div>` : ""}
+              </div>`;
+            }).join("")}
+          </div>`).join("");
+      }
+
+      // Toon/verberg submodules wanneer een module aan/uit gaat.
+      function wireSubToggle(root, prefix) {
+        root.querySelectorAll(`.${prefix}-mod`).forEach(cb => cb.addEventListener("change", () => {
+          const wrap = root.querySelector(`.${prefix}-subwrap[data-mod="${cb.dataset.key}"]`);
+          if (wrap) wrap.style.display = cb.checked ? "flex" : "none";
+        }));
+      }
+      function readMods(root, prefix) { return [...root.querySelectorAll(`.${prefix}-mod:checked`)].map(x => x.dataset.key); }
+      function readSubs(root, prefix, mods) {
+        const out = {};
+        [...root.querySelectorAll(`.${prefix}-sub:checked`)].forEach(x => {
+          if (!mods.includes(x.dataset.mod)) return;
+          (out[x.dataset.mod] = out[x.dataset.mod] || []).push(x.dataset.sub);
+        });
+        return out;
+      }
+
+      c.innerHTML = `
+<div class="sa-filters" style="margin-bottom:16px">
+  <button class="sa-btn ${_modTab === "bundles" ? "btn-primary" : "btn-secondary"} sm" id="tabBundles">📦 Bundels samenstellen</button>
+  <button class="sa-btn ${_modTab === "tenants" ? "btn-primary" : "btn-secondary"} sm" id="tabTenants">🏢 Vrijgave per tenant</button>
+</div>
+<div id="modPanel"></div>`;
+
+      document.getElementById("tabBundles").addEventListener("click", () => { _modTab = "bundles"; renderPanel(); });
+      document.getElementById("tabTenants").addEventListener("click", () => { _modTab = "tenants"; renderPanel(); });
+
+      function renderPanel() {
+        document.getElementById("tabBundles").className = `sa-btn ${_modTab === "bundles" ? "btn-primary" : "btn-secondary"} sm`;
+        document.getElementById("tabTenants").className = `sa-btn ${_modTab === "tenants" ? "btn-primary" : "btn-secondary"} sm`;
+        if (_modTab === "bundles") renderBundles(); else renderTenants();
+      }
+
+      // ── Bundels samenstellen ──────────────────────────────
+      function renderBundles() {
+        const panel = document.getElementById("modPanel");
+        panel.innerHTML = `
+<div class="sa-card">
+  <div class="sa-card-head">
+    <div class="sa-card-title">Bundel bewerken</div>
+    <select id="bunSel" class="sa-btn btn-secondary sm" style="font-weight:600">
+      ${bundles.map(b => `<option value="${b.key}">${esc(b.label)} (${b.modules.length} modules)</option>`).join("")}
+      <option value="__new">+ Nieuwe bundel…</option>
+    </select>
+  </div>
+  <div class="sa-card-body" id="bunEditor" style="padding:16px"></div>
+</div>`;
+        const sel = document.getElementById("bunSel");
+        sel.addEventListener("change", () => editBundle(sel.value));
+        editBundle(bundles[0] ? bundles[0].key : "__new");
+      }
+
+      function editBundle(key) {
+        const ed = document.getElementById("bunEditor");
+        const isNew = key === "__new";
+        const b = isNew ? { key: "", label: "", description: "", modules: [], submodules: {}, custom: false, active: true, order: (bundles.length + 1) } : bundles.find(x => x.key === key);
+        ed.innerHTML = `
+<div class="sa-form-grid" style="margin-bottom:14px">
+  <div class="sa-field"><label>Bundel-key</label><input id="bKey" value="${esc(b.key)}" ${isNew ? "" : "disabled"} placeholder="bv. pro"></div>
+  <div class="sa-field"><label>Naam</label><input id="bLabel" value="${esc(b.label)}" placeholder="bv. Pro"></div>
+</div>
+<div class="sa-field" style="margin-bottom:14px"><label>Omschrijving</label><input id="bDesc" value="${esc(b.description || "")}" placeholder="Korte omschrijving"></div>
+<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:#475569;margin-bottom:14px"><input type="checkbox" id="bCustom" ${b.custom ? "checked" : ""}> Op aanvraag (custom — klant kan niet zelf kiezen)</label>
+<div style="font-size:12px;font-weight:700;color:#0f172a;margin-bottom:6px">Inbegrepen modules &amp; submodules</div>
+<div id="bGrid">${grid("b", b.modules, b.submodules || {})}</div>
+<div style="display:flex;gap:8px;margin-top:14px">
+  <button class="sa-btn btn-primary" id="bSave">${isNew ? "Bundel aanmaken" : "Wijzigingen opslaan"}</button>
+  ${(!isNew && !b.custom) ? `<button class="sa-btn btn-danger" id="bDelete">Verwijderen</button>` : ""}
+  <span id="bMsg" style="font-size:12.5px;align-self:center;color:#64748b"></span>
+</div>`;
+        wireSubToggle(ed, "b");
+        document.getElementById("bSave").addEventListener("click", async () => {
+          const mods = readMods(ed, "b");
+          const payload = {
+            key: (document.getElementById("bKey").value || b.key).trim().toLowerCase(),
+            label: document.getElementById("bLabel").value.trim() || document.getElementById("bKey").value,
+            description: document.getElementById("bDesc").value.trim(),
+            custom: document.getElementById("bCustom").checked,
+            active: true, order: b.order,
+            modules: mods,
+            submodules: readSubs(ed, "b", mods),
+          };
+          try {
+            await api("/api/admin/bundles", { method: "POST", body: JSON.stringify(payload) });
+            window.showToast && window.showToast(`Bundel '${payload.label}' opgeslagen ✓`, "success");
+            modules();
+          } catch (e) { window.showToast && window.showToast(e.message, "error"); }
+        });
+        const del = document.getElementById("bDelete");
+        if (del) del.addEventListener("click", async () => {
+          if (!confirm(`Bundel '${b.label}' verwijderen?`)) return;
+          try {
+            await api(`/api/admin/bundles/${b.key}`, { method: "DELETE" });
+            window.showToast && window.showToast("Bundel verwijderd", "success");
+            modules();
+          } catch (e) { window.showToast && window.showToast(e.message, "error"); }
+        });
+      }
+
+      // ── Vrijgave per tenant ───────────────────────────────
+      function renderTenants() {
+        const panel = document.getElementById("modPanel");
+        panel.innerHTML = `
+<div class="sa-card">
+  <div class="sa-card-head">
+    <div class="sa-card-title">Modules vrijgeven per tenant</div>
+    <select id="tenSel" class="sa-btn btn-secondary sm" style="font-weight:600">
+      ${tenants.map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join("")}
+    </select>
+  </div>
+  <div class="sa-card-body" id="tenEditor" style="padding:16px"></div>
+</div>`;
+        if (!tenants.length) { document.getElementById("tenEditor").innerHTML = `<div class="sa-empty">Geen tenants</div>`; return; }
+        const sel = document.getElementById("tenSel");
+        sel.addEventListener("change", () => editTenant(sel.value));
+        editTenant(tenants[0].id);
+      }
+
+      async function editTenant(tid) {
+        const ed = document.getElementById("tenEditor");
+        ed.innerHTML = loader();
+        try {
+          const d = await api(`/api/admin/tenants/${tid}/entitlements`);
+          const ent = d.entitlements || {};
+          const tenant = tenants.find(t => t.id === tid) || {};
+          const baseBundle = bundles.find(b => b.key === ent.plan) || { modules: [] };
+          ed.innerHTML = `
+<div class="sa-form-grid" style="margin-bottom:14px">
+  <div class="sa-field"><label>Bundel (plan)</label>
+    <select id="tPlan">${bundles.map(b => `<option value="${b.key}" ${b.key === ent.plan ? "selected" : ""}>${esc(b.label)}</option>`).join("")}</select>
+  </div>
+  <div class="sa-field"><label>Actieve modules</label><input value="${ent.modules.length} van ${catalog.length}" disabled></div>
+</div>
+<div class="sa-alert alert-info" style="margin-bottom:12px">Aangevinkt = vrijgegeven voor deze tenant. Wijk je af van de bundel, dan wordt dat als uitzondering bewaard. Wissel van bundel hierboven om de basis te resetten.</div>
+<div id="tGrid">${grid("t", ent.modules, ent.submodules || {}, { subs: false })}</div>
+<div style="display:flex;gap:8px;margin-top:14px">
+  <button class="sa-btn btn-primary" id="tSave">Opslaan</button>
+  <span style="font-size:12px;align-self:center;color:#94a3b8">Baseline bundel '${esc(baseBundle.label || ent.plan)}': ${baseBundle.modules.length} modules</span>
+</div>`;
+          // Bij bundelwissel: herlaad raster op die bundel-baseline (nog niet opgeslagen).
+          document.getElementById("tPlan").addEventListener("change", e => {
+            const nb = bundles.find(b => b.key === e.target.value) || { modules: [], submodules: {} };
+            document.getElementById("tGrid").innerHTML = grid("t", nb.modules, nb.submodules || {}, { subs: false });
+          });
+          document.getElementById("tSave").addEventListener("click", async () => {
+            const plan = document.getElementById("tPlan").value;
+            const nb = bundles.find(b => b.key === plan) || { modules: [] };
+            const chosen = readMods(ed, "t");
+            const add = chosen.filter(k => !nb.modules.includes(k));
+            const remove = nb.modules.filter(k => !chosen.includes(k));
+            try {
+              await api(`/api/admin/tenants/${tid}/modules`, { method: "PATCH", body: JSON.stringify({ plan, moduleOverrides: { add, remove } }) });
+              window.showToast && window.showToast(`Modules van ${tenant.name} bijgewerkt ✓ (${add.length} extra, ${remove.length} ingetrokken)`, "success");
+              editTenant(tid);
+            } catch (e) { window.showToast && window.showToast(e.message, "error"); }
+          });
+        } catch (e) { ed.innerHTML = err(e); }
+      }
+
+      renderPanel();
+    } catch (e) { content().innerHTML = err(e); }
   }
 
   // ══════════════════════════════════════════════════════════

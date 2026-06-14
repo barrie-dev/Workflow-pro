@@ -1,4 +1,6 @@
 const { config } = require("../lib/config");
+const { listBundles, getBundle } = require("./bundles");
+const { moduleByKey } = require("./catalog");
 
 const PLAN_PACKAGES = {
   starter: {
@@ -45,26 +47,50 @@ function createSetupIntent(tenant) {
   };
 }
 
-// Publieke plan-catalogus voor de klant-zelfbediening (prijzen server-bepaald).
-function planCatalog() {
-  return Object.entries(PLAN_PACKAGES).map(([key, p]) => ({
-    key,
-    label: p.label,
-    baseAnnual: p.baseAnnual,
-    baseMonthly: p.baseAnnual ? Math.round(p.baseAnnual / 12) : null,
-    seatAnnual: p.seatAnnual,
-    includedSeats: p.includedSeats,
-    features: p.features,
-    custom: key === "enterprise",
-  }));
+// Features van een bundel = de labels van de inbegrepen modules (DB-bundels),
+// met val-terug op de statische PLAN_PACKAGES-featurelijst.
+function bundleFeatures(bundle, fallbackKey) {
+  if (bundle && Array.isArray(bundle.modules) && bundle.modules.length) {
+    return bundle.modules.map(k => (moduleByKey(k) || {}).label).filter(Boolean);
+  }
+  return (PLAN_PACKAGES[fallbackKey] || {}).features || [];
 }
 
-// Klant kiest zelf een bundel. Prijs komt uit PLAN_PACKAGES (niet door klant
-// te beïnvloeden). Enterprise = op aanvraag (geen directe self-select).
+// Publieke plan-catalogus voor de klant-zelfbediening (prijzen server-bepaald).
+// Leest de samenstelbare bundels uit de DB; prijzen uit PLAN_PACKAGES per key.
+function planCatalog(store) {
+  const bundles = store ? listBundles(store).filter(b => b.active !== false) : [];
+  if (!bundles.length) {
+    return Object.entries(PLAN_PACKAGES).map(([key, p]) => ({
+      key, label: p.label, baseAnnual: p.baseAnnual,
+      baseMonthly: p.baseAnnual ? Math.round(p.baseAnnual / 12) : null,
+      seatAnnual: p.seatAnnual, includedSeats: p.includedSeats,
+      features: p.features, custom: key === "enterprise",
+    }));
+  }
+  return bundles.map(b => {
+    const price = PLAN_PACKAGES[b.key] || {};
+    return {
+      key: b.key,
+      label: b.label,
+      description: b.description || "",
+      baseAnnual: price.baseAnnual ?? null,
+      baseMonthly: price.baseAnnual ? Math.round(price.baseAnnual / 12) : null,
+      seatAnnual: price.seatAnnual ?? null,
+      includedSeats: price.includedSeats ?? null,
+      features: bundleFeatures(b, b.key),
+      modules: b.modules,
+      custom: !!b.custom,
+    };
+  });
+}
+
+// Klant kiest zelf een bundel. Enterprise/custom = op aanvraag (geen self-select).
 function selectPlan(store, tenant, planKey, actor) {
   const key = String(planKey || "").toLowerCase();
-  if (!PLAN_PACKAGES[key]) { const e = new Error("Onbekend plan"); e.status = 400; throw e; }
-  if (key === "enterprise") { const e = new Error("Enterprise verloopt via een offerte op maat — neem contact op."); e.status = 400; throw e; }
+  const bundle = getBundle(store, key);
+  if (!bundle && !PLAN_PACKAGES[key]) { const e = new Error("Onbekend plan"); e.status = 400; throw e; }
+  if ((bundle && bundle.custom) || key === "enterprise") { const e = new Error("Dit pakket verloopt via een offerte op maat — neem contact op."); e.status = 400; throw e; }
   const next = store.updateTenant(tenant.id, { plan: key });
   store.audit({ actor: actor.email, tenantId: tenant.id, action: "plan_selected", area: "billing", detail: key });
   return billingSummary(next);

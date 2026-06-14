@@ -32,6 +32,9 @@ const {
   getManagerDashboard, getManagerTeamPlanning
 } = require("./modules/me");
 const { modules } = require("./modules/registry");
+const { MODULE_CATALOG, CORE_MODULES, moduleByKey } = require("./modules/catalog");
+const { listBundles, getBundle, saveBundle, deleteBundle } = require("./modules/bundles");
+const { resolveTenantModules, isModuleEnabled, assertModuleEnabled } = require("./modules/entitlements");
 const { listModule, createModuleRow, updateModuleRow } = require("./modules/crud");
 const { lookupKbo } = require("./modules/kbo");
 const {
@@ -513,7 +516,15 @@ http.createServer(async (req, res) => {
     if (url.pathname === "/api/me") {
       const user = actor(req);
       if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
-      sendJson(res, 200, { ok: true, user: safeUser(user) });
+      let entitlements;
+      if (user.role === "super_admin") {
+        // Super-admin ziet altijd alles.
+        entitlements = { plan: null, modules: MODULE_CATALOG.map(m => m.key), views: "*", coreViews: CORE_MODULES.map(m => m.view) };
+      } else {
+        const tenant = store.data.tenants.find(t => t.id === user.tenantId) || {};
+        entitlements = resolveTenantModules(store, tenant);
+      }
+      sendJson(res, 200, { ok: true, user: safeUser(user), entitlements });
       return;
     }
 
@@ -606,6 +617,16 @@ http.createServer(async (req, res) => {
       const key = moduleMatch[1];
       const id = moduleMatch[2];
       const tenantId = url.searchParams.get("tenantId") || user.tenantId;
+      // Entitlement-handhaving op moduleniveau (super_admin omzeilt).
+      if (user.role !== "super_admin") {
+        const cat = moduleByKey(key);
+        if (cat && !cat.core) {
+          const t = store.data.tenants.find(x => x.id === tenantId) || {};
+          if (!isModuleEnabled(store, t, key)) {
+            return sendJson(res, 403, { ok: false, error: `Module '${cat.label}' is niet inbegrepen in het pakket van deze organisatie.`, code: "module_disabled" });
+          }
+        }
+      }
       if (req.method === "GET") return sendJson(res, 200, { ok: true, rows: listModule(store, user, key, tenantId) });
       if (req.method === "POST") {
         assertApiKeyWriteAllowed(user, req);
@@ -627,6 +648,70 @@ http.createServer(async (req, res) => {
       const rows = listModule(store, user, key, tenantId);
       sendCsv(res, `${key}-${new Date().toISOString().slice(0, 10)}.csv`, rows);
       return;
+    }
+
+    // ── Module-catalogus (super-admin) ──────────────────────
+    if (url.pathname === "/api/admin/catalog" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertSuperAdmin(user);
+      assertInteractiveUser(user);
+      sendJson(res, 200, { ok: true, modules: MODULE_CATALOG, core: CORE_MODULES });
+      return;
+    }
+
+    // ── Bundels CRUD (super-admin) ───────────────────────────
+    const bundleMatch = url.pathname.match(/^\/api\/admin\/bundles(?:\/([^/]+))?$/);
+    if (bundleMatch) {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertSuperAdmin(user);
+      assertInteractiveUser(user);
+      const bundleKey = bundleMatch[1];
+      if (req.method === "GET" && !bundleKey) {
+        sendJson(res, 200, { ok: true, bundles: listBundles(store) });
+        return;
+      }
+      if (req.method === "POST" && !bundleKey) {
+        const bundle = saveBundle(store, await readBody(req), user);
+        sendJson(res, 200, { ok: true, bundle });
+        return;
+      }
+      if (req.method === "DELETE" && bundleKey) {
+        sendJson(res, 200, { ok: true, ...deleteBundle(store, bundleKey, user) });
+        return;
+      }
+    }
+
+    // ── Per-tenant entitlements (super-admin) ────────────────
+    const tenantEntMatch = url.pathname.match(/^\/api\/admin\/tenants\/([^/]+)\/(entitlements|modules)$/);
+    if (tenantEntMatch) {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertSuperAdmin(user);
+      assertInteractiveUser(user);
+      const tenant = store.data.tenants.find(t => t.id === tenantEntMatch[1]);
+      if (!tenant) return sendJson(res, 404, { ok: false, error: "Tenant not found" });
+      if (tenantEntMatch[2] === "entitlements" && req.method === "GET") {
+        sendJson(res, 200, { ok: true, entitlements: resolveTenantModules(store, tenant), overrides: tenant.moduleOverrides || { add: [], remove: [] } });
+        return;
+      }
+      if (tenantEntMatch[2] === "modules" && req.method === "PATCH") {
+        const body = await readBody(req);
+        const patch = {};
+        if (body.plan && getBundle(store, body.plan)) patch.plan = String(body.plan).toLowerCase();
+        if (body.moduleOverrides) {
+          patch.moduleOverrides = {
+            add: Array.isArray(body.moduleOverrides.add) ? body.moduleOverrides.add : [],
+            remove: Array.isArray(body.moduleOverrides.remove) ? body.moduleOverrides.remove : [],
+          };
+        }
+        if (body.submoduleOverrides && typeof body.submoduleOverrides === "object") patch.submoduleOverrides = body.submoduleOverrides;
+        const next = store.updateTenant(tenant.id, patch);
+        store.audit({ actor: user.email, tenantId: tenant.id, action: "tenant_modules_updated", area: "billing", detail: JSON.stringify(patch).slice(0, 200) });
+        sendJson(res, 200, { ok: true, entitlements: resolveTenantModules(store, next) });
+        return;
+      }
     }
 
     const adminTenantMatch = url.pathname.match(/^\/api\/admin\/tenants(?:\/([^/]+))?$/);
@@ -885,6 +970,8 @@ http.createServer(async (req, res) => {
       const tenant = store.data.tenants.find(t => t.id === tenantId);
       if (!tenant) return sendJson(res, 404, { ok: false, error: "Tenant not found" });
       assertApiKeyWriteAllowed(user, req);
+      // Entitlement-handhaving: gated modules die niet in het pakket zitten → 403.
+      assertModuleEnabled(store, user, tenant, action);
 
       if (action === "golden-path" && req.method === "GET") {
         sendJson(res, 200, { ok: true, readiness: readiness(store, tenantId) });
@@ -1308,7 +1395,7 @@ http.createServer(async (req, res) => {
       }
       if (action === "billing/plans" && req.method === "GET") {
         assertCan(user, "billing");
-        sendJson(res, 200, { ok: true, plans: planCatalog() });
+        sendJson(res, 200, { ok: true, plans: planCatalog(store) });
         return;
       }
       if (action === "billing/select-plan" && req.method === "POST") {

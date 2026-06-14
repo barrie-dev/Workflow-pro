@@ -78,6 +78,7 @@ const REQUIRED_COLLECTIONS = [
   "supportTickets",
   "salesLeads",
   "partners",
+  "bundles",
   "migrationHistory"
 ];
 

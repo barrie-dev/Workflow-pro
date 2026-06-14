@@ -41,6 +41,25 @@
     });
   }
 
+  // Verberg tabs voor modules die niet in het pakket van de tenant zitten.
+  function applyEntitlements() {
+    fetch("/api/me", { headers: { Authorization: "Bearer " + token() } })
+      .then(r => r.json())
+      .then(d => {
+        const ent = d && d.entitlements;
+        if (!ent || ent.views === "*") return;
+        const allowed = new Set(ent.views || []);
+        const alias = { clock: "clocking" };          // tab-naam → catalogus-view
+        const alwaysShow = new Set(["today", "more"]); // persoonlijke kern-tabs
+        document.querySelectorAll(".emp-tab[data-view]").forEach(a => {
+          const v = a.getAttribute("data-view");
+          const cv = alias[v] || v;
+          if (!alwaysShow.has(v) && !allowed.has(cv)) a.style.display = "none";
+        });
+      })
+      .catch(() => {});
+  }
+
   // ── Shell ──────────────────────────────────────────────────
   function buildShell() {
     const el = document.getElementById("platform-employee");
@@ -1736,6 +1755,7 @@ ${data.absentNow ? `<div style="background:#fef3c7;border-radius:10px;padding:12
   // ── Init ───────────────────────────────────────────────────
   function init() {
     buildShell();
+    applyEntitlements();
     try {
       const user = window._wfpCurrentUser || {};
       const name = user.name || user.email || "Medewerker";

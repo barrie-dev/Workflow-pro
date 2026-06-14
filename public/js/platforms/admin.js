@@ -56,6 +56,30 @@
     });
   }
 
+  // Verberg nav-items voor modules die niet in het pakket van de tenant zitten.
+  function applyEntitlements() {
+    fetch("/api/me", { headers: { Authorization: "Bearer " + token() } })
+      .then(r => r.json())
+      .then(d => {
+        const ent = d && d.entitlements;
+        if (!ent || ent.views === "*") return; // super_admin of geen data → alles tonen
+        const allowed = new Set(ent.views || []);
+        document.querySelectorAll(".adm-nav-item[data-view]").forEach(a => {
+          if (!allowed.has(a.getAttribute("data-view"))) a.style.display = "none";
+        });
+        // Verberg sectie-labels waarvan alle items verborgen zijn.
+        document.querySelectorAll(".adm-nav-label").forEach(lbl => {
+          let n = lbl.nextElementSibling, visible = false;
+          while (n && !n.classList.contains("adm-nav-label")) {
+            if (n.classList.contains("adm-nav-item") && n.style.display !== "none") visible = true;
+            n = n.nextElementSibling;
+          }
+          if (!visible) lbl.style.display = "none";
+        });
+      })
+      .catch(() => {});
+  }
+
   // ── Shell ──────────────────────────────────────────────────
   function buildShell() {
     const el = document.getElementById("platform-admin");
@@ -4762,6 +4786,7 @@ ${enrolled.map(e => `
   // ── Init ───────────────────────────────────────────────────
   function init() {
     buildShell();
+    applyEntitlements();
 
     // Sync user name + topbar from current user
     try {

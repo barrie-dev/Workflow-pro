@@ -38,6 +38,23 @@
     });
   }
 
+  // Verberg nav-items voor modules die niet in het pakket van de tenant zitten.
+  function applyEntitlements() {
+    fetch("/api/me", { headers: { Authorization: "Bearer " + token() } })
+      .then(r => r.json())
+      .then(d => {
+        const ent = d && d.entitlements;
+        if (!ent || ent.views === "*") return;
+        const allowed = new Set(ent.views || []);
+        const alwaysShow = new Set(["dashboard", "team"]); // kern-views van de manager
+        document.querySelectorAll(".mgr-nav-item[data-view]").forEach(a => {
+          const v = a.getAttribute("data-view");
+          if (!alwaysShow.has(v) && !allowed.has(v)) a.style.display = "none";
+        });
+      })
+      .catch(() => {});
+  }
+
   // ── Shell ──────────────────────────────────────────────────
   function buildShell() {
     const el = document.getElementById("platform-manager");
@@ -1745,6 +1762,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
   // ── Init ───────────────────────────────────────────────────
   function init() {
     buildShell();
+    applyEntitlements();
     try {
       const user = window._wfpCurrentUser || {};
       const name = user.name || user.email || "Manager";
