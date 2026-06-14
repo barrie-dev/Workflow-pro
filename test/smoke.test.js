@@ -14,7 +14,7 @@ let server;
 before(async () => {
   server = spawn(process.execPath, ["src/server.js"], {
     cwd: path.join(__dirname, ".."),
-    env: { ...process.env, PORT: String(PORT), STORAGE_ADAPTER: "json", REQUIRE_ADMIN_MFA: "false", NODE_ENV: "test", RELEASE_CHANNEL: "pilot" },
+    env: { ...process.env, PORT: String(PORT), STORAGE_ADAPTER: "json", REQUIRE_ADMIN_MFA: "false", NODE_ENV: "test", RELEASE_CHANNEL: "pilot", RATE_LIMIT_DISABLED: "true" },
     stdio: "pipe",
   });
   let bootLog = "";
@@ -148,4 +148,33 @@ test("entitlements: super-admin omzeilt module-gating", async () => {
   const su = await login("super@workflowpro.be", "Demo2026!");
   const r = await fetch(`${BASE}/api/tenants/t_demo/integrations`, { headers: { Authorization: `Bearer ${su.token}` } });
   assert.equal(r.status, 200, "super-admin → integraties = 200 ondanks pakket");
+});
+
+// ── Per-user rechten: admin kan rechten zetten, server saneert escalatie ──
+test("rechten per user: employees GET levert grantable lijst", async () => {
+  const admin = await login("admin@demobouw.be", "Demo2026!");
+  const d = await (await fetch(`${BASE}/api/tenants/t_demo/employees?includeInactive=true`, { headers: { Authorization: `Bearer ${admin.token}` } })).json();
+  assert.ok(Array.isArray(d.grantable), "grantable aanwezig");
+  const keys = d.grantable.map(g => g.key);
+  assert.ok(keys.includes("planning") && keys.includes("customers"), "operationele modules toewijsbaar");
+  for (const adminPerm of ["settings", "billing", "audit", "tenants", "employees"]) {
+    assert.ok(!keys.includes(adminPerm), `${adminPerm} niet toewijsbaar`);
+  }
+});
+
+test("rechten per user: PATCH saneert escalatie-poging", async () => {
+  const admin = await login("admin@demobouw.be", "Demo2026!");
+  const empId = "u_emp1"; // jan, employee in demo-data
+  const r = await fetch(`${BASE}/api/tenants/t_demo/employees/${empId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${admin.token}` },
+    body: JSON.stringify({ permissions: ["customers", "settings", "billing", "tenants", "*"] }),
+  });
+  assert.equal(r.status, 200);
+  const perms = (r.ok && (await r.json()).user.permissions) || [];
+  assert.ok(perms.includes("own:customers"), "toegestaan recht bewaard (own-scoped voor employee)");
+  assert.ok(perms.includes("own:clockings"), "prikklok blijft altijd behouden, ook al niet aangevraagd");
+  for (const bad of ["settings", "billing", "tenants", "*"]) {
+    assert.ok(!perms.includes(bad), `escalatie '${bad}' geweerd`);
+  }
 });

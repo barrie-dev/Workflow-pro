@@ -5,7 +5,7 @@ const assert = require("node:assert");
 
 const { gateableKeys, moduleForAction, moduleByKey } = require("../src/modules/catalog");
 const { seedDefaults, listBundles, getBundle, saveBundle, deleteBundle } = require("../src/modules/bundles");
-const { resolveTenantModules, isModuleEnabled, assertModuleEnabled } = require("../src/modules/entitlements");
+const { resolveTenantModules, isModuleEnabled, assertModuleEnabled, grantablePermissions } = require("../src/modules/entitlements");
 
 // Minimale in-memory store die de gebruikte methods nabootst.
 function mkStore() {
@@ -93,4 +93,18 @@ test("bundels CRUD: aanmaken, bijwerken, beschermd verwijderen", () => {
 test("bundels: ongeldige key wordt geweigerd", () => {
   const store = mkStore();
   assert.throws(() => saveBundle(store, { key: "Bad Key!", label: "x" }, { email: "su@x" }), e => e.status === 400);
+});
+
+test("grantablePermissions: enkel operationele rechten ∩ tenant-entitlements", () => {
+  const store = mkStore();
+  seedDefaults(store);
+  const starter = grantablePermissions(store, { plan: "starter" }).map(p => p.key);
+  assert.ok(starter.includes("planning"), "starter heeft planning");
+  assert.ok(!starter.includes("workorders"), "starter zonder werkbonnen → niet toewijsbaar");
+  assert.ok(!starter.includes("clockings"), "prikklok is geen per-user toggle (altijd-aan)");
+  // Nooit admin-rechten toewijsbaar, ook niet bij enterprise.
+  const ent = grantablePermissions(store, { plan: "enterprise" }).map(p => p.key);
+  for (const admin of ["settings", "billing", "audit", "tenants", "employees", "integrations"]) {
+    assert.ok(!ent.includes(admin), `${admin} mag niet toewijsbaar zijn per user`);
+  }
 });

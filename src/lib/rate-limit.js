@@ -24,6 +24,8 @@ function cleanExpiredBuckets(now = Date.now()) {
 }
 
 function checkRateLimit(req, pathname) {
+  // Bypass voor geautomatiseerde tests (de suite logt vaak in op dezelfde IP).
+  if (process.env.RATE_LIMIT_DISABLED === "true") return { limited: false };
   const activePolicy = policy(req, pathname);
   if (!activePolicy) return { limited: false };
   const now = Date.now();

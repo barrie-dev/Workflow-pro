@@ -864,11 +864,19 @@ ${(() => {
 
   // ── Employees ──────────────────────────────────────────────
   let _empShowInactive = false;
+  let _grantable = []; // operationele rechten die deze tenant mag toekennen (uit entitlements)
+
+  // Standaard aangevinkte rechten per rol (voor nieuwe medewerkers).
+  const ROLE_DEFAULT_PERMS = {
+    employee: ["planning", "clockings", "expenses", "leaves", "workorders", "messages"],
+    manager: ["planning", "workorders", "clockings", "expenses", "leaves", "messages", "venues", "vehicles"],
+  };
 
   async function renderEmployees() {
     const data = await api("GET", "/employees?includeInactive=true");
     const employees = data.employees || data || [];
     _state.employees = employees;
+    _grantable = data.grantable || [];
 
     const activeCount   = employees.filter(u => u.active !== false).length;
     const inactiveCount = employees.filter(u => u.active === false).length;
@@ -1002,6 +1010,8 @@ ${(() => {
   function openEmployeeDrawer(emp) {
     const title = document.getElementById("admDrawerTitle");
     const body = document.getElementById("admDrawerBody");
+    // Beheerders worden niet via dit scherm gedegradeerd: rol + rechten alleen-lezen.
+    const isAdminUser = emp && (emp.role === "tenant_admin" || emp.role === "super_admin");
     title.textContent = emp ? "Medewerker bewerken" : "Medewerker toevoegen";
     body.innerHTML = `
 <form id="admEmpForm">
@@ -1017,10 +1027,12 @@ ${(() => {
   <div class="adm-form-row">
     <div class="adm-form-group"><label>Functie</label><input name="function" value="${esc(emp?.function||emp?.jobTitle||"")}" placeholder="Technieker, Chauffeur…"></div>
     <div class="adm-form-group"><label>Rol</label>
-      <select name="role">
+      ${isAdminUser
+        ? `<input value="Beheerder" disabled style="background:#f8fafc;color:#64748b">`
+        : `<select name="role">
         <option value="employee" ${(emp?.role||"employee")==="employee"?"selected":""}>Medewerker</option>
         <option value="manager" ${emp?.role==="manager"?"selected":""}>Manager</option>
-      </select>
+      </select>`}
     </div>
   </div>
 
@@ -1040,6 +1052,21 @@ ${(() => {
       Standaard: 20 dagen. Wijzig voor deeltijdse of contractuele afwijkingen.
     </div>
   </div>
+
+  <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin:14px 0 6px;">Toegang &amp; rechten</div>
+  ${isAdminUser ? `<div style="font-size:12px;color:#64748b;">Beheerders hebben volledige toegang. Rechten beheer je hier alleen voor medewerkers en managers.</div>` : `
+  <div style="font-size:12px;color:#64748b;margin-bottom:8px;">Bepaal welke modules deze gebruiker mag gebruiken. Enkel modules uit jullie pakket worden getoond. In- en uitprikken (prikklok) kan iedereen altijd, ongeacht functie.</div>
+  ${_grantable.length ? `<div id="admEmpPerms" style="display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;">
+    ${_grantable.map(p => {
+      const on = emp
+        ? (emp.permissions || []).some(x => x === p.key || x === `own:${p.key}`)
+        : ROLE_DEFAULT_PERMS[emp?.role || "employee"].includes(p.key);
+      return `<label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#334155;cursor:pointer;">
+        <input type="checkbox" class="adm-perm" data-key="${p.key}" ${on ? "checked" : ""}> ${esc(p.label)}
+      </label>`;
+    }).join("")}
+  </div>` : `<div style="font-size:12px;color:#94a3b8;">Geen toewijsbare modules in het huidige pakket.</div>`}
+  `}
 
   ${!emp ? `
   <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin:14px 0 10px;">Toegang</div>
@@ -1061,6 +1088,14 @@ ${emp ? `
 </div>` : ""}`;
 
     document.getElementById("admEmpCancel").addEventListener("click", closeDrawer);
+
+    // Bij nieuwe medewerker: rechten mee laten springen met de rol-keuze.
+    if (!emp) {
+      document.querySelector("#admEmpForm select[name=role]")?.addEventListener("change", ev => {
+        const defs = ROLE_DEFAULT_PERMS[ev.target.value] || [];
+        document.querySelectorAll("#admEmpForm .adm-perm").forEach(cb => { cb.checked = defs.includes(cb.dataset.key); });
+      });
+    }
 
     document.getElementById("admEmpPwReset")?.addEventListener("click", async () => {
       const newPw = prompt("Nieuw tijdelijk wachtwoord (min. 8 tekens):");
@@ -1089,6 +1124,11 @@ ${emp ? `
       data.name = `${data.firstName} ${data.lastName}`.trim();
       delete data.firstName; delete data.lastName;
       if (data.leaveQuota !== undefined) data.leaveQuota = Number(data.leaveQuota) || 20;
+      // Geselecteerde rechten meesturen (server saneert en scoped per rol).
+      // Niet voor beheerders — die behouden hun volledige toegang.
+      if (!isAdminUser) {
+        data.permissions = [...document.querySelectorAll("#admEmpForm .adm-perm:checked")].map(cb => cb.dataset.key);
+      }
       try {
         if (emp) {
           await api("PATCH", `/employees/${emp.id}`, data);

@@ -34,7 +34,28 @@ const {
 const { modules } = require("./modules/registry");
 const { MODULE_CATALOG, CORE_MODULES, moduleByKey } = require("./modules/catalog");
 const { listBundles, getBundle, saveBundle, deleteBundle } = require("./modules/bundles");
-const { resolveTenantModules, isModuleEnabled, assertModuleEnabled } = require("./modules/entitlements");
+const { resolveTenantModules, isModuleEnabled, assertModuleEnabled, grantablePermissions, OPERATIONAL_KEYS, ALWAYS_PERMISSIONS } = require("./modules/entitlements");
+
+/**
+ * Maak een veilige permissions-array voor een medewerker op basis van wat de
+ * tenant-admin aanvinkt. Voorkomt escalatie: niet-operationele rol-rechten komen
+ * uit de rol-baseline; operationele rechten enkel uit de 'grantable' set
+ * (operationeel ∩ tenant-entitlements), gescoped per rol (employee → own:).
+ */
+function sanitizeEmployeePermissions(store, tenant, role, requested) {
+  const grantable = new Set(grantablePermissions(store, tenant).map(g => g.key));
+  const baseDefault = role === "manager" ? MANAGER_PERMISSIONS : EMPLOYEE_PERMISSIONS;
+  // Behoud niet-operationele rol-rechten (bv. manager: employees, alerts).
+  const keptBase = baseDefault.filter(p => !OPERATIONAL_KEYS.has(String(p).replace(/^own:/, "")));
+  // Door admin gekozen operationele rechten, beperkt tot wat de tenant heeft.
+  const chosen = (Array.isArray(requested) ? requested : [])
+    .map(p => String(p).replace(/^own:/, ""))
+    .filter(k => grantable.has(k));
+  const scoped = chosen.map(k => (role === "employee" ? `own:${k}` : k));
+  // Altijd-rechten (bv. prikklok) forceren — iedereen kan in-/uitprikken ongeacht functie.
+  const always = ALWAYS_PERMISSIONS.map(k => (role === "employee" ? `own:${k}` : k));
+  return [...new Set([...keptBase, ...scoped, ...always])];
+}
 const { listModule, createModuleRow, updateModuleRow } = require("./modules/crud");
 const { lookupKbo } = require("./modules/kbo");
 const {
@@ -2464,7 +2485,7 @@ http.createServer(async (req, res) => {
         const users = store.list("users", tenantId)
           .filter(u => (includeInactive || u.active !== false) && !["super_admin"].includes(u.role))
           .map(u => { const { passwordHash, mfaSecret, mfaPendingSecret, recoveryCodes, ...safe } = u; return safe; });
-        sendJson(res, 200, { ok: true, employees: users });
+        sendJson(res, 200, { ok: true, employees: users, grantable: grantablePermissions(store, tenant) });
         return;
       }
 
@@ -2474,11 +2495,20 @@ http.createServer(async (req, res) => {
         assertCan(user, "employees");
         assertApiKeyWriteAllowed(user, req);
         const body = await readBody(req);
-        const { passwordHash, mfaSecret, mfaPendingSecret, recoveryCodes, newPassword, ...safe } = body;
+        const { passwordHash, mfaSecret, mfaPendingSecret, recoveryCodes, newPassword, role: bodyRole, permissions: bodyPerms, ...safe } = body;
         if (newPassword) {
           assertStrongPassword(newPassword);
           safe.passwordHash = hashPassword(newPassword);
           store.audit({ actor: user.email, tenantId, action: "admin_password_reset", area: "users", detail: employeePatchMatch[1] });
+        }
+        const existing = store.getUserById(employeePatchMatch[1]);
+        // Rol enkel binnen employee/manager wijzigbaar (geen escalatie naar admin).
+        const effRole = ["manager", "employee"].includes(bodyRole) ? bodyRole : (existing && existing.role) || "employee";
+        if (bodyRole !== undefined) safe.role = effRole;
+        // Permissions altijd server-side saneren (nooit rauw doorlaten).
+        if (bodyPerms !== undefined || bodyRole !== undefined) {
+          const requested = Array.isArray(bodyPerms) ? bodyPerms : (existing && existing.permissions) || [];
+          safe.permissions = sanitizeEmployeePermissions(store, tenant, effRole, requested);
         }
         const row = store.update("users", employeePatchMatch[1], { ...safe, updatedAt: new Date().toISOString() });
         const { passwordHash: _ph, mfaSecret: _ms, ...safeRow } = row;
@@ -2495,7 +2525,9 @@ http.createServer(async (req, res) => {
         if (!email) { sendJson(res, 400, { ok: false, error: "Email is verplicht" }); return; }
         if (store.getUserByEmail(email)) { sendJson(res, 409, { ok: false, error: "Email bestaat al" }); return; }
         const role = ["manager", "employee"].includes(body.role) ? body.role : "employee";
-        const permissions = role === "manager" ? MANAGER_PERMISSIONS : EMPLOYEE_PERMISSIONS;
+        const permissions = body.permissions !== undefined
+          ? sanitizeEmployeePermissions(store, tenant, role, body.permissions)
+          : (role === "manager" ? MANAGER_PERMISSIONS : EMPLOYEE_PERMISSIONS);
         const tempPassword = body.password || body.tempPassword || crypto.randomBytes(12).toString("base64url");
         const newUser = store.insert("users", {
           id: `user_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`,

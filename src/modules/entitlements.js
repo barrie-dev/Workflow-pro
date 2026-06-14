@@ -89,9 +89,40 @@ function assertModuleEnabled(store, user, tenant, action) {
   }
 }
 
+// Operationele rechten die een tenant-admin per medewerker mag toekennen.
+// Bewust GEEN admin-rechten (settings, billing, audit, tenants, employees, integrations):
+// die blijven voorbehouden aan de tenant_admin-rol — geen escalatie via per-user rechten.
+// Ook GEEN 'clockings': in-/uitprikken is basisfunctionaliteit die ELKE gebruiker
+// altijd heeft, ongeacht functie — dus niet per-user uitschakelbaar (zie ALWAYS_PERMISSIONS).
+const OPERATIONAL_PERMISSIONS = [
+  { key: "planning", label: "Planning" },
+  { key: "workorders", label: "Werkbonnen" },
+  { key: "expenses", label: "Onkosten" },
+  { key: "leaves", label: "Verlof" },
+  { key: "messages", label: "Berichten" },
+  { key: "customers", label: "Klanten" },
+  { key: "venues", label: "Locaties / werven" },
+  { key: "stock", label: "Stock" },
+  { key: "vehicles", label: "Wagenpark" },
+];
+
+// Rechten die iedereen altijd heeft (kunnen niet per gebruiker worden afgenomen).
+const ALWAYS_PERMISSIONS = ["clockings"];
+const OPERATIONAL_KEYS = new Set(OPERATIONAL_PERMISSIONS.map(p => p.key));
+
+/** Rechten die de tenant-admin per gebruiker mag toekennen = operationeel ∩ tenant-entitlements. */
+function grantablePermissions(store, tenant) {
+  const enabled = new Set(resolveTenantModules(store, tenant).modules);
+  return OPERATIONAL_PERMISSIONS.filter(p => enabled.has(p.key));
+}
+
 module.exports = {
   resolveTenantModules,
   isModuleEnabled,
   isSubmoduleEnabled,
   assertModuleEnabled,
+  grantablePermissions,
+  OPERATIONAL_PERMISSIONS,
+  OPERATIONAL_KEYS,
+  ALWAYS_PERMISSIONS,
 };
