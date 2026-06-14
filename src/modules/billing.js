@@ -56,41 +56,57 @@ function bundleFeatures(bundle, fallbackKey) {
   return (PLAN_PACKAGES[fallbackKey] || {}).features || [];
 }
 
+// Vaste prijs voor een bundel-key (enkel de standaardbundels hebben een prijs).
+// Een bundel zónder bekende prijs is "op aanvraag" en niet zelf te kiezen.
+function pricingFor(key) {
+  const p = PLAN_PACKAGES[String(key || "").toLowerCase()];
+  return p && p.baseAnnual > 0 ? p : null;
+}
+
 // Publieke plan-catalogus voor de klant-zelfbediening (prijzen server-bepaald).
 // Leest de samenstelbare bundels uit de DB; prijzen uit PLAN_PACKAGES per key.
+// Bundels zonder bekende prijs (bv. door superadmin nieuw aangemaakt) worden als
+// 'custom' (op aanvraag) gemarkeerd zodat ze niet voor €0 kiesbaar zijn.
 function planCatalog(store) {
   const bundles = store ? listBundles(store).filter(b => b.active !== false) : [];
   if (!bundles.length) {
-    return Object.entries(PLAN_PACKAGES).map(([key, p]) => ({
-      key, label: p.label, baseAnnual: p.baseAnnual,
-      baseMonthly: p.baseAnnual ? Math.round(p.baseAnnual / 12) : null,
-      seatAnnual: p.seatAnnual, includedSeats: p.includedSeats,
-      features: p.features, custom: key === "enterprise",
-    }));
+    return Object.entries(PLAN_PACKAGES).map(([key, p]) => {
+      const priced = p.baseAnnual > 0;
+      return {
+        key, label: p.label,
+        baseAnnual: priced ? p.baseAnnual : null,
+        baseMonthly: priced ? Math.round(p.baseAnnual / 12) : null,
+        seatAnnual: priced ? p.seatAnnual : null,
+        includedSeats: priced ? p.includedSeats : null,
+        features: p.features, custom: !priced,
+      };
+    });
   }
   return bundles.map(b => {
-    const price = PLAN_PACKAGES[b.key] || {};
+    const price = pricingFor(b.key);
+    const priced = !!price;
     return {
       key: b.key,
       label: b.label,
       description: b.description || "",
-      baseAnnual: price.baseAnnual ?? null,
-      baseMonthly: price.baseAnnual ? Math.round(price.baseAnnual / 12) : null,
-      seatAnnual: price.seatAnnual ?? null,
-      includedSeats: price.includedSeats ?? null,
+      baseAnnual: priced ? price.baseAnnual : null,
+      baseMonthly: priced ? Math.round(price.baseAnnual / 12) : null,
+      seatAnnual: priced ? price.seatAnnual : null,
+      includedSeats: priced ? price.includedSeats : null,
       features: bundleFeatures(b, b.key),
       modules: b.modules,
-      custom: !!b.custom,
+      custom: !!b.custom || !priced, // geen prijs → op aanvraag
     };
   });
 }
 
-// Klant kiest zelf een bundel. Enterprise/custom = op aanvraag (geen self-select).
+// Klant kiest zelf een bundel. Custom/enterprise of prijsloze bundel = op aanvraag.
 function selectPlan(store, tenant, planKey, actor) {
   const key = String(planKey || "").toLowerCase();
   const bundle = getBundle(store, key);
   if (!bundle && !PLAN_PACKAGES[key]) { const e = new Error("Onbekend plan"); e.status = 400; throw e; }
-  if ((bundle && bundle.custom) || key === "enterprise") { const e = new Error("Dit pakket verloopt via een offerte op maat — neem contact op."); e.status = 400; throw e; }
+  const onRequest = (bundle && bundle.custom) || key === "enterprise" || !pricingFor(key);
+  if (onRequest) { const e = new Error("Dit pakket verloopt via een offerte op maat — neem contact op."); e.status = 400; throw e; }
   const next = store.updateTenant(tenant.id, { plan: key });
   store.audit({ actor: actor.email, tenantId: tenant.id, action: "plan_selected", area: "billing", detail: key });
   return billingSummary(next);
@@ -102,29 +118,34 @@ function billableSeats(store, tenantId) {
 
 function billingQuote(store, tenant) {
   const planKey = String(tenant.plan || "business").toLowerCase();
-  const plan = PLAN_PACKAGES[planKey] || PLAN_PACKAGES.business;
+  const price = pricingFor(planKey);
   const seats = billableSeats(store, tenant.id);
-  const extraSeats = Math.max(seats - plan.includedSeats, 0);
-  const annualSubtotal = planKey === "enterprise" ? null : plan.baseAnnual + extraSeats * plan.seatAnnual;
+  // Geen bekende prijs (enterprise/custom/nieuwe bundel) → bedrag op aanvraag (null),
+  // NIET stilletjes terugvallen op de business-prijs.
+  const custom = !price;
+  const includedSeats = price ? price.includedSeats : 0;
+  const extraSeats = price ? Math.max(seats - includedSeats, 0) : 0;
+  const annualSubtotal = custom ? null : price.baseAnnual + extraSeats * price.seatAnnual;
   const vatRate = 0.21;
   const annualVat = annualSubtotal == null ? null : +(annualSubtotal * vatRate).toFixed(2);
   const annualTotal = annualSubtotal == null ? null : +(annualSubtotal + annualVat).toFixed(2);
+  const labelSource = PLAN_PACKAGES[planKey] || {};
   return {
     tenantId: tenant.id,
     planKey,
-    planLabel: plan.label,
+    planLabel: labelSource.label || tenant.plan || "—",
     seats,
-    includedSeats: plan.includedSeats,
+    includedSeats,
     extraSeats,
-    seatAnnual: plan.seatAnnual,
-    baseAnnual: plan.baseAnnual,
+    seatAnnual: price ? price.seatAnnual : null,
+    baseAnnual: price ? price.baseAnnual : null,
     annualSubtotal,
     annualVat,
     annualTotal,
     currency: "EUR",
     vatRate,
-    enterpriseCustom: planKey === "enterprise",
-    features: plan.features
+    enterpriseCustom: custom,
+    features: (labelSource.features) || []
   };
 }
 

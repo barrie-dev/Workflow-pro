@@ -162,6 +162,41 @@ test("rechten per user: employees GET levert grantable lijst", async () => {
   }
 });
 
+test("audit F1: prijsloze bundel is 'op aanvraag' en niet kiesbaar", async () => {
+  const su = await login("super@workflowpro.be", "Demo2026!");
+  const H = t => ({ "Content-Type": "application/json", Authorization: `Bearer ${t}` });
+  await fetch(`${BASE}/api/admin/bundles`, { method: "POST", headers: H(su.token), body: JSON.stringify({ key: "auditpro", label: "Audit Pro", modules: ["planning"] }) });
+  try {
+    const admin = await login("admin@demobouw.be", "Demo2026!");
+    const plans = (await (await fetch(`${BASE}/api/tenants/t_demo/billing/plans`, { headers: H(admin.token) })).json()).plans || [];
+    const pro = plans.find(p => p.key === "auditpro");
+    assert.ok(pro, "bundel verschijnt in catalogus");
+    assert.equal(pro.custom, true, "prijsloze bundel = op aanvraag");
+    assert.equal(pro.baseMonthly, null, "geen €0-prijs");
+    // Niet zelf te kiezen → 400
+    const sel = await fetch(`${BASE}/api/tenants/t_demo/billing/select-plan`, { method: "POST", headers: H(admin.token), body: JSON.stringify({ plan: "auditpro" }) });
+    assert.equal(sel.status, 400, "prijsloze bundel niet kiesbaar");
+  } finally {
+    await fetch(`${BASE}/api/admin/bundles/auditpro`, { method: "DELETE", headers: H(su.token) });
+  }
+});
+
+test("audit F2: peppol-submodule uit → 403 op verstuur-endpoint", async () => {
+  const su = await login("super@workflowpro.be", "Demo2026!");
+  const H = t => ({ "Content-Type": "application/json", Authorization: `Bearer ${t}` });
+  // invoices behouden maar peppol weglaten
+  await fetch(`${BASE}/api/admin/tenants/t_demo/modules`, { method: "PATCH", headers: H(su.token), body: JSON.stringify({ submoduleOverrides: { invoices: ["reminders", "online-payment"] } }) });
+  try {
+    const admin = await login("admin@demobouw.be", "Demo2026!");
+    const r = await fetch(`${BASE}/api/tenants/t_demo/facturen/any-id/peppol`, { method: "POST", headers: H(admin.token), body: "{}" });
+    assert.equal(r.status, 403, "peppol uit → 403");
+    assert.equal((await r.json()).code, "submodule_disabled");
+  } finally {
+    // herstel: terug naar bundeldefaults
+    await fetch(`${BASE}/api/admin/tenants/t_demo/modules`, { method: "PATCH", headers: H(su.token), body: JSON.stringify({ submoduleOverrides: {} }) });
+  }
+});
+
 test("rechten per user: PATCH saneert escalatie-poging", async () => {
   const admin = await login("admin@demobouw.be", "Demo2026!");
   const empId = "u_emp1"; // jan, employee in demo-data

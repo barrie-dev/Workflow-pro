@@ -62,6 +62,7 @@
       .then(r => r.json())
       .then(d => {
         const ent = d && d.entitlements;
+        window._wfpEnt = ent || null; // stash voor submodule-gating in views
         if (!ent || ent.views === "*") return; // super_admin of geen data → alles tonen
         const allowed = new Set(ent.views || []);
         document.querySelectorAll(".adm-nav-item[data-view]").forEach(a => {
@@ -78,6 +79,20 @@
         });
       })
       .catch(() => {});
+  }
+
+  // Is een submodule actief voor deze tenant? (super_admin/onbekend → ja)
+  function subEnabled(moduleKey, subKey) {
+    const e = window._wfpEnt;
+    if (!e || e.views === "*") return true;
+    return ((e.submodules || {})[moduleKey] || []).includes(subKey);
+  }
+
+  // Is een module-view actief voor deze tenant? (super_admin/onbekend → ja)
+  function viewEnabled(view) {
+    const e = window._wfpEnt;
+    if (!e || e.views === "*") return true;
+    return (e.views || []).includes(view);
   }
 
   // ── Shell ──────────────────────────────────────────────────
@@ -680,7 +695,7 @@ table.adm-table { width:100%; border-collapse:collapse; font-size:13px; }
   async function renderDashboard() {
     const [dash, pending, factData, expData, gpData] = await Promise.all([
       api("GET", "/manager/dashboard"),
-      api("GET", "/leaves?status=aangevraagd"),
+      api("GET", "/leaves?status=aangevraagd").catch(() => ({ leaves: [] })),
       api("GET", "/facturen").catch(() => ({ invoices: [] })),
       api("GET", "/expenses").catch(() => ({ expenses: [] })),
       api("GET", "/golden-path").catch(() => null)
@@ -701,24 +716,24 @@ table.adm-table { width:100%; border-collapse:collapse; font-size:13px; }
     <div class="adm-kpi-value">${dash.clockedIn ?? "—"}</div>
     <div class="adm-kpi-sub">Van ${dash.team ?? "?"} medewerkers</div>
   </div>
-  <div class="adm-kpi adm-kpi-amber adm-kpi-link" data-goto="leaves" title="Naar verlof">
+  ${viewEnabled("leaves") ? `<div class="adm-kpi adm-kpi-amber adm-kpi-link" data-goto="leaves" title="Naar verlof">
     <div class="adm-kpi-icon"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg></div>
     <div class="adm-kpi-label">Verlof aanvragen</div>
     <div class="adm-kpi-value">${dash.pendingLeaves ?? "—"}</div>
     <div class="adm-kpi-sub">Wacht op goedkeuring</div>
-  </div>
-  <div class="adm-kpi adm-kpi-red adm-kpi-link" data-goto="expenses" title="Naar onkosten">
+  </div>` : ""}
+  ${viewEnabled("expenses") ? `<div class="adm-kpi adm-kpi-red adm-kpi-link" data-goto="expenses" title="Naar onkosten">
     <div class="adm-kpi-icon"><svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg></div>
     <div class="adm-kpi-label">Onkosten</div>
     <div class="adm-kpi-value">${dash.pendingExpenses ?? "—"}</div>
     <div class="adm-kpi-sub">Te verwerken</div>
-  </div>
-  <div class="adm-kpi adm-kpi-purple adm-kpi-link" data-goto="workorders" title="Naar werkbonnen">
+  </div>` : ""}
+  ${viewEnabled("workorders") ? `<div class="adm-kpi adm-kpi-purple adm-kpi-link" data-goto="workorders" title="Naar werkbonnen">
     <div class="adm-kpi-icon"><svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg></div>
     <div class="adm-kpi-label">Werkbonnen</div>
     <div class="adm-kpi-value">${dash.openWorkorders ?? "—"}</div>
     <div class="adm-kpi-sub">Openstaand</div>
-  </div>
+  </div>` : ""}
 </div>
 
 <div class="adm-grid-2">
@@ -874,7 +889,8 @@ ${(() => {
 
   async function renderEmployees() {
     const data = await api("GET", "/employees?includeInactive=true");
-    const employees = data.employees || data || [];
+    // Beheerders horen niet in de medewerkerslijst (beheren eigen account via Instellingen).
+    const employees = (data.employees || data || []).filter(u => !["tenant_admin", "super_admin"].includes(u.role));
     _state.employees = employees;
     _grantable = data.grantable || [];
 
@@ -4051,9 +4067,9 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
               <button class="adm-btn adm-btn-secondary adm-btn-sm inv-pdf" data-id="${inv.id}" title="PDF / Afdrukken">📄</button>
               ${inv.peppolStatus === "delivered" || inv.peppolStatus === "sent"
                 ? `<span class="adm-status adm-status-active" title="Peppol: ${esc(inv.peppolReference||"")}">📧 Peppol ✓</span>`
-                : `<button class="adm-btn adm-btn-secondary adm-btn-sm inv-peppol" data-id="${inv.id}" title="Verstuur via Peppol e-facturatie">📧 Peppol</button>`}
+                : (subEnabled("invoices","peppol") ? `<button class="adm-btn adm-btn-secondary adm-btn-sm inv-peppol" data-id="${inv.id}" title="Verstuur via Peppol e-facturatie">📧 Peppol</button>` : "")}
               <button class="adm-btn adm-btn-secondary adm-btn-sm inv-ubl" data-id="${inv.id}" title="UBL-XML downloaden">⬇ UBL</button>
-              ${["open","overdue"].includes(inv.status) ? `<button class="adm-btn adm-btn-secondary adm-btn-sm inv-paylink" data-id="${inv.id}" title="Betaallink genereren">💳 Link</button>` : ""}
+              ${["open","overdue"].includes(inv.status) && subEnabled("invoices","online-payment") ? `<button class="adm-btn adm-btn-secondary adm-btn-sm inv-paylink" data-id="${inv.id}" title="Betaallink genereren">💳 Link</button>` : ""}
               ${["open","overdue"].includes(inv.status) ? `<button class="adm-btn adm-btn-success adm-btn-sm inv-paid" data-id="${inv.id}" title="Markeer als betaald">✓ Betaald</button>` : ""}
             </td>
           </tr>`;
@@ -4858,6 +4874,8 @@ ${enrolled.map(e => `
       let timer = null, lastQ = "";
       const close = () => { box.classList.remove("open"); box.innerHTML = ""; };
       const render = (results, q) => {
+        // Toon geen resultaten voor modules die niet in het pakket zitten.
+        results = (results || []).filter(r => !r.view || viewEnabled(r.view));
         if (!results.length) { box.innerHTML = `<div class="adm-search-empty">Geen resultaten voor "${esc(q)}"</div>`; box.classList.add("open"); return; }
         box.innerHTML = results.map(r => `
           <div class="adm-search-item" data-view="${esc(r.view)}">

@@ -34,7 +34,7 @@ const {
 const { modules } = require("./modules/registry");
 const { MODULE_CATALOG, CORE_MODULES, moduleByKey } = require("./modules/catalog");
 const { listBundles, getBundle, saveBundle, deleteBundle } = require("./modules/bundles");
-const { resolveTenantModules, isModuleEnabled, assertModuleEnabled, grantablePermissions, OPERATIONAL_KEYS, ALWAYS_PERMISSIONS } = require("./modules/entitlements");
+const { resolveTenantModules, isModuleEnabled, assertModuleEnabled, assertSubmoduleEnabled, grantablePermissions, OPERATIONAL_KEYS, ALWAYS_PERMISSIONS } = require("./modules/entitlements");
 
 /**
  * Maak een veilige permissions-array voor een medewerker op basis van wat de
@@ -195,7 +195,10 @@ function handleError(req, res, error, tenantId = null) {
       stack: String(error.stack || "").split("\n").slice(0, 4).join("\n")
     });
   }
-  sendJson(res, status, { ok: false, error: error.message || "Server error" });
+  const payload = { ok: false, error: error.message || "Server error" };
+  if (error.code) payload.code = error.code;       // bv. module_disabled / submodule_disabled
+  if (error.module) payload.module = error.module;
+  sendJson(res, status, payload);
 }
 
 function publicQuotePage() {
@@ -2233,6 +2236,7 @@ http.createServer(async (req, res) => {
       const invoicePeppolMatch = action.match(/^facturen\/([^/]+)\/peppol$/);
       if (invoicePeppolMatch && req.method === "POST") {
         assertCan(user, "billing");
+        assertSubmoduleEnabled(store, user, tenant, "invoices", "peppol");
         const inv = store.get("invoices", invoicePeppolMatch[1]);
         if (!inv || inv.tenantId !== tenantId) return sendJson(res, 404, { ok: false, error: "Factuur niet gevonden" });
         try {
@@ -2258,6 +2262,7 @@ http.createServer(async (req, res) => {
       const invoicePayMatch = action.match(/^facturen\/([^/]+)\/payment-link$/);
       if (invoicePayMatch && req.method === "POST") {
         assertCan(user, "billing");
+        assertSubmoduleEnabled(store, user, tenant, "invoices", "online-payment");
         const inv = store.get("invoices", invoicePayMatch[1]);
         if (!inv || inv.tenantId !== tenantId) return sendJson(res, 404, { ok: false, error: "Factuur niet gevonden" });
         const link = await createPaymentLink(store, tenant, inv);

@@ -5,7 +5,7 @@ const assert = require("node:assert");
 
 const { gateableKeys, moduleForAction, moduleByKey } = require("../src/modules/catalog");
 const { seedDefaults, listBundles, getBundle, saveBundle, deleteBundle } = require("../src/modules/bundles");
-const { resolveTenantModules, isModuleEnabled, assertModuleEnabled, grantablePermissions } = require("../src/modules/entitlements");
+const { resolveTenantModules, isModuleEnabled, assertModuleEnabled, assertSubmoduleEnabled, grantablePermissions } = require("../src/modules/entitlements");
 
 // Minimale in-memory store die de gebruikte methods nabootst.
 function mkStore() {
@@ -93,6 +93,19 @@ test("bundels CRUD: aanmaken, bijwerken, beschermd verwijderen", () => {
 test("bundels: ongeldige key wordt geweigerd", () => {
   const store = mkStore();
   assert.throws(() => saveBundle(store, { key: "Bad Key!", label: "x" }, { email: "su@x" }), e => e.status === 400);
+});
+
+test("submodules: assertSubmoduleEnabled handhaaft per-submodule (F2)", () => {
+  const store = mkStore();
+  seedDefaults(store);
+  // Business heeft invoices + alle submodules; override laat peppol weg.
+  const tenant = { id: "t1", plan: "business", submoduleOverrides: { invoices: ["reminders", "online-payment"] } };
+  assert.throws(
+    () => assertSubmoduleEnabled(store, { role: "tenant_admin" }, tenant, "invoices", "peppol"),
+    e => e.status === 403 && e.code === "submodule_disabled"
+  );
+  assert.doesNotThrow(() => assertSubmoduleEnabled(store, { role: "tenant_admin" }, tenant, "invoices", "reminders"));
+  assert.doesNotThrow(() => assertSubmoduleEnabled(store, { role: "super_admin" }, tenant, "invoices", "peppol"), "super_admin omzeilt");
 });
 
 test("grantablePermissions: enkel operationele rechten ∩ tenant-entitlements", () => {

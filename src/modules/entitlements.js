@@ -72,6 +72,28 @@ function isSubmoduleEnabled(store, tenant, moduleKey, subKey) {
   return subs.includes(subKey);
 }
 
+function submoduleLabel(moduleKey, subKey) {
+  const m = moduleByKey(moduleKey);
+  const s = m && (m.submodules || []).find(x => x.key === subKey);
+  return (s && s.label) || subKey;
+}
+
+/**
+ * Handhaaf een submodule (bv. invoices→peppol). super_admin omzeilt.
+ * 403 als de bovenliggende module of de submodule niet in het pakket zit.
+ */
+function assertSubmoduleEnabled(store, user, tenant, moduleKey, subKey) {
+  if (user && user.role === "super_admin") return;
+  if (!isSubmoduleEnabled(store, tenant, moduleKey, subKey)) {
+    const e = new Error(`'${submoduleLabel(moduleKey, subKey)}' is niet inbegrepen in het pakket van deze organisatie.`);
+    e.status = 403;
+    e.code = "submodule_disabled";
+    e.module = moduleKey;
+    e.submodule = subKey;
+    throw e;
+  }
+}
+
 /**
  * Handhaaf module-toegang voor een API-action. super_admin omzeilt.
  * Onbekende/kern-actions zijn altijd toegestaan (moduleForAction → null).
@@ -121,6 +143,7 @@ module.exports = {
   isModuleEnabled,
   isSubmoduleEnabled,
   assertModuleEnabled,
+  assertSubmoduleEnabled,
   grantablePermissions,
   OPERATIONAL_PERMISSIONS,
   OPERATIONAL_KEYS,
