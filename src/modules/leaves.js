@@ -18,18 +18,14 @@ function parseDate(str) {
   return d.toISOString().slice(0, 10);
 }
 
+const { workingDaysBetween } = require("./be-locale");
+
 function daysBetween(start, end) {
   const s = new Date(start);
   const e = new Date(end);
   if (e < s) throw apiError("Einddatum moet na startdatum liggen");
-  let count = 0;
-  const cur = new Date(s);
-  while (cur <= e) {
-    const dow = cur.getDay();
-    if (dow !== 0 && dow !== 6) count++; // werkdagen
-    cur.setDate(cur.getDate() + 1);
-  }
-  return count;
+  // Werkdagen excl. weekend ÉN Belgische feestdagen.
+  return workingDaysBetween(start, end);
 }
 
 function leaveRecord(store, tenantId, leaveId) {

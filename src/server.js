@@ -36,6 +36,7 @@ const { MODULE_CATALOG, CORE_MODULES, moduleByKey } = require("./modules/catalog
 const { listBundles, getBundle, saveBundle, deleteBundle } = require("./modules/bundles");
 const { resolveTenantModules, isModuleEnabled, assertModuleEnabled, assertSubmoduleEnabled, grantablePermissions, OPERATIONAL_KEYS, ALWAYS_PERMISSIONS } = require("./modules/entitlements");
 const { bodenChat } = require("./modules/boden");
+const { workingDaysBetween, round2, isValidBelgianVat } = require("./modules/be-locale");
 
 /**
  * Maak een veilige permissions-array voor een medewerker op basis van wat de
@@ -1344,8 +1345,7 @@ http.createServer(async (req, res) => {
         // 3. Verloven zonder days
         const leavesNoDays = store.list("leaves", tenantId).filter(l => !l.days && l.startDate && l.endDate);
         leavesNoDays.forEach(l => {
-          let days = 0; const cur = new Date(l.startDate), end = new Date(l.endDate);
-          while (cur <= end) { const d = cur.getDay(); if (d!==0&&d!==6) days++; cur.setDate(cur.getDate()+1); }
+          const days = workingDaysBetween(l.startDate, l.endDate); // excl. weekend + BE feestdagen
           if (days > 0) store.update("leaves", l.id, { days });
         });
         results.leaveDays = leavesNoDays.length;
@@ -2042,11 +2042,8 @@ http.createServer(async (req, res) => {
           l.endDate >= body.startDate
         );
         if (existingLeaves.length > 0) return sendJson(res, 409, { ok: false, error: "Je hebt al een verlofaanvraag in deze periode" });
-        // Bereken werkdagen
-        let days = 0;
-        const cur = new Date(body.startDate);
-        const end = new Date(body.endDate);
-        while (cur <= end) { const d = cur.getDay(); if (d !== 0 && d !== 6) days++; cur.setDate(cur.getDate()+1); }
+        // Bereken werkdagen (excl. weekend + Belgische feestdagen)
+        const days = workingDaysBetween(body.startDate, body.endDate);
         if (days === 0) return sendJson(res, 400, { ok: false, error: "Geen werkdagen in de geselecteerde periode" });
         const leave = store.insert("leaves", {
           id: `leave_${Date.now()}_${require("crypto").randomBytes(4).toString("hex")}`,
@@ -2237,13 +2234,13 @@ http.createServer(async (req, res) => {
           const qty = Number(l.qty || 1);
           const unitPrice = Number(l.unitPrice || 0);
           const vatRate = Number(l.vatRate ?? 21);
-          const lineSubtotal = qty * unitPrice;
-          const lineVat = lineSubtotal * vatRate / 100;
-          return { description: l.description || "", qty, unitPrice, vatRate, lineSubtotal, lineVat, lineTotal: lineSubtotal + lineVat };
+          const lineSubtotal = round2(qty * unitPrice);
+          const lineVat = round2(lineSubtotal * vatRate / 100);
+          return { description: l.description || "", qty, unitPrice, vatRate, lineSubtotal, lineVat, lineTotal: round2(lineSubtotal + lineVat) };
         });
-        const subtotal = lines.reduce((s, l) => s + l.lineSubtotal, 0);
-        const vatAmount = lines.reduce((s, l) => s + l.lineVat, 0);
-        const total = subtotal + vatAmount;
+        const subtotal = round2(lines.reduce((s, l) => s + l.lineSubtotal, 0));
+        const vatAmount = round2(lines.reduce((s, l) => s + l.lineVat, 0));
+        const total = round2(subtotal + vatAmount);
         const invoice = store.insert("invoices", {
           id: `inv_${Date.now()}_${Math.random().toString(16).slice(2)}`,
           tenantId,
@@ -2362,13 +2359,13 @@ http.createServer(async (req, res) => {
           const qty = Number(l.qty || 1);
           const unitPrice = Number(l.unitPrice || 0);
           const vatRate = Number(l.vatRate ?? 21);
-          const lineSubtotal = qty * unitPrice;
-          const lineVat = lineSubtotal * vatRate / 100;
-          return { description: l.description || "", qty, unitPrice, vatRate, lineSubtotal, lineVat, lineTotal: lineSubtotal + lineVat };
+          const lineSubtotal = round2(qty * unitPrice);
+          const lineVat = round2(lineSubtotal * vatRate / 100);
+          return { description: l.description || "", qty, unitPrice, vatRate, lineSubtotal, lineVat, lineTotal: round2(lineSubtotal + lineVat) };
         });
-        const subtotal = lines.reduce((s, l) => s + l.lineSubtotal, 0);
-        const vatAmount = lines.reduce((s, l) => s + l.lineVat, 0);
-        const total = subtotal + vatAmount;
+        const subtotal = round2(lines.reduce((s, l) => s + l.lineSubtotal, 0));
+        const vatAmount = round2(lines.reduce((s, l) => s + l.lineVat, 0));
+        const total = round2(subtotal + vatAmount);
         const quote = store.insert("quotes", {
           id: `quote_${Date.now()}_${Math.random().toString(16).slice(2)}`,
           tenantId,

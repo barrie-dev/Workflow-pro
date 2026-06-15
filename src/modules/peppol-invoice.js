@@ -12,6 +12,7 @@
  */
 const https = require("https");
 const { loadPlatformConfig } = require("./platform-config");
+const { isValidBelgianVat } = require("./be-locale");
 
 function esc(v) {
   return String(v == null ? "" : v)
@@ -40,6 +41,8 @@ function validatePeppol(invoice, tenant) {
   if (!s.street || !s.city) errors.push("Leverancieradres ontbreekt (KBO-onboarding).");
   if (!invoice.customerName) errors.push("Klantnaam ontbreekt.");
   if (!invoice.customerVatNumber) errors.push("BTW-nummer van de klant ontbreekt (verplicht voor Peppol B2B).");
+  else if (!isValidBelgianVat(invoice.customerVatNumber)) errors.push("Ongeldig Belgisch BTW-nummer van de klant (mod-97 controle faalt).");
+  if (s.vat && !isValidBelgianVat(s.vat)) errors.push("Ongeldig Belgisch BTW-nummer van de leverancier (controleer KBO in Instellingen).");
   if (!Array.isArray(invoice.lines) || !invoice.lines.length) errors.push("Geen factuurregels.");
   if (!invoice.number) errors.push("Factuurnummer ontbreekt.");
   if (!invoice.invoiceDate) errors.push("Factuurdatum ontbreekt.");
