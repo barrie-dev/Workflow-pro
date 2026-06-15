@@ -1763,6 +1763,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
   function init() {
     buildShell();
     applyEntitlements();
+    window.WfpBoden && window.WfpBoden.mount({ navigate: switchView });
     try {
       const user = window._wfpCurrentUser || {};
       const name = user.name || user.email || "Manager";

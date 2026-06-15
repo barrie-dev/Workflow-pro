@@ -1764,6 +1764,7 @@ ${data.absentNow ? `<div style="background:#fef3c7;border-radius:10px;padding:12
   function init() {
     buildShell();
     applyEntitlements();
+    window.WfpBoden && window.WfpBoden.mount({ navigate: switchView });
     try {
       const user = window._wfpCurrentUser || {};
       const name = user.name || user.email || "Medewerker";

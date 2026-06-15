@@ -89,6 +89,27 @@ test("rechten: zonder token overal 401", async () => {
   assert.equal(r.status, 401);
 });
 
+// ── Boden AI-assistent ──────────────────────────────────────────
+test("boden: endpoint draait in mock-modus zonder key en vereist login", async () => {
+  // Zonder token → 401
+  const noAuth = await fetch(`${BASE}/api/tenants/t_demo/boden`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ messages: [{ role: "user", content: "hallo" }] }),
+  });
+  assert.equal(noAuth.status, 401);
+
+  const admin = await login("admin@demobouw.be", "Demo2026!");
+  const r = await fetch(`${BASE}/api/tenants/t_demo/boden`, {
+    method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${admin.token}` },
+    body: JSON.stringify({ messages: [{ role: "user", content: "Wat kan je voor mij doen?" }] }),
+  });
+  assert.equal(r.status, 200);
+  const d = await r.json();
+  assert.equal(d.ok, true);
+  assert.equal(d.mock, true, "geen echte key → mock-modus");
+  assert.ok(typeof d.reply === "string" && d.reply.length > 0, "Boden antwoordt");
+});
+
 // ── Validatie: junk-data wordt geweigerd ────────────────────────
 test("validatie: onkost met bedrag 0 of negatief → 400", async () => {
   const emp = await login("jan@demobouw.be", "Demo2026!");

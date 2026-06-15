@@ -1271,6 +1271,15 @@ ${locked?`<div class="sa-alert alert-warn">⚠️ Account is vergrendeld na teve
     </div>
   </div>
 
+  <div class="sa-card">
+    <div class="sa-card-head"><div class="sa-card-title">🤖 Boden — AI-assistent (OpenAI)</div><div class="sa-card-sub">${statusPill(cfg.openai?.configured)}</div></div>
+    <div style="padding:16px;display:grid;gap:12px">
+      <div style="font-size:12px;color:#64748b;font-weight:400">Zonder echte sleutel draait Boden in <strong>gratis demo-modus</strong> (gesimuleerde antwoorden, ideaal voor QA). Vul de OpenAI-sleutel in om de echte AI te activeren. Boden respecteert altijd de rechten van de ingelogde gebruiker.</div>
+      <label class="sa-fld"><span>OpenAI API-sleutel</span><input name="openai.apiKey" value="${esc(cfg.openai?.apiKey||"")}" placeholder="sk-..."></label>
+      <label class="sa-fld"><span>Model</span><input name="openai.model" value="${esc(cfg.openai?.model||"")}" placeholder="bv. gpt-4o-mini of gpt-4o"></label>
+    </div>
+  </div>
+
   <div style="display:flex;gap:10px;align-items:center;margin:4px 0 24px">
     <button type="submit" class="sa-btn btn-primary">Opslaan</button>
     <span id="saIntStatus" style="font-size:13px"></span>
@@ -1285,7 +1294,7 @@ ${locked?`<div class="sa-alert alert-warn">⚠️ Account is vergrendeld na teve
       document.getElementById("saIntegrationsForm").addEventListener("submit", async e => {
         e.preventDefault();
         const fd = new FormData(e.target);
-        const body = { stripe:{}, peppol:{}, email:{}, kbo:{} };
+        const body = { stripe:{}, peppol:{}, email:{}, kbo:{}, openai:{} };
         for (const [k,v] of fd.entries()) { const [s,f]=k.split("."); if(body[s]) body[s][f]=v; }
         const st = document.getElementById("saIntStatus");
         st.textContent = "Opslaan…"; st.style.color = "#64748b";

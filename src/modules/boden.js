@@ -1,0 +1,230 @@
+"use strict";
+/**
+ * Boden — de AI-assistent van WorkFlow Pro.
+ *
+ * Kernregel (beveiliging): Boden heeft GEEN directe DB-toegang. Hij werkt met
+ * tools die onder de identiteit van de ingelogde gebruiker draaien en exact
+ * dezelfde poort passeren als de gebruiker zelf: rol-rechten (can/assertCan),
+ * pakket-entitlements (isModuleEnabled) én own:-scoping. Mag de gebruiker iets
+ * niet zien, dan geeft de tool het niet terug → Boden kan het niet vertellen.
+ *
+ * Acties (aanmaken/wijzigen) voert Boden NOOIT zelf uit. Hij geeft een
+ * voorstel-kaart terug; de gebruiker bevestigt en de UI roept het bestaande,
+ * reeds-beveiligde endpoint aan.
+ *
+ * Zonder echte OpenAI-key draait Boden in mock-modus (gratis, voor QA).
+ */
+
+const { can } = require("../lib/auth");
+const { isModuleEnabled, resolveTenantModules } = require("./entitlements");
+const { hasRealKey, createChat } = require("../lib/openai");
+const { loadPlatformConfig } = require("./platform-config");
+
+// ── Leesbare record-types → collectie, vereist recht, module-key, samenvatter ──
+const READABLE = {
+  customers:  { collection: "customers",  perm: "customers",  module: "customers",  label: "Klanten",
+    sum: r => ({ id: r.id, naam: r.name, email: r.email, btw: r.vatNumber }) },
+  workorders: { collection: "workorders", perm: "workorders", module: "workorders", label: "Werkbonnen", ownable: true,
+    sum: r => ({ id: r.id, nummer: r.number, titel: r.title, status: r.status, klant: r.clientName, medewerker: r.userName, datum: r.date }) },
+  invoices:   { collection: "invoices",   perm: "billing",    module: "invoices",   label: "Facturen",
+    sum: r => ({ id: r.id, nummer: r.number, klant: r.customerName, bedrag: r.total, status: r.status, vervaldatum: r.dueDate }) },
+  quotes:     { collection: "quotes",     perm: "billing",    module: "offertes",   label: "Offertes",
+    sum: r => ({ id: r.id, nummer: r.number, klant: r.customerName, bedrag: r.total, status: r.status }) },
+  expenses:   { collection: "expenses",   perm: "expenses",   module: "expenses",   label: "Onkosten", ownable: true,
+    sum: r => ({ id: r.id, datum: r.date, bedrag: r.amount, categorie: r.category, status: r.status, medewerker: r.userName }) },
+  leaves:     { collection: "leaves",     perm: "leaves",     module: "leaves",     label: "Verlof", ownable: true,
+    sum: r => ({ id: r.id, van: r.startDate, tot: r.endDate, type: r.type, status: r.status, dagen: r.days, medewerker: r.userName }) },
+  shifts:     { collection: "shifts",     perm: "planning",   module: "planning",   label: "Planning", ownable: true,
+    sum: r => ({ id: r.id, datum: r.date, start: r.start, eind: r.end, medewerker: r.userName, locatie: r.venueName }) },
+  stock:      { collection: "stock",      perm: "stock",      module: "stock",      label: "Stock",
+    sum: r => ({ id: r.id, naam: r.name, aantal: r.quantity, minimum: r.minQuantity, eenheid: r.unit }) },
+  vehicles:   { collection: "vehicles",   perm: "vehicles",   module: "vehicles",   label: "Wagenpark",
+    sum: r => ({ id: r.id, naam: r.name, nummerplaat: r.plate, status: r.status, bestuurder: r.driverName }) },
+  employees:  { collection: "users",      perm: "employees",  module: null,         label: "Medewerkers",
+    sum: r => ({ id: r.id, naam: r.name, email: r.email, rol: r.role, functie: r.function, actief: r.active !== false }) },
+};
+
+// ── Bevestig-acties: server-allowlist; UI roept bij bevestiging het endpoint aan ──
+const ACTIONS = {
+  navigate:        { label: "Naar scherm gaan", needsConfirm: false },
+  create_leave:    { label: "Verlof aanvragen",  perm: "leaves",   path: "me/leaves",   method: "POST", fields: ["startDate", "endDate", "type", "reason"] },
+  create_expense:  { label: "Onkost indienen",   perm: "expenses", path: "me/expenses", method: "POST", fields: ["amount", "category", "description", "date"] },
+};
+
+function hasFull(user, perm) {
+  if (["tenant_admin", "manager"].includes(user.role)) return true;
+  return (user.permissions || []).includes(perm);
+}
+function hasAny(user, perm) {
+  return can(user, perm); // true bij perm óf own:perm
+}
+
+// ── Tool-uitvoering (onder user-identiteit, volledig rechten-gescoped) ──────────
+function runTool(store, tenant, user, name, input, proposals) {
+  if (name === "get_my_context") {
+    const ent = resolveTenantModules(store, tenant);
+    return {
+      gebruiker: user.name || user.email,
+      rol: user.role,
+      organisatie: tenant.name,
+      toegankelijke_modules: ent.views,
+      toegankelijke_record_types: Object.keys(READABLE).filter(t => {
+        const d = READABLE[t];
+        return hasAny(user, d.perm) && (!d.module || isModuleEnabled(store, tenant, d.module));
+      }),
+    };
+  }
+
+  if (name === "query_records") {
+    const type = String(input.type || "");
+    const d = READABLE[type];
+    if (!d) return { error: `Onbekend type '${type}'. Geldig: ${Object.keys(READABLE).join(", ")}` };
+    if (!hasAny(user, d.perm)) return { error: `Geen toegang: je mag '${d.label}' niet bekijken.` };
+    if (d.module && !isModuleEnabled(store, tenant, d.module)) return { error: `'${d.label}' zit niet in het pakket van deze organisatie.` };
+    let rows = store.list(d.collection, tenant.id);
+    // own:-scoping voor wie geen volledig recht heeft (bv. medewerker)
+    if (d.ownable && !hasFull(user, d.perm)) rows = rows.filter(r => r.userId === user.id);
+    if (type === "employees") rows = rows.filter(r => r.role !== "super_admin");
+    if (input.status) rows = rows.filter(r => String(r.status || "").toLowerCase() === String(input.status).toLowerCase());
+    if (input.query) {
+      const q = String(input.query).toLowerCase();
+      rows = rows.filter(r => JSON.stringify(d.sum(r)).toLowerCase().includes(q));
+    }
+    const limit = Math.min(Number(input.limit) || 15, 40);
+    return { type, label: d.label, aantal: rows.length, resultaten: rows.slice(0, limit).map(d.sum) };
+  }
+
+  if (name === "search") {
+    const q = String(input.query || "").toLowerCase();
+    if (q.length < 2) return { resultaten: [] };
+    const out = [];
+    for (const [type, d] of Object.entries(READABLE)) {
+      if (!hasAny(user, d.perm)) continue;
+      if (d.module && !isModuleEnabled(store, tenant, d.module)) continue;
+      let rows = store.list(d.collection, tenant.id);
+      if (d.ownable && !hasFull(user, d.perm)) rows = rows.filter(r => r.userId === user.id);
+      if (type === "employees") rows = rows.filter(r => r.role !== "super_admin");
+      for (const r of rows) {
+        if (JSON.stringify(d.sum(r)).toLowerCase().includes(q)) {
+          out.push({ type: d.label, ...d.sum(r) });
+          if (out.length >= 25) break;
+        }
+      }
+      if (out.length >= 25) break;
+    }
+    return { aantal: out.length, resultaten: out };
+  }
+
+  if (name === "propose_action") {
+    const action = String(input.action || "");
+    const a = ACTIONS[action];
+    if (!a) return { error: `Onbekende actie '${action}'.` };
+    if (a.perm && !hasAny(user, a.perm)) return { error: `Geen toegang om '${a.label}' uit te voeren.` };
+    const params = (input.params && typeof input.params === "object") ? input.params : {};
+    const proposal = {
+      id: `prop_${proposals.length + 1}`,
+      action,
+      label: a.label,
+      params,
+      needsConfirm: a.needsConfirm !== false,
+    };
+    if (a.path) { proposal.method = a.method; proposal.path = a.path; }
+    proposals.push(proposal);
+    return { ok: true, melding: "Voorstel klaar. Vraag de gebruiker om te bevestigen — voer niets uit." };
+  }
+
+  return { error: `Onbekende tool '${name}'.` };
+}
+
+// ── Tool-schema's voor OpenAI (function calling) ───────────────────────────────
+function fn(name, description, parameters) {
+  return { type: "function", function: { name, description, parameters } };
+}
+function toolDefs() {
+  return [
+    fn("get_my_context", "Geef de rol, organisatie en welke modules/record-types deze gebruiker mag zien. Roep dit eerst aan als je niet zeker weet wat de gebruiker mag.", { type: "object", properties: {} }),
+    fn("query_records", "Haal records op van één type, gescoped op de rechten van de gebruiker. Geeft enkel data terug die de gebruiker mag zien.", { type: "object", properties: {
+      type: { type: "string", enum: Object.keys(READABLE), description: "Soort record" },
+      status: { type: "string", description: "Optioneel statusfilter" },
+      query: { type: "string", description: "Optioneel zoekwoord" },
+      limit: { type: "number", description: "Max aantal (default 15, max 40)" },
+    }, required: ["type"] }),
+    fn("search", "Snel zoeken over alle voor de gebruiker toegankelijke record-types.", { type: "object", properties: { query: { type: "string" } }, required: ["query"] }),
+    fn("propose_action", "Stel een actie voor die de gebruiker daarna bevestigt. Voert NIETS uit. 'navigate' brengt de gebruiker naar een scherm (params.view). 'create_leave' (params: startDate,endDate,type,reason) en 'create_expense' (params: amount,category,description,date) maken na bevestiging een aanvraag aan.", { type: "object", properties: {
+      action: { type: "string", enum: Object.keys(ACTIONS) },
+      params: { type: "object" },
+    }, required: ["action"] }),
+  ];
+}
+
+function systemPrompt(store, tenant, user) {
+  const ent = resolveTenantModules(store, tenant);
+  return [
+    "Je bent Boden, de behulpzame AI-assistent in WorkFlow Pro — een Belgische B2B SaaS voor KMO's (planning, werkbonnen, tijdregistratie, verlof, onkosten, offertes, facturen/Peppol, klanten, stock, wagenpark).",
+    `De gebruiker is ${user.name || user.email}, rol "${user.role}", organisatie "${tenant.name}".`,
+    `Toegankelijke schermen: ${ent.views.join(", ")}.`,
+    "",
+    "STRIKTE REGELS:",
+    "1) Gebruik UITSLUITEND data die je via tools terugkrijgt. Verzin nooit gegevens. Geeft een tool 'geen toegang' of 'niet in pakket', leg dat dan kort uit aan de gebruiker.",
+    "2) Toon nooit data van andere gebruikers of modules dan wat de tools teruggeven — de tools bewaken de rechten, jij mag die niet omzeilen.",
+    "3) Je voert zelf NOOIT wijzigingen uit. Voor elke aanmaak/wijziging/navigatie gebruik je propose_action en zeg je duidelijk dat de gebruiker moet bevestigen. Beweer nooit dat je iets hebt uitgevoerd.",
+    "4) Antwoord in het Nederlands, kort en concreet. Verwijs naar het juiste scherm waar nuttig.",
+  ].join("\n");
+}
+
+// ── Hoofdfunctie ───────────────────────────────────────────────────────────────
+async function bodenChat(store, tenant, user, history) {
+  const cfg = loadPlatformConfig(store).openai || {};
+  // Normaliseer geschiedenis → laatste 12 turns, enkel user/assistant met tekst.
+  const msgs = (Array.isArray(history) ? history : [])
+    .filter(m => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string" && m.content.trim())
+    .slice(-12)
+    .map(m => ({ role: m.role, content: m.content }));
+  if (!msgs.length || msgs[msgs.length - 1].role !== "user") {
+    const e = new Error("Laatste bericht moet van de gebruiker zijn."); e.status = 400; throw e;
+  }
+
+  if (!hasRealKey(cfg)) return mockChat(store, tenant, user, msgs);
+
+  const proposals = [];
+  const tools = toolDefs();
+  const convo = [{ role: "system", content: systemPrompt(store, tenant, user) }, ...msgs];
+
+  for (let i = 0; i < 6; i++) {
+    const resp = await createChat(cfg, { messages: convo, tools, max_tokens: 1536 });
+    const m = resp.choices && resp.choices[0] && resp.choices[0].message;
+    if (!m) return { reply: "…", proposals, mock: false };
+    convo.push(m); // assistant-turn (kan tool_calls bevatten)
+    const calls = m.tool_calls || [];
+    if (!calls.length) {
+      return { reply: (m.content || "").trim() || "…", proposals, mock: false };
+    }
+    for (const call of calls) {
+      let args = {};
+      try { args = JSON.parse(call.function.arguments || "{}"); } catch (_) {}
+      let result;
+      try { result = runTool(store, tenant, user, call.function.name, args, proposals); }
+      catch (e) { result = { error: e.message }; }
+      convo.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(result) });
+    }
+  }
+  return { reply: "Sorry, dat lukt me even niet. Probeer je vraag anders te formuleren.", proposals, mock: false };
+}
+
+// ── Mock-modus (geen echte key) — gratis, voor QA. Toont dat rechten-scoping werkt ──
+function mockChat(store, tenant, user, msgs) {
+  const last = msgs[msgs.length - 1].content;
+  const ctx = runTool(store, tenant, user, "get_my_context", {}, []);
+  const found = runTool(store, tenant, user, "search", { query: last.slice(0, 40) }, []);
+  let reply = `🤖 Boden draait in **demo-modus** (nog geen AI-sleutel ingesteld door de beheerder).\n\n`;
+  reply += `Je bent ingelogd als ${ctx.gebruiker} (${ctx.rol}). Ik kan je helpen met: ${ctx.toegankelijke_record_types.join(", ") || "—"}.\n`;
+  if (found.aantal) {
+    reply += `\nIk vond ${found.aantal} resultaat(en) voor "${last.slice(0, 40)}":\n`;
+    reply += found.resultaten.slice(0, 5).map(r => `• ${r.type}: ${r.naam || r.nummer || r.titel || r.id}`).join("\n");
+  } else {
+    reply += `\nZodra de beheerder de AI-sleutel instelt (super-admin → Integraties), beantwoord ik je vragen volledig — altijd binnen jouw rechten.`;
+  }
+  return { reply, proposals: [], mock: true };
+}
+
+module.exports = { bodenChat, runTool, ACTIONS, READABLE };

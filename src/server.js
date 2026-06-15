@@ -35,6 +35,7 @@ const { modules } = require("./modules/registry");
 const { MODULE_CATALOG, CORE_MODULES, moduleByKey } = require("./modules/catalog");
 const { listBundles, getBundle, saveBundle, deleteBundle } = require("./modules/bundles");
 const { resolveTenantModules, isModuleEnabled, assertModuleEnabled, assertSubmoduleEnabled, grantablePermissions, OPERATIONAL_KEYS, ALWAYS_PERMISSIONS } = require("./modules/entitlements");
+const { bodenChat } = require("./modules/boden");
 
 /**
  * Maak een veilige permissions-array voor een medewerker op basis van wat de
@@ -996,6 +997,20 @@ http.createServer(async (req, res) => {
       assertApiKeyWriteAllowed(user, req);
       // Entitlement-handhaving: gated modules die niet in het pakket zitten → 403.
       assertModuleEnabled(store, user, tenant, action);
+
+      // ── Boden AI-assistent (beschikbaar voor elke ingelogde tenant-gebruiker;
+      //    de tools binnen Boden bewaken zelf de data-rechten) ──
+      if (action === "boden" && req.method === "POST") {
+        assertInteractiveUser(user);
+        const body = await readBody(req);
+        try {
+          const result = await bodenChat(store, tenant, user, body.messages || []);
+          sendJson(res, 200, { ok: true, ...result });
+        } catch (e) {
+          sendJson(res, e.status || 500, { ok: false, error: e.message });
+        }
+        return;
+      }
 
       if (action === "golden-path" && req.method === "GET") {
         sendJson(res, 200, { ok: true, readiness: readiness(store, tenantId) });

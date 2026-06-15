@@ -4843,6 +4843,7 @@ ${enrolled.map(e => `
   function init() {
     buildShell();
     applyEntitlements();
+    window.WfpBoden && window.WfpBoden.mount({ navigate: switchView });
 
     // Sync user name + topbar from current user
     try {
