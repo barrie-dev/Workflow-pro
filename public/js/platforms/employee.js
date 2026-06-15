@@ -1764,7 +1764,9 @@ ${data.absentNow ? `<div style="background:#fef3c7;border-radius:10px;padding:12
   function init() {
     buildShell();
     applyEntitlements();
-    window.WfpBoden && window.WfpBoden.mount({ navigate: switchView });
+    // Catalogus-view-namen → employee-tabnamen (bv. 'clocking' → 'clock')
+    const navAlias = { clocking: "clock" };
+    window.WfpBoden && window.WfpBoden.mount({ navigate: v => switchView(navAlias[v] || v) });
     try {
       const user = window._wfpCurrentUser || {};
       const name = user.name || user.email || "Medewerker";

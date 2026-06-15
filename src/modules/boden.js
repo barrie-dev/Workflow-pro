@@ -191,7 +191,14 @@ async function bodenChat(store, tenant, user, history) {
   const convo = [{ role: "system", content: systemPrompt(store, tenant, user) }, ...msgs];
 
   for (let i = 0; i < 6; i++) {
-    const resp = await createChat(cfg, { messages: convo, tools, max_tokens: 1536 });
+    let resp;
+    try {
+      resp = await createChat(cfg, { messages: convo, tools, max_tokens: 1536 });
+    } catch (e) {
+      if (e.status === 401 || e.status === 403) { const err = new Error("De AI-sleutel lijkt ongeldig of heeft geen toegang. Controleer de OpenAI-instellingen (super-admin → Integraties)."); err.status = 502; throw err; }
+      if (e.status === 429) { const err = new Error("De AI-dienst is even overbelast. Probeer het zo dadelijk opnieuw."); err.status = 502; throw err; }
+      throw e;
+    }
     const m = resp.choices && resp.choices[0] && resp.choices[0].message;
     if (!m) return { reply: "…", proposals, mock: false };
     convo.push(m); // assistant-turn (kan tool_calls bevatten)

@@ -29,7 +29,9 @@ const DEFAULT_MODEL = "gpt-4o-mini";
 async function createChat(cfg, body) {
   const payload = {
     model: cfg.model || DEFAULT_MODEL,
-    max_tokens: body.max_tokens || 1536,
+    // max_completion_tokens is de forward-compatibele parameter: werkt voor gpt-4o(-mini)
+    // én voor nieuwere modellen (o-serie / gpt-5) waar max_tokens een 400 geeft.
+    max_completion_tokens: body.max_tokens || 1536,
     messages: body.messages,
   };
   if (body.tools && body.tools.length) { payload.tools = body.tools; payload.tool_choice = "auto"; }

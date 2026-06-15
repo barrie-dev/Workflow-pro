@@ -311,6 +311,17 @@ load();
 </script></body></html>`;
 }
 
+// In-memory gzip-cache voor tekstassets. Sleutel = pad; auto-invalidatie als de
+// bestandsgrootte wijzigt (na edit) of bij procesherstart (na deploy).
+const _gzCache = new Map();
+function gzipFor(filePath, data) {
+  const c = _gzCache.get(filePath);
+  if (c && c.size === data.length) return c.buf;
+  const buf = require("zlib").gzipSync(data);
+  _gzCache.set(filePath, { size: data.length, buf });
+  return buf;
+}
+
 function serveStatic(req, res) {
   const url = new URL(req.url, config.appUrl);
   const file = url.pathname === "/" ? "index.html" : url.pathname.replace(/^\/+/, "");
@@ -347,6 +358,19 @@ function serveStatic(req, res) {
     const cacheControl = [".woff2", ".woff", ".png", ".jpg", ".jpeg", ".svg", ".ico"].includes(ext)
       ? "public, max-age=86400"  // 24h cache voor statische assets
       : "no-store";
+    // Gzip voor tekstassets (JS/CSS/HTML/JSON) wanneer de client het ondersteunt.
+    const acceptsGzip = /\bgzip\b/.test(req.headers["accept-encoding"] || "");
+    if (isText && acceptsGzip && data.length > 1024) {
+      const gz = gzipFor(filePath, data);
+      res.writeHead(200, securityHeaders({
+        "Content-Type": `${type}; charset=utf-8`,
+        "Cache-Control": cacheControl,
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding"
+      }));
+      res.end(gz);
+      return;
+    }
     res.writeHead(200, securityHeaders({
       "Content-Type": isText ? `${type}; charset=utf-8` : type,
       "Cache-Control": cacheControl
