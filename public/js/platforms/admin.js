@@ -4197,8 +4197,9 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
     <div class="adm-form-group">
       <label>BTW-regime</label>
       <select name="vatRegime" id="invVatRegime" ${invoice?"disabled":""}>
-        <option value="binnen" ${invoice?.vatRegime==="intracom"?"":"selected"}>Binnenland (btw per regel)</option>
+        <option value="binnen" ${(invoice?.vatRegime&&invoice.vatRegime!=="binnen")?"":"selected"}>Binnenland (btw per regel)</option>
         <option value="intracom" ${invoice?.vatRegime==="intracom"?"selected":""}>Intracommunautair — btw verlegd (0%)</option>
+        <option value="medecontractant" ${invoice?.vatRegime==="medecontractant"?"selected":""}>Medecontractant (bouw, KB nr. 1 art. 20) — btw verlegd (0%)</option>
       </select>
     </div>
     <div class="adm-form-group" style="align-self:flex-end;padding-bottom:7px;font-size:11.5px;color:#64748b;">Bij 'btw verlegd' wordt 0% btw toegepast met de wettelijke vermelding op de factuur.</div>
@@ -4255,7 +4256,7 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
     }
 
     function recalc() {
-      const intracom = document.getElementById("invVatRegime")?.value === "intracom";
+      const reverseCharge = (document.getElementById("invVatRegime")?.value || "binnen") !== "binnen";
       const lines = document.querySelectorAll(".inv-line-row");
       let subtotal = 0, vatAmt = 0;
       lines.forEach(row => {
@@ -4264,7 +4265,7 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
         const vat = Number(row.querySelector(".inv-line-vat").value||21);
         const ls = qty * price;
         subtotal += ls;
-        vatAmt += intracom ? 0 : ls * vat / 100;
+        vatAmt += reverseCharge ? 0 : ls * vat / 100;
       });
       document.getElementById("invSubtotal").textContent = fmtEurInv(subtotal);
       document.getElementById("invVat").textContent = fmtEurInv(vatAmt);

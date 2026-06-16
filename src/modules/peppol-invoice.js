@@ -71,11 +71,12 @@ function buildUbl(invoice, tenant) {
   const vatAmount = Number(invoice.vatAmount != null ? invoice.vatAmount : Object.values(groups).reduce((a, g) => a + g.tax, 0));
   const total = Number(invoice.total != null ? invoice.total : subtotal + vatAmount);
 
-  // BTW-categorie: AE = btw verlegd (intracommunautair); Z = 0%; S = standaard.
-  const reverseCharge = invoice.vatRegime === "intracom";
+  // BTW-categorie: AE = btw verlegd (intracommunautair óf binnenlandse
+  // medecontractant); Z = 0%; S = standaard.
+  const reverseCharge = invoice.vatRegime === "intracom" || invoice.vatRegime === "medecontractant";
   const catId = pct => (reverseCharge ? "AE" : (Number(pct) === 0 ? "Z" : "S"));
   const exemptionXml = reverseCharge
-    ? `<cbc:TaxExemptionReasonCode>VATEX-EU-AE</cbc:TaxExemptionReasonCode><cbc:TaxExemptionReason>${esc(invoice.vatNote || "Btw verlegd")}</cbc:TaxExemptionReason>`
+    ? `${invoice.vatRegime === "intracom" ? "<cbc:TaxExemptionReasonCode>VATEX-EU-AE</cbc:TaxExemptionReasonCode>" : ""}<cbc:TaxExemptionReason>${esc(invoice.vatNote || "Btw verlegd")}</cbc:TaxExemptionReason>`
     : "";
   const ogm = invoice.structuredComm || structuredCommunication(invoice.number);
   const paymentMeansXml = `

@@ -141,6 +141,20 @@ test("factuur: intracommunautair → btw verlegd (0%)", async () => {
   assert.ok(/verlegd/i.test(inv.vatNote), "wettelijke vermelding aanwezig");
 });
 
+test("factuur: binnenlandse medecontractant → btw verlegd (0%, KB nr. 1 art. 20)", async () => {
+  const admin = await login("admin@demobouw.be", "Demo2026!");
+  const H = { "Content-Type": "application/json", Authorization: `Bearer ${admin.token}` };
+  const r = await fetch(`${BASE}/api/tenants/t_demo/facturen`, {
+    method: "POST", headers: H,
+    body: JSON.stringify({ customerName: "BE Aannemer", customerVatNumber: "BE0417497106", vatRegime: "medecontractant", lines: [{ description: "Ruwbouw", qty: 1, unitPrice: 5000, vatRate: 21 }] }),
+  });
+  assert.equal(r.status, 201);
+  const inv = (await r.json()).invoice;
+  assert.equal(inv.vatRegime, "medecontractant");
+  assert.equal(inv.vatAmount, 0);
+  assert.ok(/medecontractant/i.test(inv.vatNote), "medecontractant-vermelding");
+});
+
 // ── Validatie: junk-data wordt geweigerd ────────────────────────
 test("validatie: onkost met bedrag 0 of negatief → 400", async () => {
   const emp = await login("jan@demobouw.be", "Demo2026!");
