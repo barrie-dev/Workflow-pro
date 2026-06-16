@@ -12,7 +12,7 @@
  */
 const https = require("https");
 const { loadPlatformConfig } = require("./platform-config");
-const { isValidBelgianVat } = require("./be-locale");
+const { isValidBelgianVat, structuredCommunication } = require("./be-locale");
 
 function esc(v) {
   return String(v == null ? "" : v)
@@ -30,6 +30,7 @@ function supplierOf(tenant) {
     postalCode: ip.postalCode || "",
     city: ip.city || "",
     country: ip.country || "BE",
+    iban: ip.iban || "",
   };
 }
 
@@ -70,6 +71,20 @@ function buildUbl(invoice, tenant) {
   const vatAmount = Number(invoice.vatAmount != null ? invoice.vatAmount : Object.values(groups).reduce((a, g) => a + g.tax, 0));
   const total = Number(invoice.total != null ? invoice.total : subtotal + vatAmount);
 
+  // BTW-categorie: AE = btw verlegd (intracommunautair); Z = 0%; S = standaard.
+  const reverseCharge = invoice.vatRegime === "intracom";
+  const catId = pct => (reverseCharge ? "AE" : (Number(pct) === 0 ? "Z" : "S"));
+  const exemptionXml = reverseCharge
+    ? `<cbc:TaxExemptionReasonCode>VATEX-EU-AE</cbc:TaxExemptionReasonCode><cbc:TaxExemptionReason>${esc(invoice.vatNote || "Btw verlegd")}</cbc:TaxExemptionReason>`
+    : "";
+  const ogm = invoice.structuredComm || structuredCommunication(invoice.number);
+  const paymentMeansXml = `
+  <cac:PaymentMeans>
+    <cbc:PaymentMeansCode>30</cbc:PaymentMeansCode>
+    <cbc:PaymentID>${esc(ogm)}</cbc:PaymentID>${s.iban ? `
+    <cac:PayeeFinancialAccount><cbc:ID>${esc(s.iban.replace(/\s/g, ""))}</cbc:ID></cac:PayeeFinancialAccount>` : ""}
+  </cac:PaymentMeans>`;
+
   const partyXml = (p, vat) => `
       <cac:PartyName><cbc:Name>${esc(p.name)}</cbc:Name></cac:PartyName>
       <cac:PostalAddress>
@@ -86,8 +101,9 @@ function buildUbl(invoice, tenant) {
       <cbc:TaxableAmount currencyID="${cur}">${money(g.taxable)}</cbc:TaxableAmount>
       <cbc:TaxAmount currencyID="${cur}">${money(g.tax)}</cbc:TaxAmount>
       <cac:TaxCategory>
-        <cbc:ID>${Number(pct) === 0 ? "Z" : "S"}</cbc:ID>
+        <cbc:ID>${catId(pct)}</cbc:ID>
         <cbc:Percent>${money(pct)}</cbc:Percent>
+        ${exemptionXml}
         <cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme>
       </cac:TaxCategory>
     </cac:TaxSubtotal>`).join("");
@@ -104,7 +120,7 @@ function buildUbl(invoice, tenant) {
     <cac:Item>
       <cbc:Name>${esc(l.description || "Artikel")}</cbc:Name>
       <cac:ClassifiedTaxCategory>
-        <cbc:ID>${p === 0 ? "Z" : "S"}</cbc:ID>
+        <cbc:ID>${catId(p)}</cbc:ID>
         <cbc:Percent>${money(p)}</cbc:Percent>
         <cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme>
       </cac:ClassifiedTaxCategory>
@@ -128,7 +144,7 @@ function buildUbl(invoice, tenant) {
   <cac:AccountingSupplierParty><cac:Party>${partyXml(s, s.vat)}</cac:Party></cac:AccountingSupplierParty>
   <cac:AccountingCustomerParty><cac:Party>${partyXml({
     name: invoice.customerName, street: invoice.customerAddress || "", city: "", postalCode: "", country: "BE",
-  }, invoice.customerVatNumber)}</cac:Party></cac:AccountingCustomerParty>
+  }, invoice.customerVatNumber)}</cac:Party></cac:AccountingCustomerParty>${paymentMeansXml}
   <cac:TaxTotal>
     <cbc:TaxAmount currencyID="${cur}">${money(vatAmount)}</cbc:TaxAmount>${taxSubtotals}
   </cac:TaxTotal>

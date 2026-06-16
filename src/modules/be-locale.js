@@ -81,4 +81,28 @@ function isValidBelgianVat(vat) {
   return 97 - (base % 97) === check;
 }
 
-module.exports = { round2, easterSunday, belgianHolidays, isBelgianHoliday, workingDaysBetween, isValidBelgianVat };
+/**
+ * Belgische gestructureerde mededeling (OGM/VCS): +++ddd/dddd/ddddd+++.
+ * 12 cijfers = 10 basiscijfers + 2 controlecijfers (basis mod 97; 0 → 97).
+ * `seed` mag een factuurnummer/-id zijn; de cijfers worden eruit gehaald.
+ */
+function structuredCommunication(seed) {
+  const digits = String(seed == null ? "" : seed).replace(/\D/g, "") || "0";
+  const base = Number(digits.slice(-10)) % 1e10;       // max 10 cijfers
+  let check = base % 97;
+  if (check === 0) check = 97;
+  const full = String(base).padStart(10, "0") + String(check).padStart(2, "0");
+  return `+++${full.slice(0, 3)}/${full.slice(3, 7)}/${full.slice(7, 12)}+++`;
+}
+
+// Geldige gestructureerde mededeling? (controle van het mod-97 controlegetal)
+function isValidStructuredCommunication(comm) {
+  const d = String(comm || "").replace(/\D/g, "");
+  if (d.length !== 12) return false;
+  const base = Number(d.slice(0, 10));
+  const check = Number(d.slice(10));
+  const expected = (base % 97) || 97;
+  return expected === check;
+}
+
+module.exports = { round2, easterSunday, belgianHolidays, isBelgianHoliday, workingDaysBetween, isValidBelgianVat, structuredCommunication, isValidStructuredCommunication };

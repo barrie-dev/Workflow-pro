@@ -36,7 +36,7 @@ const { MODULE_CATALOG, CORE_MODULES, moduleByKey } = require("./modules/catalog
 const { listBundles, getBundle, saveBundle, deleteBundle } = require("./modules/bundles");
 const { resolveTenantModules, isModuleEnabled, assertModuleEnabled, assertSubmoduleEnabled, grantablePermissions, OPERATIONAL_KEYS, ALWAYS_PERMISSIONS } = require("./modules/entitlements");
 const { bodenChat } = require("./modules/boden");
-const { workingDaysBetween, round2, isValidBelgianVat } = require("./modules/be-locale");
+const { workingDaysBetween, round2, isValidBelgianVat, structuredCommunication } = require("./modules/be-locale");
 
 /**
  * Maak een veilige permissions-array voor een medewerker op basis van wat de
@@ -2229,11 +2229,14 @@ http.createServer(async (req, res) => {
         const year = new Date().getFullYear();
         const seq = existing.filter(i => String(i.number||"").startsWith(String(year))).length + 1;
         const number = `${year}-${String(seq).padStart(3, "0")}`;
+        // BTW-regime: 'intracom' = intracommunautaire B2B → btw verlegd (0%).
+        const intracom = body.vatRegime === "intracom";
+        const vatNote = intracom ? "Btw verlegd — intracommunautaire handeling (art. 21 §2 / art. 39bis W.Btw)." : "";
         // Calculate totals from lines
         const lines = body.lines.map(l => {
           const qty = Number(l.qty || 1);
           const unitPrice = Number(l.unitPrice || 0);
-          const vatRate = Number(l.vatRate ?? 21);
+          const vatRate = intracom ? 0 : Number(l.vatRate ?? 21);
           const lineSubtotal = round2(qty * unitPrice);
           const lineVat = round2(lineSubtotal * vatRate / 100);
           return { description: l.description || "", qty, unitPrice, vatRate, lineSubtotal, lineVat, lineTotal: round2(lineSubtotal + lineVat) };
@@ -2256,6 +2259,9 @@ http.createServer(async (req, res) => {
           subtotal,
           vatAmount,
           total,
+          vatRegime: intracom ? "intracom" : "binnen",
+          vatNote,
+          structuredComm: structuredCommunication(number),  // Belgische gestructureerde mededeling
           notes: body.notes || "",
           workorderId: body.workorderId || null,
           paidAt: null,

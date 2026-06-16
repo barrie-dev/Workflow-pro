@@ -4193,6 +4193,20 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
       <input type="date" name="dueDate" value="${invoice?.dueDate||due30}">
     </div>
   </div>
+  <div class="adm-form-row">
+    <div class="adm-form-group">
+      <label>BTW-regime</label>
+      <select name="vatRegime" id="invVatRegime" ${invoice?"disabled":""}>
+        <option value="binnen" ${invoice?.vatRegime==="intracom"?"":"selected"}>Binnenland (btw per regel)</option>
+        <option value="intracom" ${invoice?.vatRegime==="intracom"?"selected":""}>Intracommunautair — btw verlegd (0%)</option>
+      </select>
+    </div>
+    <div class="adm-form-group" style="align-self:flex-end;padding-bottom:7px;font-size:11.5px;color:#64748b;">Bij 'btw verlegd' wordt 0% btw toegepast met de wettelijke vermelding op de factuur.</div>
+  </div>
+  ${invoice?.structuredComm ? `<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:12.5px;">
+    <span style="color:#64748b;">Gestructureerde mededeling:</span> <strong style="font-family:monospace;font-size:13px;">${esc(invoice.structuredComm)}</strong>
+    ${invoice.vatNote ? `<div style="color:#92400e;margin-top:4px;">⚖ ${esc(invoice.vatNote)}</div>` : ""}
+  </div>` : ""}
 
   <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px;">Factuurregels</div>
   <div id="invLines">
@@ -4241,6 +4255,7 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
     }
 
     function recalc() {
+      const intracom = document.getElementById("invVatRegime")?.value === "intracom";
       const lines = document.querySelectorAll(".inv-line-row");
       let subtotal = 0, vatAmt = 0;
       lines.forEach(row => {
@@ -4249,12 +4264,13 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
         const vat = Number(row.querySelector(".inv-line-vat").value||21);
         const ls = qty * price;
         subtotal += ls;
-        vatAmt += ls * vat / 100;
+        vatAmt += intracom ? 0 : ls * vat / 100;
       });
       document.getElementById("invSubtotal").textContent = fmtEurInv(subtotal);
       document.getElementById("invVat").textContent = fmtEurInv(vatAmt);
       document.getElementById("invTotal").textContent = fmtEurInv(subtotal + vatAmt);
     }
+    document.getElementById("invVatRegime")?.addEventListener("change", recalc);
 
     function bindLineEvents() {
       document.querySelectorAll(".inv-line-qty,.inv-line-price,.inv-line-vat").forEach(el => {

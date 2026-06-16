@@ -3,7 +3,7 @@
 const { test } = require("node:test");
 const assert = require("node:assert");
 
-const { round2, easterSunday, belgianHolidays, isBelgianHoliday, workingDaysBetween, isValidBelgianVat } = require("../src/modules/be-locale");
+const { round2, easterSunday, belgianHolidays, isBelgianHoliday, workingDaysBetween, isValidBelgianVat, structuredCommunication, isValidStructuredCommunication } = require("../src/modules/be-locale");
 
 test("round2: cent-afronding zonder float-artefacten", () => {
   assert.equal(round2(0.1 + 0.2), 0.3);
@@ -35,6 +35,15 @@ test("workingDaysBetween: sluit weekend ÉN feestdag uit", () => {
   assert.equal(workingDaysBetween("2026-04-27", "2026-05-01"), 4);
   // Volledig weekend → 0
   assert.equal(workingDaysBetween("2026-04-25", "2026-04-26"), 0);
+});
+
+test("structuredCommunication: geldig formaat + mod-97 controle", () => {
+  const comm = structuredCommunication("2026-001");
+  assert.match(comm, /^\+\+\+\d{3}\/\d{4}\/\d{5}\+\+\+$/, "+++ddd/dddd/ddddd+++");
+  assert.ok(isValidStructuredCommunication(comm), "controlegetal klopt");
+  assert.ok(!isValidStructuredCommunication("+++123/4567/89012+++"), "fout controlegetal");
+  // deterministisch per seed
+  assert.equal(structuredCommunication("2026-001"), structuredCommunication("2026-001"));
 });
 
 test("isValidBelgianVat: mod-97", () => {

@@ -110,6 +110,37 @@ test("boden: endpoint draait in mock-modus zonder key en vereist login", async (
   assert.ok(typeof d.reply === "string" && d.reply.length > 0, "Boden antwoordt");
 });
 
+// ── Belgische facturatie: afronding, gestructureerde mededeling, btw verlegd ──
+test("factuur: cent-afronding + geldige gestructureerde mededeling", async () => {
+  const admin = await login("admin@demobouw.be", "Demo2026!");
+  const H = { "Content-Type": "application/json", Authorization: `Bearer ${admin.token}` };
+  const r = await fetch(`${BASE}/api/tenants/t_demo/facturen`, {
+    method: "POST", headers: H,
+    body: JSON.stringify({ customerName: "Klant A", customerVatNumber: "BE0417497106", lines: [{ description: "Uren", qty: 3, unitPrice: 33.33, vatRate: 21 }] }),
+  });
+  assert.equal(r.status, 201);
+  const inv = (await r.json()).invoice;
+  assert.equal(inv.subtotal, 99.99);
+  assert.equal(inv.vatAmount, 21);     // round2(99.99*0.21)
+  assert.equal(inv.total, 120.99);
+  assert.match(inv.structuredComm, /^\+\+\+\d{3}\/\d{4}\/\d{5}\+\+\+$/);
+});
+
+test("factuur: intracommunautair → btw verlegd (0%)", async () => {
+  const admin = await login("admin@demobouw.be", "Demo2026!");
+  const H = { "Content-Type": "application/json", Authorization: `Bearer ${admin.token}` };
+  const r = await fetch(`${BASE}/api/tenants/t_demo/facturen`, {
+    method: "POST", headers: H,
+    body: JSON.stringify({ customerName: "EU Klant", customerVatNumber: "NL123456789B01", vatRegime: "intracom", lines: [{ description: "Dienst", qty: 1, unitPrice: 1000, vatRate: 21 }] }),
+  });
+  assert.equal(r.status, 201);
+  const inv = (await r.json()).invoice;
+  assert.equal(inv.vatRegime, "intracom");
+  assert.equal(inv.vatAmount, 0, "geen btw bij verlegging");
+  assert.equal(inv.total, 1000);
+  assert.ok(/verlegd/i.test(inv.vatNote), "wettelijke vermelding aanwezig");
+});
+
 // ── Validatie: junk-data wordt geweigerd ────────────────────────
 test("validatie: onkost met bedrag 0 of negatief → 400", async () => {
   const emp = await login("jan@demobouw.be", "Demo2026!");
