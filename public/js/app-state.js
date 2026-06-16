@@ -24,8 +24,6 @@
     reportsSummary: null,
     reportPreview: null,
     portal: null,
-    supportTickets: [],
-    supportTicketSummary: null,
     pilot: null,
     decisionReport: null,
     sales: [],

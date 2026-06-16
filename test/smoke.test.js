@@ -279,3 +279,64 @@ test("rechten per user: PATCH saneert escalatie-poging", async () => {
     assert.ok(!perms.includes(bad), `escalatie '${bad}' geweerd`);
   }
 });
+
+// ── GDPR support-toegang: consent + impersonatie + sliding expiry ──
+test("support: zonder klant-consent kan super-admin geen sessie starten", async () => {
+  const su = await login("super@workflowpro.be", "Demo2026!");
+  const admin = await login("admin@demobouw.be", "Demo2026!");
+  const H = t => ({ "Content-Type": "application/json", Authorization: `Bearer ${t}` });
+  // zorg dat consent uit staat
+  await fetch(`${BASE}/api/tenants/t_demo/support-access/end`, { method: "POST", headers: H(admin.token), body: "{}" });
+  const r = await fetch(`${BASE}/api/admin/support/start`, { method: "POST", headers: H(su.token), body: JSON.stringify({ tenantId: "t_demo", scope: "read", reason: "test" }) });
+  assert.equal(r.status, 403, "geen consent → 403");
+});
+
+test("support: read-sessie neemt gebruiker over, leest wel, schrijft niet", async () => {
+  const su = await login("super@workflowpro.be", "Demo2026!");
+  const admin = await login("admin@demobouw.be", "Demo2026!");
+  const H = t => ({ "Content-Type": "application/json", Authorization: `Bearer ${t}` });
+  try {
+    // 1) klant geeft consent
+    const consent = await fetch(`${BASE}/api/tenants/t_demo/support-access`, { method: "POST", headers: H(admin.token), body: JSON.stringify({ allowed: true, reason: "Klant vraagt hulp" }) });
+    assert.equal(consent.status, 200);
+    // 2) super-admin start read-sessie
+    const start = await fetch(`${BASE}/api/admin/support/start`, { method: "POST", headers: H(su.token), body: JSON.stringify({ tenantId: "t_demo", scope: "read", reason: "Onderzoek facturatiebug" }) });
+    assert.equal(start.status, 200, "consent aanwezig → start ok");
+    const sd = await start.json();
+    assert.ok(sd.supportToken, "support-token uitgereikt");
+    assert.equal(sd.session.scope, "read");
+    assert.ok(sd.session.expiresAt < sd.session.hardExpiresAt, "sliding < hard max");
+    // 3) impersonatie: GET werkt + /me toont sessie-banner info
+    const me = await (await fetch(`${BASE}/api/me`, { headers: { Authorization: `Bearer ${sd.supportToken}` } })).json();
+    assert.ok(me.supportSession && me.supportSession.active, "/me meldt actieve support-sessie (banner)");
+    assert.equal(me.supportSession.scope, "read");
+    const read = await fetch(`${BASE}/api/tenants/t_demo/facturen`, { headers: { Authorization: `Bearer ${sd.supportToken}` } });
+    assert.equal(read.status, 200, "read-sessie mag lezen als overgenomen gebruiker");
+    // 4) read-scope blokkeert schrijven
+    const write = await fetch(`${BASE}/api/tenants/t_demo/facturen`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sd.supportToken}` }, body: JSON.stringify({ customerName: "X", lines: [{ description: "u", qty: 1, unitPrice: 1, vatRate: 21 }] }) });
+    assert.equal(write.status, 403, "read-sessie mag niet schrijven");
+    // 5) overzicht toont actieve sessie
+    const ov = await (await fetch(`${BASE}/api/admin/support`, { headers: H(su.token) })).json();
+    const row = ov.rows.find(r => r.tenantId === "t_demo");
+    assert.ok(row && row.allowed && row.session, "overzicht toont consent + actieve sessie");
+  } finally {
+    await fetch(`${BASE}/api/admin/support/end`, { method: "POST", headers: H(su.token), body: JSON.stringify({ tenantId: "t_demo" }) });
+    await fetch(`${BASE}/api/tenants/t_demo/support-access/end`, { method: "POST", headers: H(admin.token), body: "{}" });
+  }
+});
+
+test("support: write-sessie mag schrijven, en consent intrekken stopt de sessie", async () => {
+  const su = await login("super@workflowpro.be", "Demo2026!");
+  const admin = await login("admin@demobouw.be", "Demo2026!");
+  const H = t => ({ "Content-Type": "application/json", Authorization: `Bearer ${t}` });
+  await fetch(`${BASE}/api/tenants/t_demo/support-access`, { method: "POST", headers: H(admin.token), body: JSON.stringify({ allowed: true, reason: "Hulp bij planning" }) });
+  const start = await fetch(`${BASE}/api/admin/support/start`, { method: "POST", headers: H(su.token), body: JSON.stringify({ tenantId: "t_demo", scope: "write", reason: "Planning herstellen" }) });
+  const sd = await start.json();
+  assert.equal(sd.session.scope, "write");
+  const write = await fetch(`${BASE}/api/tenants/t_demo/planning`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sd.supportToken}` }, body: JSON.stringify({ userId: "u_emp1", date: "2027-02-01", start: "08:00", end: "16:00" }) });
+  assert.ok(write.status === 200 || write.status === 201, "write-sessie mag schrijven");
+  // klant trekt consent in → sessie meteen dood
+  await fetch(`${BASE}/api/tenants/t_demo/support-access/end`, { method: "POST", headers: H(admin.token), body: "{}" });
+  const after = await fetch(`${BASE}/api/tenants/t_demo/planning`, { headers: { Authorization: `Bearer ${sd.supportToken}` } });
+  assert.equal(after.status, 401, "ingetrokken consent → support-token ongeldig");
+});

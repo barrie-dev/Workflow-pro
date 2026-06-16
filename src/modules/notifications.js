@@ -1,5 +1,3 @@
-const { escalationFor } = require("./support");
-
 function publicNotification(row) {
   return row;
 }
@@ -29,20 +27,6 @@ function createNotification(store, tenant, payload, actor) {
   });
   store.audit({ actor: actor.email, tenantId: tenant.id, action: "notification_created", area: "notifications", detail: row.title });
   return publicNotification(row);
-}
-
-function createSupportEscalationNotification(store, tenant, ticket, escalation, actor) {
-  const sourceRef = `support:${ticket.id}:${escalation.level}`;
-  if (hasOpenNotification(store, tenant.id, sourceRef)) return null;
-  return createNotification(store, tenant, {
-    type: "support",
-    channel: "in_app",
-    audience: "admins",
-    title: escalation.level === "blocker" ? "Pilot blocker: kritieke bug" : "Support SLA opvolgen",
-    body: `${ticket.title || ticket.id} - ${escalation.reason}`,
-    priority: escalation.level === "blocker" ? "high" : "normal",
-    sourceRef
-  }, actor);
 }
 
 function listNotifications(store, tenantId) {
@@ -104,13 +88,6 @@ function generateReminders(store, tenant, actor) {
     }, actor));
   }
 
-  for (const ticket of scoped.supportTickets.filter(row => row.status !== "closed")) {
-    const escalation = escalationFor(ticket);
-    if (!["watch", "escalate", "blocker"].includes(escalation.level)) continue;
-    const reminder = createSupportEscalationNotification(store, tenant, ticket, escalation, actor);
-    if (reminder) reminders.push(reminder);
-  }
-
   store.audit({ actor: actor.email, tenantId: tenant.id, action: "reminders_generated", area: "notifications", detail: String(reminders.length) });
   return reminders;
 }
@@ -122,7 +99,6 @@ function notificationSummary(store, tenantId) {
     queued: rows.filter(row => row.status === "queued").length,
     read: rows.filter(row => row.status === "read").length,
     highPriority: rows.filter(row => row.priority === "high").length,
-    supportEscalations: rows.filter(row => row.type === "support" && row.status !== "read").length,
     channels: rows.reduce((acc, row) => {
       acc[row.channel] = (acc[row.channel] || 0) + 1;
       return acc;

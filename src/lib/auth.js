@@ -40,6 +40,70 @@ function issueSession(user) {
   });
 }
 
+// ── GDPR support-impersonatie ────────────────────────────────
+// Een support-sessie neemt de exacte gebruikerssessie over via een
+// kortlevend support-token. Sliding expiry: bij activiteit verschuift
+// de vervaltijd (auto-renew) tot een harde limiet, daarna nieuwe
+// toestemming nodig. Toestemming + grant leven op de tenant, het token
+// verwijst er via grantId naar. De token-exp is de harde limiet.
+const SUPPORT_IDLE_MS = 30 * 60 * 1000;     // 30 min inactiviteit → verlopen
+const SUPPORT_HARD_MS = 4 * 60 * 60 * 1000; // harde max 4u, daarna her-consent
+
+// Bouwt een grant-object (op de tenant te bewaren als supportSession).
+function buildSupportGrant({ impersonatedUserId, agent, scope, reason, now = Date.now() }) {
+  const grantId = `support_${now}_${crypto.randomBytes(6).toString("hex")}`;
+  return {
+    grantId,
+    impersonatedUserId,
+    agent,
+    scope: scope === "write" ? "write" : "read",
+    reason: reason || "",
+    startedAt: new Date(now).toISOString(),
+    lastActivityAt: new Date(now).toISOString(),
+    expiresAt: new Date(now + SUPPORT_IDLE_MS).toISOString(),
+    hardExpiresAt: new Date(now + SUPPORT_HARD_MS).toISOString(),
+    endedAt: null
+  };
+}
+
+// Token dat naar een grant verwijst. exp = harde limiet (verify weigert daarna).
+function issueSupportToken(grant, tenantId) {
+  return sign({
+    sub: grant.impersonatedUserId,
+    tenantId: tenantId || null,
+    support: true,
+    grantId: grant.grantId,
+    agent: grant.agent,
+    scope: grant.scope,
+    exp: new Date(grant.hardExpiresAt).getTime()
+  });
+}
+
+function supportGrantStatus(grant, payload, now = Date.now()) {
+  if (!grant || grant.endedAt) return { ok: false, reason: "Support-sessie is beëindigd" };
+  if (payload && grant.grantId !== payload.grantId) return { ok: false, reason: "Support-grant komt niet overeen" };
+  if (new Date(grant.hardExpiresAt).getTime() <= now) return { ok: false, reason: "Harde limiet bereikt, nieuwe toestemming nodig" };
+  if (new Date(grant.expiresAt).getTime() <= now) return { ok: false, reason: "Support-sessie verlopen (inactiviteit)" };
+  return { ok: true };
+}
+
+// Schuift de vervaltijd op bij activiteit, begrensd door de harde limiet.
+function slideSupportGrant(grant, now = Date.now()) {
+  const hard = new Date(grant.hardExpiresAt).getTime();
+  const next = Math.min(now + SUPPORT_IDLE_MS, hard);
+  return { ...grant, lastActivityAt: new Date(now).toISOString(), expiresAt: new Date(next).toISOString() };
+}
+
+// Blokkeer schrijfacties tijdens een read-only support-sessie.
+function assertSupportWrite(user, method) {
+  if (!user?.isSupportSession) return;
+  if (user.support?.scope === "write") return;
+  if (String(method || "GET").toUpperCase() === "GET") return;
+  const error = new Error("Support-sessie heeft alleen leesrechten");
+  error.status = 403;
+  throw error;
+}
+
 function safeUser(user) {
   const { passwordHash, mfaSecret, mfaPendingSecret, recoveryCodes, ...safe } = user || {};
   return safe;
@@ -50,6 +114,28 @@ function authenticate(req, store) {
   const token = header.startsWith("Bearer ") ? header.slice(7) : "";
   const payload = verify(token);
   if (!payload) return null;
+
+  // Support-impersonatie: valideer tegen de tenant-grant + schuif de vervaltijd.
+  if (payload.support === true) {
+    const tenant = (store.data.tenants || []).find(t => t.id === payload.tenantId);
+    if (!tenant || tenant.supportAccess?.allowed !== true) return null;
+    const grant = tenant.supportSession;
+    const status = supportGrantStatus(grant, payload);
+    if (!status.ok) return null;
+    const user = store.getUserById(payload.sub);
+    if (!user || !user.active) return null;
+    // auto-renew bij activiteit
+    const slid = slideSupportGrant(grant);
+    tenant.supportSession = slid;
+    if (typeof store.save === "function") { try { store.save(); } catch (_) {} }
+    return {
+      ...user,
+      session: payload,
+      isSupportSession: true,
+      support: { agent: payload.agent, grantId: payload.grantId, scope: payload.scope, tenantId: tenant.id }
+    };
+  }
+
   const user = store.getUserById(payload.sub);
   if (!user || !user.active) return null;
   return { ...user, session: payload };
@@ -324,6 +410,13 @@ function assertCan(user, permission) {
 module.exports = {
   issueSession,
   authenticate,
+  buildSupportGrant,
+  issueSupportToken,
+  supportGrantStatus,
+  slideSupportGrant,
+  assertSupportWrite,
+  SUPPORT_IDLE_MS,
+  SUPPORT_HARD_MS,
   login,
   loginWithMfa,
   safeUser,

@@ -267,7 +267,7 @@
         <span class="nav-badge" id="navBadgeErrors" style="display:none">0</span>
       </button>
       <button class="sa-nav-item" data-view="support">
-        <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>Support
+        <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>Support-toegang
         <span class="nav-badge" id="navBadgeSupport" style="display:none">0</span>
       </button>
       <button class="sa-nav-item" data-view="audit">
@@ -359,12 +359,13 @@
     try {
       const [st, sup] = await Promise.all([
         api("/api/admin/stats"),
-        api("/api/admin/support?limit=5").catch(()=>({tickets:[]}))
+        api("/api/admin/support").catch(()=>({rows:[]}))
       ]);
-      const openTickets = (sup.tickets||[]).filter(t=>t.status!=="closed");
+      const supRows = sup.rows||[];
+      const activeSessions = supRows.filter(r=>r.session);
       badge_update("navBadgeTenants", st.tenants?.total);
       badge_update("navBadgeErrors",  st.errors24h);
-      badge_update("navBadgeSupport", openTickets.length);
+      badge_update("navBadgeSupport", activeSessions.length);
 
       c.innerHTML = `
 <div class="sa-kpis">
@@ -384,9 +385,9 @@
     <div class="sa-kpi-sub">${st.users?.active||0} actief</div>
   </div>
   <div class="sa-kpi kpi-orange">
-    <div class="sa-kpi-label">Support open</div>
-    <div class="sa-kpi-value">${openTickets.length}</div>
-    <div class="sa-kpi-sub">tickets</div>
+    <div class="sa-kpi-label">Support-sessies actief</div>
+    <div class="sa-kpi-value">${activeSessions.length}</div>
+    <div class="sa-kpi-sub">${supRows.filter(r=>r.allowed).length} tenants gaven toestemming</div>
   </div>
   <div class="sa-kpi ${(st.errors24h||0)>0?"kpi-red":"kpi-teal"}">
     <div class="sa-kpi-label">Errors (24h)</div>
@@ -410,17 +411,17 @@
   </div>
   <div class="sa-card">
     <div class="sa-card-head">
-      <div class="sa-card-title">Open support tickets</div>
+      <div class="sa-card-title">Actieve support-sessies</div>
       <button class="sa-btn btn-ghost sm" data-nav="support">Alle →</button>
     </div>
-    ${openTickets.length ? openTickets.slice(0,5).map(t=>`
+    ${activeSessions.length ? activeSessions.slice(0,5).map(r=>`
     <div style="padding:10px 16px;border-bottom:1px solid #f8fafc;display:flex;align-items:center;gap:10px">
       <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:600;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.subject||t.title||"Ticket")}</div>
-        <div style="font-size:11px;color:#94a3b8">${esc(t.tenantName||t.tenantId||"—")} · ${fmtD(t.createdAt)}</div>
+        <div style="font-size:13px;font-weight:600;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.tenantName||r.tenantId||"—")}</div>
+        <div style="font-size:11px;color:#94a3b8">${esc(r.session.agent||"agent")} · verloopt ${fmtD(r.session.expiresAt)}</div>
       </div>
-      ${badge(t.priority||"normaal", t.priority==="hoog"?"badge-red":"badge-gray")}
-    </div>`).join("") : `<div class="sa-empty"><div class="sa-empty-icon">✅</div>Geen open tickets</div>`}
+      ${badge(r.session.scope==="read"?"alleen-lezen":"lezen+schrijven", r.session.scope==="read"?"badge-gray":"badge-red")}
+    </div>`).join("") : `<div class="sa-empty"><div class="sa-empty-icon">🔒</div>Geen actieve support-sessies</div>`}
   </div>
 </div>`;
 
@@ -882,54 +883,83 @@ ${locked?`<div class="sa-alert alert-warn">⚠️ Account is vergrendeld na teve
   }
 
   // ══════════════════════════════════════════════════════════
-  // VIEW: Support
+  // VIEW: Support-toegang (GDPR — impersonatie met toestemming)
   // ══════════════════════════════════════════════════════════
   async function support() {
     const c = content(); c.innerHTML = loader();
     try {
       const sd = await api("/api/admin/support");
-      const tickets = sd.tickets||[];
-      const open = tickets.filter(t=>t.status!=="closed");
-      badge_update("navBadgeSupport", open.length);
+      const rows = sd.rows||[];
+      const active = rows.filter(r=>r.session);
+      badge_update("navBadgeSupport", active.length);
+
+      function scopeBadge(scope){ return scope==="read" ? badge("alleen-lezen","badge-gray") : badge("lezen+schrijven","badge-red"); }
+
       c.innerHTML = `
-<div class="sa-page-head"><h1>Support Tickets<span class="cnt">${tickets.length}</span></h1></div>
-<div class="sa-filters">
-  <input id="stSearch" placeholder="Zoek…" style="flex:1;min-width:180px">
-  <select id="stStatus"><option value="">Alle</option><option value="open">Open</option><option value="closed">Gesloten</option></select>
-  <select id="stPrio"><option value="">Alle prioriteiten</option><option value="hoog">Hoog</option><option value="normaal">Normaal</option></select>
+<div class="sa-page-head"><h1>Support-toegang<span class="cnt">${active.length}</span></h1></div>
+<div class="sa-card" style="margin-bottom:16px">
+  <div style="padding:14px 16px;font-size:13px;color:#475569;line-height:1.5">
+    <strong>GDPR-conforme support.</strong> Een support-sessie kan alleen starten als de klant toestemming gaf.
+    De sessie neemt de exacte gebruikerssessie over (impersonatie), is tijdgebonden met automatische
+    verlenging bij activiteit tot een harde limiet, en wordt volledig geaudit.
+  </div>
 </div>
 <div class="sa-card">
-  ${tickets.length ? `
   <div class="sa-tbl-wrap">
-    <table class="sa-tbl" id="stTable">
-      <thead><tr><th>Onderwerp</th><th>Tenant</th><th>Status</th><th>Prioriteit</th><th>Aangemaakt</th></tr></thead>
-      <tbody id="stTbody"></tbody>
+    <table class="sa-tbl">
+      <thead><tr><th>Tenant</th><th>Toestemming</th><th>Actieve sessie</th><th>Verloopt</th><th></th></tr></thead>
+      <tbody id="supBody"></tbody>
     </table>
-  </div>` : `<div class="sa-empty"><div class="sa-empty-icon">🎫</div>Geen support tickets</div>`}
+  </div>
 </div>`;
 
-      function renderST() {
-        const q  = (document.getElementById("stSearch")?.value||"").toLowerCase();
-        const st = document.getElementById("stStatus")?.value||"";
-        const pr = document.getElementById("stPrio")?.value||"";
-        const rows = tickets.filter(t => {
-          const txt = `${t.subject||t.title||""} ${t.tenantName||t.tenantId||""}`.toLowerCase();
-          return (!q||txt.includes(q))&&(!st||t.status===st)&&(!pr||t.priority===pr);
-        });
-        const tb = document.getElementById("stTbody");
-        if (tb) tb.innerHTML = rows.map(t=>`<tr>
-          <td><div class="main">${esc(t.subject||t.title||"Ticket")}</div></td>
-          <td><span class="sub">${esc(t.tenantName||t.tenantId||"—")}</span></td>
-          <td>${badge(t.status, t.status==="closed"?"badge-green":t.status==="open"?"badge-yellow":"badge-gray")}</td>
-          <td>${badge(t.priority||"normaal", t.priority==="hoog"?"badge-red":"badge-gray")}</td>
-          <td><span class="sub">${fmtD(t.createdAt)}</span></td>
-        </tr>`).join("");
+      function render() {
+        const tb = document.getElementById("supBody");
+        tb.innerHTML = rows.map(r=>{
+          const consent = r.allowed
+            ? badge("toegestaan","badge-green")
+            : badge("geweigerd","badge-gray");
+          const sess = r.session
+            ? `${scopeBadge(r.session.scope)} <span class="sub">${esc(r.session.agent||"agent")}</span>`
+            : `<span class="sub">—</span>`;
+          const expiry = r.session
+            ? `<span class="sub">${fmtD(r.session.expiresAt)}<br>hard: ${fmtD(r.session.hardExpiresAt)}</span>`
+            : `<span class="sub">—</span>`;
+          const action = r.session
+            ? `<button class="sa-btn btn-secondary sm" data-end="${r.tenantId}">Sessie beëindigen</button>`
+            : (r.allowed
+                ? `<button class="sa-btn btn-primary sm" data-start="${r.tenantId}">Start sessie</button>`
+                : `<span class="sub">Wacht op toestemming klant</span>`);
+          return `<tr>
+            <td><div class="main">${esc(r.tenantName||r.tenantId)}</div>${r.consentBy?`<span class="sub">door ${esc(r.consentBy)}</span>`:""}</td>
+            <td>${consent}</td>
+            <td>${sess}</td>
+            <td>${expiry}</td>
+            <td style="text-align:right">${action}</td>
+          </tr>`;
+        }).join("") || `<tr><td colspan="5"><div class="sa-empty"><div class="sa-empty-icon">🔒</div>Geen tenants</div></td></tr>`;
+
+        tb.querySelectorAll("[data-start]").forEach(b=>b.addEventListener("click", ()=>startSession(b.dataset.start)));
+        tb.querySelectorAll("[data-end]").forEach(b=>b.addEventListener("click", ()=>endSession(b.dataset.end)));
       }
-      renderST();
-      ["stSearch","stStatus","stPrio"].forEach(id => {
-        document.getElementById(id)?.addEventListener("input", renderST);
-        document.getElementById(id)?.addEventListener("change", renderST);
-      });
+
+      async function startSession(tenantId) {
+        const scope = window.confirm("Lezen+schrijven? OK = read-write, Annuleer = alleen-lezen.") ? "write" : "read";
+        const reason = window.prompt("Reden voor support-toegang (verplicht, wordt geaudit):", "");
+        if (!reason) return;
+        try {
+          const r = await api("/api/admin/support/start", { method:"POST", body: JSON.stringify({ tenantId, scope, reason }) });
+          alert(`Support-sessie gestart als ${r.session.impersonatedUserEmail||r.session.impersonatedUserId}.\nOpen het support-portaal met dit sessietoken.\nVerloopt ${fmtD(r.session.expiresAt)} (hard ${fmtD(r.session.hardExpiresAt)}).`);
+          support();
+        } catch(e){ alert(e.message); }
+      }
+      async function endSession(tenantId) {
+        if (!window.confirm("Support-sessie nu beëindigen?")) return;
+        try { await api("/api/admin/support/end", { method:"POST", body: JSON.stringify({ tenantId }) }); support(); }
+        catch(e){ alert(e.message); }
+      }
+
+      render();
     } catch(e) { content().innerHTML = err(e); }
   }
 

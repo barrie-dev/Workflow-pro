@@ -7,7 +7,6 @@ const { productionReadiness, productionConfigRisk } = require("./production");
 const { rateLimitSnapshot } = require("../lib/rate-limit");
 const { isExpired } = require("./api-keys");
 const { syncSummary, mappingSummary } = require("./integrations");
-const { supportRisk } = require("./support");
 
 const backupDir = path.join(config.root, "data", "backups");
 const dbPath = path.join(config.root, "data", "workflowpro-fullstack.json");
@@ -28,7 +27,6 @@ const TENANT_COLLECTIONS = [
   "integrations",
   "invoices",
   "apiKeys",
-  "supportTickets",
   "salesLeads",
   "partners"
 ];
@@ -188,7 +186,6 @@ function tenantStatus(store, tenantId) {
   const keyRisk = apiKeyRisk(scoped.apiKeys);
   const mfa = mfaRisk(store.data.users, tenantId);
   const integrationHealth = integrationRisk(scoped.integrations);
-  const supportHealth = supportRisk(scoped.supportTickets);
   return {
     generatedAt: new Date().toISOString(),
     tenant: {
@@ -227,7 +224,6 @@ function tenantStatus(store, tenantId) {
     apiKeyRisk: keyRisk,
     mfaRisk: mfa,
     integrationRisk: integrationHealth,
-    supportRisk: supportHealth,
     release: releaseInfo(),
     counts: {
       users: scoped.users.length,
@@ -238,7 +234,6 @@ function tenantStatus(store, tenantId) {
       expenses: scoped.expenses.length,
       integrations: scoped.integrations.length,
       apiKeys: scoped.apiKeys.length,
-      supportTickets: scoped.supportTickets.length,
       salesLeads: scoped.salesLeads.length,
       partners: scoped.partners.length,
       auditEvents: auditRows.length,

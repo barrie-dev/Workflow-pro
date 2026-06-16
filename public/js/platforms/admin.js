@@ -61,6 +61,7 @@
     fetch("/api/me", { headers: { Authorization: "Bearer " + token() } })
       .then(r => r.json())
       .then(d => {
+        if (d && d.supportSession && d.supportSession.active) renderSupportBanner(d.supportSession);
         const ent = d && d.entitlements;
         window._wfpEnt = ent || null; // stash voor submodule-gating in views
         if (!ent || ent.views === "*") return; // super_admin of geen data → alles tonen
@@ -79,6 +80,19 @@
         });
       })
       .catch(() => {});
+  }
+
+  // GDPR-transparantie: toon een vaste banner tijdens een support-sessie.
+  function renderSupportBanner(s) {
+    if (document.getElementById("wfpSupportBanner")) return;
+    const scope = s.scope === "write" ? "lezen + schrijven" : "alleen-lezen";
+    const b = document.createElement("div");
+    b.id = "wfpSupportBanner";
+    b.setAttribute("role", "status");
+    b.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:9999;background:#b91c1c;color:#fff;font:600 13px/1.4 system-ui,sans-serif;padding:8px 16px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.2)";
+    b.textContent = `🛟 Support-sessie actief — ${s.agent || "supportmedewerker"} (${scope}). Deze sessie wordt geaudit.`;
+    document.body.appendChild(b);
+    document.body.style.paddingTop = "34px";
   }
 
   // Is een submodule actief voor deze tenant? (super_admin/onbekend → ja)

@@ -22,6 +22,9 @@ const {
   assertOwn,
   assertSuperAdmin,
   assertAdminMfa,
+  assertSupportWrite,
+  buildSupportGrant,
+  issueSupportToken,
   isEmployee,
   isManager,
   isAdmin
@@ -89,7 +92,6 @@ const { customerStartPayload } = require("./modules/customer-start");
 const { listApiKeys, createApiKey, revokeApiKey, rotateApiKey, authenticateApiKey, recordApiKeyDenied } = require("./modules/api-keys");
 const { apiKeyGovernance } = require("./modules/api-key-governance");
 const { releaseInfo } = require("./modules/releases");
-const { listSupportTickets, createSupportTicket, updateSupportTicket, supportSummary } = require("./modules/support");
 const { pilotKpis, decisionReport } = require("./modules/pilot");
 const { salesSummary, salesLaunchReadiness, advanceLead, addPartnerNote } = require("./modules/sales");
 const { goLiveReadiness } = require("./modules/go-live");
@@ -149,7 +151,10 @@ function sendCsv(res, filename, rows) {
 }
 
 function actor(req) {
-  return authenticate(req, store) || authenticateApiKey(store, req.headers["x-api-key"], requestMetadata(req));
+  const user = authenticate(req, store) || authenticateApiKey(store, req.headers["x-api-key"], requestMetadata(req));
+  // Read-only support-sessie: blokkeer elke schrijfactie centraal.
+  if (user) assertSupportWrite(user, req.method);
+  return user;
 }
 
 function requestMetadata(req) {
@@ -574,7 +579,10 @@ http.createServer(async (req, res) => {
         const tenant = store.data.tenants.find(t => t.id === user.tenantId) || {};
         entitlements = resolveTenantModules(store, tenant);
       }
-      sendJson(res, 200, { ok: true, user: safeUser(user), entitlements });
+      const supportSession = user.isSupportSession
+        ? { active: true, agent: user.support?.agent, scope: user.support?.scope, expiresAt: store.data.tenants.find(t => t.id === user.support?.tenantId)?.supportSession?.expiresAt || null }
+        : null;
+      sendJson(res, 200, { ok: true, user: safeUser(user), entitlements, supportSession });
       return;
     }
 
@@ -801,7 +809,7 @@ http.createServer(async (req, res) => {
         invoiceProfile: {},
         onboarding: {},
         billingOps: { invoiceHistory: [] },
-        supportAccess: { enabled: false }
+        supportAccess: { allowed: false }
       });
       let adminUser = null;
       if (body.adminEmail) {
@@ -969,17 +977,73 @@ http.createServer(async (req, res) => {
       return;
     }
 
-    // ── Super-admin: alle support tickets ─────────────────────────────────────
+    // ── Super-admin: support-toegang overzicht (GDPR) ─────────────────────────
+    // Per tenant de toestemming + actieve impersonatie-sessie.
     if (url.pathname === "/api/admin/support" && req.method === "GET") {
       const user = actor(req);
       if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
       assertSuperAdmin(user);
-      const limit = Number(url.searchParams.get("limit") || 100);
-      const tickets = store.data.tenants.flatMap(t =>
-        (store.list("supportTickets", t.id) || []).map(tk => ({ ...tk, tenantName: t.name }))
-      ).sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))
-        .slice(0, limit);
-      sendJson(res, 200, { ok: true, tickets });
+      const now = Date.now();
+      const rows = store.data.tenants.map(t => {
+        const sa = t.supportAccess || {};
+        const sess = t.supportSession || null;
+        const active = !!(sess && !sess.endedAt && new Date(sess.expiresAt).getTime() > now && new Date(sess.hardExpiresAt).getTime() > now);
+        return {
+          tenantId: t.id, tenantName: t.name,
+          allowed: sa.allowed === true,
+          consentBy: sa.allowedBy || null, consentAt: sa.allowedAt || null,
+          session: active ? { agent: sess.agent, scope: sess.scope, startedAt: sess.startedAt, expiresAt: sess.expiresAt, hardExpiresAt: sess.hardExpiresAt, impersonatedUserId: sess.impersonatedUserId } : null,
+        };
+      });
+      sendJson(res, 200, { ok: true, rows });
+      return;
+    }
+
+    // ── Super-admin: start GDPR support-sessie (impersonatie) ─────────────────
+    if (url.pathname === "/api/admin/support/start" && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertSuperAdmin(user);
+      const body = await readBody(req);
+      const tenant = store.data.tenants.find(t => t.id === body.tenantId);
+      if (!tenant) return sendJson(res, 404, { ok: false, error: "Tenant niet gevonden" });
+      if (tenant.supportAccess?.allowed !== true) {
+        return sendJson(res, 403, { ok: false, error: "Klant heeft geen support-toegang toegestaan (GDPR-consent vereist)" });
+      }
+      if (!body.reason || !String(body.reason).trim()) {
+        return sendJson(res, 400, { ok: false, error: "Reden is verplicht (wordt geaudit)" });
+      }
+      const tenantUsers = store.data.users.filter(u => u.tenantId === tenant.id && u.active !== false);
+      const target = body.impersonatedUserId
+        ? tenantUsers.find(u => u.id === body.impersonatedUserId)
+        : (tenantUsers.find(u => u.role === "tenant_admin") || tenantUsers[0]);
+      if (!target) return sendJson(res, 404, { ok: false, error: "Geen geschikte gebruiker om over te nemen" });
+      const grant = buildSupportGrant({ impersonatedUserId: target.id, agent: user.email, scope: body.scope, reason: String(body.reason).trim() });
+      store.updateTenant(tenant.id, { supportSession: grant });
+      const supportToken = issueSupportToken(grant, tenant.id);
+      store.audit({ actor: user.email, tenantId: tenant.id, action: "support_session_started", area: "support", detail: `scope=${grant.scope} als=${target.email} reden=${grant.reason}` });
+      sendJson(res, 200, { ok: true, supportToken, session: {
+        grantId: grant.grantId, scope: grant.scope, agent: grant.agent,
+        impersonatedUserId: target.id, impersonatedUserEmail: target.email,
+        startedAt: grant.startedAt, expiresAt: grant.expiresAt, hardExpiresAt: grant.hardExpiresAt
+      } });
+      return;
+    }
+
+    // ── Super-admin: beëindig support-sessie ──────────────────────────────────
+    if (url.pathname === "/api/admin/support/end" && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertSuperAdmin(user);
+      const body = await readBody(req);
+      const tenant = store.data.tenants.find(t => t.id === body.tenantId);
+      if (!tenant) return sendJson(res, 404, { ok: false, error: "Tenant niet gevonden" });
+      const sess = tenant.supportSession;
+      if (sess && !sess.endedAt) {
+        store.updateTenant(tenant.id, { supportSession: { ...sess, endedAt: new Date().toISOString(), endedBy: user.email, endedReason: "ended_by_agent" } });
+        store.audit({ actor: user.email, tenantId: tenant.id, action: "support_session_ended", area: "support", detail: sess.grantId });
+      }
+      sendJson(res, 200, { ok: true });
       return;
     }
 
@@ -1079,10 +1143,6 @@ http.createServer(async (req, res) => {
         assertInteractiveUser(user);
         const updatedTenant = updateOnboardingStep(store, tenant, onboardingStepMatch[1], await readBody(req), user);
         sendJson(res, 200, { ok: true, portal: portalPayload(store, updatedTenant, tenantStatus(store, tenantId), billingSummary(updatedTenant)) });
-        return;
-      }
-      if (action === "support-tickets" && req.method === "GET") {
-        sendJson(res, 200, { ok: true, rows: listSupportTickets(store, tenant.id), summary: supportSummary(store, tenant.id) });
         return;
       }
       if (action === "sales/summary" && req.method === "GET") {
@@ -1207,18 +1267,6 @@ http.createServer(async (req, res) => {
         assertCan(user, "planning");
         assertInteractiveUser(user);
         sendJson(res, 201, { ok: true, report: decisionReport(store, tenant, user) });
-        return;
-      }
-      if (action === "support-tickets" && req.method === "POST") {
-        assertApiKeyWriteAllowed(user, req);
-        sendJson(res, 201, { ok: true, row: createSupportTicket(store, tenant, await readBody(req), user) });
-        return;
-      }
-      const supportTicketMatch = action.match(/^support-tickets\/([^/]+)$/);
-      if (supportTicketMatch && req.method === "PATCH") {
-        assertCan(user, "settings");
-        assertInteractiveUser(user);
-        sendJson(res, 200, { ok: true, row: updateSupportTicket(store, tenant, supportTicketMatch[1], await readBody(req), user) });
         return;
       }
       if (action === "admin/backups" && req.method === "GET") {
@@ -1408,21 +1456,26 @@ http.createServer(async (req, res) => {
         sendJson(res, 200, { ok: true, tenant: applyKbo(store, tenant, body.vat, user) });
         return;
       }
+      // GDPR-consent: de klant (tenant-admin) staat support-toegang toe of trekt ze in.
+      // Toestemming intrekken beëindigt meteen een lopende support-sessie.
       if (action === "support-access" && req.method === "POST") {
         assertCan(user, "settings");
         assertInteractiveUser(user);
         const body = await readBody(req);
         const now = new Date();
-        const expiresAt = body.expiresAt || new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString();
+        const allowed = body.allowed !== false && body.enabled !== false;
         const supportAccess = {
-          enabled: body.enabled !== false,
-          reason: body.reason || "Support op vraag van klant",
-          grantedBy: user.email,
-          grantedAt: now.toISOString(),
-          expiresAt
+          allowed,
+          reason: body.reason || "Support-toegang toegestaan door klant",
+          allowedBy: user.email,
+          allowedAt: now.toISOString()
         };
-        const next = store.updateTenant(tenant.id, { supportAccess });
-        store.audit({ actor: user.email, tenantId: tenant.id, action: "support_access_granted", area: "support", detail: supportAccess.reason });
+        const patch = { supportAccess };
+        if (!allowed && tenant.supportSession && !tenant.supportSession.endedAt) {
+          patch.supportSession = { ...tenant.supportSession, endedAt: now.toISOString(), endedBy: user.email, endedReason: "consent_withdrawn" };
+        }
+        const next = store.updateTenant(tenant.id, patch);
+        store.audit({ actor: user.email, tenantId: tenant.id, action: allowed ? "support_access_allowed" : "support_access_denied", area: "support", detail: supportAccess.reason });
         sendJson(res, 200, { ok: true, tenant: next });
         return;
       }
@@ -1430,14 +1483,13 @@ http.createServer(async (req, res) => {
         assertCan(user, "settings");
         assertInteractiveUser(user);
         const previous = tenant.supportAccess || {};
-        const supportAccess = {
-          ...previous,
-          enabled: false,
-          endedBy: user.email,
-          endedAt: new Date().toISOString()
-        };
-        const next = store.updateTenant(tenant.id, { supportAccess });
-        store.audit({ actor: user.email, tenantId: tenant.id, action: "support_access_ended", area: "support", detail: previous.reason || "" });
+        const now = new Date();
+        const patch = { supportAccess: { ...previous, allowed: false, endedBy: user.email, endedAt: now.toISOString() } };
+        if (tenant.supportSession && !tenant.supportSession.endedAt) {
+          patch.supportSession = { ...tenant.supportSession, endedAt: now.toISOString(), endedBy: user.email, endedReason: "consent_withdrawn" };
+        }
+        const next = store.updateTenant(tenant.id, patch);
+        store.audit({ actor: user.email, tenantId: tenant.id, action: "support_access_denied", area: "support", detail: previous.reason || "" });
         sendJson(res, 200, { ok: true, tenant: next });
         return;
       }
@@ -2858,7 +2910,7 @@ http.createServer(async (req, res) => {
         assertCan(user, "settings");
         const t = store.data.tenants.find(x => x.id === tenantId);
         if (!t) return sendJson(res, 404, { ok: false, error: "Tenant niet gevonden" });
-        const { billingOps, supportAccess, ...safeTenant } = t;
+        const { billingOps, supportSession, ...safeTenant } = t;
         sendJson(res, 200, { ok: true, tenant: safeTenant });
         return;
       }

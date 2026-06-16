@@ -1,5 +1,4 @@
 const { RELEASE_NOTES, releaseInfo } = require("./releases");
-const { supportSummary } = require("./support");
 
 const HELP_ARTICLES = [
   {
@@ -85,9 +84,8 @@ function portalPayload(store, tenant, status, billing) {
       storage: status.health.storage,
       pwa: status.health.pwa,
       release: releaseInfo(),
-      supportAccess: tenant.supportAccess || { enabled: false },
-      errors: status.counts.errorEvents || 0,
-      supportTickets: supportSummary(store, tenant.id)
+      supportAccess: tenant.supportAccess || { allowed: false },
+      errors: status.counts.errorEvents || 0
     },
     onboarding: {
       percent: Math.round((completed / onboarding.length) * 100),

@@ -1,6 +1,5 @@
 const { managementReport } = require("./operations");
 const { billingQuote } = require("./billing");
-const { slaFor } = require("./support");
 
 function earliestDate(rows, field) {
   const values = rows.map(row => row[field]).filter(Boolean).sort();
@@ -16,8 +15,6 @@ const KPI_ACTIONS = {
   time_to_first_value: "Zet samen met de klant binnen 24u een eerste planning, werkbon of tijdregistratie live.",
   first_planning: "Maak minstens een eerste planning aan voor een echte medewerker op locatie.",
   workorders: "Laat de pilotklant minstens 10 werkbonnen verwerken in de mobiele of desktopflow.",
-  support_load: "Bundel terugkerende vragen in onboardingmateriaal en los frictiepunten in de basisflow op.",
-  critical_bug_sla: "Los high-priority bugs binnen 48u op of escalereer ze als pilot blocker.",
   completed_workorders: "Werk minstens een werkbon volledig af, inclusief status naar voltooid of afgewerkt.",
   decision_report: "Genereer een beslissersrapport voor de klantreview en go/no-go evaluatie."
 };
@@ -38,10 +35,6 @@ function pilotKpis(store, tenantId) {
     ...scoped.clocks.map(row => ({ at: row.clockInAt || row.date }))
   ], "at");
   const tenantCreatedAt = scoped.tenant?.createdAt || scoped.tenant?.onboarding?.kboAppliedAt || null;
-  const supportTickets = scoped.supportTickets || [];
-  const ticketsPerUser = activeUsers.length ? +(supportTickets.length / activeUsers.length).toFixed(2) : supportTickets.length;
-  const criticalBugs = supportTickets.filter(row => row.priority === "high" && row.category === "bug");
-  const criticalBugsBreached = criticalBugs.filter(row => slaFor(row).breached).length;
   const completedWorkorders = scoped.workorders.filter(row => ["Voltooid", "Afgewerkt"].includes(row.status)).length;
   const reportsGenerated = store.data.auditLogs.filter(row => row.tenantId === tenantId && row.area === "reports").length;
 
@@ -66,20 +59,6 @@ function pilotKpis(store, tenantId) {
       value: scoped.workorders.length,
       target: ">= 10",
       ok: scoped.workorders.length >= 10
-    },
-    {
-      key: "support_load",
-      label: "Supporttickets/gebruiker",
-      value: ticketsPerUser,
-      target: "<= 2",
-      ok: ticketsPerUser <= 2
-    },
-    {
-      key: "critical_bug_sla",
-      label: "Kritieke bugs binnen SLA",
-      value: `${criticalBugs.length - criticalBugsBreached}/${criticalBugs.length}`,
-      target: "100% binnen 48u",
-      ok: criticalBugsBreached === 0
     },
     {
       key: "completed_workorders",

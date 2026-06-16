@@ -1771,10 +1771,9 @@ function renderPortal() {
   `).join("");
 
   const pilot = state.pilot || {};
-  const supportSummary = state.supportTicketSummary || portal.status.supportTickets || {};
   const openPilotKpis = (pilot.kpis || []).filter(kpi => !kpi.ok);
   const onboardingOpen = (portal.onboarding.steps || []).filter(step => !step.done);
-  const pilotReady = (pilot.score || 0) >= 80 && portal.onboarding.percent >= 70 && !(supportSummary.criticalOpen || 0);
+  const pilotReady = (pilot.score || 0) >= 80 && portal.onboarding.percent >= 70;
   const portalAction = openPilotKpis[0]?.action || onboardingOpen[0]?.label || "Genereer beslissersrapport voor go/no-go.";
   el("portalFocus").innerHTML = `
     <article class="portal-focus-card primary">
@@ -1792,11 +1791,6 @@ function renderPortal() {
       <span>Pilot KPI</span>
       <strong>${pilot.score || 0}%</strong>
       <small>${openPilotKpis.length} open KPI's</small>
-    </article>
-    <article class="portal-focus-card">
-      <span>Support</span>
-      <strong>${supportSummary.open || 0}</strong>
-      <small>${supportSummary.criticalOpen || 0} kritisch open</small>
     </article>
   `;
   const portalDecisionAction = el("portalDecisionAction");
@@ -1843,7 +1837,6 @@ function renderPortal() {
   `, "Nog geen release notes.");
 
   renderPilot();
-  renderSupportTickets();
 }
 
 async function refreshPortal() {
@@ -1855,7 +1848,6 @@ async function refreshPortal() {
     const result = await api(`/api/tenants/${tenantId}/portal`);
     state.portal = result.portal;
     await refreshPilot(false);
-    await refreshSupportTickets(false);
     renderPortal();
   } catch (error) {
     setText("portalIntro", error.message);
@@ -1904,83 +1896,6 @@ async function generateDecisionReport() {
   } catch (error) {
     el("decisionReportPreview").textContent = error.message;
     el("decisionReportPreview").classList.add("bad");
-  }
-}
-
-function renderSupportTickets() {
-  const summary = state.supportTicketSummary || state.portal?.status?.supportTickets || {};
-  const cards = [
-    ["Totaal", summary.total || 0],
-    ["Open", summary.open || 0],
-    ["Wachtend", summary.waiting || 0],
-    ["Gesloten", summary.closed || 0],
-    ["SLA risico", summary.slaRisk || 0],
-    ["SLA verlopen", summary.slaBreached || 0],
-    ["Kritieke bugs", summary.criticalBugSlaBreached || 0],
-    ["Escalaties", (summary.escalations || 0) + (summary.blockers || 0)]
-  ];
-  el("supportTicketCards").innerHTML = cards.map(([label, value]) => `
-    <article class="metric">
-      <span class="metric-label">${label}</span>
-      <strong>${value}</strong>
-      <small>Supporttickets</small>
-    </article>
-  `).join("");
-
-  renderList("supportTicketRows", state.supportTickets, ticket => `
-    <div class="data-row ${ticket.sla?.status === "breached" ? "kpi-open" : ""}">
-      <strong>${ticket.title}</strong>
-      <small>${ticket.category} - ${ticket.priority} - ${ticket.status} - ${ticket.createdAt}</small>
-      <small>SLA: ${ticket.sla?.status || "ok"} - deadline ${shortDateTime(ticket.sla?.deadlineAt)} - ${ticket.sla?.status === "closed" ? "gesloten" : `${ticket.sla?.remainingHours ?? "-"}u resterend`}</small>
-      <small>Escalatie: ${ticket.escalation?.label || "Geen escalatie"} - ${ticket.escalation?.reason || "Binnen SLA."}</small>
-      <small>${ticket.description || ""}</small>
-      <div class="row-actions">
-        ${ticket.status === "closed" ? "" : `
-          ${ticket.status === "waiting" ? "" : `<button class="small-action" data-wait-ticket="${ticket.id}" type="button">Wachtend</button>`}
-          <button class="small-action" data-close-ticket="${ticket.id}" type="button">Sluiten</button>
-        `}
-      </div>
-    </div>
-  `, "Nog geen supporttickets.");
-  document.querySelectorAll("[data-wait-ticket]").forEach(button => {
-    button.addEventListener("click", () => updateSupportTicket(button.dataset.waitTicket, { status: "waiting", comment: "Wacht op klant of externe input" }));
-  });
-  document.querySelectorAll("[data-close-ticket]").forEach(button => {
-    button.addEventListener("click", () => updateSupportTicket(button.dataset.closeTicket, { status: "closed", comment: "Gesloten via portal" }));
-  });
-}
-
-async function refreshSupportTickets(render = true) {
-  if (!token) return;
-  const result = await api(`/api/tenants/${tenantId}/support-tickets`);
-  state.supportTickets = result.rows || [];
-  state.supportTicketSummary = result.summary || {};
-  if (render) renderSupportTickets();
-}
-
-async function createSupportTicket(form) {
-  if (!token) return;
-  try {
-    await api(`/api/tenants/${tenantId}/support-tickets`, {
-      method: "POST",
-      body: JSON.stringify(formData(form))
-    });
-    form.reset();
-    await refreshPortal();
-  } catch (error) {
-    setText("portalIntro", error.message);
-  }
-}
-
-async function updateSupportTicket(ticketId, patch) {
-  try {
-    await api(`/api/tenants/${tenantId}/support-tickets/${ticketId}`, {
-      method: "PATCH",
-      body: JSON.stringify(patch)
-    });
-    await refreshPortal();
-  } catch (error) {
-    setText("portalIntro", error.message);
   }
 }
 
@@ -2979,12 +2894,7 @@ el("partnerForm").addEventListener("submit", event => {
   event.preventDefault();
   createPartner(event.currentTarget);
 });
-el("refreshSupportTickets").addEventListener("click", () => refreshSupportTickets(true));
 el("generateDecisionReport").addEventListener("click", generateDecisionReport);
-el("supportTicketForm").addEventListener("submit", event => {
-  event.preventDefault();
-  createSupportTicket(event.currentTarget);
-});
 el("createBackup").addEventListener("click", createBackup);
 el("generateReports").addEventListener("click", generateReports);
 el("supportAccessForm").addEventListener("submit", event => {

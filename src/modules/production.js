@@ -1,7 +1,6 @@
 const { config } = require("../lib/config");
 const { isExpired } = require("./api-keys");
 const { syncSummary, mappingSummary } = require("./integrations");
-const { supportRisk } = require("./support");
 const fs = require("fs");
 const path = require("path");
 const MODULE_SCOPES = ["planning", "workorders", "billing", "integrations"];
@@ -199,7 +198,6 @@ function productionReadiness(store) {
   const missingIntegrationSecrets = integrations.filter(row => !row.encryptedSecret);
   const integrationFailures = integrations.reduce((total, row) => total + syncSummary(row).unresolvedFailures, 0);
   const integrationMappingIssues = integrations.filter(row => mappingSummary(row).needsAttention).length;
-  const support = supportRisk(store.data.supportTickets || []);
   const backups = backupFreshness(store);
   const configRisk = productionConfigRisk();
   const checks = [
@@ -347,33 +345,6 @@ function productionReadiness(store) {
       integrationMappingIssues
         ? `${integrationMappingIssues} integraties hebben ontbrekende of ongeldige field mappings.`
         : "Alle integratie field mappings zijn volledig.",
-      "P1"
-    ),
-    check(
-      "support_sla",
-      "Support SLA",
-      support.slaBreached === 0,
-      support.slaBreached
-        ? `${support.slaBreached} open supporttickets zijn buiten SLA.`
-        : "Geen open supporttickets buiten SLA.",
-      "P1"
-    ),
-    check(
-      "support_critical_bug_sla",
-      "Kritieke bug SLA",
-      support.criticalBugSlaBreached === 0,
-      support.criticalBugSlaBreached
-        ? `${support.criticalBugSlaBreached} kritieke bugtickets zijn buiten 48u SLA.`
-        : "Geen kritieke bugtickets buiten 48u SLA.",
-      "P1"
-    ),
-    check(
-      "support_escalation_queue",
-      "Support escalaties",
-      support.blockers === 0 && support.escalations === 0,
-      support.blockers || support.escalations
-        ? `${support.blockers} pilot blockers en ${support.escalations} SLA-escalaties open.`
-        : "Geen open supportescalaties.",
       "P1"
     ),
     check(
