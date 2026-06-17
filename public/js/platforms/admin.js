@@ -4669,7 +4669,71 @@ ${billing.status === "trial" ? `<div style="background:#fffbeb;border:1px solid 
       </form>
     </div>
   </div>
+  <div class="adm-card">
+    <div class="adm-card-header"><h3 class="adm-card-title">Support-toegang (GDPR)</h3></div>
+    <div class="adm-card-body">
+      <p style="font-size:13px;color:#64748b;margin-bottom:12px;">
+        Geef je toestemming dan kan een supportmedewerker tijdelijk inloggen en je sessie overnemen om je te helpen.
+        De toegang is tijdgebonden, wordt volledig geaudit, en je ziet een banner zolang een sessie actief is.
+        Je kunt de toestemming op elk moment intrekken — een lopende sessie stopt dan meteen.
+      </p>
+      <div id="admSupportStatus" style="font-size:13px;margin-bottom:12px;"></div>
+      <div class="adm-form-group" id="admSupportReasonWrap">
+        <label>Reden / context (optioneel)</label>
+        <input id="admSupportReason" placeholder="bv. hulp bij facturatie-instelling">
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="adm-btn adm-btn-primary" id="admSupportAllow">✅ Support-toegang toestaan</button>
+        <button class="adm-btn adm-btn-secondary" id="admSupportRevoke" style="display:none;">⛔ Toestemming intrekken</button>
+      </div>
+      <div id="admSupportMsg" style="display:none;padding:8px 12px;border-radius:8px;font-size:13px;margin-top:10px;"></div>
+    </div>
+  </div>
 </div>`;
+
+    // ── Support-toegang (GDPR consent) ──
+    function renderSupportConsent(sa) {
+      const allowed = sa && sa.allowed === true;
+      const statusEl = document.getElementById("admSupportStatus");
+      const allowBtn = document.getElementById("admSupportAllow");
+      const revokeBtn = document.getElementById("admSupportRevoke");
+      const reasonWrap = document.getElementById("admSupportReasonWrap");
+      if (!statusEl) return;
+      if (allowed) {
+        statusEl.innerHTML = `<span style="display:inline-block;padding:3px 10px;border-radius:999px;background:#d1fae5;color:#065f46;font-weight:600;">Toegestaan</span>`
+          + (sa.allowedBy ? ` <span style="color:#64748b;">door ${esc(sa.allowedBy)}${sa.allowedAt ? " · " + new Date(sa.allowedAt).toLocaleString("nl-BE") : ""}</span>` : "");
+        allowBtn.style.display = "none";
+        revokeBtn.style.display = "";
+        reasonWrap.style.display = "none";
+      } else {
+        statusEl.innerHTML = `<span style="display:inline-block;padding:3px 10px;border-radius:999px;background:#f1f5f9;color:#475569;font-weight:600;">Niet toegestaan</span> <span style="color:#64748b;">support kan niet inloggen</span>`;
+        allowBtn.style.display = "";
+        revokeBtn.style.display = "none";
+        reasonWrap.style.display = "";
+      }
+    }
+    function admSupportMsg(text, ok) {
+      const m = document.getElementById("admSupportMsg");
+      if (!m) return;
+      m.style.cssText = `display:block;padding:8px 12px;border-radius:8px;font-size:13px;margin-top:10px;background:${ok ? "#d1fae5" : "#fee2e2"};color:${ok ? "#065f46" : "#dc2626"};`;
+      m.textContent = text;
+    }
+    document.getElementById("admSupportAllow")?.addEventListener("click", async () => {
+      const reason = document.getElementById("admSupportReason")?.value || "";
+      try {
+        const r = await api("POST", "/support-access", { allowed: true, reason });
+        renderSupportConsent(r.tenant?.supportAccess || { allowed: true });
+        admSupportMsg("Support-toegang toegestaan ✓", true);
+      } catch (e) { admSupportMsg(e.message, false); }
+    });
+    document.getElementById("admSupportRevoke")?.addEventListener("click", async () => {
+      try {
+        const r = await api("POST", "/support-access/end", {});
+        renderSupportConsent(r.tenant?.supportAccess || { allowed: false });
+        admSupportMsg("Toestemming ingetrokken. Een lopende sessie is gestopt.", true);
+      } catch (e) { admSupportMsg(e.message, false); }
+    });
+    renderSupportConsent(tenant.supportAccess || { allowed: false });
 
     // Save company settings
     document.getElementById("admOrgForm").addEventListener("submit", async e => {
