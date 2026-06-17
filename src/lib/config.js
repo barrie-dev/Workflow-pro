@@ -15,7 +15,7 @@ const config = {
   releaseChannel: process.env.RELEASE_CHANNEL || "pilot",
   // Render vult RENDER_GIT_COMMIT automatisch per deploy → bron van waarheid.
   // COMMIT_SHA blijft als handmatige override; "local-dev" lokaal.
-  commitSha: (process.env.RENDER_GIT_COMMIT || process.env.COMMIT_SHA || "local-dev").slice(0, 7),
+  commitSha: (raw => /^[0-9a-f]{7,40}$/i.test(raw) ? raw.slice(0, 7) : raw)(process.env.RENDER_GIT_COMMIT || process.env.COMMIT_SHA || "local-dev"),
   jwtSecret: process.env.JWT_SECRET || "dev_only_replace_this_secret",
   encryptionKey: process.env.ENCRYPTION_KEY || "dev_only_replace_this_encryption_key_32",
   databaseUrl: process.env.DATABASE_URL || "",

@@ -89,6 +89,33 @@ test("rechten: zonder token overal 401", async () => {
   assert.equal(r.status, 401);
 });
 
+// ── Klantbril-QA: heldere, Nederlandse foutmeldingen ──
+test("login met fout wachtwoord → 401 met Nederlandse melding", async () => {
+  const r = await fetch(`${BASE}/api/auth/login`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: "admin@demobouw.be", password: "fout" }),
+  });
+  assert.equal(r.status, 401);
+  const d = await r.json();
+  assert.match(d.error, /wachtwoord/i, "melding is Nederlands en duidelijk");
+  assert.doesNotMatch(d.error, /invalid credentials/i, "geen Engelse placeholder meer");
+});
+
+test("klok in → meteen uit (zelfde minuut) → 400 met behulpzame uitleg", async () => {
+  const sara = await login("sara@demobouw.be", "Demo2026!");
+  const H = { "Content-Type": "application/json", Authorization: `Bearer ${sara.token}` };
+  const inR = await fetch(`${BASE}/api/tenants/t_demo/me/clock/in`, { method: "POST", headers: H, body: "{}" });
+  assert.ok(inR.status === 201 || inR.status === 409, "inklokken lukt of er was al een actieve klok");
+  const outR = await fetch(`${BASE}/api/tenants/t_demo/me/clock/out`, { method: "POST", headers: H, body: "{}" });
+  if (outR.status === 400) {
+    const d = await outR.json();
+    assert.match(d.error, /uitklokken kan pas/i, "contextuele klok-uit-melding i.p.v. cryptische 'Eindtijd moet na Starttijd'");
+    assert.doesNotMatch(d.error, /Eindtijd moet na/i);
+  } else {
+    assert.equal(outR.status, 200, "anders een geldige uitklok (tijd is verstreken)");
+  }
+});
+
 // ── Boden AI-assistent ──────────────────────────────────────────
 test("boden: endpoint draait in mock-modus zonder key en vereist login", async () => {
   // Zonder token → 401

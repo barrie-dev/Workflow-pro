@@ -555,7 +555,7 @@ http.createServer(async (req, res) => {
       const result = body.mfaCode
         ? loginWithMfa(store, body.email, body.password, body.mfaCode)
         : login(store, body.email, body.password);
-      if (!result) return sendJson(res, 401, { ok: false, error: "Invalid credentials" });
+      if (!result) return sendJson(res, 401, { ok: false, error: "Onjuist e-mailadres of wachtwoord" });
       if (result.mfaRequired) {
         store.audit({ actor: result.user.email, tenantId: result.user.tenantId, action: "mfa_required", area: "auth" });
         sendJson(res, 200, { ok: true, mfaRequired: true, user: safeUser(result.user) });

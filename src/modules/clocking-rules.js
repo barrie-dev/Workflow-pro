@@ -78,6 +78,11 @@ function normalizeClockIn(store, tenantId, payload, actor, fallbackTime) {
 
 function normalizeClockOut(store, tenantId, active, payload, fallbackTime) {
   const clockOut = payload.clockOut || fallbackTime;
+  // Contextuele melding i.p.v. het generieke "Eindtijd moet na Starttijd liggen":
+  // de medewerker koos geen eindtijd, dus leg uit dat uitklokken nog niet kan.
+  if (parseTime(clockOut) <= parseTime(active.clockIn)) {
+    throw apiError(`Uitklokken kan pas nadat er tijd verstreken is sinds het inklokken om ${active.clockIn}. Probeer straks opnieuw, of laat een beheerder de tijd handmatig corrigeren.`, 400);
+  }
   const window = windowFromTimes(active.clockIn, clockOut, { start: "Starttijd", end: "Eindtijd" });
   if (window.end - window.start > MAX_CLOCK_MINUTES) {
     throw apiError("Tijdregistratie mag maximaal 16 uur duren zonder correctie", 422);
