@@ -2921,10 +2921,13 @@ if ("serviceWorker" in navigator) {
   // Zodra een nieuwe service worker de controle overneemt (na een deploy),
   // herlaadt de pagina één keer zodat de gebruiker meteen de verse code krijgt.
   // Zonder dit bleef een mobiel toestel op een oude shell hangen (stale/"dubbel").
-  let _wfpReloadedForSw = false;
+  // Eén keer per tab herladen (sessionStorage-vlag overleeft de reload en
+  // voorkomt een reload-loop als de controller meermaals wisselt). Nooit
+  // herladen tijdens een support-enter (anders verstoort het de overname).
   navigator.serviceWorker.addEventListener("controllerchange", () => {
-    if (_wfpReloadedForSw) return;
-    _wfpReloadedForSw = true;
+    if (/support_token=/.test(location.hash)) return;
+    if (sessionStorage.getItem("wfp_sw_reloaded")) return;
+    try { sessionStorage.setItem("wfp_sw_reloaded", "1"); } catch (_) {}
     window.location.reload();
   });
   navigator.serviceWorker.register("/sw.js")
@@ -2988,9 +2991,16 @@ refresh();
 // in de URL-hash (hash gaat niet naar de server/logs). We pikken het op, loggen
 // in als de overgenomen gebruiker en tonen meteen het juiste platform — de agent
 // hoeft dus niet uit zijn eigen profiel te loggen en opnieuw in te loggen.
-(function supportEnterBootstrap() {
+//
+// Belangrijk: dit draait op `load`, NIET tijdens het uitvoeren van main.js zelf.
+// platform-router.js + de platform-shells worden ná main.js geladen, dus
+// WorkFlowProPlatformRouter bestaat pas op `load`.
+let _supportEnterDone = false;
+function supportEnterBootstrap() {
+  if (_supportEnterDone) return;
   const match = (location.hash || "").match(/support_token=([^&]+)/);
   if (!match) return;
+  _supportEnterDone = true;
   const supportToken = decodeURIComponent(match[1]);
   // Token meteen uit de URL halen zodat het niet in history/bookmarks blijft.
   history.replaceState(null, "", location.pathname + location.search);
@@ -3005,6 +3015,9 @@ refresh();
       if (loginPage) loginPage.classList.add("hidden");
       if (window.WorkFlowProPlatformRouter) {
         window.WorkFlowProPlatformRouter.showPlatform(me.user.role);
+      } else {
+        // Fallback: router nog niet klaar → korte retry.
+        setTimeout(() => window.WorkFlowProPlatformRouter && window.WorkFlowProPlatformRouter.showPlatform(me.user.role), 200);
       }
     })
     .catch(err => {
@@ -3013,4 +3026,11 @@ refresh();
       const notice = el("loginNotice");
       if (notice) { notice.textContent = err.message || "Support-sessie kon niet starten"; notice.classList.add("bad"); }
     });
-})();
+}
+// Meerdere triggers (done-guard voorkomt dubbel): de platform-router laadt ná
+// main.js, dus we wachten minstens tot DOMContentLoaded; de setTimeouts vangen
+// edge-cases waarin events al gevuurd waren.
+document.addEventListener("DOMContentLoaded", supportEnterBootstrap);
+window.addEventListener("load", supportEnterBootstrap);
+setTimeout(supportEnterBootstrap, 0);
+setTimeout(supportEnterBootstrap, 400);
