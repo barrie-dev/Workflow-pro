@@ -37,7 +37,6 @@ function markdown(store, tenantId) {
   const mfa = productionCheck(production, "mfa");
   const stripe = productionCheck(production, "stripe");
   const peppol = productionCheck(production, "peppol");
-  const support = productionCheck(production, "support_sla");
   const integration = productionCheck(production, "integration_sync_health");
 
   return [
@@ -72,13 +71,11 @@ function markdown(store, tenantId) {
     "",
     line(stripe.ok, `Stripe configuratie: ${stripe.detail}`),
     line(peppol.ok, `Peppol provider: ${peppol.detail}`),
-    line(productionCheck(production, "support_escalation_queue").ok, productionCheck(production, "support_escalation_queue").detail),
     line(true, "DPA/GDPR, support consent, invoice model en payment-method tokenflow zijn als platformflows aanwezig."),
     "",
     "## Fase 4 - Pilot Launch",
     "",
     ...pilot.kpis.map(kpi => line(kpi.ok, `${kpi.label}: ${kpi.value} / ${kpi.target}${kpi.ok ? "" : ` - ${kpi.action}`}`)),
-    line(support.ok, `Support SLA: ${support.detail}`),
     line(integration.ok, `Integratie sync health: ${integration.detail}`),
     "",
     "## Fase 5 - Commercial Launch",

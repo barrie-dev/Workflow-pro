@@ -822,7 +822,6 @@ function renderAdmin() {
   const keyRisk = status.apiKeyRisk || {};
   const mfaRisk = status.mfaRisk || {};
   const integrationRisk = status.integrationRisk || {};
-  const supportRisk = status.supportRisk || {};
   const rateLimits = status.rateLimits || {};
   const backupHealth = status.backupHealth || {};
   const goLive = state.goLive || {};
@@ -879,15 +878,10 @@ function renderAdmin() {
     ["Mapping issues", integrationRisk.mappingsNeedAttention || 0],
     ["Foutcode secret", integrationRisk.errorCodes?.missing_secret || 0],
     ["Foutcode mapping", integrationRisk.errorCodes?.invalid_mapping || 0],
-    ["Support SLA verlopen", supportRisk.slaBreached || 0],
-    ["Support SLA risico", supportRisk.slaRisk || 0],
-    ["Kritieke bug SLA", supportRisk.criticalBugSlaBreached || 0],
-    ["Support escalaties", supportRisk.escalations || 0],
-    ["Pilot blockers", supportRisk.blockers || 0],
     ["Rate limit", health.rateLimiting || "-"],
     ["Rate buckets", rateLimits.activeBuckets || 0],
     ["Release", status.release?.version || "-"],
-    ["Support", support.enabled ? "Open" : "Gesloten"]
+    ["Support", support.allowed ? "Open" : "Gesloten"]
   ];
   el("adminCards").innerHTML = cards.map(([label, value]) => `
     <article class="metric">
@@ -937,7 +931,7 @@ function renderAdmin() {
 
   const securityOpen = [
     mfaRisk.ok ? "" : `${mfaRisk.missingMfa || 0} admin MFA open`,
-    support.enabled ? "Supporttoegang staat open" : "",
+    support.allowed ? "Supporttoegang staat open" : "",
     backupHealth.ok ? "" : `${backupHealth.missing || 0} backup issue(s)`,
     Number(counts.errorEvents || 0) ? `${counts.errorEvents} fout-events` : ""
   ].filter(Boolean);
@@ -987,8 +981,8 @@ function renderAdmin() {
       </article>
       <article class="admin-focus-card">
         <span>Support</span>
-        <strong>${support.enabled ? "Open" : "Gesloten"}</strong>
-        <small>${support.enabled ? support.reason || "consent actief" : "geen actieve toegang"}</small>
+        <strong>${support.allowed ? "Open" : "Gesloten"}</strong>
+        <small>${support.allowed ? support.reason || "consent actief" : "geen actieve toegang"}</small>
       </article>
       <article class="admin-focus-card">
         <span>Backup</span>
@@ -1229,12 +1223,12 @@ function renderMfaStatus() {
 
 function renderSupportAccess() {
   const support = state.admin?.tenant?.supportAccess || {};
-  const status = support.enabled ? "Supporttoegang is open." : "Supporttoegang is gesloten.";
-  const detail = support.enabled
+  const status = support.allowed ? "Supporttoegang is open." : "Supporttoegang is gesloten.";
+  const detail = support.allowed
     ? `${support.reason || "Geen reden"} - tot ${support.expiresAt || "onbekend"} - door ${support.grantedBy || "onbekend"}`
     : support.endedAt ? `Gesloten op ${support.endedAt} door ${support.endedBy || "onbekend"}` : "Geen actieve toestemming.";
   el("supportAccessStatus").textContent = `${status} ${detail}`;
-  el("supportAccessStatus").classList.toggle("bad", !support.enabled);
+  el("supportAccessStatus").classList.toggle("bad", !support.allowed);
 }
 
 async function refreshAdmin() {
@@ -1673,10 +1667,7 @@ async function openSupportAccess(form) {
     const data = formData(form);
     await api(`/api/tenants/${tenantId}/support-access`, {
       method: "POST",
-      body: JSON.stringify({
-        reason: data.reason,
-        expiresAt: localDateTimeToIso(data.expiresAt)
-      })
+      body: JSON.stringify({ allowed: true, reason: data.reason })
     });
     setAdminNotice("Supporttoegang is geopend en gelogd.");
     await refreshAdmin();
@@ -1756,7 +1747,7 @@ function renderPortal() {
     ["API", portal.status.api],
     ["PWA", portal.status.pwa],
     ["Release", portal.status.release?.version || "-"],
-    ["Support", portal.status.supportAccess?.enabled ? "Open" : "Gesloten"],
+    ["Support", portal.status.supportAccess?.allowed ? "Open" : "Gesloten"],
     ["Billing", portal.billing.status || "trial"],
     ["Facturen", portal.billing.invoices || 0],
     ["DPA", portal.billing.dpaAccepted ? "Klaar" : "Open"],
