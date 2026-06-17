@@ -1,3 +1,8 @@
+// Deze preflight test expliciet dat de admin-MFA-gate dwingt. Een dev-.env met
+// REQUIRE_ADMIN_MFA=false zou de gate uitschakelen en de check vals laten falen;
+// forceer 'm hier aan zodat de check deterministisch is (lokaal én in CI).
+process.env.REQUIRE_ADMIN_MFA = "true";
+
 const { Store } = require("../src/lib/store");
 const { hashPassword } = require("../src/lib/security");
 const { loginWithMfa, assertCan } = require("../src/lib/auth");
