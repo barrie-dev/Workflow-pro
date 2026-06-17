@@ -324,6 +324,39 @@ test("support: consent met auto-renew zet jaarlijkse review-datum", async () => 
   }
 });
 
+test("support: agent kan een specifieke medewerker overnemen, niet enkel de admin", async () => {
+  const su = await login("super@workflowpro.be", "Demo2026!");
+  const admin = await login("admin@demobouw.be", "Demo2026!");
+  const H = t => ({ "Content-Type": "application/json", Authorization: `Bearer ${t}` });
+  try {
+    await fetch(`${BASE}/api/tenants/t_demo/support-access`, { method: "POST", headers: H(admin.token), body: JSON.stringify({ allowed: true, reason: "per-user" }) });
+    // Neem de medewerker (jan, u_emp1) over — niet de admin.
+    const start = await fetch(`${BASE}/api/admin/support/start`, { method: "POST", headers: H(su.token), body: JSON.stringify({ tenantId: "t_demo", impersonatedUserId: "u_emp1", scope: "read", reason: "jan kan niet inklokken" }) });
+    assert.equal(start.status, 200);
+    const sd = await start.json();
+    assert.equal(sd.session.impersonatedUserId, "u_emp1");
+    const me = await (await fetch(`${BASE}/api/me`, { headers: { Authorization: `Bearer ${sd.supportToken}` } })).json();
+    assert.equal(me.user.role, "employee", "overgenomen sessie is de medewerker, niet de admin");
+    assert.equal(me.user.email, "jan@demobouw.be");
+  } finally {
+    await fetch(`${BASE}/api/admin/support/end`, { method: "POST", headers: H(su.token), body: JSON.stringify({ tenantId: "t_demo" }) });
+    await fetch(`${BASE}/api/tenants/t_demo/support-access/end`, { method: "POST", headers: H(admin.token), body: "{}" });
+  }
+});
+
+test("support: gebruiker van een andere tenant kan niet overgenomen worden", async () => {
+  const su = await login("super@workflowpro.be", "Demo2026!");
+  const admin = await login("admin@demobouw.be", "Demo2026!");
+  const H = t => ({ "Content-Type": "application/json", Authorization: `Bearer ${t}` });
+  try {
+    await fetch(`${BASE}/api/tenants/t_demo/support-access`, { method: "POST", headers: H(admin.token), body: JSON.stringify({ allowed: true, reason: "cross-tenant" }) });
+    const r = await fetch(`${BASE}/api/admin/support/start`, { method: "POST", headers: H(su.token), body: JSON.stringify({ tenantId: "t_demo", impersonatedUserId: "u_super", scope: "read", reason: "mag niet" }) });
+    assert.equal(r.status, 404, "gebruiker buiten de tenant → geweigerd");
+  } finally {
+    await fetch(`${BASE}/api/tenants/t_demo/support-access/end`, { method: "POST", headers: H(admin.token), body: "{}" });
+  }
+});
+
 test("support: zonder klant-consent kan super-admin geen sessie starten", async () => {
   const su = await login("super@workflowpro.be", "Demo2026!");
   const admin = await login("admin@demobouw.be", "Demo2026!");
