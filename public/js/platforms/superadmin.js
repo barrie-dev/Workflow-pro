@@ -949,12 +949,18 @@ ${locked?`<div class="sa-alert alert-warn">⚠️ Account is vergrendeld na teve
         if (!reason) return;
         try {
           const r = await api("/api/admin/support/start", { method:"POST", body: JSON.stringify({ tenantId, scope, reason }) });
-          // Open de overgenomen sessie automatisch in een nieuw tabblad: het token
-          // staat in de hash, de app logt de agent meteen in als de klant-gebruiker.
-          const enterUrl = `${location.origin}/#support_token=${encodeURIComponent(r.supportToken)}`;
-          window.open(enterUrl, "_blank", "noopener");
-          alert(`Support-sessie gestart als ${r.session.impersonatedUserEmail||r.session.impersonatedUserId}.\nEen nieuw tabblad opent de overgenomen sessie automatisch (${r.session.scope==="write"?"lezen+schrijven":"alleen-lezen"}).\nVerloopt ${fmtD(r.session.expiresAt)} · hard ${fmtD(r.session.hardExpiresAt)}.`);
-          support();
+          alert(`Support-sessie gestart als ${r.session.impersonatedUserEmail||r.session.impersonatedUserId} (${r.session.scope==="write"?"lezen+schrijven":"alleen-lezen"}).\nJe neemt nu de sessie van de klant over. Verloopt ${fmtD(r.session.expiresAt)} · hard ${fmtD(r.session.hardExpiresAt)}.\nUitloggen brengt je terug naar je eigen account.`);
+          // Neem de sessie meteen over in DIT tabblad (geen pop-up/nieuw tabblad —
+          // dat wordt op mobiel geblokkeerd na de async call). We zetten het
+          // support-token als actieve sessie en tonen het platform van de klant.
+          localStorage.setItem("wfp_token", r.supportToken);
+          const me = await fetch("/api/me", { headers: { Authorization: "Bearer " + r.supportToken } }).then(x => x.json());
+          if (!me || !me.ok || !me.user) throw new Error("Support-sessie kon niet starten");
+          // Loginpagina expliciet verbergen (showPlatform doet dat niet) en het
+          // platform van de klant tonen.
+          document.getElementById("loginPage")?.classList.add("hidden");
+          if (window.WorkFlowProPlatformRouter) window.WorkFlowProPlatformRouter.showPlatform(me.user.role);
+          else location.reload();
         } catch(e){ alert(e.message); }
       }
       async function endSession(tenantId) {
