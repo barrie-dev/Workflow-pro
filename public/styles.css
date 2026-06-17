@@ -1934,10 +1934,6 @@ label {
 
 .notification-form { max-width: 560px; }
 
-/* Support panel */
-.support-panel { max-width: 680px; }
-.support-form { max-width: 400px; }
-
 /* Admin */
 .admin-tenants { }
 .tenant-form { max-width: 480px; }
@@ -2098,9 +2094,7 @@ label {
 
 /* ── Forms: minder agressief, meer card-achtig ── */
 .ops-form,
-.ops-tool,
-.support-form,
-.support-ticket-form {
+.ops-tool {
   background: white;
   border: 1px solid var(--gray-200);
   border-radius: 0.75rem;
@@ -2297,9 +2291,6 @@ main > div:not(.hidden) {
 /* ── Notificatie / actiecentrum form: max breedte ── */
 .notification-form,
 .action-center-form { max-width: 640px; }
-
-/* ── Support panels: beter ingekaderd ── */
-.support-panel { max-width: 720px; }
 
 /* ── Tenant form: compact ── */
 .tenant-form { max-width: 520px; }
