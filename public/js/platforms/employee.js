@@ -553,6 +553,41 @@
 .emp-day-pill.today { border-color: #0ea5e9; color: #0ea5e9; }
 .emp-day-pill.has-shift { background: #0ea5e9; color: #fff; }
 .emp-day-num { font-size: 16px; font-weight: 700; line-height: 1.2; }
+
+/* ── Breed scherm: medewerker op pc krijgt een echte pc-view ──
+   Mobiel-first blijft de basis; vanaf 860px verbreedt de layout en
+   verhuist de bottom-tabbar naar een boven-navbalk met labels. */
+@media (min-width: 860px) {
+  .emp-layout { max-width: 960px; box-shadow: 0 0 0 1px #e2e8f0; }
+  .emp-header { padding: 18px 28px 22px; border-radius: 0; }
+  /* Tabbar van onder naar boven (tussen header en inhoud) */
+  .emp-tabbar {
+    order: 1;
+    position: static;
+    transform: none;
+    left: auto; bottom: auto;
+    width: auto; max-width: none;
+    border-top: none;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 8px 20px;
+    gap: 6px;
+  }
+  .emp-main { order: 2; padding: 28px 32px; padding-bottom: 32px; }
+  .emp-tab {
+    flex: 0 0 auto;
+    flex-direction: row;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 9px 16px;
+    border-radius: 10px;
+  }
+  .emp-tab svg { width: 18px; height: 18px; }
+  .emp-tab:hover { background: #f1f5f9; color: #475569; }
+  .emp-tab.active { background: #e0f2fe; color: #0369a1; }
+  /* Inhoud mag de breedte benutten: kaarten in twee kolommen */
+  .emp-cards-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+}
 </style>`;
 
     // tab nav
