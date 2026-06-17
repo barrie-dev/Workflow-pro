@@ -8,6 +8,23 @@ const {
   buildSupportGrant, issueSupportToken, supportGrantStatus, slideSupportGrant,
   assertSupportWrite, SUPPORT_IDLE_MS, SUPPORT_HARD_MS
 } = require("../src/lib/auth");
+const { Store } = require("../src/lib/store");
+const { runSupportAccessReview } = require("../src/modules/support-access");
+
+class MemAdapter {
+  constructor(data) { this.data = data; }
+  load() { return JSON.parse(JSON.stringify(this.data)); }
+  save(data) { this.data = JSON.parse(JSON.stringify(data)); }
+  status() { return { adapter: "memory", mode: "test" }; }
+}
+function reviewStore(tenants) {
+  return new Store(new MemAdapter({
+    schemaVersion: 6, tenants, users: [], roles: [], venues: [], customers: [], shifts: [],
+    workorders: [], clocks: [], expenses: [], stock: [], vehicles: [], leaves: [], messages: [],
+    notifications: [], integrations: [], invoices: [], paymentMethods: [], files: [], secrets: [],
+    auditLogs: [], errorEvents: [], apiKeys: [], salesLeads: [], partners: [], migrationHistory: []
+  }));
+}
 
 test("normalizeVat voegt BE-prefix toe en strijkt opmaak glad", () => {
   assert.equal(normalizeVat("0123456789"), "BE0123456789");
@@ -89,4 +106,28 @@ test("support-scope: read-sessie blokkeert schrijven, write mag, GET altijd, gew
   assert.throws(() => assertSupportWrite(read, "DELETE"), e => e.status === 403);
   assert.doesNotThrow(() => assertSupportWrite(write, "POST"), "write mag schrijven");
   assert.doesNotThrow(() => assertSupportWrite({}, "DELETE"), "niet-support-user onaangeroerd");
+});
+
+test("support-toegang: jaarlijkse mededeling stuurt notice + verschuift review (auto-renew)", () => {
+  const past = new Date(Date.now() - 1000).toISOString();
+  const store = reviewStore([{ id: "t1", name: "T1 BV", supportAccess: { allowed: true, autoRenew: true, allowedAt: "2025-06-01T00:00:00.000Z", reviewDueAt: past } }]);
+  const res = runSupportAccessReview(store, Date.now());
+  assert.deepEqual(res.notified, ["t1"]);
+  const sa = store.data.tenants[0].supportAccess;
+  assert.ok(new Date(sa.reviewDueAt).getTime() > Date.now(), "review verschoven naar de toekomst");
+  assert.ok(sa.lastReviewNoticeAt, "laatste-mededeling gemarkeerd");
+  const notes = store.list("notifications", "t1");
+  assert.ok(notes.some(n => /staat nog steeds aan/i.test(n.title || "")), "informatieve mededeling aangemaakt");
+});
+
+test("support-toegang: geen mededeling als niet verstreken / autoRenew uit / niet toegestaan", () => {
+  const past = new Date(Date.now() - 1000).toISOString();
+  const future = new Date(Date.now() + 1e9).toISOString();
+  const store = reviewStore([
+    { id: "a", name: "A", supportAccess: { allowed: true, autoRenew: true, reviewDueAt: future } },   // nog niet verstreken
+    { id: "b", name: "B", supportAccess: { allowed: true, autoRenew: false, reviewDueAt: past } },     // auto-renew uit
+    { id: "c", name: "C", supportAccess: { allowed: false, autoRenew: true, reviewDueAt: past } }      // geen consent
+  ]);
+  const res = runSupportAccessReview(store, Date.now());
+  assert.equal(res.notified.length, 0, "geen enkele tenant krijgt een mededeling");
 });

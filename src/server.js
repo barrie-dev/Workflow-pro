@@ -87,6 +87,7 @@ const { listIntegrations, connectIntegration, updateMapping, runSync, retrySync 
 const { tenantStatus, unlockUser, listBackups, createBackup, backupPreview, restoreBackup, publicStatus } = require("./modules/admin");
 const { createNotification, listNotifications, markNotificationRead, generateReminders, notificationSummary } = require("./modules/notifications");
 const { importEmployees } = require("./modules/imports");
+const { runSupportAccessReview } = require("./modules/support-access");
 const { portalPayload, updateOnboardingStep } = require("./modules/portal");
 const { customerStartPayload } = require("./modules/customer-start");
 const { listApiKeys, createApiKey, revokeApiKey, rotateApiKey, authenticateApiKey, recordApiKeyDenied } = require("./modules/api-keys");
@@ -1464,11 +1465,16 @@ http.createServer(async (req, res) => {
         const body = await readBody(req);
         const now = new Date();
         const allowed = body.allowed !== false && body.enabled !== false;
+        const autoRenew = body.autoRenew !== false; // standaard aan: blijft jaarlijks staan
+        const reviewDueAt = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString();
         const supportAccess = {
           allowed,
           reason: body.reason || "Support-toegang toegestaan door klant",
           allowedBy: user.email,
-          allowedAt: now.toISOString()
+          allowedAt: now.toISOString(),
+          autoRenew,
+          // Jaarlijkse mededeling-datum (alleen relevant zolang toegestaan).
+          reviewDueAt: allowed ? reviewDueAt : null
         };
         const patch = { supportAccess };
         if (!allowed && tenant.supportSession && !tenant.supportSession.endedAt) {
@@ -3026,6 +3032,11 @@ http.createServer(async (req, res) => {
       if (backed > 0) console.log(`  Backup    : ${backed} tenant(s) automatisch gebackupt`);
     } catch(_) {}
   });
+
+  // Support-toegang: jaarlijkse mededeling + auto-renew. Bij opstart + dagelijks.
+  const reviewSupportAccess = () => { try { runSupportAccessReview(store); } catch (_) {} };
+  setImmediate(reviewSupportAccess);
+  setInterval(reviewSupportAccess, 24 * 60 * 60 * 1000).unref();
 });
 
 // ── Graceful shutdown ─────────────────────────────────────────

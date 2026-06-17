@@ -4681,6 +4681,10 @@ ${billing.status === "trial" ? `<div style="background:#fffbeb;border:1px solid 
       <div class="adm-form-group" id="admSupportReasonWrap">
         <label>Reden / context (optioneel)</label>
         <input id="admSupportReason" placeholder="bv. hulp bij facturatie-instelling">
+        <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px;color:#475569;cursor:pointer;">
+          <input type="checkbox" id="admSupportAutoRenew" checked>
+          Automatisch verlengen — blijft jaarlijks staan, je krijgt jaarlijks een mededeling per e-mail
+        </label>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="adm-btn adm-btn-primary" id="admSupportAllow">✅ Support-toegang toestaan</button>
@@ -4700,8 +4704,11 @@ ${billing.status === "trial" ? `<div style="background:#fffbeb;border:1px solid 
       const reasonWrap = document.getElementById("admSupportReasonWrap");
       if (!statusEl) return;
       if (allowed) {
+        const renew = sa.autoRenew !== false;
+        const review = sa.reviewDueAt ? new Date(sa.reviewDueAt).toLocaleDateString("nl-BE") : null;
         statusEl.innerHTML = `<span style="display:inline-block;padding:3px 10px;border-radius:999px;background:#d1fae5;color:#065f46;font-weight:600;">Toegestaan</span>`
-          + (sa.allowedBy ? ` <span style="color:#64748b;">door ${esc(sa.allowedBy)}${sa.allowedAt ? " · " + new Date(sa.allowedAt).toLocaleString("nl-BE") : ""}</span>` : "");
+          + (sa.allowedBy ? ` <span style="color:#64748b;">door ${esc(sa.allowedBy)}${sa.allowedAt ? " · " + new Date(sa.allowedAt).toLocaleString("nl-BE") : ""}</span>` : "")
+          + `<div style="color:#64748b;margin-top:6px;">${renew ? "🔁 Verlengt jaarlijks automatisch" : "Geen automatische verlenging"}${renew && review ? ` · volgende mededeling ${review}` : ""}</div>`;
         allowBtn.style.display = "none";
         revokeBtn.style.display = "";
         reasonWrap.style.display = "none";
@@ -4720,8 +4727,9 @@ ${billing.status === "trial" ? `<div style="background:#fffbeb;border:1px solid 
     }
     document.getElementById("admSupportAllow")?.addEventListener("click", async () => {
       const reason = document.getElementById("admSupportReason")?.value || "";
+      const autoRenew = document.getElementById("admSupportAutoRenew")?.checked !== false;
       try {
-        const r = await api("POST", "/support-access", { allowed: true, reason });
+        const r = await api("POST", "/support-access", { allowed: true, reason, autoRenew });
         renderSupportConsent(r.tenant?.supportAccess || { allowed: true });
         admSupportMsg("Support-toegang toegestaan ✓", true);
       } catch (e) { admSupportMsg(e.message, false); }

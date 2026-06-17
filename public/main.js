@@ -2918,10 +2918,21 @@ document.addEventListener("click", event => {
 });
 
 if ("serviceWorker" in navigator) {
+  // Zodra een nieuwe service worker de controle overneemt (na een deploy),
+  // herlaadt de pagina één keer zodat de gebruiker meteen de verse code krijgt.
+  // Zonder dit bleef een mobiel toestel op een oude shell hangen (stale/"dubbel").
+  let _wfpReloadedForSw = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (_wfpReloadedForSw) return;
+    _wfpReloadedForSw = true;
+    window.location.reload();
+  });
   navigator.serviceWorker.register("/sw.js")
-    .then(() => {
+    .then(reg => {
       setText("pwaStatus", "Actief");
       setText("pwaDetail", "Service worker geregistreerd");
+      // Controleer meteen op een nieuwere versie (deploy terwijl tab open stond).
+      try { reg.update(); } catch (_) {}
     })
     .catch(() => {
       setText("pwaStatus", "Niet actief");
@@ -2971,3 +2982,35 @@ el("exportClockings")?.addEventListener("click", () => downloadExport("clockings
 
 saveQueue();
 refresh();
+
+// ── Support-impersonatie: agent komt automatisch binnen via #support_token=… ──
+// De superadmin opent de support-sessie in een nieuw tabblad met het sessietoken
+// in de URL-hash (hash gaat niet naar de server/logs). We pikken het op, loggen
+// in als de overgenomen gebruiker en tonen meteen het juiste platform — de agent
+// hoeft dus niet uit zijn eigen profiel te loggen en opnieuw in te loggen.
+(function supportEnterBootstrap() {
+  const match = (location.hash || "").match(/support_token=([^&]+)/);
+  if (!match) return;
+  const supportToken = decodeURIComponent(match[1]);
+  // Token meteen uit de URL halen zodat het niet in history/bookmarks blijft.
+  history.replaceState(null, "", location.pathname + location.search);
+  token = supportToken;
+  localStorage.setItem("wfp_token", supportToken);
+  api("/api/me")
+    .then(me => {
+      if (!me || !me.ok || !me.user) throw new Error("Support-sessie ongeldig of verlopen");
+      window._wfpCurrentUser = me.user;
+      setShellAuthenticated(true);
+      const loginPage = document.getElementById("loginPage");
+      if (loginPage) loginPage.classList.add("hidden");
+      if (window.WorkFlowProPlatformRouter) {
+        window.WorkFlowProPlatformRouter.showPlatform(me.user.role);
+      }
+    })
+    .catch(err => {
+      localStorage.removeItem("wfp_token");
+      token = "";
+      const notice = el("loginNotice");
+      if (notice) { notice.textContent = err.message || "Support-sessie kon niet starten"; notice.classList.add("bad"); }
+    });
+})();

@@ -308,6 +308,22 @@ test("rechten per user: PATCH saneert escalatie-poging", async () => {
 });
 
 // ── GDPR support-toegang: consent + impersonatie + sliding expiry ──
+test("support: consent met auto-renew zet jaarlijkse review-datum", async () => {
+  const admin = await login("admin@demobouw.be", "Demo2026!");
+  const H = t => ({ "Content-Type": "application/json", Authorization: `Bearer ${t}` });
+  try {
+    const r = await fetch(`${BASE}/api/tenants/t_demo/support-access`, { method: "POST", headers: H(admin.token), body: JSON.stringify({ allowed: true, autoRenew: true, reason: "test" }) });
+    assert.equal(r.status, 200);
+    const sa = (await r.json()).tenant.supportAccess;
+    assert.equal(sa.autoRenew, true);
+    assert.ok(sa.reviewDueAt, "jaarlijkse review-datum gezet");
+    const days = (new Date(sa.reviewDueAt).getTime() - Date.now()) / 86400000;
+    assert.ok(days > 360 && days < 370, `review ~1 jaar vooruit (was ${Math.round(days)} dagen)`);
+  } finally {
+    await fetch(`${BASE}/api/tenants/t_demo/support-access/end`, { method: "POST", headers: H(admin.token), body: "{}" });
+  }
+});
+
 test("support: zonder klant-consent kan super-admin geen sessie starten", async () => {
   const su = await login("super@workflowpro.be", "Demo2026!");
   const admin = await login("admin@demobouw.be", "Demo2026!");

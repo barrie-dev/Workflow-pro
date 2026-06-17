@@ -949,7 +949,11 @@ ${locked?`<div class="sa-alert alert-warn">⚠️ Account is vergrendeld na teve
         if (!reason) return;
         try {
           const r = await api("/api/admin/support/start", { method:"POST", body: JSON.stringify({ tenantId, scope, reason }) });
-          alert(`Support-sessie gestart als ${r.session.impersonatedUserEmail||r.session.impersonatedUserId}.\nOpen het support-portaal met dit sessietoken.\nVerloopt ${fmtD(r.session.expiresAt)} (hard ${fmtD(r.session.hardExpiresAt)}).`);
+          // Open de overgenomen sessie automatisch in een nieuw tabblad: het token
+          // staat in de hash, de app logt de agent meteen in als de klant-gebruiker.
+          const enterUrl = `${location.origin}/#support_token=${encodeURIComponent(r.supportToken)}`;
+          window.open(enterUrl, "_blank", "noopener");
+          alert(`Support-sessie gestart als ${r.session.impersonatedUserEmail||r.session.impersonatedUserId}.\nEen nieuw tabblad opent de overgenomen sessie automatisch (${r.session.scope==="write"?"lezen+schrijven":"alleen-lezen"}).\nVerloopt ${fmtD(r.session.expiresAt)} · hard ${fmtD(r.session.hardExpiresAt)}.`);
           support();
         } catch(e){ alert(e.message); }
       }
