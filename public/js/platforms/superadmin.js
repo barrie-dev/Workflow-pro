@@ -893,6 +893,16 @@ ${locked?`<div class="sa-alert alert-warn">⚠️ Account is vergrendeld na teve
       const active = rows.filter(r=>r.session);
       badge_update("navBadgeSupport", active.length);
 
+      // Gebruikers per tenant ophalen zodat de agent de juiste persoon kan overnemen.
+      const ud = await api("/api/admin/users").catch(()=>({users:[]}));
+      const roleRank = { tenant_admin:0, manager:1, employee:2 };
+      const usersByTenant = {};
+      (ud.users||[]).filter(u=>u.active!==false && u.role!=="super_admin").forEach(u=>{
+        (usersByTenant[u.tenantId] = usersByTenant[u.tenantId] || []).push(u);
+      });
+      Object.values(usersByTenant).forEach(list => list.sort((a,b)=>(roleRank[a.role]??9)-(roleRank[b.role]??9) || String(a.name||"").localeCompare(String(b.name||""))));
+      const roleLabel = { tenant_admin:"beheerder", manager:"werfleider", employee:"medewerker" };
+
       function scopeBadge(scope){ return scope==="read" ? badge("alleen-lezen","badge-gray") : badge("lezen+schrijven","badge-red"); }
 
       c.innerHTML = `
@@ -943,25 +953,56 @@ ${locked?`<div class="sa-alert alert-warn">⚠️ Account is vergrendeld na teve
         tb.querySelectorAll("[data-end]").forEach(b=>b.addEventListener("click", ()=>endSession(b.dataset.end)));
       }
 
-      async function startSession(tenantId) {
-        const scope = window.confirm("Lezen+schrijven? OK = read-write, Annuleer = alleen-lezen.") ? "write" : "read";
-        const reason = window.prompt("Reden voor support-toegang (verplicht, wordt geaudit):", "");
-        if (!reason) return;
-        try {
-          const r = await api("/api/admin/support/start", { method:"POST", body: JSON.stringify({ tenantId, scope, reason }) });
-          alert(`Support-sessie gestart als ${r.session.impersonatedUserEmail||r.session.impersonatedUserId} (${r.session.scope==="write"?"lezen+schrijven":"alleen-lezen"}).\nJe neemt nu de sessie van de klant over. Verloopt ${fmtD(r.session.expiresAt)} · hard ${fmtD(r.session.hardExpiresAt)}.\nUitloggen brengt je terug naar je eigen account.`);
-          // Neem de sessie meteen over in DIT tabblad (geen pop-up/nieuw tabblad —
-          // dat wordt op mobiel geblokkeerd na de async call). We zetten het
-          // support-token als actieve sessie en tonen het platform van de klant.
-          localStorage.setItem("wfp_token", r.supportToken);
-          const me = await fetch("/api/me", { headers: { Authorization: "Bearer " + r.supportToken } }).then(x => x.json());
-          if (!me || !me.ok || !me.user) throw new Error("Support-sessie kon niet starten");
-          // Loginpagina expliciet verbergen (showPlatform doet dat niet) en het
-          // platform van de klant tonen.
-          document.getElementById("loginPage")?.classList.add("hidden");
-          if (window.WorkFlowProPlatformRouter) window.WorkFlowProPlatformRouter.showPlatform(me.user.role);
-          else location.reload();
-        } catch(e){ alert(e.message); }
+      function startSession(tenantId) {
+        const row = rows.find(r=>r.tenantId===tenantId) || {};
+        const users = usersByTenant[tenantId] || [];
+        const ov = document.createElement("div");
+        ov.style.cssText = "position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:1200;display:flex;align-items:center;justify-content:center;padding:16px;";
+        ov.innerHTML = `
+<div style="background:#fff;border-radius:16px;width:100%;max-width:440px;padding:22px 24px;box-shadow:0 20px 60px rgba(0,0,0,.25)">
+  <h3 style="margin:0 0 4px;font-size:17px;color:#0f172a">Support-sessie starten</h3>
+  <div style="font-size:13px;color:#64748b;margin-bottom:16px">${esc(row.tenantName||tenantId)}</div>
+  <label style="display:block;font-size:13px;font-weight:600;color:#334155;margin-bottom:6px">Wie neem je over?</label>
+  <select id="supUser" style="width:100%;padding:9px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;margin-bottom:14px">
+    ${users.length ? users.map(u=>`<option value="${u.id}">${esc(u.name||u.email)} — ${roleLabel[u.role]||u.role}${u.email?` (${esc(u.email)})`:""}</option>`).join("") : `<option value="">Geen gebruikers gevonden</option>`}
+  </select>
+  <label style="display:block;font-size:13px;font-weight:600;color:#334155;margin-bottom:6px">Rechten</label>
+  <select id="supScope" style="width:100%;padding:9px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;margin-bottom:14px">
+    <option value="read">Alleen-lezen (aanbevolen)</option>
+    <option value="write">Lezen + schrijven</option>
+  </select>
+  <label style="display:block;font-size:13px;font-weight:600;color:#334155;margin-bottom:6px">Reden (verplicht, wordt geaudit)</label>
+  <input id="supReason" placeholder="bv. factuur kan niet verstuurd worden" style="width:100%;padding:9px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;margin-bottom:8px">
+  <div id="supErr" style="display:none;color:#dc2626;font-size:12.5px;margin-bottom:8px"></div>
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+    <button class="sa-btn btn-secondary sm" id="supCancel">Annuleren</button>
+    <button class="sa-btn btn-primary sm" id="supGo">Sessie overnemen</button>
+  </div>
+</div>`;
+        document.body.appendChild(ov);
+        const close = () => ov.remove();
+        ov.addEventListener("click", e => { if (e.target === ov) close(); });
+        ov.querySelector("#supCancel").addEventListener("click", close);
+        ov.querySelector("#supGo").addEventListener("click", async () => {
+          const impersonatedUserId = ov.querySelector("#supUser").value;
+          const scope = ov.querySelector("#supScope").value;
+          const reason = ov.querySelector("#supReason").value.trim();
+          const errEl = ov.querySelector("#supErr");
+          if (!impersonatedUserId) { errEl.textContent = "Geen gebruiker geselecteerd."; errEl.style.display = ""; return; }
+          if (!reason) { errEl.textContent = "Reden is verplicht."; errEl.style.display = ""; return; }
+          try {
+            const r = await api("/api/admin/support/start", { method:"POST", body: JSON.stringify({ tenantId, impersonatedUserId, scope, reason }) });
+            close();
+            alert(`Support-sessie gestart als ${r.session.impersonatedUserEmail||r.session.impersonatedUserId} (${r.session.scope==="write"?"lezen+schrijven":"alleen-lezen"}).\nJe neemt nu de sessie van deze gebruiker over. Verloopt ${fmtD(r.session.expiresAt)} · hard ${fmtD(r.session.hardExpiresAt)}.\nUitloggen brengt je terug naar je eigen account.`);
+            // Overname in DIT tabblad (pop-up/nieuw tabblad wordt op mobiel geblokkeerd).
+            localStorage.setItem("wfp_token", r.supportToken);
+            const me = await fetch("/api/me", { headers: { Authorization: "Bearer " + r.supportToken } }).then(x => x.json());
+            if (!me || !me.ok || !me.user) throw new Error("Support-sessie kon niet starten");
+            document.getElementById("loginPage")?.classList.add("hidden");
+            if (window.WorkFlowProPlatformRouter) window.WorkFlowProPlatformRouter.showPlatform(me.user.role);
+            else location.reload();
+          } catch(e){ errEl.textContent = e.message; errEl.style.display = ""; }
+        });
       }
       async function endSession(tenantId) {
         if (!window.confirm("Support-sessie nu beëindigen?")) return;
