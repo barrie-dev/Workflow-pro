@@ -255,26 +255,31 @@ test("rechten per user: employees GET levert grantable lijst", async () => {
   }
 });
 
-test("superadmin: kan tenant-gebruiker rol toekennen + rechten inperken", async () => {
+test("GDPR: superadmin-gebruikerslijst toont geen tenant-medewerkers (enkel platform)", async () => {
   const su = await login("super@workflowpro.be", "Demo2026!");
-  const H = t => ({ "Content-Type": "application/json", Authorization: `Bearer ${t}` });
-  try {
-    const r = await fetch(`${BASE}/api/admin/users/u_emp1`, { method: "PATCH", headers: H(su.token), body: JSON.stringify({ role: "manager", permissions: ["planning"] }) });
-    assert.equal(r.status, 200);
-    const u = (await r.json()).user;
-    assert.equal(u.role, "manager", "rol toegekend");
-    assert.ok(u.permissions.includes("planning"), "toegestaan recht bewaard");
-    assert.ok(!u.permissions.includes("billing") && !u.permissions.includes("settings"), "admin-rechten niet toegekend");
-  } finally {
-    await fetch(`${BASE}/api/admin/users/u_emp1`, { method: "PATCH", headers: H(su.token), body: JSON.stringify({ role: "employee", permissions: ["planning"] }) });
-  }
+  const d = await (await fetch(`${BASE}/api/admin/users`, { headers: { Authorization: `Bearer ${su.token}` } })).json();
+  assert.ok(Array.isArray(d.users));
+  assert.ok(d.users.every(u => u.role === "super_admin"), "enkel platform-accounts, geen tenant-medewerkers");
 });
 
-test("superadmin: kan tenant-gebruiker niet promoten tot super_admin", async () => {
+test("GDPR: tenant-gebruikers voor overname enkel met klant-consent", async () => {
   const su = await login("super@workflowpro.be", "Demo2026!");
+  const admin = await login("admin@demobouw.be", "Demo2026!");
   const H = t => ({ "Content-Type": "application/json", Authorization: `Bearer ${t}` });
-  const r = await fetch(`${BASE}/api/admin/users/u_emp1`, { method: "PATCH", headers: H(su.token), body: JSON.stringify({ role: "super_admin" }) });
-  assert.equal(r.status, 400, "geen escalatie naar super_admin via /users");
+  // Zonder consent → 403
+  await fetch(`${BASE}/api/tenants/t_demo/support-access/end`, { method: "POST", headers: H(admin.token), body: "{}" });
+  const denied = await fetch(`${BASE}/api/admin/support/t_demo/users`, { headers: H(su.token) });
+  assert.equal(denied.status, 403, "geen consent → geen medewerkergegevens");
+  // Met consent → lijst (geen super_admins)
+  try {
+    await fetch(`${BASE}/api/tenants/t_demo/support-access`, { method: "POST", headers: H(admin.token), body: JSON.stringify({ allowed: true, reason: "consent-gated test" }) });
+    const ok = await fetch(`${BASE}/api/admin/support/t_demo/users`, { headers: H(su.token) });
+    assert.equal(ok.status, 200);
+    const list = (await ok.json()).users;
+    assert.ok(list.length > 0 && list.every(u => u.role !== "super_admin"), "tenant-medewerkers, geen platform-accounts");
+  } finally {
+    await fetch(`${BASE}/api/tenants/t_demo/support-access/end`, { method: "POST", headers: H(admin.token), body: "{}" });
+  }
 });
 
 test("audit F1: prijsloze bundel is 'op aanvraag' en niet kiesbaar", async () => {

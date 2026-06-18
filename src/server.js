@@ -902,7 +902,9 @@ http.createServer(async (req, res) => {
       if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
       assertSuperAdmin(user);
       const safe = (u) => { const { passwordHash, mfaSecret, mfaPendingSecret, recoveryCodes, ...s } = u; return s; };
-      const users = store.data.users.map(safe);
+      // GDPR/dataminimalisatie: de console toont enkel platform-accounts, geen
+      // persoonsgegevens van tenant-medewerkers. Die raadpleeg je via consent-impersonatie.
+      const users = store.data.users.filter(u => u.role === "super_admin").map(safe);
       sendJson(res, 200, { ok: true, users });
       return;
     }
@@ -974,15 +976,23 @@ http.createServer(async (req, res) => {
       return;
     }
 
-    // ── Super-admin: toewijsbare rechten van een tenant (voor rol/rechten-editor) ──
-    const adminGrantableMatch = url.pathname.match(/^\/api\/admin\/tenants\/([^/]+)\/grantable$/);
-    if (adminGrantableMatch && req.method === "GET") {
+    // ── Support: tenant-gebruikers om over te nemen — ALLEEN met klant-consent ──
+    // Persoonsgegevens van medewerkers zijn enkel zichtbaar als de klant
+    // support-toegang toestond (GDPR: toegang gekoppeld aan toestemming).
+    const adminSupportUsersMatch = url.pathname.match(/^\/api\/admin\/support\/([^/]+)\/users$/);
+    if (adminSupportUsersMatch && req.method === "GET") {
       const user = actor(req);
       if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
       assertSuperAdmin(user);
-      const tnt = store.data.tenants.find(t => t.id === adminGrantableMatch[1]);
+      const tnt = store.data.tenants.find(t => t.id === adminSupportUsersMatch[1]);
       if (!tnt) return sendJson(res, 404, { ok: false, error: "Tenant niet gevonden" });
-      sendJson(res, 200, { ok: true, grantable: grantablePermissions(store, tnt) });
+      if (tnt.supportAccess?.allowed !== true) {
+        return sendJson(res, 403, { ok: false, error: "Klant heeft geen support-toegang toegestaan" });
+      }
+      const users = store.data.users
+        .filter(u => u.tenantId === tnt.id && u.active !== false && u.role !== "super_admin")
+        .map(u => ({ id: u.id, name: u.name, email: u.email, role: u.role }));
+      sendJson(res, 200, { ok: true, users });
       return;
     }
 
@@ -1003,30 +1013,11 @@ http.createServer(async (req, res) => {
         return sendJson(res, 403, { ok: false, error: "Beheer platform-medewerkers via Platformteam" });
       }
       const body = await readBody(req);
+      // GDPR/dataminimalisatie: de superadmin-console beheert geen rollen/rechten
+      // van tenant-medewerkers. Dat gebeurt via geconsenteerde impersonatie in de
+      // tenant-admin. Hier enkel platform-veilige basisvelden.
       const allowed = ["active", "name", "function", "phone"];
       const patch = Object.fromEntries(Object.entries(body).filter(([k]) => allowed.includes(k)));
-      // Super-admin mag rol + rechten van tenant-gebruikers toekennen/inperken.
-      // Geen escalatie naar super_admin; minstens één actieve tenant_admin blijft over.
-      if (target && target.tenantId) {
-        const tnt = store.data.tenants.find(t => t.id === target.tenantId);
-        let effRole = target.role;
-        if (body.role !== undefined) {
-          if (!["tenant_admin", "manager", "employee"].includes(body.role)) {
-            return sendJson(res, 400, { ok: false, error: "Ongeldige rol (super_admin niet toegestaan)" });
-          }
-          if (target.role === "tenant_admin" && body.role !== "tenant_admin") {
-            const otherAdmins = store.data.users.filter(u => u.tenantId === target.tenantId && u.role === "tenant_admin" && u.active !== false && u.id !== target.id);
-            if (otherAdmins.length === 0) return sendJson(res, 400, { ok: false, error: "De tenant moet minstens één actieve beheerder houden" });
-          }
-          effRole = body.role;
-          patch.role = effRole;
-        }
-        if (body.permissions !== undefined || patch.role) {
-          patch.permissions = effRole === "tenant_admin"
-            ? BUSINESS_ADMIN_PERMISSIONS
-            : sanitizeEmployeePermissions(store, tnt, effRole, body.permissions !== undefined ? body.permissions : target.permissions);
-        }
-      }
       const updated = store.update("users", adminUserMatch[1], { ...patch, updatedAt: new Date().toISOString() });
       store.audit({ actor: user.email, tenantId: updated.tenantId, action: "admin_user_updated", area: "users", detail: adminUserMatch[1] });
       const { passwordHash, mfaSecret, mfaPendingSecret, recoveryCodes, ...safe } = updated;

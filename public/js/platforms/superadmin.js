@@ -244,9 +244,6 @@
         <svg viewBox="0 0 24 24"><path d="M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z"/></svg>Tenants
         <span class="nav-badge" id="navBadgeTenants" style="display:none">0</span>
       </button>
-      <button class="sa-nav-item" data-view="users">
-        <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>Gebruikers
-      </button>
 
       <div class="sa-nav-divider"></div>
       <div class="sa-nav-section">Financieel</div>
@@ -315,7 +312,7 @@
         btn.classList.add("active");
         _view = btn.dataset.view;
         document.getElementById("saTopTitle").textContent = {
-          dashboard:"Dashboard", tenants:"Tenants", users:"Gebruikers",
+          dashboard:"Dashboard", tenants:"Tenants",
           billing:"Facturatie / MRR", modules:"Modules & Bundels", integrations:"Integraties", system:"Systeem", support:"Support",
           staff:"Platformteam", audit:"Audit Log", settings:"Instellingen"
         }[_view] || _view;
@@ -351,7 +348,7 @@
   }
 
   // ── Router ─────────────────────────────────────────────────
-  const VIEWS = { dashboard, tenants, users, billing, modules, integrations, system, support, staff, audit, settings };
+  const VIEWS = { dashboard, tenants, billing, modules, integrations, system, support, staff, audit, settings };
   function renderView() { (VIEWS[_view] || dashboard)(); }
 
   // ══════════════════════════════════════════════════════════
@@ -627,187 +624,6 @@
   }
 
   // ══════════════════════════════════════════════════════════
-  // VIEW: Gebruikers
-  // ══════════════════════════════════════════════════════════
-  async function users() {
-    const c = content(); c.innerHTML = loader();
-    try {
-      const [ud, td] = await Promise.all([api("/api/admin/users"), api("/api/admin/tenants").catch(()=>({tenants:[]}))]);
-      _cache.users   = ud.users||[];
-      _cache.tenants = td.tenants||[];
-      const tmap = Object.fromEntries(_cache.tenants.map(t=>[t.id,t]));
-
-      c.innerHTML = `
-<div class="sa-page-head"><h1>Gebruikers<span class="cnt">${_cache.users.length}</span></h1></div>
-<div class="sa-filters">
-  <input id="ufSearch" placeholder="Naam, e-mail…" style="flex:1;min-width:180px">
-  <select id="ufRole"><option value="">Alle rollen</option><option value="super_admin">Super Admin</option><option value="tenant_admin">Tenant Admin</option><option value="manager">Manager</option><option value="employee">Medewerker</option></select>
-  <select id="ufActive"><option value="">Alle</option><option value="1">Actief</option><option value="0">Inactief</option></select>
-</div>
-<div class="sa-card">
-  <div class="sa-tbl-wrap">
-    <table class="sa-tbl">
-      <thead><tr><th>Naam</th><th>E-mail</th><th>Rol</th><th>Tenant</th><th>Status</th><th>MFA</th><th>Vergrendeld</th><th>Acties</th></tr></thead>
-      <tbody id="userTbody"></tbody>
-    </table>
-  </div>
-</div>`;
-
-      function renderUserRows() {
-        const q = (document.getElementById("ufSearch")?.value||"").toLowerCase();
-        const rl = document.getElementById("ufRole")?.value||"";
-        const ac = document.getElementById("ufActive")?.value;
-        const rows = _cache.users.filter(u => {
-          const txt = `${u.name||""} ${u.email} ${u.role}`.toLowerCase();
-          const isActive = u.active !== false;
-          return (!q||txt.includes(q)) && (!rl||u.role===rl) && (ac===""||( ac==="1"?isActive:!isActive ));
-        });
-        const tb = document.getElementById("userTbody");
-        if (!tb) return;
-        tb.innerHTML = rows.map(u => {
-          const t = tmap[u.tenantId];
-          const locked = u.lockedUntil && new Date(u.lockedUntil) > new Date();
-          return `<tr>
-            <td><div class="main">${esc(u.name||u.email)}</div></td>
-            <td style="font-size:12px">${esc(u.email)}</td>
-            <td>${badge(u.role, roleColor[u.role])}</td>
-            <td><span class="sub">${esc(t?.name||(u.tenantId?"…":"—"))}</span></td>
-            <td>${u.active!==false?badge("Actief","badge-green"):badge("Inactief","badge-red")}</td>
-            <td>${u.mfaEnabled?badge("Aan","badge-green"):badge("Uit","badge-gray")}</td>
-            <td>${locked?badge("🔒 Vergrendeld","badge-orange"):badge("OK","badge-green")}</td>
-            <td><div class="sa-actions">
-              <button class="sa-btn btn-secondary sm" data-uid="${esc(u.id)}" data-act="detail">Detail</button>
-              ${u.active!==false
-                ? `<button class="sa-btn btn-danger sm" data-uid="${esc(u.id)}" data-act="deactivate">Deact.</button>`
-                : `<button class="sa-btn btn-success sm" data-uid="${esc(u.id)}" data-act="activate">Activeer</button>`}
-              ${locked?`<button class="sa-btn btn-ghost sm" data-uid="${esc(u.id)}" data-act="unlock">Ontgrendel</button>`:""}
-            </div></td>
-          </tr>`;
-        }).join("");
-
-        tb.querySelectorAll("[data-act]").forEach(btn => {
-          const uid = btn.dataset.uid, act = btn.dataset.act;
-          btn.addEventListener("click", async () => {
-            if (act==="detail") { userDetailDrawer(uid, tmap); return; }
-            if (act==="deactivate") {
-              if (!confirm("Gebruiker deactiveren?")) return;
-              try { await api(`/api/admin/users/${uid}`,{method:"PATCH",body:JSON.stringify({active:false})}); users(); } catch(e){window.showToast(e.message, "error");}
-            }
-            if (act==="activate") {
-              try { await api(`/api/admin/users/${uid}`,{method:"PATCH",body:JSON.stringify({active:true})}); users(); } catch(e){window.showToast(e.message, "error");}
-            }
-            if (act==="unlock") {
-              try { await api(`/api/admin/users/${uid}/unlock`,{method:"POST"}); users(); } catch(e){window.showToast(e.message, "error");}
-            }
-          });
-        });
-      }
-
-      renderUserRows();
-      ["ufSearch","ufRole","ufActive"].forEach(id => {
-        document.getElementById(id)?.addEventListener("input", renderUserRows);
-        document.getElementById(id)?.addEventListener("change", renderUserRows);
-      });
-    } catch(e) { content().innerHTML = err(e); }
-  }
-
-  function userDetailDrawer(uid, tmap) {
-    const u = _cache.users.find(x=>x.id===uid);
-    if (!u) return;
-    const t = tmap?.[u.tenantId];
-    const locked = u.lockedUntil && new Date(u.lockedUntil) > new Date();
-    openDrawer(`${esc(u.name||u.email)}`, `
-<div class="sa-detail">
-  <div class="sa-detail-row"><span class="sa-detail-label">ID</span><span class="sa-detail-value mono">${esc(u.id)}</span></div>
-  <div class="sa-detail-row"><span class="sa-detail-label">Naam</span><span class="sa-detail-value">${esc(u.name||"—")}</span></div>
-  <div class="sa-detail-row"><span class="sa-detail-label">E-mail</span><span class="sa-detail-value">${esc(u.email)}</span></div>
-  <div class="sa-detail-row"><span class="sa-detail-label">Rol</span><span class="sa-detail-value">${badge(u.role,roleColor[u.role])}</span></div>
-  <div class="sa-detail-row"><span class="sa-detail-label">Tenant</span><span class="sa-detail-value">${esc(t?.name||u.tenantId||"—")}</span></div>
-  <div class="sa-detail-row"><span class="sa-detail-label">Status</span><span class="sa-detail-value">${u.active!==false?badge("Actief","badge-green"):badge("Inactief","badge-red")}</span></div>
-  <div class="sa-detail-row"><span class="sa-detail-label">MFA</span><span class="sa-detail-value">${u.mfaEnabled?badge("Ingeschakeld","badge-green"):badge("Uitgeschakeld","badge-gray")}</span></div>
-  <div class="sa-detail-row"><span class="sa-detail-label">Vergrendeld tot</span><span class="sa-detail-value">${locked?fmtDT(u.lockedUntil):"—"}</span></div>
-  <div class="sa-detail-row"><span class="sa-detail-label">Aangemaakt</span><span class="sa-detail-value">${fmtD(u.createdAt)}</span></div>
-</div>
-${locked?`<div class="sa-alert alert-warn">⚠️ Account is vergrendeld na teveel mislukte aanmeldingen.</div>`:""}
-${u.tenantId && u.role!=="super_admin" ? `
-<div class="sa-divider"></div>
-<div style="font-size:13px;font-weight:600;margin-bottom:8px">Rol & rechten</div>
-<div class="sa-detail-row"><span class="sa-detail-label">Rol</span>
-  <select id="urRole" style="padding:7px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
-    <option value="tenant_admin"${u.role==="tenant_admin"?" selected":""}>Beheerder</option>
-    <option value="manager"${u.role==="manager"?" selected":""}>Werfleider</option>
-    <option value="employee"${u.role==="employee"?" selected":""}>Medewerker</option>
-  </select>
-</div>
-<div id="urPerms" style="margin-top:10px"><span class="sub">Rechten laden…</span></div>
-<div style="margin-top:10px;display:flex;gap:8px;align-items:center">
-  <button class="sa-btn btn-primary sm" id="urSave">Rol & rechten opslaan</button>
-  <span id="urMsg" style="font-size:12.5px"></span>
-</div>
-` : ""}
-<div class="sa-divider"></div>
-<div style="font-size:13px;font-weight:600;margin-bottom:8px">Acties</div>
-<div style="display:flex;gap:8px;flex-wrap:wrap">
-  <button class="sa-btn btn-secondary sm" id="drawerPwReset">🔑 Wachtwoord resetten</button>
-  ${locked?`<button class="sa-btn btn-success sm" id="drawerUnlock">🔓 Ontgrendelen</button>`:""}
-  ${u.active!==false
-    ? `<button class="sa-btn btn-danger sm" id="drawerDeactivate">Deactiveren</button>`
-    : `<button class="sa-btn btn-success sm" id="drawerActivate">Activeren</button>`}
-</div>
-<div id="pwResetResult"></div>`,
-    `<button class="sa-btn btn-secondary" id="closeDrawer">Sluiten</button>`);
-
-    document.getElementById("closeDrawer")?.addEventListener("click", closeDrawer);
-    document.getElementById("drawerPwReset")?.addEventListener("click", async () => {
-      const btn = document.getElementById("drawerPwReset");
-      btn.disabled=true; btn.textContent="Bezig…";
-      try {
-        const r = await api(`/api/admin/users/${uid}/reset-password`,{method:"POST"});
-        document.getElementById("pwResetResult").innerHTML = `<div class="sa-alert alert-success" style="margin-top:10px">✅ Tijdelijk wachtwoord: <strong style="font-family:monospace">${esc(r.tempPassword)}</strong><br><small>Geef dit eenmalig door aan de gebruiker.</small></div>`;
-      } catch(e) { window.showToast(e.message, "error"); btn.disabled=false; btn.textContent="🔑 Wachtwoord resetten"; }
-    });
-    document.getElementById("drawerUnlock")?.addEventListener("click", async () => {
-      try { await api(`/api/admin/users/${uid}/unlock`,{method:"POST"}); closeDrawer(); users(); } catch(e){window.showToast(e.message, "error");}
-    });
-    document.getElementById("drawerDeactivate")?.addEventListener("click", async () => {
-      if (!confirm("Gebruiker deactiveren?")) return;
-      try { await api(`/api/admin/users/${uid}`,{method:"PATCH",body:JSON.stringify({active:false})}); closeDrawer(); users(); } catch(e){window.showToast(e.message, "error");}
-    });
-    document.getElementById("drawerActivate")?.addEventListener("click", async () => {
-      try { await api(`/api/admin/users/${uid}`,{method:"PATCH",body:JSON.stringify({active:true})}); closeDrawer(); users(); } catch(e){window.showToast(e.message, "error");}
-    });
-
-    // Rol & rechten-editor (tenant-gebruikers): rol toekennen + rechten inperken.
-    if (u.tenantId && u.role !== "super_admin") {
-      const current = new Set((u.permissions || []).map(p => String(p).replace(/^own:/, "")));
-      let grantable = [];
-      const permsBox = () => document.getElementById("urPerms");
-      function renderPerms() {
-        const role = document.getElementById("urRole").value;
-        const box = permsBox(); if (!box) return;
-        if (role === "tenant_admin") { box.innerHTML = `<span class="sub">Beheerder krijgt automatisch alle beheerrechten.</span>`; return; }
-        box.innerHTML = `<div style="font-size:12px;color:#64748b;margin-bottom:6px">Toegestane modules — vink uit om in te perken:</div>`
-          + (grantable.map(g => `<label style="display:inline-flex;align-items:center;gap:6px;margin:3px 12px 3px 0;font-size:13px"><input type="checkbox" value="${esc(g.key)}"${current.has(g.key) ? " checked" : ""}> ${esc(g.label || g.key)}</label>`).join("") || `<span class="sub">Geen toewijsbare rechten voor dit pakket</span>`);
-      }
-      api(`/api/admin/tenants/${u.tenantId}/grantable`)
-        .then(g => { grantable = g.grantable || []; renderPerms(); })
-        .catch(() => { if (permsBox()) permsBox().innerHTML = `<span class="sub">Kon rechten niet laden</span>`; });
-      document.getElementById("urRole")?.addEventListener("change", renderPerms);
-      document.getElementById("urSave")?.addEventListener("click", async () => {
-        const role = document.getElementById("urRole").value;
-        const perms = [...document.querySelectorAll("#urPerms input:checked")].map(i => i.value);
-        const msg = document.getElementById("urMsg"); msg.style.color = "#dc2626"; msg.textContent = "";
-        try {
-          const body = role === "tenant_admin" ? { role } : { role, permissions: perms };
-          await api(`/api/admin/users/${uid}`, { method: "PATCH", body: JSON.stringify(body) });
-          msg.style.color = "#16a34a"; msg.textContent = "Opgeslagen ✓";
-          setTimeout(() => { closeDrawer(); users(); }, 700);
-        } catch (e) { msg.textContent = e.message; }
-      });
-    }
-  }
-
-  // ══════════════════════════════════════════════════════════
   // VIEW: Facturatie / MRR
   // ══════════════════════════════════════════════════════════
   async function billing() {
@@ -1025,14 +841,10 @@ ${canManage ? `
       const active = rows.filter(r=>r.session);
       badge_update("navBadgeSupport", active.length);
 
-      // Gebruikers per tenant ophalen zodat de agent de juiste persoon kan overnemen.
-      const ud = await api("/api/admin/users").catch(()=>({users:[]}));
+      // GDPR: tenant-gebruikers worden NIET vooraf geladen. Pas bij het starten
+      // van een sessie halen we ze op via een consent-gated endpoint (alleen als
+      // de klant support-toegang toestond).
       const roleRank = { tenant_admin:0, manager:1, employee:2 };
-      const usersByTenant = {};
-      (ud.users||[]).filter(u=>u.active!==false && u.role!=="super_admin").forEach(u=>{
-        (usersByTenant[u.tenantId] = usersByTenant[u.tenantId] || []).push(u);
-      });
-      Object.values(usersByTenant).forEach(list => list.sort((a,b)=>(roleRank[a.role]??9)-(roleRank[b.role]??9) || String(a.name||"").localeCompare(String(b.name||""))));
       const roleLabel = { tenant_admin:"beheerder", manager:"werfleider", employee:"medewerker" };
 
       function scopeBadge(scope){ return scope==="read" ? badge("alleen-lezen","badge-gray") : badge("lezen+schrijven","badge-red"); }
@@ -1085,9 +897,12 @@ ${canManage ? `
         tb.querySelectorAll("[data-end]").forEach(b=>b.addEventListener("click", ()=>endSession(b.dataset.end)));
       }
 
-      function startSession(tenantId) {
+      async function startSession(tenantId) {
         const row = rows.find(r=>r.tenantId===tenantId) || {};
-        const users = usersByTenant[tenantId] || [];
+        // Consent-gated: gebruikers pas ophalen bij het starten (klant gaf toestemming).
+        let users = [];
+        try { const r = await api(`/api/admin/support/${tenantId}/users`); users = (r.users||[]).slice().sort((a,b)=>(roleRank[a.role]??9)-(roleRank[b.role]??9) || String(a.name||"").localeCompare(String(b.name||""))); }
+        catch(e){ alert(e.message || "Kon gebruikers niet ophalen"); return; }
         const ov = document.createElement("div");
         ov.style.cssText = "position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:1200;display:flex;align-items:center;justify-content:center;padding:16px;";
         ov.innerHTML = `
