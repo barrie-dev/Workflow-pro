@@ -993,7 +993,9 @@ ${locked?`<div class="sa-alert alert-warn">⚠️ Account is vergrendeld na teve
           try {
             const r = await api("/api/admin/support/start", { method:"POST", body: JSON.stringify({ tenantId, impersonatedUserId, scope, reason }) });
             close();
-            alert(`Support-sessie gestart als ${r.session.impersonatedUserEmail||r.session.impersonatedUserId} (${r.session.scope==="write"?"lezen+schrijven":"alleen-lezen"}).\nJe neemt nu de sessie van deze gebruiker over. Verloopt ${fmtD(r.session.expiresAt)} · hard ${fmtD(r.session.hardExpiresAt)}.\nUitloggen brengt je terug naar je eigen account.`);
+            alert(`Support-sessie gestart als ${r.session.impersonatedUserEmail||r.session.impersonatedUserId} (${r.session.scope==="write"?"lezen+schrijven":"alleen-lezen"}).\nJe neemt nu de sessie van deze gebruiker over. Verloopt ${fmtD(r.session.expiresAt)} · hard ${fmtD(r.session.hardExpiresAt)}.\nGebruik "Sessie verlaten" in de banner om terug te keren naar je eigen account.`);
+            // Bewaar het eigen agent-token + tenant zodat "Sessie verlaten" je terugzet.
+            try { sessionStorage.setItem("wfp_agent_token", token()); sessionStorage.setItem("wfp_support_tenant", tenantId); } catch(_){}
             // Overname in DIT tabblad (pop-up/nieuw tabblad wordt op mobiel geblokkeerd).
             localStorage.setItem("wfp_token", r.supportToken);
             const me = await fetch("/api/me", { headers: { Authorization: "Bearer " + r.supportToken } }).then(x => x.json());

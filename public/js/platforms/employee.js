@@ -69,10 +69,17 @@
     const b = document.createElement("div");
     b.id = "wfpSupportBanner";
     b.setAttribute("role", "status");
-    b.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:9999;background:#b91c1c;color:#fff;font:600 13px/1.4 system-ui,sans-serif;padding:8px 16px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.2)";
-    b.textContent = `🛟 Support-sessie actief — ${s.agent || "supportmedewerker"} (${scope}). Deze sessie wordt geaudit.`;
+    b.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:9999;background:#b91c1c;color:#fff;font:600 13px/1.4 system-ui,sans-serif;padding:6px 16px;display:flex;align-items:center;justify-content:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,.2)";
+    const span = document.createElement("span");
+    span.textContent = `🛟 Support-sessie actief — ${s.agent || "supportmedewerker"} (${scope}). Deze sessie wordt geaudit.`;
+    b.appendChild(span);
+    const exit = document.createElement("button");
+    exit.textContent = "Sessie verlaten";
+    exit.style.cssText = "background:#fff;color:#b91c1c;border:none;border-radius:6px;font:600 12px system-ui,sans-serif;padding:5px 12px;cursor:pointer;flex-shrink:0";
+    exit.onclick = () => window.WorkFlowProPlatformRouter && window.WorkFlowProPlatformRouter.exitSupportSession();
+    b.appendChild(exit);
     document.body.appendChild(b);
-    document.body.style.paddingTop = "34px";
+    document.body.style.paddingTop = "38px";
   }
 
   // Is een module-view actief voor deze tenant? (super_admin/onbekend → ja)

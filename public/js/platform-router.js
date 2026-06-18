@@ -32,5 +32,39 @@
     if (legacyShell) legacyShell.classList.remove("hidden");
   }
 
-  window.WorkFlowProPlatformRouter = { showPlatform, showLogin };
+  // Verlaat een support-sessie: herstel het eigen agent-token, beëindig de
+  // support-sessie bij de klant, en keer terug naar het eigen account.
+  async function exitSupportSession() {
+    const agentToken = sessionStorage.getItem("wfp_agent_token");
+    const tenantId = sessionStorage.getItem("wfp_support_tenant");
+    const banner = document.getElementById("wfpSupportBanner");
+    if (banner) { banner.remove(); document.body.style.paddingTop = ""; }
+    if (!agentToken) {
+      // Geen bewaard agent-token → veilige terugval: uitloggen.
+      localStorage.removeItem("wfp_token");
+      showLogin();
+      return;
+    }
+    localStorage.setItem("wfp_token", agentToken);
+    sessionStorage.removeItem("wfp_agent_token");
+    sessionStorage.removeItem("wfp_support_tenant");
+    // Best-effort: beëindig de support-sessie bij de klant (met het agent-token).
+    if (tenantId) {
+      try {
+        await fetch("/api/admin/support/end", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: "Bearer " + agentToken },
+          body: JSON.stringify({ tenantId })
+        });
+      } catch (_) {}
+    }
+    let role = "super_admin";
+    try {
+      const me = await fetch("/api/me", { headers: { Authorization: "Bearer " + agentToken } }).then(r => r.json());
+      if (me && me.user && me.user.role) role = me.user.role;
+    } catch (_) {}
+    showPlatform(role);
+  }
+
+  window.WorkFlowProPlatformRouter = { showPlatform, showLogin, exitSupportSession };
 }());

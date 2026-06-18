@@ -90,6 +90,7 @@ const { importEmployees } = require("./modules/imports");
 const { runSupportAccessReview } = require("./modules/support-access");
 const { portalPayload, updateOnboardingStep } = require("./modules/portal");
 const { customerStartPayload } = require("./modules/customer-start");
+const { previewCustomerStart, applyCustomerStart } = require("./modules/customer-start-bootstrap");
 const { listApiKeys, createApiKey, revokeApiKey, rotateApiKey, authenticateApiKey, recordApiKeyDenied } = require("./modules/api-keys");
 const { apiKeyGovernance } = require("./modules/api-key-governance");
 const { releaseInfo } = require("./modules/releases");
@@ -1136,6 +1137,27 @@ http.createServer(async (req, res) => {
         const billing = billingSummary(tenant);
         const portal = portalPayload(store, tenant, status, billing);
         sendJson(res, 200, { ok: true, start: customerStartPayload(store, tenant, portal, billing) });
+        return;
+      }
+      if (action === "customer-start/bootstrap" && req.method === "GET") {
+        assertCan(user, "planning");
+        const date = url.searchParams.get("date") || undefined;
+        const targetWorkorders = Number(url.searchParams.get("targetWorkorders") || 1);
+        sendJson(res, 200, { ok: true, bootstrap: previewCustomerStart(store, tenantId, { date, targetWorkorders }) });
+        return;
+      }
+      if (action === "customer-start/bootstrap" && req.method === "POST") {
+        assertCan(user, "planning");
+        assertCan(user, "workorders");
+        assertInteractiveUser(user);
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        const result = applyCustomerStart(store, tenantId, {
+          date: body.date,
+          targetWorkorders: body.targetWorkorders,
+          actor: user
+        });
+        sendJson(res, 201, { ok: result.after?.readyBefore || false, bootstrap: result });
         return;
       }
       const onboardingStepMatch = action.match(/^portal\/onboarding\/([^/]+)$/);
