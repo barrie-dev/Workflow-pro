@@ -255,6 +255,28 @@ test("rechten per user: employees GET levert grantable lijst", async () => {
   }
 });
 
+test("superadmin: kan tenant-gebruiker rol toekennen + rechten inperken", async () => {
+  const su = await login("super@workflowpro.be", "Demo2026!");
+  const H = t => ({ "Content-Type": "application/json", Authorization: `Bearer ${t}` });
+  try {
+    const r = await fetch(`${BASE}/api/admin/users/u_emp1`, { method: "PATCH", headers: H(su.token), body: JSON.stringify({ role: "manager", permissions: ["planning"] }) });
+    assert.equal(r.status, 200);
+    const u = (await r.json()).user;
+    assert.equal(u.role, "manager", "rol toegekend");
+    assert.ok(u.permissions.includes("planning"), "toegestaan recht bewaard");
+    assert.ok(!u.permissions.includes("billing") && !u.permissions.includes("settings"), "admin-rechten niet toegekend");
+  } finally {
+    await fetch(`${BASE}/api/admin/users/u_emp1`, { method: "PATCH", headers: H(su.token), body: JSON.stringify({ role: "employee", permissions: ["planning"] }) });
+  }
+});
+
+test("superadmin: kan tenant-gebruiker niet promoten tot super_admin", async () => {
+  const su = await login("super@workflowpro.be", "Demo2026!");
+  const H = t => ({ "Content-Type": "application/json", Authorization: `Bearer ${t}` });
+  const r = await fetch(`${BASE}/api/admin/users/u_emp1`, { method: "PATCH", headers: H(su.token), body: JSON.stringify({ role: "super_admin" }) });
+  assert.equal(r.status, 400, "geen escalatie naar super_admin via /users");
+});
+
 test("audit F1: prijsloze bundel is 'op aanvraag' en niet kiesbaar", async () => {
   const su = await login("super@workflowpro.be", "Demo2026!");
   const H = t => ({ "Content-Type": "application/json", Authorization: `Bearer ${t}` });

@@ -729,6 +729,22 @@
   <div class="sa-detail-row"><span class="sa-detail-label">Aangemaakt</span><span class="sa-detail-value">${fmtD(u.createdAt)}</span></div>
 </div>
 ${locked?`<div class="sa-alert alert-warn">⚠️ Account is vergrendeld na teveel mislukte aanmeldingen.</div>`:""}
+${u.tenantId && u.role!=="super_admin" ? `
+<div class="sa-divider"></div>
+<div style="font-size:13px;font-weight:600;margin-bottom:8px">Rol & rechten</div>
+<div class="sa-detail-row"><span class="sa-detail-label">Rol</span>
+  <select id="urRole" style="padding:7px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
+    <option value="tenant_admin"${u.role==="tenant_admin"?" selected":""}>Beheerder</option>
+    <option value="manager"${u.role==="manager"?" selected":""}>Werfleider</option>
+    <option value="employee"${u.role==="employee"?" selected":""}>Medewerker</option>
+  </select>
+</div>
+<div id="urPerms" style="margin-top:10px"><span class="sub">Rechten laden…</span></div>
+<div style="margin-top:10px;display:flex;gap:8px;align-items:center">
+  <button class="sa-btn btn-primary sm" id="urSave">Rol & rechten opslaan</button>
+  <span id="urMsg" style="font-size:12.5px"></span>
+</div>
+` : ""}
 <div class="sa-divider"></div>
 <div style="font-size:13px;font-weight:600;margin-bottom:8px">Acties</div>
 <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -760,6 +776,35 @@ ${locked?`<div class="sa-alert alert-warn">⚠️ Account is vergrendeld na teve
     document.getElementById("drawerActivate")?.addEventListener("click", async () => {
       try { await api(`/api/admin/users/${uid}`,{method:"PATCH",body:JSON.stringify({active:true})}); closeDrawer(); users(); } catch(e){window.showToast(e.message, "error");}
     });
+
+    // Rol & rechten-editor (tenant-gebruikers): rol toekennen + rechten inperken.
+    if (u.tenantId && u.role !== "super_admin") {
+      const current = new Set((u.permissions || []).map(p => String(p).replace(/^own:/, "")));
+      let grantable = [];
+      const permsBox = () => document.getElementById("urPerms");
+      function renderPerms() {
+        const role = document.getElementById("urRole").value;
+        const box = permsBox(); if (!box) return;
+        if (role === "tenant_admin") { box.innerHTML = `<span class="sub">Beheerder krijgt automatisch alle beheerrechten.</span>`; return; }
+        box.innerHTML = `<div style="font-size:12px;color:#64748b;margin-bottom:6px">Toegestane modules — vink uit om in te perken:</div>`
+          + (grantable.map(g => `<label style="display:inline-flex;align-items:center;gap:6px;margin:3px 12px 3px 0;font-size:13px"><input type="checkbox" value="${esc(g.key)}"${current.has(g.key) ? " checked" : ""}> ${esc(g.label || g.key)}</label>`).join("") || `<span class="sub">Geen toewijsbare rechten voor dit pakket</span>`);
+      }
+      api(`/api/admin/tenants/${u.tenantId}/grantable`)
+        .then(g => { grantable = g.grantable || []; renderPerms(); })
+        .catch(() => { if (permsBox()) permsBox().innerHTML = `<span class="sub">Kon rechten niet laden</span>`; });
+      document.getElementById("urRole")?.addEventListener("change", renderPerms);
+      document.getElementById("urSave")?.addEventListener("click", async () => {
+        const role = document.getElementById("urRole").value;
+        const perms = [...document.querySelectorAll("#urPerms input:checked")].map(i => i.value);
+        const msg = document.getElementById("urMsg"); msg.style.color = "#dc2626"; msg.textContent = "";
+        try {
+          const body = role === "tenant_admin" ? { role } : { role, permissions: perms };
+          await api(`/api/admin/users/${uid}`, { method: "PATCH", body: JSON.stringify(body) });
+          msg.style.color = "#16a34a"; msg.textContent = "Opgeslagen ✓";
+          setTimeout(() => { closeDrawer(); users(); }, 700);
+        } catch (e) { msg.textContent = e.message; }
+      });
+    }
   }
 
   // ══════════════════════════════════════════════════════════

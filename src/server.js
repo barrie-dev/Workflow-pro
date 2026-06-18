@@ -974,6 +974,18 @@ http.createServer(async (req, res) => {
       return;
     }
 
+    // ── Super-admin: toewijsbare rechten van een tenant (voor rol/rechten-editor) ──
+    const adminGrantableMatch = url.pathname.match(/^\/api\/admin\/tenants\/([^/]+)\/grantable$/);
+    if (adminGrantableMatch && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertSuperAdmin(user);
+      const tnt = store.data.tenants.find(t => t.id === adminGrantableMatch[1]);
+      if (!tnt) return sendJson(res, 404, { ok: false, error: "Tenant niet gevonden" });
+      sendJson(res, 200, { ok: true, grantable: grantablePermissions(store, tnt) });
+      return;
+    }
+
     // ── Super-admin: gebruiker bijwerken (deactiveren / rol) ──────────────────
     const adminUserMatch = url.pathname.match(/^\/api\/admin\/users\/([^/]+)$/);
     if (adminUserMatch && req.method === "PATCH") {
@@ -993,6 +1005,28 @@ http.createServer(async (req, res) => {
       const body = await readBody(req);
       const allowed = ["active", "name", "function", "phone"];
       const patch = Object.fromEntries(Object.entries(body).filter(([k]) => allowed.includes(k)));
+      // Super-admin mag rol + rechten van tenant-gebruikers toekennen/inperken.
+      // Geen escalatie naar super_admin; minstens één actieve tenant_admin blijft over.
+      if (target && target.tenantId) {
+        const tnt = store.data.tenants.find(t => t.id === target.tenantId);
+        let effRole = target.role;
+        if (body.role !== undefined) {
+          if (!["tenant_admin", "manager", "employee"].includes(body.role)) {
+            return sendJson(res, 400, { ok: false, error: "Ongeldige rol (super_admin niet toegestaan)" });
+          }
+          if (target.role === "tenant_admin" && body.role !== "tenant_admin") {
+            const otherAdmins = store.data.users.filter(u => u.tenantId === target.tenantId && u.role === "tenant_admin" && u.active !== false && u.id !== target.id);
+            if (otherAdmins.length === 0) return sendJson(res, 400, { ok: false, error: "De tenant moet minstens één actieve beheerder houden" });
+          }
+          effRole = body.role;
+          patch.role = effRole;
+        }
+        if (body.permissions !== undefined || patch.role) {
+          patch.permissions = effRole === "tenant_admin"
+            ? BUSINESS_ADMIN_PERMISSIONS
+            : sanitizeEmployeePermissions(store, tnt, effRole, body.permissions !== undefined ? body.permissions : target.permissions);
+        }
+      }
       const updated = store.update("users", adminUserMatch[1], { ...patch, updatedAt: new Date().toISOString() });
       store.audit({ actor: user.email, tenantId: updated.tenantId, action: "admin_user_updated", area: "users", detail: adminUserMatch[1] });
       const { passwordHash, mfaSecret, mfaPendingSecret, recoveryCodes, ...safe } = updated;
