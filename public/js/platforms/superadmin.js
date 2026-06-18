@@ -9,6 +9,7 @@
   // ── State ──────────────────────────────────────────────────
   let _view  = "dashboard";
   let _cache = { tenants: [], users: [] };
+  let _platform = null; // { scopes, isGod, allScopes } — platform-rechten van de ingelogde super_admin
 
   // ── Helpers ────────────────────────────────────────────────
   const token  = () => localStorage.getItem("wfp_token") || "";
@@ -344,7 +345,26 @@
       if (actEl) renderView();
     });
 
+    applyPlatformScopes();
     renderView();
+  }
+
+  // Verberg nav-secties waartoe dit teamlid geen platform-scope heeft. De god
+  // ziet alles; "Platformteam" is god-only; Dashboard is altijd zichtbaar.
+  async function applyPlatformScopes() {
+    try {
+      const me = await fetch("/api/me", { headers: { Authorization: "Bearer " + token() } }).then(r => r.json());
+      _platform = me.platform || { scopes: [], isGod: false, allScopes: [] };
+      if (me.user) { const nm = document.getElementById("saUserNm"); if (nm) nm.textContent = me.user.name || "Super Admin"; }
+      if (_platform.isGod) return; // god: volledige toegang
+      const scopes = new Set(_platform.scopes || []);
+      document.querySelectorAll(".sa-nav-item[data-view]").forEach(btn => {
+        const v = btn.getAttribute("data-view");
+        if (v === "dashboard") return;
+        if (v === "staff" || !scopes.has(v)) btn.style.display = "none";
+      });
+      if (_view !== "dashboard" && !scopes.has(_view)) { _view = "dashboard"; renderView(); }
+    } catch (_) {}
   }
 
   // ── Router ─────────────────────────────────────────────────
@@ -749,20 +769,24 @@
   // ══════════════════════════════════════════════════════════
   // VIEW: Platformteam (eigen support-medewerkers / super_admins)
   // ══════════════════════════════════════════════════════════
+  const SCOPE_LABELS = { tenants:"Tenants", billing:"Facturatie", modules:"Modules & Bundels", integrations:"Integraties", system:"Systeem", support:"Support-toegang", audit:"Audit", settings:"Instellingen" };
   async function staff() {
     const c = content(); c.innerHTML = loader();
     try {
       const d = await api("/api/admin/staff");
       const rows = d.staff || [];
       const canManage = !!d.canManage;
+      const allScopes = d.allScopes || Object.keys(SCOPE_LABELS);
+      const scopeChecks = (checked, idPrefix) => allScopes.map(s =>
+        `<label style="display:inline-flex;align-items:center;gap:6px;margin:3px 12px 3px 0;font-size:13px"><input type="checkbox" data-scope="${s}" id="${idPrefix}-${s}"${checked.includes(s)?" checked":""}> ${esc(SCOPE_LABELS[s]||s)}</label>`).join("");
       c.innerHTML = `
 <div class="sa-page-head"><h1>Platformteam<span class="cnt">${rows.length}</span></h1></div>
 <div class="sa-card" style="margin-bottom:16px">
   <div style="padding:14px 16px;font-size:13px;color:#475569;line-height:1.5">
-    Platform-medewerkers hebben dezelfde rechten als de hoofd-superadmin (support verlenen,
-    klantplannen bekijken, sessies overnemen). Uitzonderingen: enkel de hoofd-superadmin beheert
-    het team, en de hoofd-superadmin zelf kan nooit gedeactiveerd of gewijzigd worden.
-    ${canManage ? "" : `<br><strong>Alleen de hoofd-superadmin kan teamleden toevoegen of deactiveren.</strong>`}
+    Platform-medewerkers krijgen toegang tot de platform-secties die je per persoon aanvinkt
+    (bv. enkel Support, of ook Facturatie/Modules). Uitzonderingen: enkel de hoofd-superadmin
+    beheert het team, en de hoofd-superadmin zelf kan nooit gedeactiveerd of gewijzigd worden.
+    ${canManage ? "" : `<br><strong>Alleen de hoofd-superadmin kan teamleden beheren.</strong>`}
   </div>
 </div>
 ${canManage ? `
@@ -772,6 +796,10 @@ ${canManage ? `
     <input id="stfName" placeholder="Naam" style="padding:9px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
     <input id="stfEmail" type="email" placeholder="E-mail" style="padding:9px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
     <input id="stfPass" type="password" placeholder="Wachtwoord (sterk: 12+ tekens)" style="padding:9px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;grid-column:1/3">
+    <div style="grid-column:1/3">
+      <div style="font-size:12px;color:#64748b;margin-bottom:6px">Toegang tot platform-secties:</div>
+      <div id="stfScopes">${scopeChecks(allScopes, "ns")}</div>
+    </div>
     <div style="grid-column:1/3;display:flex;gap:8px;align-items:center">
       <button class="sa-btn btn-primary sm" id="stfCreate">Teamlid toevoegen</button>
       <span id="stfMsg" style="font-size:12.5px;color:#dc2626"></span>
@@ -781,12 +809,19 @@ ${canManage ? `
 <div class="sa-card">
   <div class="sa-tbl-wrap">
     <table class="sa-tbl">
-      <thead><tr><th>Naam</th><th>E-mail</th><th>Status</th><th></th></tr></thead>
+      <thead><tr><th>Naam</th><th>E-mail</th><th>Toegang</th><th>Status</th><th></th></tr></thead>
       <tbody id="stfBody"></tbody>
     </table>
   </div>
 </div>`;
 
+      function scopesText(u) {
+        if (u.protected) return badge("alle secties","badge-red");
+        const sc = u.scopes || [];
+        if (sc.length >= allScopes.length) return badge("alle secties","badge-blue");
+        if (sc.length === 0) return `<span class="sub">geen</span>`;
+        return sc.map(s => `<span class="sub" style="margin-right:6px">${esc(SCOPE_LABELS[s]||s)}</span>`).join("");
+      }
       function render() {
         const tb = document.getElementById("stfBody");
         tb.innerHTML = rows.map(u => {
@@ -794,34 +829,63 @@ ${canManage ? `
           const status = u.active ? badge("actief","badge-green") : badge("gedeactiveerd","badge-gray");
           let action = `<span class="sub">—</span>`;
           if (canManage && !u.protected && !u.isYou) {
-            action = u.active
-              ? `<button class="sa-btn btn-secondary sm" data-deact="${u.id}">Deactiveren</button>`
-              : `<button class="sa-btn btn-primary sm" data-act="${u.id}">Heractiveren</button>`;
+            action = `<button class="sa-btn btn-secondary sm" data-scopes="${u.id}">Rechten</button> `
+              + (u.active
+                ? `<button class="sa-btn btn-secondary sm" data-deact="${u.id}">Deactiveren</button>`
+                : `<button class="sa-btn btn-primary sm" data-act="${u.id}">Heractiveren</button>`);
           }
           return `<tr>
             <td><div class="main">${esc(u.name||"—")}</div>${tags}</td>
             <td><span class="sub">${esc(u.email)}</span></td>
+            <td>${scopesText(u)}</td>
             <td>${status}</td>
             <td style="text-align:right">${action}</td>
           </tr>`;
-        }).join("") || `<tr><td colspan="4"><div class="sa-empty"><div class="sa-empty-icon">👥</div>Geen teamleden</div></td></tr>`;
+        }).join("") || `<tr><td colspan="5"><div class="sa-empty"><div class="sa-empty-icon">👥</div>Geen teamleden</div></td></tr>`;
         tb.querySelectorAll("[data-deact]").forEach(b=>b.addEventListener("click",()=>setActive(b.dataset.deact,false)));
         tb.querySelectorAll("[data-act]").forEach(b=>b.addEventListener("click",()=>setActive(b.dataset.act,true)));
+        tb.querySelectorAll("[data-scopes]").forEach(b=>b.addEventListener("click",()=>editScopes(b.dataset.scopes)));
       }
       async function setActive(id, active) {
         try { await api(`/api/admin/staff/${id}`, { method:"PATCH", body: JSON.stringify({ active }) }); staff(); }
         catch(e){ alert(e.message); }
+      }
+      function editScopes(id) {
+        const u = rows.find(r=>r.id===id) || {};
+        const ov = document.createElement("div");
+        ov.style.cssText = "position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:1200;display:flex;align-items:center;justify-content:center;padding:16px;";
+        ov.innerHTML = `
+<div style="background:#fff;border-radius:16px;width:100%;max-width:440px;padding:22px 24px;box-shadow:0 20px 60px rgba(0,0,0,.25)">
+  <h3 style="margin:0 0 4px;font-size:17px;color:#0f172a">Rechten van ${esc(u.name||u.email)}</h3>
+  <div style="font-size:13px;color:#64748b;margin-bottom:14px">Vink aan tot welke platform-secties deze persoon toegang heeft.</div>
+  <div id="esScopes">${scopeChecks(u.scopes||[], "es")}</div>
+  <div id="esMsg" style="display:none;color:#dc2626;font-size:12.5px;margin-top:8px"></div>
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+    <button class="sa-btn btn-secondary sm" id="esCancel">Annuleren</button>
+    <button class="sa-btn btn-primary sm" id="esSave">Opslaan</button>
+  </div>
+</div>`;
+        document.body.appendChild(ov);
+        const close=()=>ov.remove();
+        ov.addEventListener("click",e=>{ if(e.target===ov) close(); });
+        ov.querySelector("#esCancel").addEventListener("click", close);
+        ov.querySelector("#esSave").addEventListener("click", async () => {
+          const scopes = [...ov.querySelectorAll("#esScopes input:checked")].map(i=>i.dataset.scope);
+          try { await api(`/api/admin/staff/${id}`, { method:"PATCH", body: JSON.stringify({ platformScopes: scopes }) }); close(); staff(); }
+          catch(e){ const m=ov.querySelector("#esMsg"); m.textContent=e.message; m.style.display=""; }
+        });
       }
       if (canManage) {
         document.getElementById("stfCreate").addEventListener("click", async () => {
           const name = document.getElementById("stfName").value.trim();
           const email = document.getElementById("stfEmail").value.trim();
           const password = document.getElementById("stfPass").value;
+          const platformScopes = [...document.querySelectorAll("#stfScopes input:checked")].map(i=>i.dataset.scope);
           const msg = document.getElementById("stfMsg");
           msg.textContent = "";
           if (!name || !email || !password) { msg.textContent = "Naam, e-mail en wachtwoord zijn verplicht."; return; }
           try {
-            await api("/api/admin/staff", { method:"POST", body: JSON.stringify({ name, email, password }) });
+            await api("/api/admin/staff", { method:"POST", body: JSON.stringify({ name, email, password, platformScopes }) });
             staff();
           } catch(e){ msg.textContent = e.message; }
         });

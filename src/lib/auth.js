@@ -388,6 +388,31 @@ function assertPlatformGod(user) {
   }
 }
 
+// Platform-secties waartoe een teamlid toegang kan krijgen. De god heeft altijd
+// alles; legacy-teamleden zonder platformScopes-veld ook (niet-brekend).
+const PLATFORM_SCOPES = ["tenants", "billing", "modules", "integrations", "system", "support", "audit", "settings"];
+
+function platformScopesOf(user) {
+  if (isPlatformGod(user)) return PLATFORM_SCOPES.slice();
+  const s = user && user.platformScopes;
+  if (!Array.isArray(s)) return PLATFORM_SCOPES.slice();
+  if (s.includes("*")) return PLATFORM_SCOPES.slice();
+  return s.filter(x => PLATFORM_SCOPES.includes(x));
+}
+
+function hasPlatformScope(user, scope) {
+  return isPlatformGod(user) || platformScopesOf(user).includes(scope);
+}
+
+function assertPlatformScope(user, scope) {
+  assertSuperAdmin(user);
+  if (!hasPlatformScope(user, scope)) {
+    const error = new Error("Geen toegang tot deze platform-sectie");
+    error.status = 403;
+    throw error;
+  }
+}
+
 function assertAdminMfa(user) {
   // In dev-modus of als REQUIRE_ADMIN_MFA=false → MFA niet verplicht
   if (process.env.REQUIRE_ADMIN_MFA === "false") return;
@@ -445,6 +470,10 @@ module.exports = {
   assertSuperAdmin,
   isPlatformGod,
   assertPlatformGod,
+  PLATFORM_SCOPES,
+  platformScopesOf,
+  hasPlatformScope,
+  assertPlatformScope,
   assertAdminMfa,
   isEmployee,
   isManager,

@@ -23,6 +23,9 @@ const {
   assertSuperAdmin,
   isPlatformGod,
   assertPlatformGod,
+  PLATFORM_SCOPES,
+  platformScopesOf,
+  assertPlatformScope,
   assertAdminMfa,
   assertSupportWrite,
   buildSupportGrant,
@@ -586,7 +589,10 @@ http.createServer(async (req, res) => {
       const supportSession = user.isSupportSession
         ? { active: true, agent: user.support?.agent, scope: user.support?.scope, expiresAt: store.data.tenants.find(t => t.id === user.support?.tenantId)?.supportSession?.expiresAt || null }
         : null;
-      sendJson(res, 200, { ok: true, user: safeUser(user), entitlements, supportSession });
+      const platform = user.role === "super_admin"
+        ? { scopes: platformScopesOf(user), isGod: isPlatformGod(user), allScopes: PLATFORM_SCOPES }
+        : null;
+      sendJson(res, 200, { ok: true, user: safeUser(user), entitlements, supportSession, platform });
       return;
     }
 
@@ -633,14 +639,14 @@ http.createServer(async (req, res) => {
     if (url.pathname === "/api/admin/integrations" && req.method === "GET") {
       const user = actor(req);
       if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
-      assertSuperAdmin(user);
+      assertPlatformScope(user, "integrations");
       sendJson(res, 200, { ok: true, config: publicPlatformConfig(store) });
       return;
     }
     if (url.pathname === "/api/admin/integrations" && req.method === "PUT") {
       const user = actor(req);
       if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
-      assertSuperAdmin(user);
+      assertPlatformScope(user, "integrations");
       const body = await readBody(req);
       const config2 = savePlatformConfig(store, body, user);
       // Pas e-mailconfig meteen toe op de mailer
@@ -652,7 +658,7 @@ http.createServer(async (req, res) => {
     if (url.pathname === "/api/admin/mfa/enforce" && req.method === "POST") {
       const user = actor(req);
       if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
-      assertSuperAdmin(user);
+      assertPlatformScope(user, "system");
       const admins = (store.data.users || []).filter(u =>
         ["tenant_admin", "super_admin"].includes(u.role) && u.active !== false && !(u.mfaEnabled && u.mfaEnforced)
       );
@@ -716,7 +722,7 @@ http.createServer(async (req, res) => {
     if (url.pathname === "/api/admin/catalog" && req.method === "GET") {
       const user = actor(req);
       if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
-      assertSuperAdmin(user);
+      assertPlatformScope(user, "modules");
       assertInteractiveUser(user);
       sendJson(res, 200, { ok: true, modules: MODULE_CATALOG, core: CORE_MODULES });
       return;
@@ -727,7 +733,7 @@ http.createServer(async (req, res) => {
     if (bundleMatch) {
       const user = actor(req);
       if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
-      assertSuperAdmin(user);
+      assertPlatformScope(user, "modules");
       assertInteractiveUser(user);
       const bundleKey = bundleMatch[1];
       if (req.method === "GET" && !bundleKey) {
@@ -750,7 +756,7 @@ http.createServer(async (req, res) => {
     if (tenantEntMatch) {
       const user = actor(req);
       if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
-      assertSuperAdmin(user);
+      assertPlatformScope(user, "tenants");
       assertInteractiveUser(user);
       const tenant = store.data.tenants.find(t => t.id === tenantEntMatch[1]);
       if (!tenant) return sendJson(res, 404, { ok: false, error: "Tenant not found" });
@@ -780,7 +786,7 @@ http.createServer(async (req, res) => {
     if (adminTenantMatch && req.method === "GET" && !adminTenantMatch[1]) {
       const user = actor(req);
       if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
-      assertSuperAdmin(user);
+      assertPlatformScope(user, "tenants");
       assertInteractiveUser(user);
       const tenants = store.data.tenants.map(tenant => {
         const scoped = store.tenantScoped(tenant.id);
@@ -801,7 +807,7 @@ http.createServer(async (req, res) => {
     if (adminTenantMatch && req.method === "POST" && !adminTenantMatch[1]) {
       const user = actor(req);
       if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
-      assertSuperAdmin(user);
+      assertPlatformScope(user, "tenants");
       assertInteractiveUser(user);
       const body = await readBody(req);
       const tenant = store.insert("tenants", {
@@ -842,7 +848,7 @@ http.createServer(async (req, res) => {
     if (adminTenantMatch && req.method === "PATCH" && adminTenantMatch[1]) {
       const user = actor(req);
       if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
-      assertSuperAdmin(user);
+      assertPlatformScope(user, "tenants");
       assertInteractiveUser(user);
       const tenant = store.data.tenants.find(row => row.id === adminTenantMatch[1]);
       if (!tenant) return sendJson(res, 404, { ok: false, error: "Tenant not found" });
@@ -918,8 +924,8 @@ http.createServer(async (req, res) => {
       assertSuperAdmin(user);
       const staff = store.data.users
         .filter(u => u.role === "super_admin")
-        .map(u => ({ id: u.id, name: u.name, email: u.email, active: u.active !== false, protected: u.protected === true, isYou: u.id === user.id, lastLoginAt: u.lastLoginAt || null, createdAt: u.createdAt || null }));
-      sendJson(res, 200, { ok: true, staff, canManage: isPlatformGod(user) });
+        .map(u => ({ id: u.id, name: u.name, email: u.email, active: u.active !== false, protected: u.protected === true, isYou: u.id === user.id, scopes: platformScopesOf(u), lastLoginAt: u.lastLoginAt || null, createdAt: u.createdAt || null }));
+      sendJson(res, 200, { ok: true, staff, canManage: isPlatformGod(user), allScopes: PLATFORM_SCOPES });
       return;
     }
     if (url.pathname === "/api/admin/staff" && req.method === "POST") {
@@ -935,6 +941,10 @@ http.createServer(async (req, res) => {
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return sendJson(res, 400, { ok: false, error: "Geldig e-mailadres is verplicht" });
       if (store.getUserByEmail(email)) return sendJson(res, 409, { ok: false, error: "Er bestaat al een gebruiker met dit e-mailadres" });
       assertStrongPassword(body.password);
+      // Platform-scopes: standaard volledige toegang, of de aangevinkte subset.
+      const scopes = Array.isArray(body.platformScopes)
+        ? body.platformScopes.filter(s => PLATFORM_SCOPES.includes(s))
+        : PLATFORM_SCOPES.slice();
       const now = new Date().toISOString();
       const created = store.insert("users", {
         id: `staff_${Date.now()}_${Math.random().toString(16).slice(2)}`,
@@ -944,6 +954,7 @@ http.createServer(async (req, res) => {
         passwordHash: hashPassword(body.password),
         role: "super_admin",
         permissions: ["*"],
+        platformScopes: scopes,
         protected: false,
         mfaEnabled: false,
         mfaEnforced: false,
@@ -951,8 +962,8 @@ http.createServer(async (req, res) => {
         createdBy: user.email,
         createdAt: now
       });
-      store.audit({ actor: user.email, tenantId: null, action: "platform_staff_created", area: "auth", detail: email });
-      sendJson(res, 201, { ok: true, staff: { id: created.id, name: created.name, email: created.email, active: true, protected: false } });
+      store.audit({ actor: user.email, tenantId: null, action: "platform_staff_created", area: "auth", detail: `${email} scopes=${scopes.join(",")}` });
+      sendJson(res, 201, { ok: true, staff: { id: created.id, name: created.name, email: created.email, active: true, protected: false, scopes } });
       return;
     }
     const adminStaffMatch = url.pathname.match(/^\/api\/admin\/staff\/([^/]+)$/);
@@ -970,9 +981,10 @@ http.createServer(async (req, res) => {
       const patch = {};
       if (typeof body.active === "boolean") patch.active = body.active;
       if (typeof body.name === "string" && body.name.trim()) patch.name = body.name.trim();
+      if (Array.isArray(body.platformScopes)) patch.platformScopes = body.platformScopes.filter(s => PLATFORM_SCOPES.includes(s));
       const updated = store.update("users", targetId, { ...patch, updatedAt: new Date().toISOString() });
       store.audit({ actor: user.email, tenantId: null, action: "platform_staff_updated", area: "auth", detail: `${target.email} ${JSON.stringify(patch)}` });
-      sendJson(res, 200, { ok: true, staff: { id: updated.id, name: updated.name, email: updated.email, active: updated.active !== false, protected: false } });
+      sendJson(res, 200, { ok: true, staff: { id: updated.id, name: updated.name, email: updated.email, active: updated.active !== false, protected: false, scopes: platformScopesOf(updated) } });
       return;
     }
 
@@ -983,7 +995,7 @@ http.createServer(async (req, res) => {
     if (adminSupportUsersMatch && req.method === "GET") {
       const user = actor(req);
       if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
-      assertSuperAdmin(user);
+      assertPlatformScope(user, "support");
       const tnt = store.data.tenants.find(t => t.id === adminSupportUsersMatch[1]);
       if (!tnt) return sendJson(res, 404, { ok: false, error: "Tenant niet gevonden" });
       if (tnt.supportAccess?.allowed !== true) {
@@ -1058,7 +1070,7 @@ http.createServer(async (req, res) => {
     if (url.pathname === "/api/admin/billing" && req.method === "GET") {
       const user = actor(req);
       if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
-      assertSuperAdmin(user);
+      assertPlatformScope(user, "billing");
       const MRR_PLAN = { starter: 9, business: 18, enterprise: 29 };
       const rows = store.data.tenants.map(t => {
         const users = store.list("users", t.id).length;
@@ -1076,7 +1088,7 @@ http.createServer(async (req, res) => {
     if (url.pathname === "/api/admin/errors" && req.method === "GET") {
       const user = actor(req);
       if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
-      assertSuperAdmin(user);
+      assertPlatformScope(user, "system");
       const limit = Number(url.searchParams.get("limit") || 100);
       const errors = (store.data.errorEvents || []).slice().reverse().slice(0, limit);
       sendJson(res, 200, { ok: true, errors });
@@ -1088,7 +1100,7 @@ http.createServer(async (req, res) => {
     if (url.pathname === "/api/admin/support" && req.method === "GET") {
       const user = actor(req);
       if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
-      assertSuperAdmin(user);
+      assertPlatformScope(user, "support");
       const now = Date.now();
       const rows = store.data.tenants.map(t => {
         const sa = t.supportAccess || {};
@@ -1109,7 +1121,7 @@ http.createServer(async (req, res) => {
     if (url.pathname === "/api/admin/support/start" && req.method === "POST") {
       const user = actor(req);
       if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
-      assertSuperAdmin(user);
+      assertPlatformScope(user, "support");
       const body = await readBody(req);
       const tenant = store.data.tenants.find(t => t.id === body.tenantId);
       if (!tenant) return sendJson(res, 404, { ok: false, error: "Tenant niet gevonden" });
@@ -1140,7 +1152,7 @@ http.createServer(async (req, res) => {
     if (url.pathname === "/api/admin/support/end" && req.method === "POST") {
       const user = actor(req);
       if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
-      assertSuperAdmin(user);
+      assertPlatformScope(user, "support");
       const body = await readBody(req);
       const tenant = store.data.tenants.find(t => t.id === body.tenantId);
       if (!tenant) return sendJson(res, 404, { ok: false, error: "Tenant niet gevonden" });
@@ -1158,7 +1170,7 @@ http.createServer(async (req, res) => {
     if (adminTenantActionMatch && req.method === "POST") {
       const user = actor(req);
       if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
-      assertSuperAdmin(user);
+      assertPlatformScope(user, "tenants");
       const [, tid, action] = adminTenantActionMatch;
       const tenant = store.data.tenants.find(t => t.id === tid);
       if (!tenant) return sendJson(res, 404, { ok: false, error: "Tenant niet gevonden" });
@@ -3066,6 +3078,8 @@ http.createServer(async (req, res) => {
       const user = actor(req);
       if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
       assertCan(user, "audit");
+      // Platform-agents zonder 'audit'-scope mogen het platform-auditlog niet.
+      if (user.role === "super_admin") assertPlatformScope(user, "audit");
       const audit = listAuditEvents(store, user, {
         tenantId: url.searchParams.get("tenantId"),
         area: url.searchParams.get("area"),

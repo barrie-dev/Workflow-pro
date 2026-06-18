@@ -405,6 +405,28 @@ test("platformteam: god maakt medewerker, agent heeft super-rechten maar geen go
   assert.equal(noKill.status, 403, "god kan niet gedeactiveerd worden");
 });
 
+test("platformteam: scoped agent komt enkel in toegestane platform-secties", async () => {
+  const god = await login("super@workflowpro.be", "Demo2026!");
+  const H = t => ({ "Content-Type": "application/json", Authorization: `Bearer ${t}` });
+  const email = `scoped-${Date.now()}@workflowpro.be`;
+  const pass = "ScopedAgent2026!@#";
+  // Agent met enkel 'support'-scope
+  const c = await fetch(`${BASE}/api/admin/staff`, { method: "POST", headers: H(god.token), body: JSON.stringify({ name: "Scoped Agent", email, password: pass, platformScopes: ["support"] }) });
+  assert.equal(c.status, 201);
+  assert.deepEqual((await c.json()).staff.scopes, ["support"]);
+  const agent = await login(email, pass);
+  // In-scope: support → 200
+  assert.equal((await fetch(`${BASE}/api/admin/support`, { headers: H(agent.token) })).status, 200);
+  // Out-of-scope: billing en audit → 403
+  assert.equal((await fetch(`${BASE}/api/admin/billing`, { headers: H(agent.token) })).status, 403, "geen billing-scope");
+  assert.equal((await fetch(`${BASE}/api/audit`, { headers: H(agent.token) })).status, 403, "geen audit-scope");
+  assert.equal((await fetch(`${BASE}/api/admin/integrations`, { headers: H(agent.token) })).status, 403, "geen integraties-scope");
+  // /me toont de scopes
+  const me = await (await fetch(`${BASE}/api/me`, { headers: H(agent.token) })).json();
+  assert.deepEqual(me.platform.scopes, ["support"]);
+  assert.equal(me.platform.isGod, false);
+});
+
 test("platformteam: hoofd-superadmin (god) kan zelfs door zichzelf niet gedeactiveerd worden", async () => {
   const god = await login("super@workflowpro.be", "Demo2026!");
   const H = t => ({ "Content-Type": "application/json", Authorization: `Bearer ${t}` });
