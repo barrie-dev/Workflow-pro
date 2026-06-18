@@ -270,6 +270,9 @@
         <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>Support-toegang
         <span class="nav-badge" id="navBadgeSupport" style="display:none">0</span>
       </button>
+      <button class="sa-nav-item" data-view="staff">
+        <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>Platformteam
+      </button>
       <button class="sa-nav-item" data-view="audit">
         <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6zm2-8h8v2H8zm0 4h5v2H8z"/></svg>Audit Log
       </button>
@@ -314,7 +317,7 @@
         document.getElementById("saTopTitle").textContent = {
           dashboard:"Dashboard", tenants:"Tenants", users:"Gebruikers",
           billing:"Facturatie / MRR", modules:"Modules & Bundels", integrations:"Integraties", system:"Systeem", support:"Support",
-          audit:"Audit Log", settings:"Instellingen"
+          staff:"Platformteam", audit:"Audit Log", settings:"Instellingen"
         }[_view] || _view;
         document.getElementById("saTopActions").innerHTML = "";
         document.getElementById("saSidebar").classList.remove("open");
@@ -348,7 +351,7 @@
   }
 
   // ── Router ─────────────────────────────────────────────────
-  const VIEWS = { dashboard, tenants, users, billing, modules, integrations, system, support, audit, settings };
+  const VIEWS = { dashboard, tenants, users, billing, modules, integrations, system, support, staff, audit, settings };
   function renderView() { (VIEWS[_view] || dashboard)(); }
 
   // ══════════════════════════════════════════════════════════
@@ -880,6 +883,90 @@ ${locked?`<div class="sa-alert alert-warn">⚠️ Account is vergrendeld na teve
   </div>` : `<div class="sa-empty"><div class="sa-empty-icon">✅</div>Geen server errors — systeem is gezond</div>`}
 </div>`;
     } catch(e) { content().innerHTML = err(e); }
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // VIEW: Platformteam (eigen support-medewerkers / super_admins)
+  // ══════════════════════════════════════════════════════════
+  async function staff() {
+    const c = content(); c.innerHTML = loader();
+    try {
+      const d = await api("/api/admin/staff");
+      const rows = d.staff || [];
+      const canManage = !!d.canManage;
+      c.innerHTML = `
+<div class="sa-page-head"><h1>Platformteam<span class="cnt">${rows.length}</span></h1></div>
+<div class="sa-card" style="margin-bottom:16px">
+  <div style="padding:14px 16px;font-size:13px;color:#475569;line-height:1.5">
+    Platform-medewerkers hebben dezelfde rechten als de hoofd-superadmin (support verlenen,
+    klantplannen bekijken, sessies overnemen). Uitzonderingen: enkel de hoofd-superadmin beheert
+    het team, en de hoofd-superadmin zelf kan nooit gedeactiveerd of gewijzigd worden.
+    ${canManage ? "" : `<br><strong>Alleen de hoofd-superadmin kan teamleden toevoegen of deactiveren.</strong>`}
+  </div>
+</div>
+${canManage ? `
+<div class="sa-card" style="margin-bottom:16px">
+  <div class="sa-card-head"><div class="sa-card-title">Nieuw teamlid</div></div>
+  <div style="padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:640px">
+    <input id="stfName" placeholder="Naam" style="padding:9px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
+    <input id="stfEmail" type="email" placeholder="E-mail" style="padding:9px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
+    <input id="stfPass" type="password" placeholder="Wachtwoord (sterk: 12+ tekens)" style="padding:9px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;grid-column:1/3">
+    <div style="grid-column:1/3;display:flex;gap:8px;align-items:center">
+      <button class="sa-btn btn-primary sm" id="stfCreate">Teamlid toevoegen</button>
+      <span id="stfMsg" style="font-size:12.5px;color:#dc2626"></span>
+    </div>
+  </div>
+</div>` : ""}
+<div class="sa-card">
+  <div class="sa-tbl-wrap">
+    <table class="sa-tbl">
+      <thead><tr><th>Naam</th><th>E-mail</th><th>Status</th><th></th></tr></thead>
+      <tbody id="stfBody"></tbody>
+    </table>
+  </div>
+</div>`;
+
+      function render() {
+        const tb = document.getElementById("stfBody");
+        tb.innerHTML = rows.map(u => {
+          const tags = (u.protected ? badge("hoofd-superadmin","badge-red") : "") + (u.isYou ? ` ${badge("jij","badge-blue")}` : "");
+          const status = u.active ? badge("actief","badge-green") : badge("gedeactiveerd","badge-gray");
+          let action = `<span class="sub">—</span>`;
+          if (canManage && !u.protected && !u.isYou) {
+            action = u.active
+              ? `<button class="sa-btn btn-secondary sm" data-deact="${u.id}">Deactiveren</button>`
+              : `<button class="sa-btn btn-primary sm" data-act="${u.id}">Heractiveren</button>`;
+          }
+          return `<tr>
+            <td><div class="main">${esc(u.name||"—")}</div>${tags}</td>
+            <td><span class="sub">${esc(u.email)}</span></td>
+            <td>${status}</td>
+            <td style="text-align:right">${action}</td>
+          </tr>`;
+        }).join("") || `<tr><td colspan="4"><div class="sa-empty"><div class="sa-empty-icon">👥</div>Geen teamleden</div></td></tr>`;
+        tb.querySelectorAll("[data-deact]").forEach(b=>b.addEventListener("click",()=>setActive(b.dataset.deact,false)));
+        tb.querySelectorAll("[data-act]").forEach(b=>b.addEventListener("click",()=>setActive(b.dataset.act,true)));
+      }
+      async function setActive(id, active) {
+        try { await api(`/api/admin/staff/${id}`, { method:"PATCH", body: JSON.stringify({ active }) }); staff(); }
+        catch(e){ alert(e.message); }
+      }
+      if (canManage) {
+        document.getElementById("stfCreate").addEventListener("click", async () => {
+          const name = document.getElementById("stfName").value.trim();
+          const email = document.getElementById("stfEmail").value.trim();
+          const password = document.getElementById("stfPass").value;
+          const msg = document.getElementById("stfMsg");
+          msg.textContent = "";
+          if (!name || !email || !password) { msg.textContent = "Naam, e-mail en wachtwoord zijn verplicht."; return; }
+          try {
+            await api("/api/admin/staff", { method:"POST", body: JSON.stringify({ name, email, password }) });
+            staff();
+          } catch(e){ msg.textContent = e.message; }
+        });
+      }
+      render();
+    } catch(e){ content().innerHTML = err(e); }
   }
 
   // ══════════════════════════════════════════════════════════

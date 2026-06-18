@@ -159,7 +159,8 @@ function demoSeed() {
         permissions: ["*"],
         mfaEnabled: false,
         mfaEnforced: false,
-        active: true
+        active: true,
+        protected: true
       },
       {
         id: "u_admin",
@@ -249,6 +250,18 @@ class Store {
     this.data = this.load();
     this.migrate();
     this.bootstrapInitialAdmin();
+    this.ensurePlatformGod();
+  }
+
+  // Garandeer dat er altijd één beschermde super_admin is (de "god" van de SaaS):
+  // onaantastbaar, kan niet gedeactiveerd/gedegradeerd/verwijderd worden.
+  ensurePlatformGod() {
+    const supers = (this.data.users || []).filter(u => u.role === "super_admin");
+    if (supers.length === 0 || supers.some(u => u.protected === true)) return;
+    const god = supers.find(u => u.bootstrapAdmin) || supers.find(u => u.id === "u_super") || supers[0];
+    god.protected = true;
+    this.save();
+    this.audit({ actor: "system", tenantId: null, action: "platform_god_marked", area: "auth", detail: god.email });
   }
 
   load() {
@@ -287,6 +300,7 @@ class Store {
       permissions: ["*"],
       active: true,
       bootstrapAdmin: true,
+      protected: true,
       createdAt: new Date().toISOString()
     }));
     this.audit({

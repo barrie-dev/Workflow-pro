@@ -374,6 +374,20 @@ function assertSuperAdmin(user) {
   }
 }
 
+// De "god" van de SaaS: de beschermde hoofd-superadmin. Onaantastbaar en de
+// enige die platform-medewerkers mag beheren.
+function isPlatformGod(user) {
+  return !!(user && user.role === "super_admin" && user.protected === true);
+}
+
+function assertPlatformGod(user) {
+  if (!isPlatformGod(user)) {
+    const error = new Error("Alleen de hoofd-superadmin mag het platformteam beheren");
+    error.status = 403;
+    throw error;
+  }
+}
+
 function assertAdminMfa(user) {
   // In dev-modus of als REQUIRE_ADMIN_MFA=false → MFA niet verplicht
   if (process.env.REQUIRE_ADMIN_MFA === "false") return;
@@ -429,6 +443,8 @@ module.exports = {
   assertCan,
   assertOwn,
   assertSuperAdmin,
+  isPlatformGod,
+  assertPlatformGod,
   assertAdminMfa,
   isEmployee,
   isManager,

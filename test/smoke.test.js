@@ -357,6 +357,36 @@ test("support: gebruiker van een andere tenant kan niet overgenomen worden", asy
   }
 });
 
+// ── Platformteam: eigen support-medewerkers (super_admin) + god-bescherming ──
+test("platformteam: god maakt medewerker, agent heeft super-rechten maar geen god-macht", async () => {
+  const god = await login("super@workflowpro.be", "Demo2026!");
+  const H = t => ({ "Content-Type": "application/json", Authorization: `Bearer ${t}` });
+  const email = `staff-test-${Date.now()}@workflowpro.be`;
+  const pass = "AgentSterk2026!@#";
+  const c = await fetch(`${BASE}/api/admin/staff`, { method: "POST", headers: H(god.token), body: JSON.stringify({ name: "Test Agent", email, password: pass }) });
+  assert.equal(c.status, 201, "god kan teamlid aanmaken");
+  const agent = await login(email, pass);
+  assert.ok(agent.token, "nieuwe agent kan inloggen");
+  // Volledige platform-/support-rechten
+  assert.equal((await fetch(`${BASE}/api/admin/stats`, { headers: H(agent.token) })).status, 200);
+  assert.equal((await fetch(`${BASE}/api/admin/support`, { headers: H(agent.token) })).status, 200);
+  // Maar geen god-macht: geen teamleden beheren
+  const noStaff = await fetch(`${BASE}/api/admin/staff`, { method: "POST", headers: H(agent.token), body: JSON.stringify({ name: "X", email: `x${Date.now()}@y.be`, password: pass }) });
+  assert.equal(noStaff.status, 403, "agent mag geen teamlid aanmaken");
+  // En de god is onaantastbaar
+  const noKill = await fetch(`${BASE}/api/admin/users/u_super`, { method: "PATCH", headers: H(agent.token), body: JSON.stringify({ active: false }) });
+  assert.equal(noKill.status, 403, "god kan niet gedeactiveerd worden");
+});
+
+test("platformteam: hoofd-superadmin (god) kan zelfs door zichzelf niet gedeactiveerd worden", async () => {
+  const god = await login("super@workflowpro.be", "Demo2026!");
+  const H = t => ({ "Content-Type": "application/json", Authorization: `Bearer ${t}` });
+  const viaStaff = await fetch(`${BASE}/api/admin/staff/u_super`, { method: "PATCH", headers: H(god.token), body: JSON.stringify({ active: false }) });
+  assert.equal(viaStaff.status, 403, "god is beschermd via /staff");
+  const viaUsers = await fetch(`${BASE}/api/admin/users/u_super`, { method: "PATCH", headers: H(god.token), body: JSON.stringify({ active: false }) });
+  assert.equal(viaUsers.status, 403, "god is beschermd via /users");
+});
+
 test("support: zonder klant-consent kan super-admin geen sessie starten", async () => {
   const su = await login("super@workflowpro.be", "Demo2026!");
   const admin = await login("admin@demobouw.be", "Demo2026!");

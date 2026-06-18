@@ -21,6 +21,8 @@ const {
   can,
   assertOwn,
   assertSuperAdmin,
+  isPlatformGod,
+  assertPlatformGod,
   assertAdminMfa,
   assertSupportWrite,
   buildSupportGrant,
@@ -905,12 +907,89 @@ http.createServer(async (req, res) => {
       return;
     }
 
+    // ── Platformteam: eigen support-medewerkers (super_admin) beheren ──────────
+    // Lezen mag elke super_admin; aanmaken/wijzigen enkel de god (beschermde
+    // hoofd-superadmin). De god is onaantastbaar.
+    if (url.pathname === "/api/admin/staff" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertSuperAdmin(user);
+      const staff = store.data.users
+        .filter(u => u.role === "super_admin")
+        .map(u => ({ id: u.id, name: u.name, email: u.email, active: u.active !== false, protected: u.protected === true, isYou: u.id === user.id, lastLoginAt: u.lastLoginAt || null, createdAt: u.createdAt || null }));
+      sendJson(res, 200, { ok: true, staff, canManage: isPlatformGod(user) });
+      return;
+    }
+    if (url.pathname === "/api/admin/staff" && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertSuperAdmin(user);
+      assertPlatformGod(user);
+      assertAdminMfa(user);
+      const body = await readBody(req);
+      const email = String(body.email || "").trim().toLowerCase();
+      const name = String(body.name || "").trim();
+      if (!name) return sendJson(res, 400, { ok: false, error: "Naam is verplicht" });
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return sendJson(res, 400, { ok: false, error: "Geldig e-mailadres is verplicht" });
+      if (store.getUserByEmail(email)) return sendJson(res, 409, { ok: false, error: "Er bestaat al een gebruiker met dit e-mailadres" });
+      assertStrongPassword(body.password);
+      const now = new Date().toISOString();
+      const created = store.insert("users", {
+        id: `staff_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+        tenantId: null,
+        name,
+        email,
+        passwordHash: hashPassword(body.password),
+        role: "super_admin",
+        permissions: ["*"],
+        protected: false,
+        mfaEnabled: false,
+        mfaEnforced: false,
+        active: true,
+        createdBy: user.email,
+        createdAt: now
+      });
+      store.audit({ actor: user.email, tenantId: null, action: "platform_staff_created", area: "auth", detail: email });
+      sendJson(res, 201, { ok: true, staff: { id: created.id, name: created.name, email: created.email, active: true, protected: false } });
+      return;
+    }
+    const adminStaffMatch = url.pathname.match(/^\/api\/admin\/staff\/([^/]+)$/);
+    if (adminStaffMatch && req.method === "PATCH") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertSuperAdmin(user);
+      assertPlatformGod(user);
+      const targetId = adminStaffMatch[1];
+      const target = store.getUserById(targetId);
+      if (!target || target.role !== "super_admin") return sendJson(res, 404, { ok: false, error: "Platform-medewerker niet gevonden" });
+      if (target.protected === true) return sendJson(res, 403, { ok: false, error: "De hoofd-superadmin kan niet gewijzigd worden" });
+      if (target.id === user.id) return sendJson(res, 400, { ok: false, error: "Je kan je eigen account hier niet wijzigen" });
+      const body = await readBody(req);
+      const patch = {};
+      if (typeof body.active === "boolean") patch.active = body.active;
+      if (typeof body.name === "string" && body.name.trim()) patch.name = body.name.trim();
+      const updated = store.update("users", targetId, { ...patch, updatedAt: new Date().toISOString() });
+      store.audit({ actor: user.email, tenantId: null, action: "platform_staff_updated", area: "auth", detail: `${target.email} ${JSON.stringify(patch)}` });
+      sendJson(res, 200, { ok: true, staff: { id: updated.id, name: updated.name, email: updated.email, active: updated.active !== false, protected: false } });
+      return;
+    }
+
     // ── Super-admin: gebruiker bijwerken (deactiveren / rol) ──────────────────
     const adminUserMatch = url.pathname.match(/^\/api\/admin\/users\/([^/]+)$/);
     if (adminUserMatch && req.method === "PATCH") {
       const user = actor(req);
       if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
       assertSuperAdmin(user);
+      const target = store.getUserById(adminUserMatch[1]);
+      // De beschermde hoofd-superadmin (god) is onaantastbaar; platform-
+      // medewerkers (super_admin) worden enkel via /api/admin/staff door de god
+      // beheerd — niet via dit generieke endpoint.
+      if (target && target.protected === true) {
+        return sendJson(res, 403, { ok: false, error: "De hoofd-superadmin kan niet gewijzigd of gedeactiveerd worden" });
+      }
+      if (target && target.role === "super_admin") {
+        return sendJson(res, 403, { ok: false, error: "Beheer platform-medewerkers via Platformteam" });
+      }
       const body = await readBody(req);
       const allowed = ["active", "name", "function", "phone"];
       const patch = Object.fromEntries(Object.entries(body).filter(([k]) => allowed.includes(k)));
