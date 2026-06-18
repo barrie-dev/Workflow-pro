@@ -191,6 +191,38 @@ function customerStartResponseSchema() {
   };
 }
 
+function customerStartBootstrapSchema() {
+  return {
+    type: "object",
+    properties: {
+      date: { type: "string", format: "date", example: "2026-06-18" },
+      targetWorkorders: { type: "integer", minimum: 1, example: 10 },
+      readyBefore: { type: "boolean", example: false },
+      fieldUser: {
+        type: "object",
+        nullable: true,
+        properties: {
+          id: { type: "string", example: "u_emp1" },
+          name: { type: "string", example: "Jan Janssen" },
+          role: { type: "string", example: "employee" }
+        }
+      },
+      existing: {
+        type: "object",
+        properties: {
+          venues: { type: "integer", example: 0 },
+          customers: { type: "integer", example: 0 },
+          dayShifts: { type: "integer", example: 0 },
+          openWorkorders: { type: "integer", example: 0 }
+        }
+      },
+      blockers: { type: "array", items: { type: "string" } },
+      planned: { type: "array", items: { type: "object" } },
+      created: { type: "array", items: { type: "object" } }
+    }
+  };
+}
+
 function ticketParameter() {
   return { name: "ticketId", in: "path", required: true, schema: { type: "string" } };
 }
@@ -271,6 +303,46 @@ function openApiSpec() {
                 }
               }
             },
+            401: response("Unauthorized"),
+            403: response("Forbidden")
+          }
+        }
+      },
+      "/api/tenants/{tenantId}/customer-start/bootstrap": {
+        get: {
+          ...operation("Preview customer-start bootstrap"),
+          parameters: [
+            tenantParameter(),
+            { name: "date", in: "query", required: false, schema: { type: "string", format: "date" } },
+            { name: "targetWorkorders", in: "query", required: false, schema: { type: "integer", default: 1, minimum: 1 } }
+          ],
+          description: "Dry-run for the first operational customer day. Shows which tenant-scoped records would be created without writing data.",
+          responses: {
+            200: {
+              description: "Customer-start bootstrap preview",
+              content: { "application/json": { schema: customerStartBootstrapSchema() } }
+            },
+            401: response("Unauthorized"),
+            403: response("Forbidden")
+          }
+        },
+        post: {
+          ...operation("Apply customer-start bootstrap", "post"),
+          parameters: [tenantParameter()],
+          requestBody: jsonBody({
+            type: "object",
+            properties: {
+              date: { type: "string", format: "date", example: "2026-06-18" },
+              targetWorkorders: { type: "integer", minimum: 1, default: 1, example: 10 }
+            }
+          }),
+          description: "Creates the missing first-day venue, customer, planning item and open workorders. Requires interactive user permissions for planning and workorders; writes an audit event.",
+          responses: {
+            201: {
+              description: "Customer-start bootstrap applied",
+              content: { "application/json": { schema: customerStartBootstrapSchema() } }
+            },
+            400: response("Bad request"),
             401: response("Unauthorized"),
             403: response("Forbidden")
           }
