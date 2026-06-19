@@ -215,6 +215,10 @@
       </a>
 
       <div class="adm-nav-label">Systeem</div>
+      <a class="adm-nav-item" data-view="integrations" href="#">
+        <svg viewBox="0 0 24 24"><path d="M22 7h-7V2H9v5H2v15h20V7zM11 4h2v3h-2V4zm9 16H4V9h16v11zM9 13h2v2H9v-2zm4 0h2v2h-2v-2z"/></svg>
+        <span>Integraties</span>
+      </a>
       <a class="adm-nav-item" data-view="roadmap" href="#">
         <svg viewBox="0 0 24 24"><path d="M21 3L3 10.53v.98l6.84 2.65L12.48 21h.98L21 3z"/></svg>
         <span>Roadmap</span>
@@ -663,7 +667,7 @@ table.adm-table { width:100%; border-collapse:collapse; font-size:13px; }
     workorders: "Werkbonnen", messages: "Berichten", reports: "Rapportages",
     customers: "Klanten", offertes: "Offertes", facturen: "Facturen", venues: "Locaties", vehicles: "Voertuigen",
     stock: "Stock", billing: "Facturatie",
-    roadmap: "Roadmap", audit: "Audittrail", settings: "Instellingen"
+    integrations: "Integraties", roadmap: "Roadmap", audit: "Audittrail", settings: "Instellingen"
   };
 
   const VIEW_BTN_LABEL = {
@@ -703,6 +707,7 @@ table.adm-table { width:100%; border-collapse:collapse; font-size:13px; }
       vehicles: renderVehicles,
       stock: renderStock,
       billing: renderBilling,
+      integrations: renderIntegraties,
       roadmap: renderRoadmap,
       audit: renderAudit,
       settings: renderSettings
@@ -4577,6 +4582,81 @@ ${billing.status === "trial" ? `<div style="background:#fffbeb;border:1px solid 
   }
 
   // ── Settings ───────────────────────────────────────────────
+  // ── Integraties (Exact Online, Robaws, …) ─────────────────────
+  async function renderIntegraties() {
+    const content = document.getElementById("admContent");
+    content.innerHTML = `<div class="adm-loading">Laden…</div>`;
+    let data = { rows: [], providers: [] };
+    try { data = await api("GET", "/integrations"); }
+    catch (e) { content.innerHTML = `<div class="adm-card"><div class="adm-card-body">${esc(e.message)}</div></div>`; return; }
+    const providers = data.providers || [];
+    const byProvider = Object.fromEntries((data.rows || []).map(r => [r.provider, r]));
+    const fmtDT = s => s ? new Date(s).toLocaleString("nl-BE") : "—";
+
+    content.innerHTML = `
+<div style="font-size:13px;color:#64748b;margin-bottom:14px">Koppel je boekhouding en werfsoftware. Sleutels worden versleuteld bewaard; zonder geldige sleutel draait een sync in testmodus.</div>
+<div class="adm-grid-2">
+${providers.map(p => {
+  const conn = byProvider[p.key];
+  const ss = (conn && conn.syncSummary) || {};
+  return `
+<div class="adm-card">
+  <div class="adm-card-header">
+    <h3 class="adm-card-title">${esc(p.label)} <span style="font-weight:400;font-size:12px;color:#94a3b8">· ${esc(p.category)}</span></h3>
+    <span class="adm-status adm-status-${conn ? (conn.status === "connected" ? "active" : "inactive") : "pending"}">${conn ? esc(conn.status) : "niet verbonden"}</span>
+  </div>
+  <div class="adm-card-body">
+    <p style="font-size:13px;color:#64748b;margin-bottom:12px">${esc(p.description)}${p.docs ? ` · <a href="${esc(p.docs)}" target="_blank" rel="noopener">documentatie</a>` : ""}</p>
+    ${conn ? `
+      <div style="font-size:13px;color:#475569;margin-bottom:10px">
+        Laatste sync: ${fmtDT(conn.lastSyncAt)}${ss.lastStatus ? ` · ${esc(ss.lastStatus)}` : ""}<br>
+        ${ss.total || 0} sync(s), ${ss.failed || 0} mislukt${conn.hasSecret ? "" : " · ⚠️ geen sleutel ingesteld"}
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="adm-btn adm-btn-primary adm-btn-sm" data-sync="${esc(conn.id)}">↻ Nu synchroniseren</button>
+        <button class="adm-btn adm-btn-secondary adm-btn-sm" data-reconnect="${esc(p.key)}">Sleutel bijwerken</button>
+      </div>
+    ` : `
+      <form data-connect="${esc(p.key)}">
+        ${p.fields.map(f => `<div class="adm-form-group"><label>${esc(f.label)}${f.secret ? "" : ""}</label><input name="${esc(f.key)}" type="${f.secret ? "password" : "text"}" placeholder="${esc(f.placeholder || "")}" value="${esc(f.default || "")}" ${f.secret ? 'autocomplete="off"' : ""}></div>`).join("")}
+        <div class="adm-form-actions"><button type="submit" class="adm-btn adm-btn-primary adm-btn-sm">Verbinden</button></div>
+      </form>
+    `}
+  </div>
+</div>`;
+}).join("")}
+</div>`;
+
+    content.querySelectorAll("form[data-connect]").forEach(form => {
+      form.addEventListener("submit", async e => {
+        e.preventDefault();
+        const provider = form.dataset.connect;
+        const meta = providers.find(p => p.key === provider) || { fields: [] };
+        const fd = Object.fromEntries(new FormData(form).entries());
+        const body = { provider, apiKey: fd.apiKey || "", baseUrl: fd.baseUrl || "", config: {} };
+        (meta.fields || []).forEach(f => { if (!f.secret && f.key !== "apiKey" && f.key !== "baseUrl" && fd[f.key]) body.config[f.key] = fd[f.key]; });
+        try { await api("POST", "/integrations/connect", body); window.showToast && window.showToast(`${meta.label || provider} verbonden ✓`, "success"); renderIntegraties(); }
+        catch (err) { window.showToast && window.showToast(err.message, "error"); }
+      });
+    });
+    content.querySelectorAll("[data-sync]").forEach(btn => btn.addEventListener("click", async () => {
+      btn.disabled = true; btn.textContent = "Bezig…";
+      try {
+        const r = await api("POST", `/integrations/${btn.dataset.sync}/sync`, {});
+        const ok = r.result && r.result.log && r.result.log.status === "success";
+        window.showToast && window.showToast(ok ? "Synchronisatie voltooid ✓" : "Sync mislukt — controleer sleutel/mapping", ok ? "success" : "error");
+        renderIntegraties();
+      } catch (e) { window.showToast && window.showToast(e.message, "error"); btn.disabled = false; btn.textContent = "↻ Nu synchroniseren"; }
+    }));
+    content.querySelectorAll("[data-reconnect]").forEach(btn => btn.addEventListener("click", async () => {
+      const p = providers.find(x => x.key === btn.dataset.reconnect) || {};
+      const key = window.prompt(`Nieuwe ${p.label || "API"}-sleutel/token:`);
+      if (key == null || !key.trim()) return;
+      try { await api("POST", "/integrations/connect", { provider: p.key, apiKey: key.trim() }); window.showToast && window.showToast("Sleutel bijgewerkt ✓", "success"); renderIntegraties(); }
+      catch (e) { window.showToast && window.showToast(e.message, "error"); }
+    }));
+  }
+
   async function renderSettings() {
     const content = document.getElementById("admContent");
     content.innerHTML = `<div class="adm-loading">Laden…</div>`;

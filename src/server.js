@@ -88,7 +88,7 @@ const {
 const { readiness, applyKbo, createDemoGoldenPath } = require("./modules/golden-path");
 const { todayPayload, completeWorkorder, attachWorkorderPhoto, signWorkorder, syncMobileQueue } = require("./modules/mobile");
 const { clockIn, clockOut, approveExpense, managementReport } = require("./modules/operations");
-const { listIntegrations, connectIntegration, updateMapping, runSync, retrySync } = require("./modules/integrations");
+const { listIntegrations, connectIntegration, updateMapping, runSync, retrySync, listProviders } = require("./modules/integrations");
 const { tenantStatus, unlockUser, listBackups, createBackup, backupPreview, restoreBackup, publicStatus } = require("./modules/admin");
 const { createNotification, listNotifications, markNotificationRead, generateReminders, notificationSummary } = require("./modules/notifications");
 const { importEmployees } = require("./modules/imports");
@@ -1733,7 +1733,7 @@ http.createServer(async (req, res) => {
       }
       if (action === "integrations" && req.method === "GET") {
         assertCan(user, "integrations");
-        sendJson(res, 200, { ok: true, rows: listIntegrations(store, tenant.id) });
+        sendJson(res, 200, { ok: true, rows: listIntegrations(store, tenant.id), providers: listProviders() });
         return;
       }
       if (action === "notifications" && req.method === "GET") {

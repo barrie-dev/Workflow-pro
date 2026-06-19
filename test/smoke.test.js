@@ -382,6 +382,35 @@ test("customer-start bootstrap: preview is read-only, apply is idempotent", asyn
   assert.equal(repeated.created.length, 0, "tweede apply maakt niets dubbel aan");
 });
 
+// ── Integraties: Exact Online + Robaws ──
+test("integraties: Exact Online + Robaws in registry, verbindbaar + sync", async () => {
+  const su = await login("super@workflowpro.be", "Demo2026!");
+  const H = { "Content-Type": "application/json", Authorization: `Bearer ${su.token}` };
+  const list = await (await fetch(`${BASE}/api/tenants/t_demo/integrations`, { headers: H })).json();
+  const keys = (list.providers || []).map(p => p.key);
+  assert.ok(keys.includes("exact") && keys.includes("robaws"), "Exact + Robaws aangeboden");
+  const exactMeta = list.providers.find(p => p.key === "exact");
+  assert.equal(exactMeta.authType, "oauth2");
+  assert.ok(exactMeta.fields.some(f => f.key === "division"), "Exact heeft division-veld");
+
+  // Robaws verbinden + synchroniseren (sleutel + default mapping → success)
+  const conn = await fetch(`${BASE}/api/tenants/t_demo/integrations/connect`, { method: "POST", headers: H, body: JSON.stringify({ provider: "robaws", apiKey: "robaws-test-key", baseUrl: "https://app.robaws.be/api/v2" }) });
+  assert.equal(conn.status, 201);
+  const row = (await conn.json()).row;
+  assert.equal(row.provider, "robaws");
+  assert.equal(row.hasSecret, true);
+  const sync = await fetch(`${BASE}/api/tenants/t_demo/integrations/${row.id}/sync`, { method: "POST", headers: H, body: "{}" });
+  assert.equal(sync.status, 200);
+  assert.equal((await sync.json()).result.log.status, "success", "sync slaagt met sleutel + default mapping");
+
+  // Exact verbinden met division (provider-specifiek configveld bewaard)
+  const ex = await fetch(`${BASE}/api/tenants/t_demo/integrations/connect`, { method: "POST", headers: H, body: JSON.stringify({ provider: "exact", apiKey: "exact-oauth-token", config: { division: "1234567" } }) });
+  assert.equal(ex.status, 201);
+  const exrow = (await ex.json()).row;
+  assert.equal(exrow.provider, "exact");
+  assert.equal(exrow.config.division, "1234567");
+});
+
 // ── GDPR support-toegang: consent + impersonatie + sliding expiry ──
 test("support: consent met auto-renew zet jaarlijkse review-datum", async () => {
   const admin = await login("admin@demobouw.be", "Demo2026!");

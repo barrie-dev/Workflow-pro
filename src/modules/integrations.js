@@ -17,6 +17,57 @@ const DEFAULT_MAPPINGS = {
 
 const ALLOWED_DIRECTIONS = ["push", "pull", "both"];
 
+// Provider-registry: welke koppelingen WorkFlow Pro aanbiedt, met de velden die
+// een tenant nodig heeft om te verbinden. Echte API-calls draaien achter de
+// (encrypted) credentials; zonder geldige sleutel valt sync terug op mock.
+const PROVIDERS = {
+  exact: {
+    key: "exact",
+    label: "Exact Online",
+    category: "Boekhouding",
+    authType: "oauth2",
+    description: "Stuur verkoopfacturen, relaties en aankopen door naar Exact Online (BE).",
+    fields: [
+      { key: "baseUrl", label: "API-omgeving", default: "https://start.exactonline.be", placeholder: "https://start.exactonline.be" },
+      { key: "division", label: "Administratie (division)", placeholder: "bv. 1234567" },
+      { key: "apiKey", label: "OAuth access token", secret: true, placeholder: "Bearer-token (via OAuth)" }
+    ],
+    docs: "https://developers.exactonline.com"
+  },
+  robaws: {
+    key: "robaws",
+    label: "Robaws",
+    category: "Werf & offertes",
+    authType: "apikey",
+    description: "Synchroniseer klanten, projecten/offertes en gewerkte uren met Robaws.",
+    fields: [
+      { key: "baseUrl", label: "API-URL", default: "https://app.robaws.be/api/v2", placeholder: "https://app.robaws.be/api/v2" },
+      { key: "apiKey", label: "API-sleutel", secret: true, placeholder: "Robaws API key" }
+    ],
+    docs: "https://www.robaws.be"
+  },
+  generic: {
+    key: "generic",
+    label: "Generieke REST-API",
+    category: "Overig",
+    authType: "apikey",
+    description: "Eigen REST-koppeling met aanpasbare veldmapping.",
+    fields: [
+      { key: "baseUrl", label: "API-URL", placeholder: "https://api.voorbeeld.be" },
+      { key: "apiKey", label: "API-sleutel", secret: true, placeholder: "API key / token" }
+    ],
+    docs: ""
+  }
+};
+
+function listProviders() {
+  return Object.values(PROVIDERS).map(p => ({
+    key: p.key, label: p.label, category: p.category, authType: p.authType,
+    description: p.description, fields: p.fields, docs: p.docs,
+    defaultMappings: DEFAULT_MAPPINGS[p.key] || DEFAULT_MAPPINGS.generic
+  }));
+}
+
 function validateMappings(rows) {
   if (!Array.isArray(rows) || rows.length === 0) {
     const error = new Error("Minstens één field mapping is vereist");
@@ -97,16 +148,26 @@ function listIntegrations(store, tenantId) {
 
 function connectIntegration(store, tenant, payload, actor) {
   const provider = payload.provider || "robaws";
+  const meta = PROVIDERS[provider] || PROVIDERS.generic;
   const existing = store.list("integrations", tenant.id).find(row => row.provider === provider);
   const fieldMapping = validateMappings(payload.fieldMapping || DEFAULT_MAPPINGS[provider] || DEFAULT_MAPPINGS.generic);
+  // Provider-specifieke (niet-geheime) instelvelden bewaren, bv. Exact 'division'.
+  const extra = {};
+  (meta.fields || []).forEach(f => {
+    if (f.secret || f.key === "apiKey" || f.key === "baseUrl") return;
+    const v = (payload.config && payload.config[f.key]) ?? payload[f.key];
+    if (v !== undefined && v !== "") extra[f.key] = String(v);
+  });
   const patch = {
     provider,
     tenantId: tenant.id,
     status: "connected",
-    label: payload.label || provider.toUpperCase(),
+    label: payload.label || meta.label || provider.toUpperCase(),
     config: {
-      environment: payload.environment || "test",
-      baseUrl: payload.baseUrl || "",
+      ...(existing?.config || {}),
+      ...extra,
+      environment: payload.environment || existing?.config?.environment || "test",
+      baseUrl: payload.baseUrl || existing?.config?.baseUrl || (meta.fields || []).find(f => f.key === "baseUrl")?.default || "",
       fieldMapping
     },
     encryptedSecret: payload.apiKey ? encryptSecret(payload.apiKey) : existing?.encryptedSecret || "",
@@ -260,4 +321,4 @@ function retrySync(store, tenant, integrationId, syncId, actor) {
   return runSync(store, tenant, integrationId, actor, syncId);
 }
 
-module.exports = { listIntegrations, connectIntegration, updateMapping, runSync, retrySync, syncSummary, syncLogsWithResolution, mappingSummary, validateMappings };
+module.exports = { listIntegrations, connectIntegration, updateMapping, runSync, retrySync, syncSummary, syncLogsWithResolution, mappingSummary, validateMappings, listProviders, PROVIDERS };
