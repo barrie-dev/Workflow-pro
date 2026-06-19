@@ -1,6 +1,7 @@
 const { config } = require("../lib/config");
 const { listBundles, getBundle } = require("./bundles");
 const { moduleByKey } = require("./catalog");
+const { peppolTransportReadiness } = require("./peppol-invoice");
 
 const PLAN_PACKAGES = {
   starter: {
@@ -306,7 +307,17 @@ function createInvoice(store, tenant, payload, actor) {
 }
 
 function peppolResponse(tenant, invoice, payload = {}) {
-  const provider = config.peppol.provider || "mock";
+  const readiness = peppolTransportReadiness({ peppol: config.peppol }, config.isProduction);
+  const provider = readiness.provider || config.peppol.provider || "mock";
+  if (!readiness.ok) {
+    return {
+      ok: false,
+      provider,
+      status: "failed",
+      errorCode: readiness.errorCode,
+      message: readiness.message
+    };
+  }
   if (!tenant.invoiceProfile?.peppolId && !payload.peppolId) {
     return {
       ok: false,

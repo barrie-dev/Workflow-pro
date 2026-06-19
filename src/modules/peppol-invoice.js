@@ -11,6 +11,7 @@
  * uit tenant.invoiceProfile (ingevuld via de KBO-onboarding).
  */
 const https = require("https");
+const { config } = require("../lib/config");
 const { loadPlatformConfig } = require("./platform-config");
 const { isValidBelgianVat, structuredCommunication } = require("./be-locale");
 
@@ -173,7 +174,57 @@ function httpsPostJson(hostname, path, headers, body) {
   });
 }
 
-function isRealKey(k) { return !!k && !/DUMMY|replace[_-]?me|xxxx/i.test(String(k)); }
+function isRealKey(k) {
+  return !!k && !/DUMMY|replace[_-]?me|xxxx|test[_-]?key/i.test(String(k));
+}
+
+function peppolTransportReadiness(input = {}, requireLive = false) {
+  const peppol = input.peppol || input || {};
+  const provider = String(peppol.provider || "mock").trim().toLowerCase();
+  const apiKey = peppol.apiKey || "";
+  const providerLive = provider && provider !== "mock";
+  const keyLive = isRealKey(apiKey);
+
+  if (!requireLive && (!providerLive || !keyLive)) {
+    return {
+      ok: true,
+      provider: "mock",
+      transport: "mock",
+      mode: "mock",
+      message: "Mock Peppol transport actief buiten productie"
+    };
+  }
+
+  if (!providerLive) {
+    return {
+      ok: false,
+      provider,
+      transport: "none",
+      mode: "blocked",
+      errorCode: "peppol_provider_not_configured",
+      message: "Peppol provider is niet productie-klaar"
+    };
+  }
+
+  if (!keyLive) {
+    return {
+      ok: false,
+      provider,
+      transport: "none",
+      mode: "blocked",
+      errorCode: "peppol_api_key_not_configured",
+      message: "Peppol API key is niet productie-klaar"
+    };
+  }
+
+  return {
+    ok: true,
+    provider,
+    transport: provider,
+    mode: "live",
+    message: "Live Peppol transport geconfigureerd"
+  };
+}
 
 /**
  * Verzend een factuur via Peppol. Markeert peppolStatus + referentie op de factuur.
@@ -185,11 +236,18 @@ async function sendPeppolInvoice(store, tenant, invoice) {
 
   const ubl = buildUbl(invoice, tenant);
   const cfg = loadPlatformConfig(store);
-  const provider = (cfg.peppol && cfg.peppol.provider) || "mock";
+  const readiness = peppolTransportReadiness(cfg, config.isProduction);
+  if (!readiness.ok) {
+    const e = new Error(readiness.message);
+    e.status = 503;
+    e.code = readiness.errorCode;
+    throw e;
+  }
+  const provider = readiness.provider;
   const key = cfg.peppol && cfg.peppol.apiKey;
   let reference, status, transport;
 
-  if (provider !== "mock" && isRealKey(key)) {
+  if (readiness.transport !== "mock") {
     // Echte provider. Endpoints verschillen per provider; hieronder de courante
     // Belgische opties. Faalt netjes als de provider een fout teruggeeft.
     const hosts = { billit: "api.billit.be", digiteal: "api.digiteal.eu", unifiedpost: "api.unifiedpost.com" };
@@ -199,7 +257,7 @@ async function sendPeppolInvoice(store, tenant, invoice) {
     }, ubl);
     reference = resp.id || resp.transmissionId || `${provider}_${Date.now()}`;
     status = resp.status || "sent";
-    transport = provider;
+    transport = readiness.transport;
   } else {
     // Mock-transport: valideert + bewaart UBL, markeert als afgeleverd.
     reference = `PEPPOL-MOCK-${Date.now().toString(36).toUpperCase()}`;
@@ -219,4 +277,4 @@ async function sendPeppolInvoice(store, tenant, invoice) {
   return { ok: true, provider: transport, reference, status };
 }
 
-module.exports = { buildUbl, validatePeppol, sendPeppolInvoice, supplierOf };
+module.exports = { buildUbl, validatePeppol, sendPeppolInvoice, supplierOf, peppolTransportReadiness };

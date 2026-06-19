@@ -11,6 +11,7 @@ const {
 const { Store } = require("../src/lib/store");
 const { runSupportAccessReview } = require("../src/modules/support-access");
 const { verifyStripeSignature } = require("../src/modules/stripe-webhook");
+const { peppolTransportReadiness } = require("../src/modules/peppol-invoice");
 const crypto = require("node:crypto");
 
 class MemAdapter {
@@ -142,6 +143,27 @@ test("stripe-webhook: unsigned alleen toegestaan buiten productie", () => {
   const prod = verifyStripeSignature("{}", "", { webhookSecret: "", requireSignature: true });
   assert.equal(prod.ok, false);
   assert.equal(prod.mode, "missing-webhook-secret");
+});
+
+test("peppol-transport: mock alleen toegestaan buiten productie", () => {
+  const local = peppolTransportReadiness({ peppol: { provider: "mock", apiKey: "" } }, false);
+  assert.equal(local.ok, true);
+  assert.equal(local.transport, "mock");
+
+  const prod = peppolTransportReadiness({ peppol: { provider: "mock", apiKey: "" } }, true);
+  assert.equal(prod.ok, false);
+  assert.equal(prod.errorCode, "peppol_provider_not_configured");
+});
+
+test("peppol-transport: productie vereist echte provider en sleutel", () => {
+  const missingKey = peppolTransportReadiness({ peppol: { provider: "billit", apiKey: "replace_me" } }, true);
+  assert.equal(missingKey.ok, false);
+  assert.equal(missingKey.errorCode, "peppol_api_key_not_configured");
+
+  const live = peppolTransportReadiness({ peppol: { provider: "billit", apiKey: "live_peppol_secret_123456789" } }, true);
+  assert.equal(live.ok, true);
+  assert.equal(live.transport, "billit");
+  assert.equal(live.mode, "live");
 });
 
 test("stripe-webhook: HMAC signature valideert exact", () => {
