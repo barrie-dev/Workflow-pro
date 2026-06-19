@@ -3,7 +3,9 @@ const path = require("path");
 const { execFileSync } = require("child_process");
 const { config } = require("./config");
 
-const dbPath = path.join(config.root, "data", "workflowpro-fullstack.json");
+const dbPath = process.env.WORKFLOWPRO_DATA_FILE
+  ? path.resolve(process.env.WORKFLOWPRO_DATA_FILE)
+  : path.join(config.root, "data", "workflowpro-fullstack.json");
 const supabaseBridgePath = path.join(config.root, "src", "lib", "supabase-rest-bridge.js");
 
 class JsonDataAdapter {

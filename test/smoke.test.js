@@ -5,16 +5,30 @@
 const { test, before, after } = require("node:test");
 const assert = require("node:assert");
 const { spawn } = require("node:child_process");
+const fs = require("node:fs");
+const os = require("node:os");
 const path = require("node:path");
 
 const PORT = Number(process.env.SMOKE_PORT || 4399);
 const BASE = `http://127.0.0.1:${PORT}`;
 let server;
+let smokeDir;
 
 before(async () => {
+  smokeDir = fs.mkdtempSync(path.join(os.tmpdir(), "workflowpro-smoke-"));
   server = spawn(process.execPath, ["src/server.js"], {
     cwd: path.join(__dirname, ".."),
-    env: { ...process.env, PORT: String(PORT), STORAGE_ADAPTER: "json", REQUIRE_ADMIN_MFA: "false", NODE_ENV: "test", RELEASE_CHANNEL: "pilot", RATE_LIMIT_DISABLED: "true" },
+    env: {
+      ...process.env,
+      PORT: String(PORT),
+      STORAGE_ADAPTER: "json",
+      WORKFLOWPRO_DATA_FILE: path.join(smokeDir, "workflowpro-smoke.json"),
+      WORKFLOWPRO_INITIAL_ADMIN_PASSWORD: "Demo2026!",
+      REQUIRE_ADMIN_MFA: "false",
+      NODE_ENV: "test",
+      RELEASE_CHANNEL: "pilot",
+      RATE_LIMIT_DISABLED: "true"
+    },
     stdio: "pipe",
   });
   let bootLog = "";
@@ -29,7 +43,10 @@ before(async () => {
   throw new Error("server kwam niet op binnen 20s:\n" + bootLog);
 });
 
-after(() => { if (server && server.exitCode === null) server.kill(); });
+after(() => {
+  if (server && server.exitCode === null) server.kill();
+  if (smokeDir) fs.rmSync(smokeDir, { recursive: true, force: true });
+});
 
 test("health endpoint geeft ok", async () => {
   const d = await (await fetch(`${BASE}/api/health`)).json();
