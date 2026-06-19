@@ -6,7 +6,8 @@
     super_admin: "platform-superadmin",
     tenant_admin: "platform-admin",
     manager:      "platform-manager",
-    employee:     "platform-employee"
+    employee:     "platform-employee",
+    reseller:     "platform-reseller"
   };
 
   function showPlatform(role) {

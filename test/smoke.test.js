@@ -61,7 +61,7 @@ test("login pagina serveert HTML", async () => {
 });
 
 test("platform-scripts serveren met 200", async () => {
-  for (const p of ["admin", "manager", "employee", "superadmin"]) {
+  for (const p of ["admin", "manager", "employee", "superadmin", "reseller"]) {
     const r = await fetch(`${BASE}/js/platforms/${p}.js`);
     assert.equal(r.status, 200, `${p}.js moet 200 geven`);
   }

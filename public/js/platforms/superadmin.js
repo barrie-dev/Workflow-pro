@@ -271,6 +271,9 @@
       <button class="sa-nav-item" data-view="staff">
         <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>Platformteam
       </button>
+      <button class="sa-nav-item" data-view="resellers">
+        <svg viewBox="0 0 24 24"><path d="M12 2l9 4v6c0 5-3.8 9.7-9 11-5.2-1.3-9-6-9-11V6l9-4zm0 2.2L5 7v5c0 3.9 2.9 7.6 7 8.9 4.1-1.3 7-5 7-8.9V7l-7-2.8zM11 8h2v3h3v2h-3v3h-2v-3H8v-2h3V8z"/></svg>Resellers
+      </button>
       <button class="sa-nav-item" data-view="audit">
         <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6zm2-8h8v2H8zm0 4h5v2H8z"/></svg>Audit Log
       </button>
@@ -315,7 +318,7 @@
         document.getElementById("saTopTitle").textContent = {
           dashboard:"Dashboard", tenants:"Tenants",
           billing:"Facturatie / MRR", modules:"Modules & Bundels", integrations:"Integraties", system:"Systeem", support:"Support",
-          staff:"Platformteam", audit:"Audit Log", settings:"Instellingen"
+          staff:"Platformteam", resellers:"Resellers", audit:"Audit Log", settings:"Instellingen"
         }[_view] || _view;
         document.getElementById("saTopActions").innerHTML = "";
         document.getElementById("saSidebar").classList.remove("open");
@@ -368,7 +371,7 @@
   }
 
   // ── Router ─────────────────────────────────────────────────
-  const VIEWS = { dashboard, tenants, billing, modules, integrations, system, support, staff, audit, settings };
+  const VIEWS = { dashboard, tenants, billing, modules, integrations, system, support, staff, resellers, audit, settings };
   function renderView() { (VIEWS[_view] || dashboard)(); }
 
   // ══════════════════════════════════════════════════════════
@@ -764,6 +767,85 @@
   </div>` : `<div class="sa-empty"><div class="sa-empty-icon">✅</div>Geen server errors — systeem is gezond</div>`}
 </div>`;
     } catch(e) { content().innerHTML = err(e); }
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // VIEW: Resellers (platform-partnerprogramma + commissie)
+  // ══════════════════════════════════════════════════════════
+  async function resellers() {
+    const c = content(); c.innerHTML = loader();
+    try {
+      const d = await api("/api/admin/resellers");
+      const rows = d.resellers || [];
+      const canManage = !!d.canManage;
+      c.innerHTML = `
+<div class="sa-page-head"><h1>Resellers<span class="cnt">${rows.length}</span></h1></div>
+<div class="sa-card" style="margin-bottom:16px"><div style="padding:14px 16px;font-size:13px;color:#475569;line-height:1.5">
+  Resellers brengen klanten aan en verdienen een terugkerende commissie (% van het abonnement). Ze beheren hun eigen klanten via het reseller-portaal en zien enkel commerciële gegevens — geen operationele klantdata.
+  ${canManage ? "" : "<br><strong>Alleen de hoofd-superadmin kan resellers aanmaken of wijzigen.</strong>"}
+</div></div>
+${canManage ? `
+<div class="sa-card" style="margin-bottom:16px">
+  <div class="sa-card-head"><div class="sa-card-title">Nieuwe reseller</div></div>
+  <div style="padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:680px">
+    <input id="rsName" placeholder="Naam (partner/bedrijf)" style="padding:9px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
+    <input id="rsContact" placeholder="Contact-e-mail (optioneel)" style="padding:9px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
+    <input id="rsLogin" type="email" placeholder="Login-e-mail" style="padding:9px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
+    <input id="rsPass" type="password" placeholder="Wachtwoord (sterk: 12+ tekens)" style="padding:9px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
+    <div><label style="font-size:12px;color:#64748b">Commissie %</label><input id="rsPct" type="number" min="0" max="100" value="10" style="width:100%;padding:9px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px"></div>
+    <div style="grid-column:1/3;display:flex;gap:8px;align-items:center"><button class="sa-btn btn-primary sm" id="rsCreate">Reseller toevoegen</button><span id="rsMsg" style="font-size:12.5px;color:#dc2626"></span></div>
+  </div>
+</div>` : ""}
+<div class="sa-card"><div class="sa-tbl-wrap"><table class="sa-tbl">
+  <thead><tr><th>Reseller</th><th>Status</th><th>Commissie</th><th>Klanten</th><th>MRR</th><th>Commissie/mnd</th><th></th></tr></thead>
+  <tbody id="rsBody"></tbody>
+</table></div></div>`;
+
+      function render() {
+        const tb = document.getElementById("rsBody");
+        tb.innerHTML = rows.map(r => {
+          const status = r.status === "active" ? badge("actief", "badge-green") : badge("gepauzeerd", "badge-gray");
+          let action = `<span class="sub">—</span>`;
+          if (canManage) {
+            action = `<button class="sa-btn btn-secondary sm" data-edit="${r.id}">Commissie</button> `
+              + (r.status === "active" ? `<button class="sa-btn btn-secondary sm" data-pause="${r.id}">Pauzeren</button>` : `<button class="sa-btn btn-primary sm" data-resume="${r.id}">Activeren</button>`);
+          }
+          return `<tr>
+            <td><div class="main">${esc(r.name)}</div>${r.contactEmail ? `<span class="sub">${esc(r.contactEmail)}</span>` : ""}</td>
+            <td>${status}</td>
+            <td>${r.defaultCommissionPct || 0}%</td>
+            <td>${r.clientCount || 0}</td>
+            <td>${fmtEur(r.totalMrr || 0)}</td>
+            <td style="font-weight:700;color:#15803d">${fmtEur(r.totalCommission || 0)}</td>
+            <td style="text-align:right">${action}</td>
+          </tr>`;
+        }).join("") || `<tr><td colspan="7"><div class="sa-empty"><div class="sa-empty-icon">🤝</div>Nog geen resellers</div></td></tr>`;
+        tb.querySelectorAll("[data-pause]").forEach(b => b.addEventListener("click", () => setStatus(b.dataset.pause, "paused")));
+        tb.querySelectorAll("[data-resume]").forEach(b => b.addEventListener("click", () => setStatus(b.dataset.resume, "active")));
+        tb.querySelectorAll("[data-edit]").forEach(b => b.addEventListener("click", () => editPct(b.dataset.edit)));
+      }
+      async function setStatus(id, status) { try { await api(`/api/admin/resellers/${id}`, { method: "PATCH", body: JSON.stringify({ status }) }); resellers(); } catch (e) { alert(e.message); } }
+      function editPct(id) {
+        const r = rows.find(x => x.id === id) || {};
+        const pct = window.prompt(`Commissie-% voor ${r.name}:`, String(r.defaultCommissionPct || 0));
+        if (pct == null) return;
+        api(`/api/admin/resellers/${id}`, { method: "PATCH", body: JSON.stringify({ defaultCommissionPct: Number(pct) }) }).then(() => resellers()).catch(e => alert(e.message));
+      }
+      if (canManage) {
+        document.getElementById("rsCreate").addEventListener("click", async () => {
+          const name = document.getElementById("rsName").value.trim();
+          const contactEmail = document.getElementById("rsContact").value.trim();
+          const loginEmail = document.getElementById("rsLogin").value.trim();
+          const password = document.getElementById("rsPass").value;
+          const defaultCommissionPct = Number(document.getElementById("rsPct").value) || 0;
+          const msg = document.getElementById("rsMsg"); msg.textContent = "";
+          if (!name || !loginEmail || !password) { msg.textContent = "Naam, login-e-mail en wachtwoord zijn verplicht."; return; }
+          try { await api("/api/admin/resellers", { method: "POST", body: JSON.stringify({ name, contactEmail, loginEmail, password, defaultCommissionPct }) }); resellers(); }
+          catch (e) { msg.textContent = e.message; }
+        });
+      }
+      render();
+    } catch (e) { content().innerHTML = err(e); }
   }
 
   // ══════════════════════════════════════════════════════════
