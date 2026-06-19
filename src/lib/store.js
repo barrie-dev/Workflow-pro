@@ -78,6 +78,7 @@ const REQUIRED_COLLECTIONS = [
   "supportTickets",
   "salesLeads",
   "partners",
+  "resellers",
   "bundles",
   "migrationHistory"
 ];
@@ -128,6 +129,7 @@ function emptySeed() {
     supportTickets: [],
     salesLeads: [],
     partners: [],
+    resellers: [],
     migrationHistory: []
   };
 }

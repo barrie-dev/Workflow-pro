@@ -382,6 +382,42 @@ test("customer-start bootstrap: preview is read-only, apply is idempotent", asyn
   assert.equal(repeated.created.length, 0, "tweede apply maakt niets dubbel aan");
 });
 
+// ── Reseller-programma: aanmaken, klant aanmaken, commissie, isolatie ──
+test("reseller: god maakt reseller, reseller maakt klant + ziet commissie, niet die van anderen", async () => {
+  const god = await login("super@workflowpro.be", "Demo2026!");
+  const H = t => ({ "Content-Type": "application/json", Authorization: `Bearer ${t}` });
+  const stamp = Date.now();
+  const loginEmail = `reseller-${stamp}@partners.be`;
+  const pass = "ResellerSterk2026!@#";
+  // 1) god maakt reseller met 10% commissie
+  const cr = await fetch(`${BASE}/api/admin/resellers`, { method: "POST", headers: H(god.token), body: JSON.stringify({ name: "Partner X", loginEmail, password: pass, defaultCommissionPct: 10 }) });
+  assert.equal(cr.status, 201);
+  // 2) reseller logt in
+  const rs = await login(loginEmail, pass);
+  assert.ok(rs.token, "reseller kan inloggen");
+  // 3) reseller maakt een klant aan
+  const adminEmail = `klant-${stamp}@klant.be`;
+  const mk = await fetch(`${BASE}/api/reseller/clients`, { method: "POST", headers: H(rs.token), body: JSON.stringify({ name: "Klant van X", plan: "business", adminEmail, adminName: "Klant Admin", adminPassword: "KlantSterk2026!@#" }) });
+  assert.equal(mk.status, 201);
+  const tenantId = (await mk.json()).client.tenantId;
+  // 4) god zet de klant actief → MRR + commissie > 0
+  await fetch(`${BASE}/api/admin/tenants/${tenantId}`, { method: "PATCH", headers: H(god.token), body: JSON.stringify({ status: "active" }) });
+  const ov = await (await fetch(`${BASE}/api/reseller/clients`, { headers: H(rs.token) })).json();
+  const mine = ov.rows.find(r => r.tenantId === tenantId);
+  assert.ok(mine, "reseller ziet eigen klant");
+  assert.equal(mine.commissionPct, 10);
+  assert.ok(mine.mrr > 0 && mine.commission > 0, "commissie = % van MRR");
+  // 5) tweede reseller ziet die klant NIET
+  const loginEmail2 = `reseller2-${stamp}@partners.be`;
+  await fetch(`${BASE}/api/admin/resellers`, { method: "POST", headers: H(god.token), body: JSON.stringify({ name: "Partner Y", loginEmail: loginEmail2, password: pass, defaultCommissionPct: 5 }) });
+  const rs2 = await login(loginEmail2, pass);
+  const ov2 = await (await fetch(`${BASE}/api/reseller/clients`, { headers: H(rs2.token) })).json();
+  assert.ok(!ov2.rows.some(r => r.tenantId === tenantId), "reseller ziet enkel eigen klanten");
+  // 6) reseller mag geen platform-admin endpoints
+  assert.equal((await fetch(`${BASE}/api/admin/resellers`, { headers: H(rs.token) })).status, 403, "reseller geen admin-toegang");
+  assert.equal((await fetch(`${BASE}/api/admin/stats`, { headers: H(rs.token) })).status, 403);
+});
+
 // ── Integraties: Exact Online + Robaws ──
 test("integraties: Exact Online + Robaws in registry, verbindbaar + sync", async () => {
   const su = await login("super@workflowpro.be", "Demo2026!");

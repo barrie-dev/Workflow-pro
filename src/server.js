@@ -26,6 +26,8 @@ const {
   PLATFORM_SCOPES,
   platformScopesOf,
   assertPlatformScope,
+  isReseller,
+  assertReseller,
   assertAdminMfa,
   assertSupportWrite,
   buildSupportGrant,
@@ -89,6 +91,7 @@ const { readiness, applyKbo, createDemoGoldenPath } = require("./modules/golden-
 const { todayPayload, completeWorkorder, attachWorkorderPhoto, signWorkorder, syncMobileQueue } = require("./modules/mobile");
 const { clockIn, clockOut, approveExpense, managementReport } = require("./modules/operations");
 const { listIntegrations, connectIntegration, updateMapping, runSync, retrySync, listProviders } = require("./modules/integrations");
+const { commissionOverview, publicReseller, commissionPctFor } = require("./modules/resellers");
 const { tenantStatus, unlockUser, listBackups, createBackup, backupPreview, restoreBackup, publicStatus } = require("./modules/admin");
 const { createNotification, listNotifications, markNotificationRead, generateReminders, notificationSummary } = require("./modules/notifications");
 const { importEmployees } = require("./modules/imports");
@@ -846,7 +849,9 @@ http.createServer(async (req, res) => {
         ...(body.name ? { name: body.name } : {}),
         ...(body.plan ? { plan: body.plan } : {}),
         ...(body.status ? { status: body.status } : {}),
-        ...(body.billingEmail !== undefined ? { billingEmail: body.billingEmail } : {})
+        ...(body.billingEmail !== undefined ? { billingEmail: body.billingEmail } : {}),
+        ...(body.resellerId !== undefined ? { resellerId: body.resellerId || null } : {}),
+        ...(typeof body.commissionPct === "number" ? { commissionPct: body.commissionPct } : {})
       };
       const next = store.updateTenant(tenant.id, patch);
       store.audit({ actor: user.email, tenantId: tenant.id, action: "tenant_updated", area: "tenants", detail: JSON.stringify(patch) });
@@ -994,6 +999,109 @@ http.createServer(async (req, res) => {
         .filter(u => u.tenantId === tnt.id && u.active !== false && u.role !== "super_admin")
         .map(u => ({ id: u.id, name: u.name, email: u.email, role: u.role }));
       sendJson(res, 200, { ok: true, users });
+      return;
+    }
+
+    // ── Resellers (platform-partnerprogramma): beheer door superadmin ──────────
+    if (url.pathname === "/api/admin/resellers" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const resellers = (store.data.resellers || []).map(r => publicReseller(r, store));
+      sendJson(res, 200, { ok: true, resellers, canManage: isPlatformGod(user) });
+      return;
+    }
+    if (url.pathname === "/api/admin/resellers" && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformGod(user);
+      const body = await readBody(req);
+      const name = String(body.name || "").trim();
+      const loginEmail = String(body.loginEmail || "").trim().toLowerCase();
+      if (!name) return sendJson(res, 400, { ok: false, error: "Naam is verplicht" });
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(loginEmail)) return sendJson(res, 400, { ok: false, error: "Geldig login-e-mailadres is verplicht" });
+      if (store.getUserByEmail(loginEmail)) return sendJson(res, 409, { ok: false, error: "Er bestaat al een gebruiker met dit e-mailadres" });
+      assertStrongPassword(body.password);
+      const pct = Math.min(Math.max(Number(body.defaultCommissionPct) || 0, 0), 100);
+      const now = new Date().toISOString();
+      const reseller = store.insert("resellers", {
+        id: `reseller_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+        tenantId: null, name, contactEmail: String(body.contactEmail || loginEmail),
+        status: "active", defaultCommissionPct: pct, createdBy: user.email, createdAt: now
+      });
+      const loginUser = store.insert("users", {
+        id: `reseller_user_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+        tenantId: null, name, email: loginEmail, passwordHash: hashPassword(body.password),
+        role: "reseller", permissions: [], resellerId: reseller.id,
+        mfaEnabled: false, mfaEnforced: false, active: true, createdAt: now
+      });
+      store.audit({ actor: user.email, tenantId: null, action: "reseller_created", area: "resellers", detail: `${name} (${loginEmail}) ${pct}%` });
+      sendJson(res, 201, { ok: true, reseller: publicReseller(reseller, store), login: { email: loginUser.email } });
+      return;
+    }
+    const adminResellerMatch = url.pathname.match(/^\/api\/admin\/resellers\/([^/]+)$/);
+    if (adminResellerMatch && req.method === "PATCH") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformGod(user);
+      const reseller = store.get("resellers", adminResellerMatch[1]);
+      if (!reseller) return sendJson(res, 404, { ok: false, error: "Reseller niet gevonden" });
+      const body = await readBody(req);
+      const patch = {};
+      if (typeof body.status === "string" && ["active", "paused"].includes(body.status)) patch.status = body.status;
+      if (typeof body.name === "string" && body.name.trim()) patch.name = body.name.trim();
+      if (body.defaultCommissionPct !== undefined) patch.defaultCommissionPct = Math.min(Math.max(Number(body.defaultCommissionPct) || 0, 0), 100);
+      const updated = store.update("resellers", reseller.id, { ...patch, updatedAt: new Date().toISOString() });
+      // Reseller pauzeren → ook diens login-account (de)activeren.
+      if (patch.status) {
+        (store.data.users || []).filter(u => u.role === "reseller" && u.resellerId === reseller.id)
+          .forEach(u => store.update("users", u.id, { active: patch.status === "active" }));
+      }
+      store.audit({ actor: user.email, tenantId: null, action: "reseller_updated", area: "resellers", detail: `${reseller.name} ${JSON.stringify(patch)}` });
+      sendJson(res, 200, { ok: true, reseller: publicReseller(updated, store) });
+      return;
+    }
+
+    // ── Reseller-portaal: enkel commerciële data van EIGEN klanten ─────────────
+    if (url.pathname === "/api/reseller/clients" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertReseller(user);
+      const reseller = store.get("resellers", user.resellerId);
+      if (!reseller || reseller.status !== "active") return sendJson(res, 403, { ok: false, error: "Reseller-account niet actief" });
+      sendJson(res, 200, { ok: true, reseller: { name: reseller.name, defaultCommissionPct: reseller.defaultCommissionPct }, ...commissionOverview(store, reseller) });
+      return;
+    }
+    if (url.pathname === "/api/reseller/clients" && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertReseller(user);
+      const reseller = store.get("resellers", user.resellerId);
+      if (!reseller || reseller.status !== "active") return sendJson(res, 403, { ok: false, error: "Reseller-account niet actief" });
+      const body = await readBody(req);
+      const name = String(body.name || "").trim();
+      const adminEmail = String(body.adminEmail || "").trim().toLowerCase();
+      if (!name) return sendJson(res, 400, { ok: false, error: "Klantnaam is verplicht" });
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(adminEmail)) return sendJson(res, 400, { ok: false, error: "Geldig admin-e-mailadres is verplicht" });
+      if (store.getUserByEmail(adminEmail)) return sendJson(res, 409, { ok: false, error: "Er bestaat al een gebruiker met dit e-mailadres" });
+      assertStrongPassword(body.adminPassword);
+      const plan = ["starter", "business", "enterprise"].includes(body.plan) ? body.plan : "business";
+      const now = new Date().toISOString();
+      const tenant = store.insert("tenants", {
+        id: `tenant_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+        name, plan, status: "trial", billingEmail: adminEmail,
+        invoiceProfile: {}, onboarding: {}, billingOps: { invoiceHistory: [] },
+        supportAccess: { allowed: false }, resellerId: reseller.id, createdAt: now
+      });
+      store.insert("users", {
+        id: `user_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+        tenantId: tenant.id, name: body.adminName || "Klant admin", email: adminEmail,
+        passwordHash: hashPassword(body.adminPassword), role: "tenant_admin",
+        permissions: BUSINESS_ADMIN_PERMISSIONS, mfaEnabled: false, mfaEnforced: false,
+        active: true, createdAt: now
+      });
+      store.audit({ actor: user.email, tenantId: tenant.id, action: "reseller_client_created", area: "resellers", detail: `${reseller.name} → ${name}` });
+      sendJson(res, 201, { ok: true, client: { tenantId: tenant.id, name: tenant.name, plan: tenant.plan, status: tenant.status, commissionPct: commissionPctFor(tenant, reseller) } });
       return;
     }
 

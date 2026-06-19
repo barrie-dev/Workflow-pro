@@ -390,7 +390,19 @@ function assertPlatformGod(user) {
 
 // Platform-secties waartoe een teamlid toegang kan krijgen. De god heeft altijd
 // alles; legacy-teamleden zonder platformScopes-veld ook (niet-brekend).
-const PLATFORM_SCOPES = ["tenants", "billing", "modules", "integrations", "system", "support", "audit", "settings"];
+const PLATFORM_SCOPES = ["tenants", "billing", "modules", "integrations", "system", "support", "audit", "settings", "resellers"];
+
+function isReseller(user) {
+  return user?.role === "reseller";
+}
+
+function assertReseller(user) {
+  if (!isReseller(user)) {
+    const error = new Error("Reseller-account vereist");
+    error.status = 403;
+    throw error;
+  }
+}
 
 function platformScopesOf(user) {
   if (isPlatformGod(user)) return PLATFORM_SCOPES.slice();
@@ -474,6 +486,8 @@ module.exports = {
   platformScopesOf,
   hasPlatformScope,
   assertPlatformScope,
+  isReseller,
+  assertReseller,
   assertAdminMfa,
   isEmployee,
   isManager,
