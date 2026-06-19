@@ -107,6 +107,7 @@ const { listAuditEvents } = require("./modules/audit");
 const { sendMail, setRuntimeConfig } = require("./lib/mailer");
 const { loadPlatformConfig, publicPlatformConfig, savePlatformConfig } = require("./modules/platform-config");
 const { createPaymentLink, markInvoicePaidById } = require("./modules/payments");
+const { verifyStripeSignature } = require("./modules/stripe-webhook");
 const { seedDemoData, clearDemoData } = require("./modules/demo-seed");
 const { buildUbl, validatePeppol, sendPeppolInvoice } = require("./modules/peppol-invoice");
 const {
@@ -392,21 +393,6 @@ function serveStatic(req, res) {
   });
 }
 
-function verifyStripeSignature(rawBody, signatureHeader) {
-  if (!config.stripe.webhookSecret) return { ok: true, mode: "unsigned-testmode" };
-  const parts = Object.fromEntries(String(signatureHeader || "").split(",").map(part => part.split("=", 2)));
-  const timestamp = parts.t;
-  const signature = parts.v1;
-  if (!timestamp || !signature) return { ok: false, mode: "missing-signature" };
-  const expected = crypto
-    .createHmac("sha256", config.stripe.webhookSecret)
-    .update(`${timestamp}.${rawBody}`)
-    .digest("hex");
-  const ok = Buffer.byteLength(signature) === Buffer.byteLength(expected)
-    && crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
-  return { ok, mode: "signed" };
-}
-
 http.createServer(async (req, res) => {
   const url = new URL(req.url, config.appUrl);
   let errorTenantId = url.pathname.match(/^\/api\/tenants\/([^/]+)\//)?.[1] || null;
@@ -476,7 +462,10 @@ http.createServer(async (req, res) => {
 
     if (url.pathname === "/api/webhooks/stripe" && req.method === "POST") {
       const rawBody = await readRawBody(req);
-      const signature = verifyStripeSignature(rawBody, req.headers["stripe-signature"]);
+      const signature = verifyStripeSignature(rawBody, req.headers["stripe-signature"], {
+        webhookSecret: config.stripe.webhookSecret,
+        requireSignature: config.isProduction
+      });
       if (!signature.ok) return sendJson(res, 400, { ok: false, error: "Invalid Stripe signature" });
       let event;
       try {

@@ -10,6 +10,8 @@ const {
 } = require("../src/lib/auth");
 const { Store } = require("../src/lib/store");
 const { runSupportAccessReview } = require("../src/modules/support-access");
+const { verifyStripeSignature } = require("../src/modules/stripe-webhook");
+const crypto = require("node:crypto");
 
 class MemAdapter {
   constructor(data) { this.data = data; }
@@ -130,4 +132,32 @@ test("support-toegang: geen mededeling als niet verstreken / autoRenew uit / nie
   ]);
   const res = runSupportAccessReview(store, Date.now());
   assert.equal(res.notified.length, 0, "geen enkele tenant krijgt een mededeling");
+});
+
+test("stripe-webhook: unsigned alleen toegestaan buiten productie", () => {
+  const local = verifyStripeSignature("{}", "", { webhookSecret: "", requireSignature: false });
+  assert.equal(local.ok, true);
+  assert.equal(local.mode, "unsigned-testmode");
+
+  const prod = verifyStripeSignature("{}", "", { webhookSecret: "", requireSignature: true });
+  assert.equal(prod.ok, false);
+  assert.equal(prod.mode, "missing-webhook-secret");
+});
+
+test("stripe-webhook: HMAC signature valideert exact", () => {
+  const body = JSON.stringify({ id: "evt_123", type: "invoice.payment_succeeded" });
+  const secret = "whsec_test_secret_123456789";
+  const timestamp = "1781845000";
+  const signature = crypto
+    .createHmac("sha256", secret)
+    .update(`${timestamp}.${body}`)
+    .digest("hex");
+
+  const ok = verifyStripeSignature(body, `t=${timestamp},v1=${signature}`, { webhookSecret: secret, requireSignature: true });
+  assert.equal(ok.ok, true);
+  assert.equal(ok.mode, "signed");
+
+  const bad = verifyStripeSignature(body, `t=${timestamp},v1=${signature.slice(0, -1)}0`, { webhookSecret: secret, requireSignature: true });
+  assert.equal(bad.ok, false);
+  assert.equal(bad.mode, "signed");
 });
