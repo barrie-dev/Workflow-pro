@@ -334,6 +334,37 @@ test("rechten per user: PATCH saneert escalatie-poging", async () => {
   }
 });
 
+test("customer-start bootstrap: preview is read-only, apply is idempotent", async () => {
+  const admin = await login("admin@demobouw.be", "Demo2026!");
+  const H = { "Content-Type": "application/json", Authorization: `Bearer ${admin.token}` };
+  const date = "2027-06-19";
+
+  const preview = await fetch(`${BASE}/api/tenants/t_demo/customer-start/bootstrap?date=${date}&targetWorkorders=1`, { headers: H });
+  assert.equal(preview.status, 200);
+  const before = (await preview.json()).bootstrap;
+  const targetWorkorders = before.existing.openWorkorders + 2;
+
+  const apply = await fetch(`${BASE}/api/tenants/t_demo/customer-start/bootstrap`, {
+    method: "POST",
+    headers: H,
+    body: JSON.stringify({ date, targetWorkorders })
+  });
+  assert.equal(apply.status, 201);
+  const applied = (await apply.json()).bootstrap;
+  assert.equal(applied.after.readyBefore, true, "na apply is customer-start technisch klaar");
+  assert.ok(applied.created.some(row => row.collection === "workorders"), "maakt ontbrekende werkbonnen aan");
+  assert.ok(applied.created.some(row => row.collection === "shifts") || before.existing.dayShifts > 0, "planning bestaat of wordt aangemaakt");
+
+  const repeat = await fetch(`${BASE}/api/tenants/t_demo/customer-start/bootstrap`, {
+    method: "POST",
+    headers: H,
+    body: JSON.stringify({ date, targetWorkorders })
+  });
+  assert.equal(repeat.status, 201);
+  const repeated = (await repeat.json()).bootstrap;
+  assert.equal(repeated.created.length, 0, "tweede apply maakt niets dubbel aan");
+});
+
 // ── GDPR support-toegang: consent + impersonatie + sliding expiry ──
 test("support: consent met auto-renew zet jaarlijkse review-datum", async () => {
   const admin = await login("admin@demobouw.be", "Demo2026!");
