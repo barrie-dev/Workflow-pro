@@ -4530,8 +4530,8 @@ ${billing.status === "trial" ? `<div style="background:#fffbeb;border:1px solid 
       }).join("")}
     </div>
     <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-      <button class="adm-btn ${hasPayment?"adm-btn-secondary":"adm-btn-primary"} adm-btn-sm" id="billAddPayment">${hasPayment?"Betaalmethode wijzigen":"+ Betaalmethode toevoegen"}</button>
-      <span style="font-size:12px;color:#94A3B8;">Veilig betalen — je betaalgegevens worden door onze betaalpartner verwerkt.</span>
+      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="billPortal">⚙️ Abonnement &amp; betaalmethode beheren</button>
+      <span style="font-size:12px;color:#94A3B8;">Veilig betalen — je betaalgegevens worden door onze betaalpartner (Stripe) verwerkt. Upgraden, downgraden, betaalmethode en opzeggen regel je in het beheerportaal.</span>
     </div>
   </div>
 </div>
@@ -4554,15 +4554,17 @@ ${billing.status === "trial" ? `<div style="background:#fffbeb;border:1px solid 
       </table></div>`}
 </div>`;
 
-      // Bundel kiezen
+      // Bundel kiezen → echte Stripe Checkout (mode=subscription). Zonder live
+      // Stripe-sleutel geeft de server een mock-URL terug en is het plan meteen actief.
       content.querySelectorAll(".bill-select").forEach(btn => {
         btn.addEventListener("click", async () => {
           const plan = btn.dataset.plan;
-          if (!confirm(`Overschakelen naar het ${plan}-abonnement?`)) return;
+          if (!confirm(`Overschakelen naar het ${plan}-abonnement? Je wordt naar de beveiligde betaalpagina geleid.`)) return;
           btn.disabled = true; btn.textContent = "Bezig…";
           try {
-            await api("POST", "/billing/select-plan", { plan });
-            window.showToast && window.showToast(`Abonnement gewijzigd naar ${plan} ✓`, "success");
+            const r = await api("POST", "/billing/checkout", { plan });
+            if (r.provider === "stripe" && r.url) { window.location.href = r.url; return; }
+            window.showToast && window.showToast(`Abonnement geactiveerd (${plan}) ✓`, "success");
             renderBilling();
           } catch(e) { window.showToast && window.showToast(e.message, "error"); btn.disabled = false; btn.textContent = "Kies"; }
         });
@@ -4570,14 +4572,12 @@ ${billing.status === "trial" ? `<div style="background:#fffbeb;border:1px solid 
       content.querySelectorAll(".bill-contact").forEach(btn => {
         btn.addEventListener("click", () => window.showToast && window.showToast("Voor Enterprise maken we een offerte op maat. Neem contact op via je accountmanager of support.", "info"));
       });
-      // Betaalmethode toevoegen (via betaalpartner-flow)
-      document.getElementById("billAddPayment")?.addEventListener("click", async () => {
+      // Self-service beheer via Stripe Billing Portal (upgrade/downgrade/opzeggen/betaalmethode).
+      document.getElementById("billPortal")?.addEventListener("click", async () => {
         try {
-          await api("POST", "/billing/setup-intent", {});
-          const ref = "card_" + Math.random().toString(16).slice(2, 10);
-          await api("POST", "/billing/payment-method", { paymentMethodRef: ref });
-          window.showToast && window.showToast("Betaalmethode toegevoegd ✓", "success");
-          renderBilling();
+          const r = await api("POST", "/billing/portal", {});
+          if (r.provider === "stripe" && r.url) { window.location.href = r.url; return; }
+          window.showToast && window.showToast("Het beheerportaal is beschikbaar zodra betalingen live staan (Stripe-sleutel geconfigureerd).", "info");
         } catch(e) { window.showToast && window.showToast(e.message, "error"); }
       });
     } catch(e) { content.innerHTML = `<div style="padding:20px;color:#dc2626">Fout: ${e.message}</div>`; }

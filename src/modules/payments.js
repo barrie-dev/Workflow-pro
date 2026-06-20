@@ -103,4 +103,4 @@ function markInvoicePaidById(store, invoiceId, source = "betaling") {
   return updated;
 }
 
-module.exports = { createPaymentLink, markInvoicePaidById, isRealStripeKey };
+module.exports = { createPaymentLink, markInvoicePaidById, isRealStripeKey, stripePost, formEncode };

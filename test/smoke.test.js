@@ -741,7 +741,36 @@ test("sso: add-on gating, configuratie, resolve, login-redirect, metadata en ACS
   assert.match(acs.headers.get("location") || "", /sso_error=/);
 });
 
+// ── Stripe-abonnementen: checkout + portal (mock-modus zonder live key) ─────
+test("billing: checkout + portal endpoints (mock), auth-gating", async () => {
+  const admin = await login("admin@demobouw.be", "Demo2026!");
+  const H = t => ({ "Content-Type": "application/json", Authorization: `Bearer ${t}` });
+
+  // Employee mag niet factureren
+  const emp = await login("jan@demobouw.be", "Demo2026!");
+  const denied = await fetch(`${BASE}/api/tenants/t_demo/billing/checkout`, { method: "POST", headers: H(emp.token), body: JSON.stringify({ plan: "business" }) });
+  assert.equal(denied.status, 403, "employee → geen billing");
+
+  // Admin checkout (mock): activeert plan + geeft mock-URL
+  const co = await (await fetch(`${BASE}/api/tenants/t_demo/billing/checkout`, { method: "POST", headers: H(admin.token), body: JSON.stringify({ plan: "business" }) })).json();
+  assert.equal(co.ok, true);
+  assert.equal(co.provider, "mock", "zonder live key → mock");
+  assert.match(co.url, /abonnement=mock/);
+
+  // Onbekend plan → 400
+  const bad = await fetch(`${BASE}/api/tenants/t_demo/billing/checkout`, { method: "POST", headers: H(admin.token), body: JSON.stringify({ plan: "bestaat-niet" }) });
+  assert.equal(bad.status, 400);
+
+  // Portal (mock)
+  const portal = await (await fetch(`${BASE}/api/tenants/t_demo/billing/portal`, { method: "POST", headers: H(admin.token), body: "{}" })).json();
+  assert.equal(portal.ok, true);
+  assert.equal(portal.provider, "mock");
+});
+
 // ── Wachtwoord vergeten → reset via e-maillink ──────────────────────────────
+// LET OP: dit verandert het wachtwoord van de demo-admin onomkeerbaar (de oude
+// seed 'Demo2026!' is korter dan het sterkte-beleid, dus niet herstelbaar via de
+// reset-endpoint). Daarom MOET deze test als laatste lopen in dit bestand.
 test("password-reset: forgot stuurt link (dev), reset zet nieuw wachtwoord + login", async () => {
   // 'forgot' voor onbekend e-mail → zelfde ok-antwoord, geen enumeratie
   const unknown = await (await fetch(`${BASE}/api/auth/forgot`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: "bestaat.niet@nergens.be" }) })).json();

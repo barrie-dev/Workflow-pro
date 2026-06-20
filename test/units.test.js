@@ -278,6 +278,23 @@ test("stripe-webhook: HMAC signature valideert exact", () => {
   assert.equal(bad.mode, "signed");
 });
 
+// ── Stripe-abonnementen: pure status-mapper ──────────────────
+const { applySubscriptionEvent } = require("../src/modules/subscriptions");
+
+test("subscriptions: webhook-status mapt naar tenant-status + plan", () => {
+  const t = { id: "t1" };
+  const created = applySubscriptionEvent(t, { type: "customer.subscription.created", data: { object: { id: "sub_1", status: "active", metadata: { wfp_plan: "business" } } } });
+  assert.equal(created.status, "active");
+  assert.equal(created.plan, "business");
+  assert.equal(created.stripeSubscriptionId, "sub_1");
+  assert.equal(created.pendingPlan, null);
+
+  assert.equal(applySubscriptionEvent(t, { type: "customer.subscription.updated", data: { object: { id: "sub_1", status: "past_due" } } }).status, "past_due");
+  assert.equal(applySubscriptionEvent(t, { type: "customer.subscription.updated", data: { object: { id: "sub_1", status: "trialing" } } }).status, "trial");
+  assert.equal(applySubscriptionEvent(t, { type: "customer.subscription.deleted", data: { object: { id: "sub_1" } } }).status, "canceled");
+  assert.equal(applySubscriptionEvent(t, { type: "invoice.paid", data: { object: {} } }), null);
+});
+
 // ── SAML SSO (add-on) ────────────────────────────────────────
 const saml = require("../src/modules/saml");
 

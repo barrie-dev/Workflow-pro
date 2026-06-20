@@ -156,6 +156,7 @@ const { listAuditEvents } = require("./modules/audit");
 const { sendMail, setRuntimeConfig, isMailLive } = require("./lib/mailer");
 const { loadPlatformConfig, publicPlatformConfig, savePlatformConfig } = require("./modules/platform-config");
 const { createPaymentLink, markInvoicePaidById } = require("./modules/payments");
+const { createSubscriptionCheckout, createBillingPortalSession, applySubscriptionEvent } = require("./modules/subscriptions");
 const { verifyStripeSignature } = require("./modules/stripe-webhook");
 const { seedDemoData, clearDemoData } = require("./modules/demo-seed");
 const { buildUbl, validatePeppol, sendPeppolInvoice } = require("./modules/peppol-invoice");
@@ -531,6 +532,21 @@ http.createServer(async (req, res) => {
           createNotification(store, { id: paid.tenantId }, { type: "payment", channel: "in_app", audience: "admins", title: "Factuur betaald", body: `${paid.number} (€${Number(paid.total||0).toFixed(2)}) is betaald via Stripe.`, priority: "normal", sourceRef: `invoice:${paid.id}:paid` }, { email: "stripe-webhook" });
         }
         sendJson(res, 200, { ok: true, signature: signature.mode, invoicePaid: !!paid });
+        return;
+      }
+      // Abonnement-levenscyclus (start/wijziging/opzegging) → tenant-status syncen.
+      if (typeof event.type === "string" && event.type.startsWith("customer.subscription")) {
+        const tenantId = obj.metadata?.wfp_tenant_id
+          || (store.data.tenants || []).find(t => t.stripeCustomerId && t.stripeCustomerId === obj.customer)?.id;
+        const subTenant = tenantId ? store.get("tenants", tenantId) : null;
+        if (subTenant) {
+          const patch = applySubscriptionEvent(subTenant, event);
+          if (patch) {
+            store.updateTenant(subTenant.id, patch);
+            store.audit({ actor: "stripe-webhook", tenantId: subTenant.id, action: "subscription_synced", area: "billing", detail: `${event.type} → ${patch.status || "?"}` });
+          }
+        }
+        sendJson(res, 200, { ok: true, signature: signature.mode, subscription: event.type });
         return;
       }
       const result = processStripeWebhook(store, event);
@@ -2081,6 +2097,27 @@ http.createServer(async (req, res) => {
         assertInteractiveUser(user);
         const body = await readBody(req);
         sendJson(res, 200, { ok: true, billing: selectPlan(store, tenant, body.plan, user) });
+        return;
+      }
+      // Start/betaal een abonnement via Stripe Checkout (mode=subscription).
+      if (action === "billing/checkout" && req.method === "POST") {
+        assertCan(user, "billing");
+        assertInteractiveUser(user);
+        const body = await readBody(req);
+        try {
+          const result = await createSubscriptionCheckout(store, tenant, body.plan, user);
+          sendJson(res, 200, { ok: true, ...result });
+        } catch (e) { sendJson(res, e.status || 500, { ok: false, error: e.message }); }
+        return;
+      }
+      // Self-service abonnementsbeheer (upgrade/downgrade/opzeggen/betaalmethode).
+      if (action === "billing/portal" && req.method === "POST") {
+        assertCan(user, "billing");
+        assertInteractiveUser(user);
+        try {
+          const result = await createBillingPortalSession(store, tenant, user);
+          sendJson(res, 200, { ok: true, ...result });
+        } catch (e) { sendJson(res, e.status || 500, { ok: false, error: e.message }); }
         return;
       }
       if (action === "billing/contract-state" && req.method === "POST") {
