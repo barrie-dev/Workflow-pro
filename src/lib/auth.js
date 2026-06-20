@@ -182,6 +182,7 @@ function login(store, email, password) {
     registerFailedLogin(store, user);
     return null;
   }
+  if (user.active === false) return null; // gedeactiveerd / nog niet goedgekeurd
   if (user.mfaEnabled || user.mfaEnforced) {
     return { user, mfaRequired: true };
   }
@@ -237,6 +238,7 @@ function loginWithMfa(store, email, password, code) {
     registerFailedLogin(store, user);
     return null;
   }
+  if (user.active === false) return null; // gedeactiveerd / nog niet goedgekeurd
   if (user.mfaEnabled || user.mfaEnforced) {
     const recoveryResult = consumeRecoveryCode(store, user, code);
     const validTotp = user.mfaSecret && verifyTotp(decryptSecret(user.mfaSecret), code);

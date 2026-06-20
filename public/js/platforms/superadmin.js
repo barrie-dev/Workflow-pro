@@ -804,11 +804,15 @@ ${canManage ? `
       function render() {
         const tb = document.getElementById("rsBody");
         tb.innerHTML = rows.map(r => {
-          const status = r.status === "active" ? badge("actief", "badge-green") : badge("gepauzeerd", "badge-gray");
+          const status = r.status === "active" ? badge("actief", "badge-green")
+            : r.status === "pending" ? badge("in aanvraag", "badge-orange")
+            : badge("gepauzeerd", "badge-gray");
           let action = `<span class="sub">—</span>`;
           if (canManage) {
             action = `<button class="sa-btn btn-secondary sm" data-edit="${r.id}">Commissie</button> `
-              + (r.status === "active" ? `<button class="sa-btn btn-secondary sm" data-pause="${r.id}">Pauzeren</button>` : `<button class="sa-btn btn-primary sm" data-resume="${r.id}">Activeren</button>`);
+              + (r.status === "pending" ? `<button class="sa-btn btn-primary sm" data-resume="${r.id}">Goedkeuren</button>`
+                : r.status === "active" ? `<button class="sa-btn btn-secondary sm" data-pause="${r.id}">Pauzeren</button>`
+                : `<button class="sa-btn btn-primary sm" data-resume="${r.id}">Activeren</button>`);
           }
           return `<tr>
             <td><div class="main">${esc(r.name)}</div>${r.contactEmail ? `<span class="sub">${esc(r.contactEmail)}</span>` : ""}</td>

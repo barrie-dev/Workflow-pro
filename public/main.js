@@ -2569,6 +2569,87 @@ el("loginForm").addEventListener("submit", event => {
   submitLoginForm(event.currentTarget);
 });
 
+// ── Self-service registratie + reseller-aanvraag ──────────────────────────────
+let _registerMode = "tenant"; // "tenant" of "reseller"
+let _plansLoaded = false;
+const regForm = document.getElementById("registerForm");
+function showRegisterForm(mode) {
+  _registerMode = mode;
+  document.getElementById("loginForm").style.display = "none";
+  document.getElementById("loginToRegister").style.display = "none";
+  const demo = document.getElementById("loginDemoSection"); if (demo) demo.style.display = "none";
+  regForm.style.display = "";
+  const planField = document.getElementById("registerPlan")?.closest(".login-field");
+  const title = regForm.querySelector(".login-welcome");
+  const sub = regForm.querySelector(".login-welcome-sub");
+  const btn = regForm.querySelector("button[type=submit]");
+  document.getElementById("registerNotice").textContent = "";
+  document.getElementById("registerNotice").classList.remove("bad");
+  if (mode === "reseller") {
+    if (planField) planField.style.display = "none";
+    title.textContent = "Reseller worden";
+    sub.textContent = "Vraag een partneraccount aan — wij keuren het goed";
+    btn.textContent = "Aanvraag indienen";
+  } else {
+    if (planField) planField.style.display = "";
+    title.textContent = "Account aanmaken";
+    sub.textContent = "Start je eigen WorkFlow Pro — kies je pakket";
+    btn.textContent = "Account aanmaken & starten";
+    loadRegisterPlans();
+  }
+}
+function showLoginForm() {
+  regForm.style.display = "none";
+  document.getElementById("loginForm").style.display = "";
+  document.getElementById("loginToRegister").style.display = "";
+  const demo = document.getElementById("loginDemoSection"); if (demo) demo.style.display = "";
+}
+async function loadRegisterPlans() {
+  if (_plansLoaded) return;
+  try {
+    const r = await api("/api/plans");
+    const sel = document.getElementById("registerPlan");
+    const plans = (r.plans || []).filter(p => !p.custom);
+    sel.innerHTML = plans.map(p => `<option value="${p.key}">${p.label}${p.baseMonthly != null ? ` — €${p.baseMonthly}/gebruiker/mnd` : ""}</option>`).join("")
+      || `<option value="">Geen pakketten beschikbaar</option>`;
+    _plansLoaded = true;
+  } catch (_) { /* laat placeholder staan */ }
+}
+document.getElementById("showRegister")?.addEventListener("click", e => { e.preventDefault(); showRegisterForm("tenant"); });
+document.getElementById("showResellerApply")?.addEventListener("click", e => { e.preventDefault(); showRegisterForm("reseller"); });
+document.getElementById("showLogin")?.addEventListener("click", e => { e.preventDefault(); showLoginForm(); });
+regForm?.addEventListener("submit", async event => {
+  event.preventDefault();
+  const notice = document.getElementById("registerNotice");
+  notice.textContent = ""; notice.classList.remove("bad");
+  const f = event.currentTarget;
+  const companyName = f.elements.companyName.value.trim();
+  const name = f.elements.name.value.trim();
+  const email = f.elements.email.value.trim();
+  const password = f.elements.password.value;
+  try {
+    if (_registerMode === "reseller") {
+      await api("/api/resellers/apply", { method: "POST", body: JSON.stringify({ name: companyName || name, email, password }) });
+      showLoginForm();
+      showToast("Reseller-aanvraag ontvangen. Je account wordt na goedkeuring geactiveerd.", "success");
+      return;
+    }
+    const plan = f.elements.plan.value;
+    const result = await api("/api/auth/register", { method: "POST", body: JSON.stringify({ companyName, name, email, password, plan }) });
+    if (!result.token) throw new Error(result.error || "Registratie mislukt");
+    token = result.token;
+    localStorage.setItem("wfp_token", token);
+    window._wfpCurrentUser = result.user || null;
+    setShellAuthenticated(true);
+    const loginPage = document.getElementById("loginPage");
+    if (loginPage) loginPage.classList.add("hidden");
+    if (window.WorkFlowProPlatformRouter) window.WorkFlowProPlatformRouter.showPlatform(result.user.role);
+  } catch (error) {
+    notice.textContent = error.message || "Registratie mislukt";
+    notice.classList.add("bad");
+  }
+});
+
 el("demo").addEventListener("click", async () => {
   if (!token) return;
   el("demo").disabled = true;

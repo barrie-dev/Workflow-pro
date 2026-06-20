@@ -138,6 +138,34 @@
           </button>
         </form>
 
+        <div id="loginToRegister" style="text-align:center;margin-top:14px;font-size:0.8125rem;color:#64748b">
+          Nog geen account? <a href="#" id="showRegister" style="color:#0ea5e9;font-weight:600">Registreer je bedrijf</a>
+        </div>
+
+        <form id="registerForm" class="login-card" style="display:none">
+          <div class="login-form-header" style="margin-bottom:8px">
+            <h2 class="login-welcome">Account aanmaken</h2>
+            <p class="login-welcome-sub">Start je eigen WorkFlow Pro — kies je pakket</p>
+          </div>
+          <div class="login-field"><label class="login-label">Bedrijfsnaam</label>
+            <input class="login-input" name="companyName" required placeholder="Mijn Bedrijf BV"></div>
+          <div class="login-field"><label class="login-label">Jouw naam</label>
+            <input class="login-input" name="name" placeholder="Voornaam Naam"></div>
+          <div class="login-field"><label class="login-label">E-mail</label>
+            <input class="login-input" name="email" type="email" required autocomplete="email" placeholder="naam@bedrijf.be"></div>
+          <div class="login-field"><label class="login-label">Wachtwoord</label>
+            <input class="login-input" name="password" type="password" required autocomplete="new-password" placeholder="Sterk wachtwoord (12+ tekens)"></div>
+          <div class="login-field"><label class="login-label">Pakket</label>
+            <select class="login-input" name="plan" id="registerPlan"><option value="">Pakketten laden…</option></select>
+          </div>
+          <div id="registerNotice" class="login-notice"></div>
+          <button class="login-btn" type="submit">Account aanmaken &amp; starten</button>
+          <div style="text-align:center;margin-top:12px;font-size:0.8125rem;color:#64748b">
+            Al een account? <a href="#" id="showLogin" style="color:#0ea5e9;font-weight:600">Inloggen</a>
+            · <a href="#" id="showResellerApply" style="color:#64748b">Reseller worden</a>
+          </div>
+        </form>
+
         <details class="login-demo-section" id="loginDemoSection">
           <summary class="login-demo-summary">Liever eerst de demo proberen?</summary>
           <div class="login-demo-roles">

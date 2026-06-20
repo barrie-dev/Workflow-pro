@@ -382,6 +382,44 @@ test("customer-start bootstrap: preview is read-only, apply is idempotent", asyn
   assert.equal(repeated.created.length, 0, "tweede apply maakt niets dubbel aan");
 });
 
+// ── Self-service: publieke registratie + reseller-aanvraag ──
+test("self-signup: publieke plannen + registratie + auto-login", async () => {
+  const plans = await (await fetch(`${BASE}/api/plans`)).json();
+  assert.ok(Array.isArray(plans.plans) && plans.plans.length > 0, "publieke plannen beschikbaar zonder login");
+  const stamp = Date.now();
+  const email = `signup-${stamp}@nieuw.be`;
+  const r = await fetch(`${BASE}/api/auth/register`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ companyName: "Nieuw Bedrijf", name: "Eigenaar", email, password: "NieuwSterk2026!@#", plan: "business" }) });
+  assert.equal(r.status, 201);
+  const d = await r.json();
+  assert.ok(d.token, "auto-login token na registratie");
+  const me = await (await fetch(`${BASE}/api/me`, { headers: { Authorization: `Bearer ${d.token}` } })).json();
+  assert.equal(me.user.role, "tenant_admin", "nieuwe gebruiker is tenant-admin van eigen bedrijf");
+  // dubbele e-mail → 409
+  const dup = await fetch(`${BASE}/api/auth/register`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ companyName: "X", email, password: "NieuwSterk2026!@#", plan: "business" }) });
+  assert.equal(dup.status, 409);
+  // zwak wachtwoord → 400
+  const weak = await fetch(`${BASE}/api/auth/register`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ companyName: "X", email: `x-${stamp}@y.be`, password: "zwak", plan: "business" }) });
+  assert.equal(weak.status, 400);
+});
+
+test("self-signup: reseller-aanvraag = pending, login pas na goedkeuring", async () => {
+  const stamp = Date.now();
+  const email = `applyreseller-${stamp}@partner.be`;
+  const pass = "PartnerSterk2026!@#";
+  const ap = await fetch(`${BASE}/api/resellers/apply`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: "Aanvrager BV", email, password: pass }) });
+  assert.equal(ap.status, 201);
+  const pre = await login(email, pass);
+  assert.ok(!pre.token, "pending reseller kan nog niet inloggen");
+  const god = await login("super@workflowpro.be", "Demo2026!");
+  const H = { Authorization: `Bearer ${god.token}` };
+  const list = await (await fetch(`${BASE}/api/admin/resellers`, { headers: H })).json();
+  const pending = list.resellers.find(r => r.contactEmail === email);
+  assert.ok(pending && pending.status === "pending", "aanvraag staat als pending");
+  await fetch(`${BASE}/api/admin/resellers/${pending.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", ...H }, body: JSON.stringify({ status: "active" }) });
+  const post = await login(email, pass);
+  assert.ok(post.token, "na goedkeuring kan de reseller inloggen");
+});
+
 // ── Reseller-programma: aanmaken, klant aanmaken, commissie, isolatie ──
 test("reseller: god maakt reseller, reseller maakt klant + ziet commissie, niet die van anderen", async () => {
   const god = await login("super@workflowpro.be", "Demo2026!");

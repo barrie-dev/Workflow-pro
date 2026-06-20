@@ -9,6 +9,7 @@ const { Store, BUSINESS_ADMIN_PERMISSIONS, MANAGER_PERMISSIONS, EMPLOYEE_PERMISS
 const { hashPassword, assertStrongPassword, verifyPassword } = require("./lib/security");
 const {
   authenticate,
+  issueSession,
   login,
   loginWithMfa,
   safeUser,
@@ -564,6 +565,81 @@ http.createServer(async (req, res) => {
       store.update("users", result.user.id, { lastLoginAt: new Date().toISOString() });
       store.audit({ actor: result.user.email, tenantId: result.user.tenantId, action: "login", area: "auth" });
       sendJson(res, 200, { ok: true, token: result.token, user: safeUser(result.user) });
+      return;
+    }
+
+    // ── Publieke plannen (voor de zelf-registratiepagina) ─────────────────────
+    if (url.pathname === "/api/plans" && req.method === "GET") {
+      const plans = listBundles(store)
+        .filter(b => b.active !== false)
+        .map(b => ({
+          key: b.key, label: b.label, description: b.description || "",
+          baseMonthly: b.baseMonthly ?? null, custom: !!b.custom,
+          modules: Array.isArray(b.modules) ? b.modules.length : 0
+        }));
+      sendJson(res, 200, { ok: true, plans });
+      return;
+    }
+
+    // ── Self-service registratie: klant maakt zelf account + kiest bundel ──────
+    if (url.pathname === "/api/auth/register" && req.method === "POST") {
+      const body = await readBody(req);
+      const companyName = String(body.companyName || "").trim();
+      const name = String(body.name || "").trim();
+      const email = String(body.email || "").trim().toLowerCase();
+      if (!companyName) return sendJson(res, 400, { ok: false, error: "Bedrijfsnaam is verplicht" });
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return sendJson(res, 400, { ok: false, error: "Geldig e-mailadres is verplicht" });
+      if (store.getUserByEmail(email)) return sendJson(res, 409, { ok: false, error: "Er bestaat al een account met dit e-mailadres" });
+      try { assertStrongPassword(body.password); }
+      catch (e) { return sendJson(res, 400, { ok: false, error: e.message }); }
+      // Bundel: gekozen plan moet bestaan en niet 'op aanvraag' (custom = prijs op aanvraag → contact).
+      const bundle = getBundle(store, body.plan);
+      if (!bundle || bundle.active === false) return sendJson(res, 400, { ok: false, error: "Kies een geldig pakket" });
+      if (bundle.custom) return sendJson(res, 400, { ok: false, error: "Dit pakket is op aanvraag — neem contact op." });
+      const now = new Date().toISOString();
+      const tenant = store.insert("tenants", {
+        id: `tenant_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+        name: companyName, plan: bundle.key, status: "trial", billingEmail: email,
+        invoiceProfile: {}, onboarding: {}, billingOps: { invoiceHistory: [] },
+        supportAccess: { allowed: false }, selfSignup: true, createdAt: now
+      });
+      const adminUser = store.insert("users", {
+        id: `user_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+        tenantId: tenant.id, name: name || companyName, email,
+        passwordHash: hashPassword(body.password), role: "tenant_admin",
+        permissions: BUSINESS_ADMIN_PERMISSIONS, mfaEnabled: false, mfaEnforced: false,
+        active: true, lastLoginAt: now, createdAt: now
+      });
+      store.audit({ actor: email, tenantId: tenant.id, action: "self_signup", area: "auth", detail: `${companyName} · ${bundle.key}` });
+      sendJson(res, 201, { ok: true, token: issueSession(adminUser), user: safeUser(adminUser) });
+      return;
+    }
+
+    // ── Self-service reseller-aanvraag (pending → superadmin keurt goed) ───────
+    if (url.pathname === "/api/resellers/apply" && req.method === "POST") {
+      const body = await readBody(req);
+      const name = String(body.name || "").trim();
+      const email = String(body.email || "").trim().toLowerCase();
+      if (!name) return sendJson(res, 400, { ok: false, error: "Naam is verplicht" });
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return sendJson(res, 400, { ok: false, error: "Geldig e-mailadres is verplicht" });
+      if (store.getUserByEmail(email)) return sendJson(res, 409, { ok: false, error: "Er bestaat al een account met dit e-mailadres" });
+      try { assertStrongPassword(body.password); }
+      catch (e) { return sendJson(res, 400, { ok: false, error: e.message }); }
+      const now = new Date().toISOString();
+      const reseller = store.insert("resellers", {
+        id: `reseller_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+        tenantId: null, name, contactEmail: email, status: "pending",
+        defaultCommissionPct: 0, appliedAt: now, createdAt: now
+      });
+      // Login alvast aanmaken maar INACTIEF tot goedkeuring.
+      store.insert("users", {
+        id: `reseller_user_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+        tenantId: null, name, email, passwordHash: hashPassword(body.password),
+        role: "reseller", permissions: [], resellerId: reseller.id,
+        mfaEnabled: false, mfaEnforced: false, active: false, createdAt: now
+      });
+      store.audit({ actor: email, tenantId: null, action: "reseller_applied", area: "resellers", detail: name });
+      sendJson(res, 201, { ok: true, message: "Aanvraag ontvangen — je account wordt na goedkeuring geactiveerd." });
       return;
     }
 
