@@ -10,6 +10,10 @@ const { hashPassword, assertStrongPassword, verifyPassword } = require("./lib/se
 const {
   authenticate,
   issueSession,
+  startActivation,
+  activationToken,
+  parseActivationToken,
+  checkActivation,
   login,
   loginWithMfa,
   safeUser,
@@ -69,6 +73,35 @@ function sanitizeEmployeePermissions(store, tenant, role, requested) {
   const always = ALWAYS_PERMISSIONS.map(k => (role === "employee" ? `own:${k}` : k));
   return [...new Set([...keptBase, ...scoped, ...always])];
 }
+
+// Verstuur (of log) een activatiemail met de wachtwoord-instellink.
+function sendActivationMail(user, link) {
+  const html = `<p>Hallo ${user.name || ""},</p>
+    <p>Er is een WorkFlow Pro-account voor je aangemaakt. Stel binnen 7 dagen je wachtwoord in via de knop hieronder:</p>
+    <p><a href="${link}" style="display:inline-block;background:#0ea5e9;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:600">Wachtwoord instellen</a></p>
+    <p style="font-size:12px;color:#64748b">Werkt de knop niet? Open deze link: ${link}</p>`;
+  // Niet awaiten: mailer logt bij fout en valt terug op console.
+  Promise.resolve(sendMail({ to: user.email, subject: "Activeer je WorkFlow Pro-account", html, text: `Stel je wachtwoord in (7 dagen geldig): ${link}` })).catch(() => {});
+}
+
+// Maak een account zónder wachtwoord: pending tot de persoon zelf activeert via
+// de e-mailink. De aanmaker kiest dus nooit een wachtwoord (veiliger + verificatie).
+function provisionPendingUser(fields) {
+  const { secret, record } = startActivation();
+  const user = store.insert("users", {
+    ...fields,
+    passwordHash: "",
+    active: false,
+    emailVerifiedAt: null,
+    activation: record,
+    createdAt: fields.createdAt || new Date().toISOString()
+  });
+  const link = `${config.appUrl}/?activate=${encodeURIComponent(activationToken(user.id, secret))}`;
+  sendActivationMail(user, link);
+  // Link enkel teruggeven in dev/mock (geen echte mailprovider) zodat het testbaar
+  // is; in productie met echte mail wordt de link NOOIT in de respons gezet.
+  return { user, activationLink: (config.isProduction || isMailLive()) ? null : link };
+}
 const { listModule, createModuleRow, updateModuleRow } = require("./modules/crud");
 const { lookupKbo } = require("./modules/kbo");
 const {
@@ -108,7 +141,7 @@ const { salesSummary, salesLaunchReadiness, advanceLead, addPartnerNote } = requ
 const { goLiveReadiness } = require("./modules/go-live");
 const { listReports, getReport, generateStatusBundle } = require("./modules/reports");
 const { listAuditEvents } = require("./modules/audit");
-const { sendMail, setRuntimeConfig } = require("./lib/mailer");
+const { sendMail, setRuntimeConfig, isMailLive } = require("./lib/mailer");
 const { loadPlatformConfig, publicPlatformConfig, savePlatformConfig } = require("./modules/platform-config");
 const { createPaymentLink, markInvoicePaidById } = require("./modules/payments");
 const { verifyStripeSignature } = require("./modules/stripe-webhook");
@@ -590,8 +623,6 @@ http.createServer(async (req, res) => {
       if (!companyName) return sendJson(res, 400, { ok: false, error: "Bedrijfsnaam is verplicht" });
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return sendJson(res, 400, { ok: false, error: "Geldig e-mailadres is verplicht" });
       if (store.getUserByEmail(email)) return sendJson(res, 409, { ok: false, error: "Er bestaat al een account met dit e-mailadres" });
-      try { assertStrongPassword(body.password); }
-      catch (e) { return sendJson(res, 400, { ok: false, error: e.message }); }
       // Bundel: gekozen plan moet bestaan en niet 'op aanvraag' (custom = prijs op aanvraag → contact).
       const bundle = getBundle(store, body.plan);
       if (!bundle || bundle.active === false) return sendJson(res, 400, { ok: false, error: "Kies een geldig pakket" });
@@ -603,15 +634,16 @@ http.createServer(async (req, res) => {
         invoiceProfile: {}, onboarding: {}, billingOps: { invoiceHistory: [] },
         supportAccess: { allowed: false }, selfSignup: true, createdAt: now
       });
-      const adminUser = store.insert("users", {
+      // Geen wachtwoord bij aanmaak: de klant verifieert zijn e-mail en stelt
+      // zelf zijn wachtwoord in via de activatielink.
+      const { activationLink } = provisionPendingUser({
         id: `user_${Date.now()}_${Math.random().toString(16).slice(2)}`,
         tenantId: tenant.id, name: name || companyName, email,
-        passwordHash: hashPassword(body.password), role: "tenant_admin",
-        permissions: BUSINESS_ADMIN_PERMISSIONS, mfaEnabled: false, mfaEnforced: false,
-        active: true, lastLoginAt: now, createdAt: now
+        role: "tenant_admin", permissions: BUSINESS_ADMIN_PERMISSIONS,
+        mfaEnabled: false, mfaEnforced: false
       });
       store.audit({ actor: email, tenantId: tenant.id, action: "self_signup", area: "auth", detail: `${companyName} · ${bundle.key}` });
-      sendJson(res, 201, { ok: true, token: issueSession(adminUser), user: safeUser(adminUser) });
+      sendJson(res, 201, { ok: true, pending: true, message: "Account aangemaakt — check je e-mail om je wachtwoord in te stellen.", activationLink });
       return;
     }
 
@@ -623,23 +655,58 @@ http.createServer(async (req, res) => {
       if (!name) return sendJson(res, 400, { ok: false, error: "Naam is verplicht" });
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return sendJson(res, 400, { ok: false, error: "Geldig e-mailadres is verplicht" });
       if (store.getUserByEmail(email)) return sendJson(res, 409, { ok: false, error: "Er bestaat al een account met dit e-mailadres" });
-      try { assertStrongPassword(body.password); }
-      catch (e) { return sendJson(res, 400, { ok: false, error: e.message }); }
       const now = new Date().toISOString();
       const reseller = store.insert("resellers", {
         id: `reseller_${Date.now()}_${Math.random().toString(16).slice(2)}`,
         tenantId: null, name, contactEmail: email, status: "pending",
         defaultCommissionPct: 0, appliedAt: now, createdAt: now
       });
-      // Login alvast aanmaken maar INACTIEF tot goedkeuring.
+      // Login alvast aanmaken maar INACTIEF en zonder wachtwoord. Pas bij
+      // goedkeuring ontvangt de aanvrager de activatiemail om zijn wachtwoord te kiezen.
       store.insert("users", {
         id: `reseller_user_${Date.now()}_${Math.random().toString(16).slice(2)}`,
-        tenantId: null, name, email, passwordHash: hashPassword(body.password),
+        tenantId: null, name, email, passwordHash: "",
         role: "reseller", permissions: [], resellerId: reseller.id,
         mfaEnabled: false, mfaEnforced: false, active: false, createdAt: now
       });
       store.audit({ actor: email, tenantId: null, action: "reseller_applied", area: "resellers", detail: name });
       sendJson(res, 201, { ok: true, message: "Aanvraag ontvangen — je account wordt na goedkeuring geactiveerd." });
+      return;
+    }
+
+    // ── Account-activatie: persoon stelt zelf wachtwoord in via e-mailink ──────
+    if (url.pathname === "/api/auth/activate" && req.method === "POST") {
+      const body = await readBody(req);
+      const parsed = parseActivationToken(body.token);
+      const user = parsed ? store.getUserById(parsed.userId) : null;
+      const chk = user ? checkActivation(user, parsed.secret) : { ok: false, reason: "Ongeldige activatielink" };
+      if (!chk.ok) return sendJson(res, 400, { ok: false, error: chk.reason });
+      try { assertStrongPassword(body.password); }
+      catch (e) { return sendJson(res, 400, { ok: false, error: e.message }); }
+      const now = new Date().toISOString();
+      const updated = store.update("users", user.id, {
+        passwordHash: hashPassword(body.password), active: true,
+        emailVerifiedAt: now, activation: null, lastLoginAt: now
+      });
+      store.audit({ actor: updated.email, tenantId: updated.tenantId || null, action: "account_activated", area: "auth" });
+      // Auto-login na activatie. (Een reseller logt in maar het portaal blijft in
+      // afwachting tot de superadmin de reseller-status op 'active' zet.)
+      sendJson(res, 200, { ok: true, token: issueSession(updated), user: safeUser(updated) });
+      return;
+    }
+
+    // Nieuwe activatiemail aanvragen (geen account-enumeratie: altijd ok).
+    if (url.pathname === "/api/auth/activate/resend" && req.method === "POST") {
+      const body = await readBody(req);
+      const email = String(body.email || "").trim().toLowerCase();
+      const user = email ? store.getUserByEmail(email) : null;
+      if (user && user.active === false && user.activation) {
+        const { secret, record } = startActivation();
+        store.update("users", user.id, { activation: record });
+        const link = `${config.appUrl}/?activate=${encodeURIComponent(activationToken(user.id, secret))}`;
+        sendActivationMail(user, link);
+      }
+      sendJson(res, 200, { ok: true, message: "Als er een account in afwachting is, sturen we een nieuwe activatiemail." });
       return;
     }
 
@@ -890,26 +957,27 @@ http.createServer(async (req, res) => {
         supportAccess: { allowed: false }
       });
       let adminUser = null;
+      let activationLink = null;
       if (body.adminEmail) {
-        assertStrongPassword(body.adminPassword);
-        adminUser = store.insert("users", {
+        // Geen wachtwoord door de aanmaker: de klant-admin ontvangt een
+        // activatiemail en stelt zelf zijn wachtwoord in.
+        const prov = provisionPendingUser({
           id: `user_${Date.now()}_${Math.random().toString(16).slice(2)}`,
           tenantId: tenant.id,
           name: body.adminName || "Klant admin",
           email: String(body.adminEmail).toLowerCase(),
-          passwordHash: hashPassword(body.adminPassword),
           role: "tenant_admin",
           permissions: BUSINESS_ADMIN_PERMISSIONS,
           mfaEnabled: false,
           mfaEnforced: false,
-          active: true,
-          lastLoginAt: null,
           failedLoginCount: 0,
           lockedUntil: null
         });
+        adminUser = prov.user;
+        activationLink = prov.activationLink;
       }
       store.audit({ actor: user.email, tenantId: tenant.id, action: "tenant_created", area: "tenants", detail: tenant.name });
-      sendJson(res, 201, { ok: true, tenant, adminUser: adminUser ? { id: adminUser.id, name: adminUser.name, email: adminUser.email, role: adminUser.role } : null });
+      sendJson(res, 201, { ok: true, tenant, adminUser: adminUser ? { id: adminUser.id, name: adminUser.name, email: adminUser.email, role: adminUser.role } : null, activationLink });
       return;
     }
 
@@ -1010,30 +1078,26 @@ http.createServer(async (req, res) => {
       if (!name) return sendJson(res, 400, { ok: false, error: "Naam is verplicht" });
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return sendJson(res, 400, { ok: false, error: "Geldig e-mailadres is verplicht" });
       if (store.getUserByEmail(email)) return sendJson(res, 409, { ok: false, error: "Er bestaat al een gebruiker met dit e-mailadres" });
-      assertStrongPassword(body.password);
       // Platform-scopes: standaard volledige toegang, of de aangevinkte subset.
       const scopes = Array.isArray(body.platformScopes)
         ? body.platformScopes.filter(s => PLATFORM_SCOPES.includes(s))
         : PLATFORM_SCOPES.slice();
-      const now = new Date().toISOString();
-      const created = store.insert("users", {
+      // Geen wachtwoord door de aanmaker: het teamlid ontvangt een activatiemail.
+      const { user: created, activationLink } = provisionPendingUser({
         id: `staff_${Date.now()}_${Math.random().toString(16).slice(2)}`,
         tenantId: null,
         name,
         email,
-        passwordHash: hashPassword(body.password),
         role: "super_admin",
         permissions: ["*"],
         platformScopes: scopes,
         protected: false,
         mfaEnabled: false,
         mfaEnforced: false,
-        active: true,
-        createdBy: user.email,
-        createdAt: now
+        createdBy: user.email
       });
       store.audit({ actor: user.email, tenantId: null, action: "platform_staff_created", area: "auth", detail: `${email} scopes=${scopes.join(",")}` });
-      sendJson(res, 201, { ok: true, staff: { id: created.id, name: created.name, email: created.email, active: true, protected: false, scopes } });
+      sendJson(res, 201, { ok: true, staff: { id: created.id, name: created.name, email: created.email, active: false, protected: false, scopes }, activationLink });
       return;
     }
     const adminStaffMatch = url.pathname.match(/^\/api\/admin\/staff\/([^/]+)$/);
@@ -1097,7 +1161,6 @@ http.createServer(async (req, res) => {
       if (!name) return sendJson(res, 400, { ok: false, error: "Naam is verplicht" });
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(loginEmail)) return sendJson(res, 400, { ok: false, error: "Geldig login-e-mailadres is verplicht" });
       if (store.getUserByEmail(loginEmail)) return sendJson(res, 409, { ok: false, error: "Er bestaat al een gebruiker met dit e-mailadres" });
-      assertStrongPassword(body.password);
       const pct = Math.min(Math.max(Number(body.defaultCommissionPct) || 0, 0), 100);
       const now = new Date().toISOString();
       const reseller = store.insert("resellers", {
@@ -1105,14 +1168,15 @@ http.createServer(async (req, res) => {
         tenantId: null, name, contactEmail: String(body.contactEmail || loginEmail),
         status: "active", defaultCommissionPct: pct, createdBy: user.email, createdAt: now
       });
-      const loginUser = store.insert("users", {
+      // Geen wachtwoord door de aanmaker: de reseller ontvangt een activatiemail.
+      const { user: loginUser, activationLink } = provisionPendingUser({
         id: `reseller_user_${Date.now()}_${Math.random().toString(16).slice(2)}`,
-        tenantId: null, name, email: loginEmail, passwordHash: hashPassword(body.password),
+        tenantId: null, name, email: loginEmail,
         role: "reseller", permissions: [], resellerId: reseller.id,
-        mfaEnabled: false, mfaEnforced: false, active: true, createdAt: now
+        mfaEnabled: false, mfaEnforced: false
       });
       store.audit({ actor: user.email, tenantId: null, action: "reseller_created", area: "resellers", detail: `${name} (${loginEmail}) ${pct}%` });
-      sendJson(res, 201, { ok: true, reseller: publicReseller(reseller, store), login: { email: loginUser.email } });
+      sendJson(res, 201, { ok: true, reseller: publicReseller(reseller, store), login: { email: loginUser.email }, activationLink });
       return;
     }
     const adminResellerMatch = url.pathname.match(/^\/api\/admin\/resellers\/([^/]+)$/);
@@ -1128,13 +1192,30 @@ http.createServer(async (req, res) => {
       if (typeof body.name === "string" && body.name.trim()) patch.name = body.name.trim();
       if (body.defaultCommissionPct !== undefined) patch.defaultCommissionPct = Math.min(Math.max(Number(body.defaultCommissionPct) || 0, 0), 100);
       const updated = store.update("resellers", reseller.id, { ...patch, updatedAt: new Date().toISOString() });
-      // Reseller pauzeren → ook diens login-account (de)activeren.
+      let activationLink = null;
       if (patch.status) {
         (store.data.users || []).filter(u => u.role === "reseller" && u.resellerId === reseller.id)
-          .forEach(u => store.update("users", u.id, { active: patch.status === "active" }));
+          .forEach(u => {
+            if (patch.status === "active") {
+              // Goedkeuren: heeft de aanvrager nog geen wachtwoord? → activatiemail
+              // sturen zodat die er zelf één instelt. Anders gewoon heractiveren.
+              if (!u.passwordHash && !u.activation) {
+                const { secret, record } = startActivation();
+                store.update("users", u.id, { activation: record });
+                const link = `${config.appUrl}/?activate=${encodeURIComponent(activationToken(u.id, secret))}`;
+                sendActivationMail(u, link);
+                if (!config.isProduction && !isMailLive()) activationLink = link;
+              } else if (u.passwordHash) {
+                store.update("users", u.id, { active: true });
+              }
+            } else {
+              // Pauzeren → login-account deactiveren.
+              store.update("users", u.id, { active: false });
+            }
+          });
       }
       store.audit({ actor: user.email, tenantId: null, action: "reseller_updated", area: "resellers", detail: `${reseller.name} ${JSON.stringify(patch)}` });
-      sendJson(res, 200, { ok: true, reseller: publicReseller(updated, store) });
+      sendJson(res, 200, { ok: true, reseller: publicReseller(updated, store), activationLink });
       return;
     }
 
@@ -1160,7 +1241,6 @@ http.createServer(async (req, res) => {
       if (!name) return sendJson(res, 400, { ok: false, error: "Klantnaam is verplicht" });
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(adminEmail)) return sendJson(res, 400, { ok: false, error: "Geldig admin-e-mailadres is verplicht" });
       if (store.getUserByEmail(adminEmail)) return sendJson(res, 409, { ok: false, error: "Er bestaat al een gebruiker met dit e-mailadres" });
-      assertStrongPassword(body.adminPassword);
       const plan = ["starter", "business", "enterprise"].includes(body.plan) ? body.plan : "business";
       const now = new Date().toISOString();
       const tenant = store.insert("tenants", {
@@ -1169,15 +1249,15 @@ http.createServer(async (req, res) => {
         invoiceProfile: {}, onboarding: {}, billingOps: { invoiceHistory: [] },
         supportAccess: { allowed: false }, resellerId: reseller.id, createdAt: now
       });
-      store.insert("users", {
+      // Geen wachtwoord door de reseller: de klant-admin ontvangt een activatiemail.
+      const { activationLink } = provisionPendingUser({
         id: `user_${Date.now()}_${Math.random().toString(16).slice(2)}`,
         tenantId: tenant.id, name: body.adminName || "Klant admin", email: adminEmail,
-        passwordHash: hashPassword(body.adminPassword), role: "tenant_admin",
-        permissions: BUSINESS_ADMIN_PERMISSIONS, mfaEnabled: false, mfaEnforced: false,
-        active: true, createdAt: now
+        role: "tenant_admin", permissions: BUSINESS_ADMIN_PERMISSIONS,
+        mfaEnabled: false, mfaEnforced: false
       });
       store.audit({ actor: user.email, tenantId: tenant.id, action: "reseller_client_created", area: "resellers", detail: `${reseller.name} → ${name}` });
-      sendJson(res, 201, { ok: true, client: { tenantId: tenant.id, name: tenant.name, plan: tenant.plan, status: tenant.status, commissionPct: commissionPctFor(tenant, reseller) } });
+      sendJson(res, 201, { ok: true, client: { tenantId: tenant.id, name: tenant.name, plan: tenant.plan, status: tenant.status, commissionPct: commissionPctFor(tenant, reseller) }, activationLink });
       return;
     }
 
@@ -2950,30 +3030,22 @@ http.createServer(async (req, res) => {
         const permissions = body.permissions !== undefined
           ? sanitizeEmployeePermissions(store, tenant, role, body.permissions)
           : (role === "manager" ? MANAGER_PERMISSIONS : EMPLOYEE_PERMISSIONS);
-        const tempPassword = body.password || body.tempPassword || crypto.randomBytes(12).toString("base64url");
-        const newUser = store.insert("users", {
+        // Geen wachtwoord door de aanmaker: de medewerker ontvangt een activatiemail
+        // en stelt binnen de geldigheidsperiode zelf zijn wachtwoord in.
+        const { user: newUser, activationLink } = provisionPendingUser({
           id: `user_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`,
           tenantId,
           name: String(body.name || "").trim() || email,
           email,
-          passwordHash: hashPassword(tempPassword),
           role,
           permissions,
           mfaEnabled: false,
           mfaEnforced: false,
-          active: true,
           function: body.function || null,
-          phone: body.phone || null,
-          createdAt: new Date().toISOString()
+          phone: body.phone || null
         });
         store.audit({ actor: user.email, tenantId, action: "employee_created", area: "employees", detail: `${email} (${role})` });
-        // Welkomstmail naar nieuwe medewerker (alleen als er een tijdelijk wachtwoord is)
-        const sendWelcome = !body.password; // enkel bij auto-gegenereerd ww
-        if (sendWelcome && email) {
-          const tpl = welcomeEmployee({ employee: newUser, tempPassword, appUrl: config.appUrl });
-          sendMail({ to: email, ...tpl });
-        }
-        sendJson(res, 201, { ok: true, user: { ...newUser, passwordHash: undefined }, tempPassword });
+        sendJson(res, 201, { ok: true, user: { ...newUser, passwordHash: undefined }, activationLink });
         return;
       }
       // ── Einde medewerker aanmaken ─────────────────────────────────────────────

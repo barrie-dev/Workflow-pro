@@ -83,6 +83,19 @@ async function login(email, password) {
   return r.json();
 }
 
+async function activateWithLink(activationLink, password) {
+  assert.ok(activationLink, "dev/test moet een activatielink teruggeven");
+  const token = new URL(activationLink).searchParams.get("activate");
+  assert.ok(token, "activatielink bevat token");
+  const r = await fetch(`${BASE}/api/auth/activate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token, password })
+  });
+  assert.equal(r.status, 200);
+  return r.json();
+}
+
 test("rechten: admin kan medewerkers lezen, employee niet", async () => {
   const admin = await login("admin@demobouw.be", "Demo2026!");
   assert.ok(admin.token, "admin-login moet slagen (reset-demo-passwords)");
@@ -383,7 +396,7 @@ test("customer-start bootstrap: preview is read-only, apply is idempotent", asyn
 });
 
 // ── Self-service: publieke registratie + reseller-aanvraag ──
-test("self-signup: publieke plannen + registratie + auto-login", async () => {
+test("self-signup: publieke plannen + registratie + activatie", async () => {
   const plans = await (await fetch(`${BASE}/api/plans`)).json();
   assert.ok(Array.isArray(plans.plans) && plans.plans.length > 0, "publieke plannen beschikbaar zonder login");
   const stamp = Date.now();
@@ -391,14 +404,19 @@ test("self-signup: publieke plannen + registratie + auto-login", async () => {
   const r = await fetch(`${BASE}/api/auth/register`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ companyName: "Nieuw Bedrijf", name: "Eigenaar", email, password: "NieuwSterk2026!@#", plan: "business" }) });
   assert.equal(r.status, 201);
   const d = await r.json();
-  assert.ok(d.token, "auto-login token na registratie");
-  const me = await (await fetch(`${BASE}/api/me`, { headers: { Authorization: `Bearer ${d.token}` } })).json();
+  assert.equal(d.pending, true, "registratie wacht op e-mailactivatie");
+  assert.ok(!d.token, "geen auto-login voor e-mailverificatie");
+  const pre = await login(email, "NieuwSterk2026!@#");
+  assert.ok(!pre.token, "voor activatie kan de nieuwe klant niet inloggen");
+  const activated = await activateWithLink(d.activationLink, "NieuwSterk2026!@#");
+  assert.ok(activated.token, "auto-login token na activatie");
+  const me = await (await fetch(`${BASE}/api/me`, { headers: { Authorization: `Bearer ${activated.token}` } })).json();
   assert.equal(me.user.role, "tenant_admin", "nieuwe gebruiker is tenant-admin van eigen bedrijf");
   // dubbele e-mail → 409
-  const dup = await fetch(`${BASE}/api/auth/register`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ companyName: "X", email, password: "NieuwSterk2026!@#", plan: "business" }) });
+  const dup = await fetch(`${BASE}/api/auth/register`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ companyName: "X", email, plan: "business" }) });
   assert.equal(dup.status, 409);
   // zwak wachtwoord → 400
-  const weak = await fetch(`${BASE}/api/auth/register`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ companyName: "X", email: `x-${stamp}@y.be`, password: "zwak", plan: "business" }) });
+  const weak = await fetch(`${BASE}/api/auth/activate`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token: new URL(d.activationLink).searchParams.get("activate"), password: "zwak" }) });
   assert.equal(weak.status, 400);
 });
 
@@ -415,9 +433,9 @@ test("self-signup: reseller-aanvraag = pending, login pas na goedkeuring", async
   const list = await (await fetch(`${BASE}/api/admin/resellers`, { headers: H })).json();
   const pending = list.resellers.find(r => r.contactEmail === email);
   assert.ok(pending && pending.status === "pending", "aanvraag staat als pending");
-  await fetch(`${BASE}/api/admin/resellers/${pending.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", ...H }, body: JSON.stringify({ status: "active" }) });
-  const post = await login(email, pass);
-  assert.ok(post.token, "na goedkeuring kan de reseller inloggen");
+  const approved = await (await fetch(`${BASE}/api/admin/resellers/${pending.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", ...H }, body: JSON.stringify({ status: "active" }) })).json();
+  const activated = await activateWithLink(approved.activationLink, pass);
+  assert.ok(activated.token, "na goedkeuring en activatie kan de reseller inloggen");
 });
 
 // ── Reseller-programma: aanmaken, klant aanmaken, commissie, isolatie ──
@@ -430,9 +448,10 @@ test("reseller: god maakt reseller, reseller maakt klant + ziet commissie, niet 
   // 1) god maakt reseller met 10% commissie
   const cr = await fetch(`${BASE}/api/admin/resellers`, { method: "POST", headers: H(god.token), body: JSON.stringify({ name: "Partner X", loginEmail, password: pass, defaultCommissionPct: 10 }) });
   assert.equal(cr.status, 201);
+  const createdReseller = await cr.json();
   // 2) reseller logt in
-  const rs = await login(loginEmail, pass);
-  assert.ok(rs.token, "reseller kan inloggen");
+  const rs = await activateWithLink(createdReseller.activationLink, pass);
+  assert.ok(rs.token, "reseller kan inloggen na activatie");
   // 3) reseller maakt een klant aan
   const adminEmail = `klant-${stamp}@klant.be`;
   const mk = await fetch(`${BASE}/api/reseller/clients`, { method: "POST", headers: H(rs.token), body: JSON.stringify({ name: "Klant van X", plan: "business", adminEmail, adminName: "Klant Admin", adminPassword: "KlantSterk2026!@#" }) });
@@ -447,8 +466,8 @@ test("reseller: god maakt reseller, reseller maakt klant + ziet commissie, niet 
   assert.ok(mine.mrr > 0 && mine.commission > 0, "commissie = % van MRR");
   // 5) tweede reseller ziet die klant NIET
   const loginEmail2 = `reseller2-${stamp}@partners.be`;
-  await fetch(`${BASE}/api/admin/resellers`, { method: "POST", headers: H(god.token), body: JSON.stringify({ name: "Partner Y", loginEmail: loginEmail2, password: pass, defaultCommissionPct: 5 }) });
-  const rs2 = await login(loginEmail2, pass);
+  const cr2 = await (await fetch(`${BASE}/api/admin/resellers`, { method: "POST", headers: H(god.token), body: JSON.stringify({ name: "Partner Y", loginEmail: loginEmail2, password: pass, defaultCommissionPct: 5 }) })).json();
+  const rs2 = await activateWithLink(cr2.activationLink, pass);
   const ov2 = await (await fetch(`${BASE}/api/reseller/clients`, { headers: H(rs2.token) })).json();
   assert.ok(!ov2.rows.some(r => r.tenantId === tenantId), "reseller ziet enkel eigen klanten");
   // 6) reseller mag geen platform-admin endpoints
@@ -543,8 +562,9 @@ test("platformteam: god maakt medewerker, agent heeft super-rechten maar geen go
   const pass = "AgentSterk2026!@#";
   const c = await fetch(`${BASE}/api/admin/staff`, { method: "POST", headers: H(god.token), body: JSON.stringify({ name: "Test Agent", email, password: pass }) });
   assert.equal(c.status, 201, "god kan teamlid aanmaken");
-  const agent = await login(email, pass);
-  assert.ok(agent.token, "nieuwe agent kan inloggen");
+  const created = await c.json();
+  const agent = await activateWithLink(created.activationLink, pass);
+  assert.ok(agent.token, "nieuwe agent kan inloggen na activatie");
   // Volledige platform-/support-rechten
   assert.equal((await fetch(`${BASE}/api/admin/stats`, { headers: H(agent.token) })).status, 200);
   assert.equal((await fetch(`${BASE}/api/admin/support`, { headers: H(agent.token) })).status, 200);
@@ -564,8 +584,9 @@ test("platformteam: scoped agent komt enkel in toegestane platform-secties", asy
   // Agent met enkel 'support'-scope
   const c = await fetch(`${BASE}/api/admin/staff`, { method: "POST", headers: H(god.token), body: JSON.stringify({ name: "Scoped Agent", email, password: pass, platformScopes: ["support"] }) });
   assert.equal(c.status, 201);
-  assert.deepEqual((await c.json()).staff.scopes, ["support"]);
-  const agent = await login(email, pass);
+  const created = await c.json();
+  assert.deepEqual(created.staff.scopes, ["support"]);
+  const agent = await activateWithLink(created.activationLink, pass);
   // In-scope: support → 200
   assert.equal((await fetch(`${BASE}/api/admin/support`, { headers: H(agent.token) })).status, 200);
   // Out-of-scope: billing en audit → 403

@@ -40,6 +40,36 @@ function issueSession(user) {
   });
 }
 
+// ── Account-activatie / e-mailverificatie ────────────────────
+// Bij aanmaak kiest de aanmaker GEEN wachtwoord. De persoon krijgt een mail met
+// een tijdsgebonden activatielink en stelt zelf zijn wachtwoord in. Veiliger:
+// niemand kent andermans wachtwoord en het e-mailadres wordt geverifieerd.
+const ACTIVATION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 dagen
+
+function hashActivation(secret) {
+  return crypto.createHmac("sha256", config.jwtSecret).update(String(secret)).digest("base64url");
+}
+// Bouwt een activatie-record voor op de user; retourneert ook het ruwe secret.
+function startActivation(now = Date.now()) {
+  const secret = crypto.randomBytes(24).toString("base64url");
+  return {
+    secret,
+    record: { tokenHash: hashActivation(secret), expiresAt: new Date(now + ACTIVATION_TTL_MS).toISOString(), createdAt: new Date(now).toISOString() }
+  };
+}
+function activationToken(userId, secret) { return `${userId}~${secret}`; }
+function parseActivationToken(token) {
+  const i = String(token || "").indexOf("~");
+  return i < 0 ? null : { userId: token.slice(0, i), secret: token.slice(i + 1) };
+}
+function checkActivation(user, secret, now = Date.now()) {
+  const a = user && user.activation;
+  if (!a || !a.tokenHash) return { ok: false, reason: "Geen openstaande activatie voor dit account" };
+  if (new Date(a.expiresAt).getTime() <= now) return { ok: false, reason: "Activatielink is verlopen — vraag een nieuwe aan" };
+  if (hashActivation(secret) !== a.tokenHash) return { ok: false, reason: "Ongeldige activatielink" };
+  return { ok: true };
+}
+
 // ── GDPR support-impersonatie ────────────────────────────────
 // Een support-sessie neemt de exacte gebruikerssessie over via een
 // kortlevend support-token. Sliding expiry: bij activiteit verschuift
@@ -105,7 +135,7 @@ function assertSupportWrite(user, method) {
 }
 
 function safeUser(user) {
-  const { passwordHash, mfaSecret, mfaPendingSecret, recoveryCodes, ...safe } = user || {};
+  const { passwordHash, mfaSecret, mfaPendingSecret, recoveryCodes, activation, ...safe } = user || {};
   return safe;
 }
 
@@ -462,6 +492,11 @@ function assertCan(user, permission) {
 
 module.exports = {
   issueSession,
+  ACTIVATION_TTL_MS,
+  startActivation,
+  activationToken,
+  parseActivationToken,
+  checkActivation,
   authenticate,
   buildSupportGrant,
   issueSupportToken,

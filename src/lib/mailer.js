@@ -16,6 +16,8 @@
  */
 
 const https = require("https");
+const net = require("net");
+const tls = require("tls");
 
 const EMAIL_PROVIDER = (process.env.EMAIL_PROVIDER || "log").toLowerCase();
 const EMAIL_FROM     = process.env.EMAIL_FROM || "WorkFlow Pro <noreply@workflowpro.app>";
@@ -37,6 +39,17 @@ function activeKey() { return (RUNTIME && RUNTIME.apiKey) || null; }
 function realKey(envName) {
   const k = activeKey() || process.env[envName];
   return (k && !/DUMMY/.test(k)) ? k : null;
+}
+
+function smtpConfig() {
+  return {
+    host: process.env.SMTP_HOST || "",
+    port: Number(process.env.SMTP_PORT || 587),
+    user: process.env.SMTP_USER || "",
+    pass: activeKey() || process.env.SMTP_PASS || "",
+    secure: String(process.env.SMTP_SECURE || "").toLowerCase() === "true",
+    from: activeFrom()
+  };
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -112,6 +125,86 @@ async function sendViaSendGrid(mail) {
   }).then(() => ({ ok: true, provider: "sendgrid" }));
 }
 
+function smtpAddress(value) {
+  const raw = String(value || "");
+  const match = raw.match(/<([^>]+)>/);
+  return (match ? match[1] : raw).trim();
+}
+
+function smtpData(mail) {
+  const from = smtpAddress(mail.from || activeFrom());
+  const recipients = Array.isArray(mail.to) ? mail.to : [mail.to];
+  const to = recipients.map(smtpAddress);
+  const boundary = `wf_${Date.now().toString(36)}_${Math.random().toString(16).slice(2)}`;
+  const subject = String(mail.subject || "").replace(/\r?\n/g, " ");
+  const text = mail.text || (mail.html || "").replace(/<[^>]+>/g, " ").replace(/\s{2,}/g, " ").trim();
+  const html = mail.html || `<p>${text}</p>`;
+  const headers = [
+    `From: ${mail.from || activeFrom()}`,
+    `To: ${to.join(", ")}`,
+    `Subject: ${subject}`,
+    "MIME-Version: 1.0",
+    `Content-Type: multipart/alternative; boundary="${boundary}"`
+  ];
+  const body = [
+    `--${boundary}`,
+    "Content-Type: text/plain; charset=utf-8",
+    "",
+    text,
+    `--${boundary}`,
+    "Content-Type: text/html; charset=utf-8",
+    "",
+    html,
+    `--${boundary}--`
+  ];
+  return { from, to, data: `${headers.join("\r\n")}\r\n\r\n${body.join("\r\n")}\r\n` };
+}
+
+function smtpCommand(socket, command, expect) {
+  return new Promise((resolve, reject) => {
+    let raw = "";
+    const onData = chunk => {
+      raw += chunk.toString("utf8");
+      const lines = raw.split(/\r?\n/).filter(Boolean);
+      const last = lines[lines.length - 1] || "";
+      if (!/^\d{3} /.test(last)) return;
+      socket.off("data", onData);
+      const code = Number(last.slice(0, 3));
+      const expected = Array.isArray(expect) ? expect : [expect];
+      if (expected.includes(code)) resolve(raw);
+      else reject(new Error(`SMTP ${command || "response"} verwacht ${expected.join("/")} maar kreeg ${code}: ${raw.slice(0, 200)}`));
+    };
+    socket.on("data", onData);
+    if (command) socket.write(`${command}\r\n`);
+  });
+}
+
+async function sendViaSmtp(mail) {
+  const cfg = smtpConfig();
+  if (!cfg.host || !cfg.user || !cfg.pass) throw new Error("SMTP_HOST, SMTP_USER en SMTP_PASS zijn verplicht");
+  const envelope = smtpData(mail);
+  let socket = cfg.secure
+    ? tls.connect({ host: cfg.host, port: cfg.port, servername: cfg.host })
+    : net.connect({ host: cfg.host, port: cfg.port });
+  await smtpCommand(socket, null, 220);
+  await smtpCommand(socket, `EHLO ${cfg.host}`, 250);
+  if (!cfg.secure) {
+    await smtpCommand(socket, "STARTTLS", 220);
+    socket = tls.connect({ socket, servername: cfg.host });
+    await smtpCommand(socket, `EHLO ${cfg.host}`, 250);
+  }
+  await smtpCommand(socket, "AUTH LOGIN", 334);
+  await smtpCommand(socket, Buffer.from(cfg.user).toString("base64"), 334);
+  await smtpCommand(socket, Buffer.from(cfg.pass).toString("base64"), 235);
+  await smtpCommand(socket, `MAIL FROM:<${envelope.from}>`, 250);
+  for (const recipient of envelope.to) await smtpCommand(socket, `RCPT TO:<${recipient}>`, [250, 251]);
+  await smtpCommand(socket, "DATA", 354);
+  await smtpCommand(socket, `${envelope.data.replace(/\r?\n\./g, "\r\n..")}\r\n.`, 250);
+  await smtpCommand(socket, "QUIT", 221).catch(() => {});
+  socket.end();
+  return { ok: true, provider: "smtp" };
+}
+
 // ── Public API ─────────────────────────────────────────────────────────────────
 
 /**
@@ -127,6 +220,7 @@ async function sendMail(mail) {
   const provider = activeProvider();
   try {
     switch (provider) {
+      case "smtp":      return await sendViaSmtp(mail);
       case "resend":    return await sendViaResend(mail);
       case "sendgrid":  return await sendViaSendGrid(mail);
       default:          return await sendViaLog(mail);   // "log" + onbekende waarden
@@ -190,4 +284,14 @@ function wrapHtml(title, bodyHtml) {
 </html>`;
 }
 
-module.exports = { sendMail, wrapHtml, EMAIL_FROM, setRuntimeConfig };
+// Echt verzendt e-mail (geen "log"-fallback)? Bepaalt of we de activatielink
+// in de API-respons teruggeven (alleen in dev/mock, nooit in productie).
+function isMailLive() {
+  const p = activeProvider();
+  if (p === "smtp") return !!(process.env.SMTP_HOST && (activeKey() || process.env.SMTP_PASS));
+  if (p === "resend") return !!realKey("RESEND_API_KEY");
+  if (p === "sendgrid") return !!realKey("SENDGRID_API_KEY");
+  return false; // "log" of onbekend → niet live
+}
+
+module.exports = { sendMail, wrapHtml, EMAIL_FROM, setRuntimeConfig, isMailLive };
