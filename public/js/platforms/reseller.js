@@ -60,7 +60,7 @@
     <select id="ncPlan" style="padding:9px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px"><option value="starter">Starter</option><option value="business" selected>Business</option><option value="enterprise">Enterprise</option></select>
     <input id="ncEmail" type="email" placeholder="Login-e-mail beheerder klant" style="padding:9px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
     <input id="ncAdminName" placeholder="Naam beheerder" style="padding:9px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
-    <input id="ncPass" type="password" placeholder="Wachtwoord beheerder (sterk: 12+)" style="padding:9px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;grid-column:1/3">
+    <div style="grid-column:1/3;font-size:12px;color:#64748b">De beheerder van de klant ontvangt een activatiemail om zelf een wachtwoord in te stellen.</div>
     <div style="grid-column:1/3;display:flex;gap:8px;align-items:center">
       <button id="ncCreate" style="background:#0ea5e9;color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer">Klant aanmaken</button>
       <span id="ncMsg" style="font-size:12.5px;color:#dc2626"></span>
@@ -88,11 +88,11 @@
       const plan = document.getElementById("ncPlan").value;
       const adminEmail = document.getElementById("ncEmail").value.trim();
       const adminName = document.getElementById("ncAdminName").value.trim();
-      const adminPassword = document.getElementById("ncPass").value;
       const msg = document.getElementById("ncMsg"); msg.textContent = "";
-      if (!name || !adminEmail || !adminPassword) { msg.textContent = "Klantnaam, login-e-mail en wachtwoord zijn verplicht."; return; }
+      if (!name || !adminEmail) { msg.textContent = "Klantnaam en login-e-mail zijn verplicht."; return; }
       try {
-        await api("POST", "/api/reseller/clients", { name, plan, adminEmail, adminName, adminPassword });
+        const r = await api("POST", "/api/reseller/clients", { name, plan, adminEmail, adminName });
+        if (r && r.activationLink && window.showToast) window.showToast("Klant aangemaakt. Activatielink (dev): " + r.activationLink, "success");
         render();
       } catch (e) { msg.textContent = e.message; }
     });

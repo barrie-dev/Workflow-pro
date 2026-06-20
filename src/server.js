@@ -1742,7 +1742,7 @@ http.createServer(async (req, res) => {
       if (action === "imports/employees" && req.method === "POST") {
         assertCan(user, "employees");
         assertApiKeyWriteAllowed(user, req);
-        sendJson(res, 201, { ok: true, result: importEmployees(store, tenant, await readBody(req), user) });
+        sendJson(res, 201, { ok: true, result: importEmployees(store, tenant, await readBody(req), user, provisionPendingUser) });
         return;
       }
       // POST /admin/backfill — data quality fixes (nummers, notificaties, etc.)

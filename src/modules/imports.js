@@ -1,4 +1,3 @@
-const { hashPassword, assertStrongPassword } = require("../lib/security");
 
 const FIELD_ALIASES = {
   naam: "name",
@@ -86,13 +85,15 @@ function normalizeRole(role) {
 }
 
 function publicUser(user) {
-  const { passwordHash, mfaSecret, recoveryCodes, ...safe } = user;
+  const { passwordHash, mfaSecret, mfaPendingSecret, recoveryCodes, activation, ...safe } = user;
   return safe;
 }
 
-function importEmployees(store, tenant, body, user) {
+// `provision` (optioneel) maakt een gebruiker zonder wachtwoord aan + stuurt een
+// activatiemail (door server.js geïnjecteerd). Zo kiest de importeerder nooit een
+// (gedeeld) wachtwoord — iedere medewerker activeert zelf via e-mail.
+function importEmployees(store, tenant, body, user, provision) {
   const csv = body.csv || body.text || "";
-  assertStrongPassword(body.defaultPassword);
   const rows = parseEmployeesCsv(csv);
   const result = { created: [], updated: [], skipped: [] };
   const now = new Date().toISOString();
@@ -112,27 +113,31 @@ function importEmployees(store, tenant, body, user) {
       role,
       phone: String(row.phone || "").trim(),
       jobTitle: String(row.jobTitle || "").trim(),
-      active: true,
       permissions: ROLE_PERMISSIONS[role] || ROLE_PERMISSIONS.employee,
       importedAt: now,
       importedBy: user.email
     };
     if (existing) {
+      // Bestaande medewerker enkel bijwerken (rol/telefoon/...), niet (de)activeren.
       const updated = store.update("users", existing.id, patch);
       result.updated.push(publicUser(updated));
       return;
     }
-    const created = store.insert("users", {
+    const base = {
       id: `user_${Date.now()}_${Math.random().toString(16).slice(2)}`,
       tenantId: tenant.id,
-      passwordHash: hashPassword(body.defaultPassword),
       mfaEnabled: false,
       mfaEnforced: false,
       lastLoginAt: null,
       failedLoginCount: 0,
       lockedUntil: null,
       ...patch
-    });
+    };
+    // Pending + activatiemail (geen gedeeld wachtwoord). Fallback (geen provision):
+    // inactief account zonder wachtwoord — kan pas in na activatie/reset.
+    const created = provision
+      ? provision(base).user
+      : store.insert("users", { ...base, passwordHash: "", active: false });
     result.created.push(publicUser(created));
   });
 

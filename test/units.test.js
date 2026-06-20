@@ -13,6 +13,7 @@ const { runSupportAccessReview } = require("../src/modules/support-access");
 const { verifyStripeSignature } = require("../src/modules/stripe-webhook");
 const { peppolTransportReadiness } = require("../src/modules/peppol-invoice");
 const { liveServiceReadiness } = require("../src/modules/live-services");
+const { importEmployees } = require("../src/modules/imports");
 const crypto = require("node:crypto");
 
 class MemAdapter {
@@ -199,6 +200,34 @@ test("live-services: externe productieafhankelijkheden zijn expliciet gegated", 
   assert.equal(ready.ok, true);
   assert.equal(ready.blockers.length, 0);
   assert.equal(ready.warnings.length, 0);
+});
+
+test("employee-import: nieuwe gebruikers krijgen activatieflow zonder gedeeld wachtwoord", () => {
+  const store = reviewStore([{ id: "t1", name: "Tenant BV" }]);
+  const tenant = store.data.tenants[0];
+  const actor = { email: "admin@tenant.be" };
+  const provisioned = [];
+  const result = importEmployees(store, tenant, {
+    csv: "naam;email;rol;telefoon\nNieuwe Medewerker;nieuw@tenant.be;employee;+32470000000"
+  }, actor, base => {
+    const user = store.insert("users", {
+      ...base,
+      passwordHash: "",
+      active: false,
+      activation: { tokenHash: "hashed-token", expiresAt: "2026-06-27T00:00:00.000Z" }
+    });
+    provisioned.push(user);
+    return { user, activationLink: "http://localhost:4280/?activate=test" };
+  });
+
+  assert.equal(result.created.length, 1);
+  assert.equal(provisioned.length, 1);
+  assert.equal(provisioned[0].active, false);
+  assert.equal(provisioned[0].passwordHash, "");
+  assert.ok(provisioned[0].activation.tokenHash);
+  assert.equal(result.created[0].passwordHash, undefined);
+  assert.equal(result.created[0].activation, undefined);
+  assert.equal(result.created[0].email, "nieuw@tenant.be");
 });
 
 test("stripe-webhook: HMAC signature valideert exact", () => {

@@ -628,7 +628,7 @@
   <div class="sa-form-grid">
     <div class="sa-field"><label>Admin naam</label><input name="adminName" placeholder="Jan Janssen"></div>
     <div class="sa-field"><label>Admin e-mail</label><input name="adminEmail" type="email" placeholder="jan@janssen.be"></div>
-    <div class="sa-field" style="grid-column:1/-1"><label>Admin wachtwoord</label><input name="adminPassword" type="password" placeholder="Min. 10 tekens met cijfer en hoofdletter"></div>
+    <div class="sa-field" style="grid-column:1/-1;font-size:12px;color:#64748b">De admin ontvangt een activatiemail om zelf een wachtwoord in te stellen — je kiest er hier geen.</div>
   </div>
 </form>`,
     `<button class="sa-btn btn-primary" id="submitNewTenant">Tenant aanmaken</button>
@@ -641,7 +641,12 @@
       const body = Object.fromEntries(new FormData(form).entries());
       const btn = document.getElementById("submitNewTenant");
       btn.disabled = true; btn.textContent = "Bezig…";
-      try { await api("/api/admin/tenants",{method:"POST",body:JSON.stringify(body)}); closeDrawer(); tenants(); }
+      try {
+        const r = await api("/api/admin/tenants",{method:"POST",body:JSON.stringify(body)});
+        closeDrawer(); tenants();
+        if (r && r.activationLink) window.showToast("Tenant aangemaakt. Activatielink (dev): " + r.activationLink, "success");
+        else window.showToast("Tenant aangemaakt — admin krijgt een activatiemail.", "success");
+      }
       catch(e) { btn.disabled=false; btn.textContent="Tenant aanmaken"; window.showToast(e.message, "error"); }
     });
   }
@@ -791,8 +796,8 @@ ${canManage ? `
     <input id="rsName" placeholder="Naam (partner/bedrijf)" style="padding:9px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
     <input id="rsContact" placeholder="Contact-e-mail (optioneel)" style="padding:9px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
     <input id="rsLogin" type="email" placeholder="Login-e-mail" style="padding:9px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
-    <input id="rsPass" type="password" placeholder="Wachtwoord (sterk: 12+ tekens)" style="padding:9px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
     <div><label style="font-size:12px;color:#64748b">Commissie %</label><input id="rsPct" type="number" min="0" max="100" value="10" style="width:100%;padding:9px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px"></div>
+    <div style="grid-column:1/3;font-size:12px;color:#64748b">De reseller ontvangt een activatiemail om zelf een wachtwoord in te stellen.</div>
     <div style="grid-column:1/3;display:flex;gap:8px;align-items:center"><button class="sa-btn btn-primary sm" id="rsCreate">Reseller toevoegen</button><span id="rsMsg" style="font-size:12.5px;color:#dc2626"></span></div>
   </div>
 </div>` : ""}
@@ -840,11 +845,14 @@ ${canManage ? `
           const name = document.getElementById("rsName").value.trim();
           const contactEmail = document.getElementById("rsContact").value.trim();
           const loginEmail = document.getElementById("rsLogin").value.trim();
-          const password = document.getElementById("rsPass").value;
           const defaultCommissionPct = Number(document.getElementById("rsPct").value) || 0;
           const msg = document.getElementById("rsMsg"); msg.textContent = "";
-          if (!name || !loginEmail || !password) { msg.textContent = "Naam, login-e-mail en wachtwoord zijn verplicht."; return; }
-          try { await api("/api/admin/resellers", { method: "POST", body: JSON.stringify({ name, contactEmail, loginEmail, password, defaultCommissionPct }) }); resellers(); }
+          if (!name || !loginEmail) { msg.textContent = "Naam en login-e-mail zijn verplicht."; return; }
+          try {
+            const r = await api("/api/admin/resellers", { method: "POST", body: JSON.stringify({ name, contactEmail, loginEmail, defaultCommissionPct }) });
+            if (r && r.activationLink) window.showToast("Reseller aangemaakt. Activatielink (dev): " + r.activationLink, "success");
+            resellers();
+          }
           catch (e) { msg.textContent = e.message; }
         });
       }
@@ -881,7 +889,7 @@ ${canManage ? `
   <div style="padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:640px">
     <input id="stfName" placeholder="Naam" style="padding:9px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
     <input id="stfEmail" type="email" placeholder="E-mail" style="padding:9px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
-    <input id="stfPass" type="password" placeholder="Wachtwoord (sterk: 12+ tekens)" style="padding:9px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;grid-column:1/3">
+    <div style="grid-column:1/3;font-size:12px;color:#64748b">Het teamlid ontvangt een activatiemail om zelf een wachtwoord in te stellen.</div>
     <div style="grid-column:1/3">
       <div style="font-size:12px;color:#64748b;margin-bottom:6px">Toegang tot platform-secties:</div>
       <div id="stfScopes">${scopeChecks(allScopes, "ns")}</div>
@@ -965,13 +973,13 @@ ${canManage ? `
         document.getElementById("stfCreate").addEventListener("click", async () => {
           const name = document.getElementById("stfName").value.trim();
           const email = document.getElementById("stfEmail").value.trim();
-          const password = document.getElementById("stfPass").value;
           const platformScopes = [...document.querySelectorAll("#stfScopes input:checked")].map(i=>i.dataset.scope);
           const msg = document.getElementById("stfMsg");
           msg.textContent = "";
-          if (!name || !email || !password) { msg.textContent = "Naam, e-mail en wachtwoord zijn verplicht."; return; }
+          if (!name || !email) { msg.textContent = "Naam en e-mail zijn verplicht."; return; }
           try {
-            await api("/api/admin/staff", { method:"POST", body: JSON.stringify({ name, email, password, platformScopes }) });
+            const r = await api("/api/admin/staff", { method:"POST", body: JSON.stringify({ name, email, platformScopes }) });
+            if (r && r.activationLink) window.showToast("Teamlid aangemaakt. Activatielink (dev): " + r.activationLink, "success");
             staff();
           } catch(e){ msg.textContent = e.message; }
         });

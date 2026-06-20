@@ -153,16 +153,31 @@
             <input class="login-input" name="name" placeholder="Voornaam Naam"></div>
           <div class="login-field"><label class="login-label">E-mail</label>
             <input class="login-input" name="email" type="email" required autocomplete="email" placeholder="naam@bedrijf.be"></div>
-          <div class="login-field"><label class="login-label">Wachtwoord</label>
-            <input class="login-input" name="password" type="password" required autocomplete="new-password" placeholder="Sterk wachtwoord (12+ tekens)"></div>
           <div class="login-field"><label class="login-label">Pakket</label>
             <select class="login-input" name="plan" id="registerPlan"><option value="">Pakketten laden…</option></select>
           </div>
+          <p class="login-welcome-sub" style="font-size:0.75rem;margin:0 0 4px">Je ontvangt een e-mail om je wachtwoord veilig in te stellen.</p>
           <div id="registerNotice" class="login-notice"></div>
-          <button class="login-btn" type="submit">Account aanmaken &amp; starten</button>
+          <button class="login-btn" type="submit">Account aanmaken</button>
           <div style="text-align:center;margin-top:12px;font-size:0.8125rem;color:#64748b">
             Al een account? <a href="#" id="showLogin" style="color:#0ea5e9;font-weight:600">Inloggen</a>
             · <a href="#" id="showResellerApply" style="color:#64748b">Reseller worden</a>
+          </div>
+        </form>
+
+        <form id="activateForm" class="login-card" style="display:none">
+          <div class="login-form-header" style="margin-bottom:8px">
+            <h2 class="login-welcome">Stel je wachtwoord in</h2>
+            <p class="login-welcome-sub">Activeer je WorkFlow Pro-account</p>
+          </div>
+          <div class="login-field"><label class="login-label">Nieuw wachtwoord</label>
+            <input class="login-input" name="password" type="password" required autocomplete="new-password" placeholder="Sterk wachtwoord (12+ tekens)" autofocus></div>
+          <div class="login-field"><label class="login-label">Herhaal wachtwoord</label>
+            <input class="login-input" name="password2" type="password" required autocomplete="new-password" placeholder="Herhaal je wachtwoord"></div>
+          <div id="activateNotice" class="login-notice"></div>
+          <button class="login-btn" type="submit">Wachtwoord instellen &amp; inloggen</button>
+          <div style="text-align:center;margin-top:12px;font-size:0.8125rem;color:#64748b">
+            <a href="#" id="activateResend" style="color:#0ea5e9;font-weight:600">Activatielink verlopen? Stuur opnieuw</a>
           </div>
         </form>
 
@@ -234,7 +249,7 @@
     <form id="dpaForm" style="display:none"><input name="version"><input name="companyName"></form>
     <form id="contractForm" style="display:none"><select name="action"></select><input name="reason"></form>
     <form id="gdprForm" style="display:none"><select name="type"></select><input name="subjectEmail" type="email"></form>
-    <form id="employeeImportForm" style="display:none"><input id="employeeImportFile" type="file"><textarea name="csv"></textarea><input name="defaultPassword" type="password"></form>
+    <form id="employeeImportForm" style="display:none"><input id="employeeImportFile" type="file"><textarea name="csv"></textarea></form>
     <form id="permissionForm" style="display:none"><select id="permissionUser"></select><select id="permissionRole"></select><div id="permissionChecks"></div></form>
     <form id="supportAccessForm" style="display:none"><input name="reason"><input name="expiresAt" type="datetime-local"></form>
     <button id="endSupportAccess" type="button" style="display:none"></button>

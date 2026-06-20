@@ -1110,7 +1110,7 @@ ${(() => {
 
   ${!emp ? `
   <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin:14px 0 10px;">Toegang</div>
-  <div class="adm-form-group"><label>Tijdelijk wachtwoord</label><input name="tempPassword" placeholder="Laat leeg voor auto-generatie" autocomplete="new-password"></div>` : ""}
+  <div class="adm-form-group" style="font-size:12px;color:#64748b;background:#f8fafc;border-radius:8px;padding:10px 12px;">De medewerker ontvangt een activatiemail om binnen 7 dagen zelf een wachtwoord in te stellen. Je kiest hier dus geen wachtwoord.</div>` : ""}
 
   <div id="admEmpFormErr" style="display:none;background:#fef2f2;color:#dc2626;border-radius:8px;padding:8px;font-size:12px;margin-top:8px;"></div>
   <div class="adm-form-actions" style="margin-top:16px;">
@@ -1176,10 +1176,12 @@ ${emp ? `
           renderEmployees();
         } else {
           const result = await api("POST", "/employees", data);
-          // Toon tijdelijk wachtwoord als er geen wachtwoord ingesteld werd
-          if (result.tempPassword && !data.tempPassword) {
-            document.getElementById("admEmpFormErr").style.cssText = "display:block;background:#d1fae5;color:#065f46;border-radius:8px;padding:8px;font-size:12px;margin-top:8px;";
-            document.getElementById("admEmpFormErr").innerHTML = `✅ Medewerker aangemaakt. Tijdelijk wachtwoord: <strong style="font-family:monospace;">${result.tempPassword}</strong><br><small>Kopieer dit — wordt niet opnieuw getoond.</small>`;
+          // Geen wachtwoord meer: de medewerker activeert via e-mail. In dev (geen
+          // echte mailprovider) geeft de server de activatielink terug zodat het
+          // testbaar blijft; in productie wordt die nooit getoond.
+          if (result.activationLink) {
+            document.getElementById("admEmpFormErr").style.cssText = "display:block;background:#d1fae5;color:#065f46;border-radius:8px;padding:8px;font-size:12px;margin-top:8px;word-break:break-all;";
+            document.getElementById("admEmpFormErr").innerHTML = `✅ Medewerker aangemaakt. Activatielink (dev): <a href="${result.activationLink}">${result.activationLink}</a>`;
             e.target.querySelector("[type=submit]").textContent = "Sluiten";
             e.target.querySelector("[type=submit]").type = "button";
             e.target.querySelector("[type=submit]").addEventListener("click", () => { closeDrawer(); renderEmployees(); });

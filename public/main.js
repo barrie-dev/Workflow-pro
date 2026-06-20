@@ -2345,9 +2345,11 @@ async function importEmployees(form) {
   }
   try {
     const data = formData(form);
+    // Geen gedeeld wachtwoord meer: iedere geïmporteerde medewerker krijgt een
+    // eigen activatiemail om zelf een wachtwoord in te stellen.
     const result = await api(`/api/tenants/${tenantId}/imports/employees`, {
       method: "POST",
-      body: JSON.stringify({ csv: data.csv, defaultPassword: data.defaultPassword })
+      body: JSON.stringify({ csv: data.csv })
     });
     renderImportResult(result.result || {});
     setNotice("Medewerkersimport is verwerkt.");
@@ -2626,24 +2628,19 @@ regForm?.addEventListener("submit", async event => {
   const companyName = f.elements.companyName.value.trim();
   const name = f.elements.name.value.trim();
   const email = f.elements.email.value.trim();
-  const password = f.elements.password.value;
   try {
     if (_registerMode === "reseller") {
-      await api("/api/resellers/apply", { method: "POST", body: JSON.stringify({ name: companyName || name, email, password }) });
+      await api("/api/resellers/apply", { method: "POST", body: JSON.stringify({ name: companyName || name, email }) });
       showLoginForm();
       showToast("Reseller-aanvraag ontvangen. Je account wordt na goedkeuring geactiveerd.", "success");
       return;
     }
     const plan = f.elements.plan.value;
-    const result = await api("/api/auth/register", { method: "POST", body: JSON.stringify({ companyName, name, email, password, plan }) });
-    if (!result.token) throw new Error(result.error || "Registratie mislukt");
-    token = result.token;
-    localStorage.setItem("wfp_token", token);
-    window._wfpCurrentUser = result.user || null;
-    setShellAuthenticated(true);
-    const loginPage = document.getElementById("loginPage");
-    if (loginPage) loginPage.classList.add("hidden");
-    if (window.WorkFlowProPlatformRouter) window.WorkFlowProPlatformRouter.showPlatform(result.user.role);
+    // Geen wachtwoord meer bij registratie: de klant verifieert zijn e-mail en
+    // stelt zelf zijn wachtwoord in via de activatielink.
+    await api("/api/auth/register", { method: "POST", body: JSON.stringify({ companyName, name, email, plan }) });
+    showLoginForm();
+    showToast("Account aangemaakt — open de activatiemail om je wachtwoord in te stellen.", "success");
   } catch (error) {
     notice.textContent = error.message || "Registratie mislukt";
     notice.classList.add("bad");
@@ -3115,3 +3112,61 @@ document.addEventListener("DOMContentLoaded", supportEnterBootstrap);
 window.addEventListener("load", supportEnterBootstrap);
 setTimeout(supportEnterBootstrap, 0);
 setTimeout(supportEnterBootstrap, 400);
+
+// ── Account-activatie: persoon opent de e-mailink ?activate=<token> en stelt ──
+// zelf zijn wachtwoord in. Bij succes meteen ingelogd. De aanmaker kent dus nooit
+// een wachtwoord en het e-mailadres is geverifieerd.
+let _activateToken = "";
+function showActivateForm() {
+  const params = new URLSearchParams(location.search);
+  _activateToken = params.get("activate") || "";
+  if (!_activateToken) return false;
+  const af = document.getElementById("activateForm");
+  if (!af) return false;
+  ["loginForm", "registerForm", "loginToRegister", "loginDemoSection"].forEach(id => {
+    const n = document.getElementById(id); if (n) n.style.display = "none";
+  });
+  af.style.display = "";
+  const loginPage = document.getElementById("loginPage");
+  if (loginPage) loginPage.classList.remove("hidden");
+  return true;
+}
+document.getElementById("activateForm")?.addEventListener("submit", async event => {
+  event.preventDefault();
+  const f = event.currentTarget;
+  const notice = document.getElementById("activateNotice");
+  notice.textContent = ""; notice.classList.remove("bad");
+  const password = f.elements.password.value;
+  if (password !== f.elements.password2.value) {
+    notice.textContent = "De wachtwoorden komen niet overeen."; notice.classList.add("bad"); return;
+  }
+  try {
+    const result = await api("/api/auth/activate", { method: "POST", body: JSON.stringify({ token: _activateToken, password }) });
+    if (!result.token) throw new Error(result.error || "Activatie mislukt");
+    token = result.token;
+    localStorage.setItem("wfp_token", token);
+    window._wfpCurrentUser = result.user || null;
+    history.replaceState(null, "", location.pathname);
+    setShellAuthenticated(true);
+    const loginPage = document.getElementById("loginPage");
+    if (loginPage) loginPage.classList.add("hidden");
+    if (window.WorkFlowProPlatformRouter) window.WorkFlowProPlatformRouter.showPlatform(result.user.role);
+  } catch (error) {
+    notice.textContent = error.message || "Activatie mislukt"; notice.classList.add("bad");
+  }
+});
+document.getElementById("activateResend")?.addEventListener("click", async e => {
+  e.preventDefault();
+  const notice = document.getElementById("activateNotice");
+  const email = prompt("Met welk e-mailadres is je account aangemaakt?");
+  if (!email) return;
+  try {
+    await api("/api/auth/activate/resend", { method: "POST", body: JSON.stringify({ email: email.trim() }) });
+    notice.textContent = "Als er een account in afwachting is, is er een nieuwe activatiemail verstuurd."; notice.classList.remove("bad");
+  } catch (_) {
+    notice.textContent = "Kon de activatiemail niet versturen."; notice.classList.add("bad");
+  }
+});
+document.addEventListener("DOMContentLoaded", showActivateForm);
+window.addEventListener("load", showActivateForm);
+setTimeout(showActivateForm, 0);
