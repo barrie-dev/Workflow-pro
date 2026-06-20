@@ -2587,16 +2587,27 @@ function showRegisterForm(mode) {
   const btn = regForm.querySelector("button[type=submit]");
   document.getElementById("registerNotice").textContent = "";
   document.getElementById("registerNotice").classList.remove("bad");
+  // Toggle-links: toon altijd het pad naar de ANDERE modus, zodat een verkeerde
+  // keuze (reseller i.p.v. bedrijf of omgekeerd) altijd terug te draaien is.
+  const toReseller = document.getElementById("showResellerApply");
+  const toTenant = document.getElementById("showTenantRegister");
+  const pwHint = document.getElementById("registerPwHint");
   if (mode === "reseller") {
     if (planField) planField.style.display = "none";
+    if (pwHint) pwHint.style.display = "none"; // mail volgt pas na goedkeuring
     title.textContent = "Reseller worden";
     sub.textContent = "Vraag een partneraccount aan — wij keuren het goed";
     btn.textContent = "Aanvraag indienen";
+    if (toReseller) toReseller.style.display = "none";
+    if (toTenant) toTenant.style.display = "";
   } else {
     if (planField) planField.style.display = "";
     title.textContent = "Account aanmaken";
     sub.textContent = "Start je eigen WorkFlow Pro — kies je pakket";
     btn.textContent = "Account aanmaken & starten";
+    if (toReseller) toReseller.style.display = "";
+    if (toTenant) toTenant.style.display = "none";
+    if (pwHint) pwHint.style.display = "";
     loadRegisterPlans();
   }
 }
@@ -2619,6 +2630,7 @@ async function loadRegisterPlans() {
 }
 document.getElementById("showRegister")?.addEventListener("click", e => { e.preventDefault(); showRegisterForm("tenant"); });
 document.getElementById("showResellerApply")?.addEventListener("click", e => { e.preventDefault(); showRegisterForm("reseller"); });
+document.getElementById("showTenantRegister")?.addEventListener("click", e => { e.preventDefault(); showRegisterForm("tenant"); });
 document.getElementById("showLogin")?.addEventListener("click", e => { e.preventDefault(); showLoginForm(); });
 regForm?.addEventListener("submit", async event => {
   event.preventDefault();
