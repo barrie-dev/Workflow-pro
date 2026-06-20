@@ -12,6 +12,7 @@ const { Store } = require("../src/lib/store");
 const { runSupportAccessReview } = require("../src/modules/support-access");
 const { verifyStripeSignature } = require("../src/modules/stripe-webhook");
 const { peppolTransportReadiness } = require("../src/modules/peppol-invoice");
+const { liveServiceReadiness } = require("../src/modules/live-services");
 const crypto = require("node:crypto");
 
 class MemAdapter {
@@ -164,6 +165,40 @@ test("peppol-transport: productie vereist echte provider en sleutel", () => {
   assert.equal(live.ok, true);
   assert.equal(live.transport, "billit");
   assert.equal(live.mode, "live");
+});
+
+test("live-services: externe productieafhankelijkheden zijn expliciet gegated", () => {
+  const blocked = liveServiceReadiness({
+    storageAdapter: "json",
+    supabase: { url: "", serviceRoleKey: "" },
+    databaseUrl: "",
+    stripe: { secretKey: "sk_test_x", webhookSecret: "" },
+    peppol: { provider: "mock", apiKey: "" },
+    appUrl: "http://localhost:4280",
+    releaseChannel: "development",
+    commitSha: "local-dev"
+  });
+  assert.equal(blocked.ok, false);
+  assert.ok(blocked.blockers.some(row => row.key === "storage_adapter"));
+  assert.ok(blocked.blockers.some(row => row.key === "stripe_secret"));
+  assert.ok(blocked.blockers.some(row => row.key === "peppol_provider"));
+
+  const ready = liveServiceReadiness({
+    storageAdapter: "postgres",
+    supabase: {
+      url: "https://workflowpro.supabase.co",
+      serviceRoleKey: `${"a".repeat(40)}.${"b".repeat(40)}.${"c".repeat(40)}`
+    },
+    databaseUrl: "postgresql://user:pass@aws-0-eu-west-1.pooler.supabase.com:6543/postgres",
+    stripe: { secretKey: "sk_live_12345678901234567890", webhookSecret: "whsec_12345678901234567890" },
+    peppol: { provider: "billit", apiKey: "live_peppol_secret_123456789" },
+    appUrl: "https://app.workflowpro.be",
+    releaseChannel: "production",
+    commitSha: "b2f721cc0ffee"
+  });
+  assert.equal(ready.ok, true);
+  assert.equal(ready.blockers.length, 0);
+  assert.equal(ready.warnings.length, 0);
 });
 
 test("stripe-webhook: HMAC signature valideert exact", () => {
