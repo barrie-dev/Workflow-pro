@@ -63,6 +63,63 @@ function validProviderSecret(value) {
   return raw.length >= 16 && !isPlaceholder(raw);
 }
 
+function emailProviderConfig(platformConfig = {}) {
+  const email = platformConfig.email || {};
+  const provider = String(email.provider || process.env.EMAIL_PROVIDER || "log").trim().toLowerCase();
+  return {
+    provider,
+    apiKey: email.apiKey || process.env.RESEND_API_KEY || process.env.SENDGRID_API_KEY || "",
+    from: email.from || process.env.EMAIL_FROM || "",
+    smtpHost: email.smtpHost || process.env.SMTP_HOST || "",
+    smtpUser: email.smtpUser || process.env.SMTP_USER || "",
+    smtpPass: email.smtpPass || process.env.SMTP_PASS || ""
+  };
+}
+
+function validEmailFrom(value) {
+  const raw = String(value || "");
+  const match = raw.match(/<([^>]+)>/);
+  const address = (match ? match[1] : raw).trim();
+  return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(address);
+}
+
+function emailReadinessItems(platformConfig = {}) {
+  const email = emailProviderConfig(platformConfig);
+  const providerReady = ["resend", "sendgrid", "smtp"].includes(email.provider);
+  const secretReady = email.provider === "smtp"
+    ? !!email.smtpHost && !!email.smtpUser && validProviderSecret(email.smtpPass)
+    : validProviderSecret(email.apiKey);
+  const secretValue = email.provider === "smtp"
+    ? (email.smtpHost && email.smtpUser && email.smtpPass ? "configured" : "missing")
+    : maskedState(email.apiKey);
+  return [
+    item(
+      "email_provider",
+      "E-mail provider",
+      providerReady,
+      email.provider,
+      "Zet EMAIL_PROVIDER op resend, sendgrid of smtp. Log-mode is niet toegestaan voor productie-activatie."
+    ),
+    item(
+      "email_credentials",
+      "E-mail credentials",
+      providerReady && secretReady,
+      secretValue,
+      email.provider === "smtp"
+        ? "Zet SMTP_HOST, SMTP_USER en SMTP_PASS voor activatiemails."
+        : "Zet RESEND_API_KEY of SENDGRID_API_KEY als server-only secret."
+    ),
+    item(
+      "email_from",
+      "Afzender",
+      validEmailFrom(email.from),
+      email.from || "missing",
+      "Zet EMAIL_FROM naar een gevalideerd afzenderadres, bijvoorbeeld WorkFlow Pro <noreply@workflowpro.be>.",
+      "P1"
+    )
+  ];
+}
+
 function liveServiceReadiness(platformConfig = config) {
   const groups = [
     {
@@ -119,6 +176,11 @@ function liveServiceReadiness(platformConfig = config) {
           "Zet STRIPE_WEBHOOK_SECRET vanuit de live webhook endpoint settings."
         )
       ]
+    },
+    {
+      key: "email",
+      label: "E-mail activatie",
+      items: emailReadinessItems(platformConfig)
     },
     {
       key: "peppol",

@@ -14,6 +14,7 @@ const { verifyStripeSignature } = require("../src/modules/stripe-webhook");
 const { peppolTransportReadiness } = require("../src/modules/peppol-invoice");
 const { liveServiceReadiness } = require("../src/modules/live-services");
 const { importEmployees } = require("../src/modules/imports");
+const { productionConfigRisk } = require("../src/modules/production");
 const crypto = require("node:crypto");
 
 class MemAdapter {
@@ -174,6 +175,7 @@ test("live-services: externe productieafhankelijkheden zijn expliciet gegated", 
     supabase: { url: "", serviceRoleKey: "" },
     databaseUrl: "",
     stripe: { secretKey: "sk_test_x", webhookSecret: "" },
+    email: { provider: "log", apiKey: "", from: "" },
     peppol: { provider: "mock", apiKey: "" },
     appUrl: "http://localhost:4280",
     releaseChannel: "development",
@@ -182,6 +184,7 @@ test("live-services: externe productieafhankelijkheden zijn expliciet gegated", 
   assert.equal(blocked.ok, false);
   assert.ok(blocked.blockers.some(row => row.key === "storage_adapter"));
   assert.ok(blocked.blockers.some(row => row.key === "stripe_secret"));
+  assert.ok(blocked.blockers.some(row => row.key === "email_provider"));
   assert.ok(blocked.blockers.some(row => row.key === "peppol_provider"));
 
   const ready = liveServiceReadiness({
@@ -192,6 +195,7 @@ test("live-services: externe productieafhankelijkheden zijn expliciet gegated", 
     },
     databaseUrl: "postgresql://user:pass@aws-0-eu-west-1.pooler.supabase.com:6543/postgres",
     stripe: { secretKey: "sk_live_12345678901234567890", webhookSecret: "whsec_12345678901234567890" },
+    email: { provider: "resend", apiKey: "re_live_12345678901234567890", from: "WorkFlow Pro <noreply@workflowpro.be>" },
     peppol: { provider: "billit", apiKey: "live_peppol_secret_123456789" },
     appUrl: "https://app.workflowpro.be",
     releaseChannel: "production",
@@ -228,6 +232,32 @@ test("employee-import: nieuwe gebruikers krijgen activatieflow zonder gedeeld wa
   assert.equal(result.created[0].passwordHash, undefined);
   assert.equal(result.created[0].activation, undefined);
   assert.equal(result.created[0].email, "nieuw@tenant.be");
+});
+
+test("production-config: e-mailactivatie is P0 voor productie", () => {
+  const previous = {
+    EMAIL_PROVIDER: process.env.EMAIL_PROVIDER,
+    EMAIL_FROM: process.env.EMAIL_FROM,
+    RESEND_API_KEY: process.env.RESEND_API_KEY
+  };
+  try {
+    process.env.EMAIL_PROVIDER = "log";
+    delete process.env.EMAIL_FROM;
+    delete process.env.RESEND_API_KEY;
+    const blocked = productionConfigRisk().rows.find(row => row.key === "email_provider");
+    assert.equal(blocked.ok, false);
+
+    process.env.EMAIL_PROVIDER = "resend";
+    process.env.EMAIL_FROM = "WorkFlow Pro <noreply@workflowpro.be>";
+    process.env.RESEND_API_KEY = "re_live_12345678901234567890";
+    const ready = productionConfigRisk().rows.find(row => row.key === "email_provider");
+    assert.equal(ready.ok, true);
+  } finally {
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
 });
 
 test("stripe-webhook: HMAC signature valideert exact", () => {

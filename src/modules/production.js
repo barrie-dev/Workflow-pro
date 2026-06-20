@@ -21,6 +21,27 @@ function isLiveStripeWebhookSecret(value) {
   return raw.startsWith("whsec_") && !raw.includes("replace_me");
 }
 
+function validEmailFrom(value) {
+  const raw = String(value || "");
+  const match = raw.match(/<([^>]+)>/);
+  const address = (match ? match[1] : raw).trim();
+  return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(address);
+}
+
+function emailProviderReady() {
+  const provider = String(process.env.EMAIL_PROVIDER || "log").toLowerCase();
+  if (provider === "smtp") {
+    return !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS && validEmailFrom(process.env.EMAIL_FROM));
+  }
+  if (provider === "resend") {
+    return !!(process.env.RESEND_API_KEY && !isDevSecret(process.env.RESEND_API_KEY, "DUMMY") && validEmailFrom(process.env.EMAIL_FROM));
+  }
+  if (provider === "sendgrid") {
+    return !!(process.env.SENDGRID_API_KEY && !isDevSecret(process.env.SENDGRID_API_KEY, "DUMMY") && validEmailFrom(process.env.EMAIL_FROM));
+  }
+  return false;
+}
+
 function check(key, label, ok, detail, priority = "P0") {
   return {
     key,
@@ -89,6 +110,14 @@ function productionConfigRisk() {
       ok: isLiveStripeWebhookSecret(config.stripe.webhookSecret),
       value: config.stripe.webhookSecret ? (isLiveStripeWebhookSecret(config.stripe.webhookSecret) ? "configured" : "placeholder") : "missing",
       action: "Zet STRIPE_WEBHOOK_SECRET zodat events cryptografisch gecontroleerd worden."
+    },
+    {
+      key: "email_provider",
+      label: "E-mail activatie",
+      required: "EMAIL_PROVIDER + EMAIL_FROM + provider secret",
+      ok: emailProviderReady(),
+      value: `${process.env.EMAIL_PROVIDER || "log"}/${process.env.EMAIL_FROM || "missing"}`,
+      action: "Configureer resend, sendgrid of smtp zodat accountactivatie-e-mails echt verzonden worden."
     },
     {
       key: "peppol_provider",
@@ -275,6 +304,13 @@ function productionReadiness(store) {
       "Stripe test/live configuratie",
       isLiveStripeSecret(config.stripe.secretKey) && isLiveStripeWebhookSecret(config.stripe.webhookSecret),
       "STRIPE_SECRET_KEY moet live zijn en STRIPE_WEBHOOK_SECRET moet geldig ingesteld zijn.",
+      "P0"
+    ),
+    check(
+      "email_activation",
+      "E-mail activatie",
+      emailProviderReady(),
+      "Configureer EMAIL_PROVIDER met geldige providercredentials en EMAIL_FROM; zonder e-mail kunnen nieuwe accounts niet activeren.",
       "P0"
     ),
     check(
