@@ -126,6 +126,7 @@ const { todayPayload, completeWorkorder, attachWorkorderPhoto, signWorkorder, sy
 const { clockIn, clockOut, approveExpense, managementReport } = require("./modules/operations");
 const { listIntegrations, connectIntegration, updateMapping, runSync, retrySync, listProviders } = require("./modules/integrations");
 const { commissionOverview, publicReseller, commissionPctFor } = require("./modules/resellers");
+const saml = require("./modules/saml");
 const { tenantStatus, unlockUser, listBackups, createBackup, backupPreview, restoreBackup, publicStatus } = require("./modules/admin");
 const { createNotification, listNotifications, markNotificationRead, generateReminders, notificationSummary } = require("./modules/notifications");
 const { importEmployees } = require("./modules/imports");
@@ -708,6 +709,99 @@ http.createServer(async (req, res) => {
       }
       sendJson(res, 200, { ok: true, message: "Als er een account in afwachting is, sturen we een nieuwe activatiemail." });
       return;
+    }
+
+    // ── SAML Single Sign-On (add-on) ──────────────────────────────────────────
+    // Add-on: enkel beschikbaar als de tenant het 'sso'-entitlement heeft ÉN het
+    // geconfigureerd is. We valideren XML-signaturen via de vetted library.
+    const ssoLive = t => t && saml.ssoConfigured(t) && isModuleEnabled(store, t, "sso");
+    const redirectTo = to => { res.writeHead(302, { Location: to }); res.end(); };
+
+    // Domein → tenant: welk SSO-startpunt hoort bij dit e-mailadres?
+    if (url.pathname === "/api/auth/sso/resolve" && req.method === "GET") {
+      const email = String(url.searchParams.get("email") || "").trim().toLowerCase();
+      const domain = email.includes("@") ? email.split("@")[1] : email.replace(/^@/, "");
+      let hit = null;
+      if (domain) {
+        hit = (store.data.tenants || []).find(t => ssoLive(t) && saml.ssoDomains(t).includes(domain)) || null;
+      }
+      if (!hit) return sendJson(res, 200, { ok: true, sso: false });
+      sendJson(res, 200, { ok: true, sso: true, tenantId: hit.id, loginUrl: `/api/auth/saml/${hit.id}/login` });
+      return;
+    }
+
+    const samlMatch = url.pathname.match(/^\/api\/auth\/saml\/([^/]+)\/(metadata|login|acs)$/);
+    if (samlMatch) {
+      const tenant = store.get("tenants", samlMatch[1]);
+      const kind = samlMatch[2];
+      // SP-metadata mag getoond worden zodra geconfigureerd+entitled (publiek doc).
+      if (kind === "metadata" && req.method === "GET") {
+        if (!ssoLive(tenant)) { res.writeHead(404); res.end("SSO niet beschikbaar"); return; }
+        res.writeHead(200, { "Content-Type": "application/xml; charset=utf-8" });
+        res.end(saml.spMetadata(tenant));
+        return;
+      }
+      if (kind === "login" && req.method === "GET") {
+        if (!ssoLive(tenant)) return redirectTo("/?sso_error=unavailable");
+        try {
+          const loginUrl = await saml.buildLoginUrl(tenant, "");
+          return redirectTo(loginUrl);
+        } catch (e) {
+          store.audit({ actor: "sso", tenantId: tenant.id, action: "sso_login_error", area: "auth", detail: e.message });
+          return redirectTo("/?sso_error=request");
+        }
+      }
+      if (kind === "acs" && req.method === "POST") {
+        if (!ssoLive(tenant)) return redirectTo("/?sso_error=unavailable");
+        let identity;
+        try {
+          const raw = await readRawBody(req);
+          const form = new URLSearchParams(raw);
+          const profile = await saml.validateAcs(tenant, { SAMLResponse: form.get("SAMLResponse"), RelayState: form.get("RelayState") });
+          identity = saml.extractIdentity(profile, tenant);
+        } catch (e) {
+          store.audit({ actor: "sso", tenantId: tenant.id, action: "sso_assertion_invalid", area: "auth", detail: e.message });
+          return redirectTo("/?sso_error=assertion");
+        }
+        if (!identity.email || !/@/.test(identity.email)) return redirectTo("/?sso_error=noemail");
+
+        let target = (store.data.users || []).find(u => u.tenantId === tenant.id && String(u.email).toLowerCase() === identity.email);
+        const now = new Date().toISOString();
+        if (target) {
+          if (target.active === false) {
+            // Pending account (nooit wachtwoord gezet) → SSO bewijst de identiteit,
+            // dus activeren. Een door een admin gedeactiveerd account blijft geweigerd.
+            if (!target.passwordHash && target.activation) {
+              target = store.update("users", target.id, { active: true, emailVerifiedAt: now, activation: null, lastLoginAt: now });
+            } else {
+              store.audit({ actor: identity.email, tenantId: tenant.id, action: "sso_login_denied", area: "auth", detail: "account inactief" });
+              return redirectTo("/?sso_error=inactive");
+            }
+          } else {
+            store.update("users", target.id, { lastLoginAt: now });
+          }
+        } else {
+          // Just-in-time provisioning: account aanmaken bij eerste SSO-login.
+          if (!saml.jitEnabled(tenant)) {
+            store.audit({ actor: identity.email, tenantId: tenant.id, action: "sso_login_denied", area: "auth", detail: "geen account, JIT uit" });
+            return redirectTo("/?sso_error=nouser");
+          }
+          const role = saml.jitRole(tenant);
+          target = store.insert("users", {
+            id: `user_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+            tenantId: tenant.id, name: identity.name || identity.email, email: identity.email,
+            passwordHash: "", role, permissions: role === "manager" ? MANAGER_PERMISSIONS : EMPLOYEE_PERMISSIONS,
+            mfaEnabled: false, mfaEnforced: false, active: true, ssoProvisioned: true,
+            emailVerifiedAt: now, lastLoginAt: now, createdAt: now
+          });
+          store.audit({ actor: identity.email, tenantId: tenant.id, action: "sso_jit_provisioned", area: "auth", detail: role });
+        }
+        store.audit({ actor: identity.email, tenantId: tenant.id, action: "sso_login", area: "auth" });
+        // Sessie-token in de URL-fragment (gaat niet naar server/logs), net als de
+        // support-flow. De client pikt #sso_token op en toont meteen het platform.
+        return redirectTo(`/#sso_token=${encodeURIComponent(issueSession(target))}`);
+      }
+      res.writeHead(405); res.end("Method niet toegestaan"); return;
     }
 
     if (url.pathname === "/api/me") {
@@ -1469,6 +1563,27 @@ http.createServer(async (req, res) => {
         } catch (e) {
           sendJson(res, e.status || 500, { ok: false, error: e.message });
         }
+        return;
+      }
+
+      // ── SAML SSO-configuratie (add-on; gated door assertModuleEnabled hierboven) ──
+      if (action === "sso/config" && req.method === "GET") {
+        assertCan(user, "settings");
+        sendJson(res, 200, { ok: true, sso: saml.publicSsoConfig(tenant) });
+        return;
+      }
+      if (action === "sso/config" && (req.method === "PUT" || req.method === "POST")) {
+        assertCan(user, "settings");
+        assertInteractiveUser(user);
+        const body = await readBody(req);
+        const next = saml.sanitizeSsoInput(body, tenant.sso || {});
+        // Inschakelen mag enkel met een werkbare configuratie (anti-lockout).
+        if (next.enabled && (!next.entryPoint || !next.idpCert)) {
+          return sendJson(res, 400, { ok: false, error: "IdP-login-URL en certificaat zijn verplicht om SSO in te schakelen." });
+        }
+        const updated = store.update("tenants", tenant.id, { sso: next });
+        store.audit({ actor: user.email, tenantId, action: "sso_config_updated", area: "settings", detail: next.enabled ? "ingeschakeld" : "uitgeschakeld" });
+        sendJson(res, 200, { ok: true, sso: saml.publicSsoConfig(updated) });
         return;
       }
 

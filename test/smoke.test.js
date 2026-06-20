@@ -667,3 +667,76 @@ test("support: write-sessie mag schrijven, en consent intrekken stopt de sessie"
   const after = await fetch(`${BASE}/api/tenants/t_demo/planning`, { headers: { Authorization: `Bearer ${sd.supportToken}` } });
   assert.equal(after.status, 401, "ingetrokken consent → support-token ongeldig");
 });
+
+// ── SAML SSO (add-on) ──────────────────────────────────────────────────────
+test("sso: add-on gating, configuratie, resolve, login-redirect, metadata en ACS-weigering", async () => {
+  const H = t => ({ "Content-Type": "application/json", Authorization: `Bearer ${t}` });
+  const god = await login("super@workflowpro.be", "Demo2026!");
+  const admin = await login("admin@demobouw.be", "Demo2026!");
+
+  // Zonder add-on: /sso/config is 403 (entitlement-gating).
+  const denied = await fetch(`${BASE}/api/tenants/t_demo/sso/config`, { headers: H(admin.token) });
+  assert.equal(denied.status, 403, "geen sso-add-on → 403");
+
+  // God kent de sso-add-on toe via module-overrides.
+  const grant = await fetch(`${BASE}/api/admin/tenants/t_demo/modules`, {
+    method: "PATCH", headers: H(god.token),
+    body: JSON.stringify({ moduleOverrides: { add: ["sso"], remove: [] } })
+  });
+  assert.equal(grant.status, 200);
+
+  // Nu kan de admin de config lezen + opslaan.
+  const cfgGet = await fetch(`${BASE}/api/tenants/t_demo/sso/config`, { headers: H(admin.token) });
+  assert.equal(cfgGet.status, 200, "met add-on → config leesbaar");
+
+  const dummyCert = "-----BEGIN CERTIFICATE-----\nMIIBdummybase64data\n-----END CERTIFICATE-----";
+  const save = await fetch(`${BASE}/api/tenants/t_demo/sso/config`, {
+    method: "PUT", headers: H(admin.token),
+    body: JSON.stringify({
+      enabled: true, entryPoint: "https://idp.example/sso", idpCert: dummyCert,
+      domains: ["demobouw.be"], jit: { enabled: true, defaultRole: "employee" }
+    })
+  });
+  assert.equal(save.status, 200);
+  const saved = await save.json();
+  assert.equal(saved.sso.enabled, true);
+  assert.deepEqual(saved.sso.domains, ["demobouw.be"]);
+
+  // Inschakelen zonder cert moet falen (anti-lockout).
+  const bad = await fetch(`${BASE}/api/tenants/t_demo/sso/config`, {
+    method: "PUT", headers: H(admin.token),
+    body: JSON.stringify({ enabled: true, entryPoint: "https://idp.example/sso", idpCert: "" })
+  });
+  assert.equal(bad.status, 400, "inschakelen zonder cert → 400");
+  // (config staat nog op de geldige versie van hierboven)
+  await fetch(`${BASE}/api/tenants/t_demo/sso/config`, {
+    method: "PUT", headers: H(admin.token),
+    body: JSON.stringify({ enabled: true, entryPoint: "https://idp.example/sso", idpCert: dummyCert, domains: ["demobouw.be"], jit: { enabled: true, defaultRole: "employee" } })
+  });
+
+  // Publieke resolve: domein → tenant.
+  const resolved = await (await fetch(`${BASE}/api/auth/sso/resolve?email=iemand@demobouw.be`)).json();
+  assert.equal(resolved.sso, true);
+  assert.equal(resolved.tenantId, "t_demo");
+  const noSso = await (await fetch(`${BASE}/api/auth/sso/resolve?email=iemand@onbekend.be`)).json();
+  assert.equal(noSso.sso, false);
+
+  // Login-endpoint → 302 naar de IdP met SAMLRequest.
+  const loginRedirect = await fetch(`${BASE}/api/auth/saml/t_demo/login`, { redirect: "manual" });
+  assert.equal(loginRedirect.status, 302);
+  assert.match(loginRedirect.headers.get("location") || "", /^https:\/\/idp\.example\/sso\?SAMLRequest=/);
+
+  // SP-metadata is XML.
+  const meta = await fetch(`${BASE}/api/auth/saml/t_demo/metadata`);
+  assert.equal(meta.status, 200);
+  assert.match((meta.headers.get("content-type") || ""), /xml/);
+
+  // ACS met rommel → redirect met sso_error (nooit een sessie).
+  const acs = await fetch(`${BASE}/api/auth/saml/t_demo/acs`, {
+    method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: "SAMLResponse=" + encodeURIComponent(Buffer.from("<garbage/>").toString("base64")),
+    redirect: "manual"
+  });
+  assert.equal(acs.status, 302);
+  assert.match(acs.headers.get("location") || "", /sso_error=/);
+});

@@ -4780,6 +4780,10 @@ ${providers.map(p => {
       <div id="admSupportMsg" style="display:none;padding:8px 12px;border-radius:8px;font-size:13px;margin-top:10px;"></div>
     </div>
   </div>
+  <div class="adm-card" id="admSsoCard" style="display:none;grid-column:1/-1;">
+    <div class="adm-card-header"><h3 class="adm-card-title">Single Sign-On (SAML) <span style="font-size:11px;background:#eef2ff;color:#4338ca;border-radius:999px;padding:2px 8px;vertical-align:middle;">Add-on</span></h3></div>
+    <div class="adm-card-body" id="admSsoBody"><div class="adm-loading">Laden…</div></div>
+  </div>
 </div>`;
 
     // ── Support-toegang (GDPR consent) ──
@@ -4829,6 +4833,73 @@ ${providers.map(p => {
       } catch (e) { admSupportMsg(e.message, false); }
     });
     renderSupportConsent(tenant.supportAccess || { allowed: false });
+
+    // ── SSO (SAML) add-on: enkel tonen als de tenant het entitlement heeft ──
+    // We proberen de config te laden; bij 403 (geen add-on) blijft de kaart verborgen.
+    (async function loadSsoCard() {
+      let sso;
+      try { const r = await api("GET", "/sso/config"); sso = r.sso; }
+      catch (_) { return; } // niet geëntitleerd → kaart blijft verborgen
+      const card = document.getElementById("admSsoCard");
+      const body = document.getElementById("admSsoBody");
+      if (!card || !body) return;
+      card.style.display = "";
+      function paint(cfg) {
+        body.innerHTML = `
+          <p style="font-size:13px;color:#64748b;margin-bottom:12px;">
+            Laat je medewerkers inloggen via jullie identiteitsprovider (Azure AD, Okta, Google Workspace…).
+            Configureer hieronder de IdP-gegevens en geef onderstaande SP-URL's in bij je IdP.
+          </p>
+          <div style="background:#f8fafc;border-radius:8px;padding:10px 12px;font-size:12px;margin-bottom:14px;word-break:break-all;">
+            <div><strong>ACS / Reply URL:</strong> ${esc(cfg.acsUrl)}</div>
+            <div><strong>Entity ID / Issuer:</strong> ${esc(cfg.issuer)}</div>
+            <div><strong>SP-metadata:</strong> <a href="${esc(cfg.metadataUrl)}" target="_blank" rel="noopener">${esc(cfg.metadataUrl)}</a></div>
+          </div>
+          <form id="admSsoForm">
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:12px;cursor:pointer;">
+              <input type="checkbox" name="enabled" ${cfg.enabled ? "checked" : ""}> SSO inschakelen voor deze organisatie
+            </label>
+            <div class="adm-form-group"><label>IdP login-URL (SSO endpoint)</label>
+              <input name="entryPoint" value="${esc(cfg.entryPoint || "")}" placeholder="https://login.microsoftonline.com/.../saml2"></div>
+            <div class="adm-form-group"><label>IdP X.509-certificaat (PEM)</label>
+              <textarea name="idpCert" rows="4" placeholder="-----BEGIN CERTIFICATE-----" style="font-family:monospace;font-size:11px;">${esc(cfg.idpCert || "")}</textarea></div>
+            <div class="adm-form-group"><label>E-maildomeinen (komma-gescheiden)</label>
+              <input name="domains" value="${esc((cfg.domains || []).join(", "))}" placeholder="bedrijf.be, bedrijf.com"></div>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin:8px 0;cursor:pointer;">
+              <input type="checkbox" name="jitEnabled" ${cfg.jit && cfg.jit.enabled ? "checked" : ""}> Just-in-time provisioning (account automatisch aanmaken bij eerste SSO-login)
+            </label>
+            <div class="adm-form-group"><label>Standaardrol bij JIT</label>
+              <select name="jitRole">
+                <option value="employee" ${cfg.jit && cfg.jit.defaultRole === "employee" ? "selected" : ""}>Medewerker</option>
+                <option value="manager" ${cfg.jit && cfg.jit.defaultRole === "manager" ? "selected" : ""}>Manager</option>
+              </select></div>
+            <div id="admSsoMsg" style="display:none;padding:8px 12px;border-radius:8px;font-size:13px;margin-bottom:8px;"></div>
+            <div class="adm-form-actions"><button type="submit" class="adm-btn adm-btn-primary">SSO-instellingen opslaan</button></div>
+          </form>`;
+        document.getElementById("admSsoForm").addEventListener("submit", async e => {
+          e.preventDefault();
+          const f = e.target;
+          const msg = document.getElementById("admSsoMsg");
+          const payload = {
+            enabled: f.elements.enabled.checked,
+            entryPoint: f.elements.entryPoint.value.trim(),
+            idpCert: f.elements.idpCert.value.trim(),
+            domains: f.elements.domains.value.split(",").map(s => s.trim()).filter(Boolean),
+            jit: { enabled: f.elements.jitEnabled.checked, defaultRole: f.elements.jitRole.value }
+          };
+          try {
+            const r = await api("PUT", "/sso/config", payload);
+            msg.style.cssText = "display:block;background:#d1fae5;color:#065f46;padding:8px 12px;border-radius:8px;font-size:13px;margin-bottom:8px;";
+            msg.textContent = "SSO-instellingen opgeslagen ✓";
+            paint(r.sso);
+          } catch (err) {
+            msg.style.cssText = "display:block;background:#fee2e2;color:#dc2626;padding:8px 12px;border-radius:8px;font-size:13px;margin-bottom:8px;";
+            msg.textContent = err.message;
+          }
+        });
+      }
+      paint(sso);
+    })();
 
     // Save company settings
     document.getElementById("admOrgForm").addEventListener("submit", async e => {

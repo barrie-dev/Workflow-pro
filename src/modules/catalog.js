@@ -84,6 +84,11 @@ const MODULE_CATALOG = [
     submodules: [{ key: "datahub-export", label: "Datahub export" }] },
   { key: "integrations", label: "Integraties", group: "Systeem", core: false,
     view: "integrations", actions: ["integrations"], submodules: [] },
+  // Add-on: Single Sign-On via SAML 2.0. Geen eigen nav-view — de configuratie
+  // leeft in Instellingen. À-la-carte: superadmin zet 'm per tenant aan via
+  // moduleOverrides.add (niet standaard in een bundel).
+  { key: "sso", label: "Single Sign-On (SAML)", group: "Systeem", core: false,
+    addon: true, actions: ["sso", "saml"], submodules: [] },
 ];
 
 // Altijd-aan modules: nooit gated, niet in bundels te kiezen.

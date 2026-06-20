@@ -3003,7 +3003,7 @@ if ("serviceWorker" in navigator) {
   // voorkomt een reload-loop als de controller meermaals wisselt). Nooit
   // herladen tijdens een support-enter (anders verstoort het de overname).
   navigator.serviceWorker.addEventListener("controllerchange", () => {
-    if (/support_token=/.test(location.hash)) return;
+    if (/support_token=|sso_token=/.test(location.hash)) return;
     if (sessionStorage.getItem("wfp_sw_reloaded")) return;
     try { sessionStorage.setItem("wfp_sw_reloaded", "1"); } catch (_) {}
     window.location.reload();
@@ -3170,3 +3170,65 @@ document.getElementById("activateResend")?.addEventListener("click", async e => 
 document.addEventListener("DOMContentLoaded", showActivateForm);
 window.addEventListener("load", showActivateForm);
 setTimeout(showActivateForm, 0);
+
+// ── SAML SSO (add-on): inloggen via de bedrijfs-IdP ───────────────────────────
+// 1) Knop: vraag werk-e-mail → resolve domein → redirect naar de IdP-login.
+// 2) Terugkeer: de ACS-redirect zet #sso_token=… ; we pikken het op en loggen in
+//    (zelfde patroon als de support-flow). 3) ?sso_error=… toont een melding.
+document.getElementById("ssoLoginBtn")?.addEventListener("click", async () => {
+  const notice = document.getElementById("loginNotice");
+  const email = prompt("Met welk werk-e-mailadres wil je via SSO inloggen?");
+  if (!email) return;
+  try {
+    const r = await api(`/api/auth/sso/resolve?email=${encodeURIComponent(email.trim())}`);
+    if (r && r.sso && r.loginUrl) { window.location.href = r.loginUrl; return; }
+    if (notice) { notice.textContent = "Voor dit e-maildomein is geen SSO geconfigureerd. Log in met je wachtwoord."; notice.classList.add("bad"); }
+  } catch (e) {
+    if (notice) { notice.textContent = e.message || "SSO kon niet gestart worden."; notice.classList.add("bad"); }
+  }
+});
+const SSO_ERRORS = {
+  unavailable: "SSO is niet (meer) beschikbaar voor deze organisatie.",
+  request: "De SSO-aanvraag kon niet worden opgebouwd. Probeer opnieuw.",
+  assertion: "De SSO-aanmelding kon niet geverifieerd worden.",
+  noemail: "De identiteitsprovider gaf geen e-mailadres door.",
+  inactive: "Dit account is gedeactiveerd. Neem contact op met je beheerder.",
+  nouser: "Er bestaat nog geen account voor jou. Vraag je beheerder om toegang."
+};
+function showSsoError() {
+  const code = new URLSearchParams(location.search).get("sso_error");
+  if (!code) return;
+  const notice = document.getElementById("loginNotice");
+  if (notice) { notice.textContent = SSO_ERRORS[code] || "SSO-login mislukt."; notice.classList.add("bad"); }
+  history.replaceState(null, "", location.pathname);
+}
+let _ssoEnterDone = false;
+function ssoEnterBootstrap() {
+  if (_ssoEnterDone) return;
+  const match = (location.hash || "").match(/sso_token=([^&]+)/);
+  if (!match) return;
+  _ssoEnterDone = true;
+  const ssoToken = decodeURIComponent(match[1]);
+  history.replaceState(null, "", location.pathname + location.search);
+  token = ssoToken;
+  localStorage.setItem("wfp_token", ssoToken);
+  api("/api/me")
+    .then(me => {
+      if (!me || !me.ok || !me.user) throw new Error("SSO-sessie ongeldig of verlopen");
+      window._wfpCurrentUser = me.user;
+      setShellAuthenticated(true);
+      const loginPage = document.getElementById("loginPage");
+      if (loginPage) loginPage.classList.add("hidden");
+      if (window.WorkFlowProPlatformRouter) window.WorkFlowProPlatformRouter.showPlatform(me.user.role);
+      else setTimeout(() => window.WorkFlowProPlatformRouter && window.WorkFlowProPlatformRouter.showPlatform(me.user.role), 200);
+    })
+    .catch(err => {
+      localStorage.removeItem("wfp_token"); token = "";
+      const notice = document.getElementById("loginNotice");
+      if (notice) { notice.textContent = err.message || "SSO-sessie kon niet starten"; notice.classList.add("bad"); }
+    });
+}
+document.addEventListener("DOMContentLoaded", () => { ssoEnterBootstrap(); showSsoError(); });
+window.addEventListener("load", () => { ssoEnterBootstrap(); showSsoError(); });
+setTimeout(ssoEnterBootstrap, 0);
+setTimeout(ssoEnterBootstrap, 400);

@@ -247,3 +247,56 @@ test("stripe-webhook: HMAC signature valideert exact", () => {
   assert.equal(bad.ok, false);
   assert.equal(bad.mode, "signed");
 });
+
+// ── SAML SSO (add-on) ────────────────────────────────────────
+const saml = require("../src/modules/saml");
+
+test("saml: sanitizeSsoInput normaliseert domeinen, JIT-rol en booleans", () => {
+  const out = saml.sanitizeSsoInput({
+    enabled: 1, entryPoint: " https://idp/sso ", idpCert: " CERT ",
+    domains: ["@Acme.BE", " bedrijf.com ", ""],
+    jit: { enabled: 1, defaultRole: "super_admin" }, // mag NOOIT super_admin worden
+    attrMap: { email: " mail ", name: "" }
+  }, {});
+  assert.equal(out.enabled, true);
+  assert.equal(out.entryPoint, "https://idp/sso");
+  assert.equal(out.idpCert, "CERT");
+  assert.deepEqual(out.domains, ["acme.be", "bedrijf.com"]);
+  assert.equal(out.jit.enabled, true);
+  assert.equal(out.jit.defaultRole, "employee"); // geclampt
+  assert.equal(out.attrMap.email, "mail");
+});
+
+test("saml: ssoConfigured vereist enabled + entryPoint + idpCert", () => {
+  assert.equal(saml.ssoConfigured({ sso: { enabled: true, entryPoint: "x", idpCert: "y" } }), true);
+  assert.equal(saml.ssoConfigured({ sso: { enabled: false, entryPoint: "x", idpCert: "y" } }), false);
+  assert.equal(saml.ssoConfigured({ sso: { enabled: true, entryPoint: "x" } }), false);
+  assert.equal(saml.ssoConfigured({}), false);
+});
+
+test("saml: extractIdentity haalt e-mail uit attributen of nameID-fallback", () => {
+  const t = { id: "t1", sso: {} };
+  assert.equal(saml.extractIdentity({ "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress": "JAN@acme.be" }, t).email, "jan@acme.be");
+  assert.equal(saml.extractIdentity({ nameID: "piet@acme.be" }, t).email, "piet@acme.be");
+  assert.equal(saml.extractIdentity({ email: "x@y.be", displayName: "X Y" }, t).name, "X Y");
+  // attribuut-mapping override
+  const t2 = { id: "t2", sso: { attrMap: { email: "customMail" } } };
+  assert.equal(saml.extractIdentity({ customMail: "mapped@acme.be" }, t2).email, "mapped@acme.be");
+});
+
+test("saml: jitRole clam't naar veilige rollen, publicSsoConfig toont SP-URLs", () => {
+  assert.equal(saml.jitRole({ sso: { jit: { defaultRole: "manager" } } }), "manager");
+  assert.equal(saml.jitRole({ sso: { jit: { defaultRole: "tenant_admin" } } }), "employee");
+  const pub = saml.publicSsoConfig({ id: "t9", sso: { enabled: true, entryPoint: "https://idp/sso", idpCert: "C" } });
+  assert.match(pub.acsUrl, /\/api\/auth\/saml\/t9\/acs$/);
+  assert.match(pub.metadataUrl, /\/api\/auth\/saml\/t9\/metadata$/);
+  assert.equal(pub.configured, true);
+});
+
+test("saml: buildLoginUrl produceert een SAMLRequest-redirect; validateAcs weigert rommel", async () => {
+  const dummyCert = "-----BEGIN CERTIFICATE-----\nMIIBdummybase64\n-----END CERTIFICATE-----";
+  const tenant = { id: "t1", sso: { enabled: true, entryPoint: "https://idp.example/sso", idpCert: dummyCert } };
+  const url = await saml.buildLoginUrl(tenant, "");
+  assert.match(url, /^https:\/\/idp\.example\/sso\?SAMLRequest=/);
+  await assert.rejects(saml.validateAcs(tenant, { SAMLResponse: Buffer.from("<garbage/>").toString("base64") }));
+});
