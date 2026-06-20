@@ -188,6 +188,22 @@
           </div>
         </form>
 
+        <form id="resetForm" class="login-card" style="display:none">
+          <div class="login-form-header" style="margin-bottom:8px">
+            <h2 class="login-welcome">Nieuw wachtwoord</h2>
+            <p class="login-welcome-sub">Kies een nieuw wachtwoord voor je account</p>
+          </div>
+          <div class="login-field"><label class="login-label">Nieuw wachtwoord</label>
+            <input class="login-input" name="password" type="password" required autocomplete="new-password" placeholder="Sterk wachtwoord (12+ tekens)" autofocus></div>
+          <div class="login-field"><label class="login-label">Herhaal wachtwoord</label>
+            <input class="login-input" name="password2" type="password" required autocomplete="new-password" placeholder="Herhaal je wachtwoord"></div>
+          <div id="resetNotice" class="login-notice"></div>
+          <button class="login-btn" type="submit">Wachtwoord opslaan &amp; inloggen</button>
+          <div style="text-align:center;margin-top:12px;font-size:0.8125rem;color:#64748b">
+            <a href="#" id="resetToLogin" style="color:#0ea5e9;font-weight:600">Terug naar inloggen</a>
+          </div>
+        </form>
+
         <details class="login-demo-section" id="loginDemoSection">
           <summary class="login-demo-summary">Liever eerst de demo proberen?</summary>
           <div class="login-demo-roles">

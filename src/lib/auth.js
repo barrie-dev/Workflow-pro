@@ -70,6 +70,25 @@ function checkActivation(user, secret, now = Date.now()) {
   return { ok: true };
 }
 
+// Wachtwoord-reset: zelfde token-mechaniek als activatie, maar korter geldig (1u)
+// en in een apart veld (user.passwordReset) zodat het niet botst met een
+// openstaande activatie. Token-formaat (userId~secret) is gedeeld.
+const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000; // 1 uur
+function startPasswordReset(now = Date.now()) {
+  const secret = crypto.randomBytes(24).toString("base64url");
+  return {
+    secret,
+    record: { tokenHash: hashActivation(secret), expiresAt: new Date(now + PASSWORD_RESET_TTL_MS).toISOString(), createdAt: new Date(now).toISOString() }
+  };
+}
+function checkPasswordReset(user, secret, now = Date.now()) {
+  const a = user && user.passwordReset;
+  if (!a || !a.tokenHash) return { ok: false, reason: "Geen openstaand reset-verzoek voor dit account" };
+  if (new Date(a.expiresAt).getTime() <= now) return { ok: false, reason: "Reset-link is verlopen — vraag een nieuwe aan" };
+  if (hashActivation(secret) !== a.tokenHash) return { ok: false, reason: "Ongeldige reset-link" };
+  return { ok: true };
+}
+
 // ── GDPR support-impersonatie ────────────────────────────────
 // Een support-sessie neemt de exacte gebruikerssessie over via een
 // kortlevend support-token. Sliding expiry: bij activiteit verschuift
@@ -497,6 +516,9 @@ module.exports = {
   activationToken,
   parseActivationToken,
   checkActivation,
+  PASSWORD_RESET_TTL_MS,
+  startPasswordReset,
+  checkPasswordReset,
   authenticate,
   buildSupportGrant,
   issueSupportToken,

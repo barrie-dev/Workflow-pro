@@ -740,3 +740,37 @@ test("sso: add-on gating, configuratie, resolve, login-redirect, metadata en ACS
   assert.equal(acs.status, 302);
   assert.match(acs.headers.get("location") || "", /sso_error=/);
 });
+
+// ── Wachtwoord vergeten → reset via e-maillink ──────────────────────────────
+test("password-reset: forgot stuurt link (dev), reset zet nieuw wachtwoord + login", async () => {
+  // 'forgot' voor onbekend e-mail → zelfde ok-antwoord, geen enumeratie
+  const unknown = await (await fetch(`${BASE}/api/auth/forgot`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: "bestaat.niet@nergens.be" }) })).json();
+  assert.equal(unknown.ok, true);
+  assert.ok(!unknown.resetLink, "geen link voor onbekend account");
+
+  // Bestaande demo-admin vraagt reset → dev geeft resetLink terug
+  const req = await (await fetch(`${BASE}/api/auth/forgot`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: "admin@demobouw.be" }) })).json();
+  assert.equal(req.ok, true);
+  assert.ok(req.resetLink, "dev/test geeft reset-link terug");
+  const tokenParam = new URL(req.resetLink).searchParams.get("reset");
+  assert.ok(tokenParam, "reset-link bevat token");
+
+  // Zwak wachtwoord → 400
+  const weak = await fetch(`${BASE}/api/auth/reset`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token: tokenParam, password: "zwak" }) });
+  assert.equal(weak.status, 400);
+
+  // Sterk wachtwoord → 200 + auto-login token
+  const newPass = "ResetSterk2026!@#";
+  const done = await (await fetch(`${BASE}/api/auth/reset`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token: tokenParam, password: newPass }) })).json();
+  assert.ok(done.token, "reset geeft sessie-token");
+
+  // Oud wachtwoord werkt niet meer, nieuw wel
+  const oldLogin = await login("admin@demobouw.be", "Demo2026!");
+  assert.ok(!oldLogin.token, "oud wachtwoord is ongeldig na reset");
+  const newLogin = await login("admin@demobouw.be", newPass);
+  assert.ok(newLogin.token, "nieuw wachtwoord werkt");
+
+  // Token is eenmalig: tweede reset met zelfde token → 400
+  const reuse = await fetch(`${BASE}/api/auth/reset`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token: tokenParam, password: "NogEenSterk2026!@#" }) });
+  assert.equal(reuse.status, 400, "reset-token is eenmalig");
+});

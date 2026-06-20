@@ -14,6 +14,8 @@ const {
   activationToken,
   parseActivationToken,
   checkActivation,
+  startPasswordReset,
+  checkPasswordReset,
   login,
   loginWithMfa,
   safeUser,
@@ -82,6 +84,15 @@ function sendActivationMail(user, link) {
     <p style="font-size:12px;color:#64748b">Werkt de knop niet? Open deze link: ${link}</p>`;
   // Niet awaiten: mailer logt bij fout en valt terug op console.
   Promise.resolve(sendMail({ to: user.email, subject: "Activeer je WorkFlow Pro-account", html, text: `Stel je wachtwoord in (7 dagen geldig): ${link}` })).catch(() => {});
+}
+
+// Verstuur (of log) een wachtwoord-reset-mail met de reset-link (1 uur geldig).
+function sendPasswordResetMail(user, link) {
+  const html = `<p>Hallo ${user.name || ""},</p>
+    <p>Er is een wachtwoord-reset aangevraagd voor je WorkFlow Pro-account. Stel binnen 1 uur een nieuw wachtwoord in:</p>
+    <p><a href="${link}" style="display:inline-block;background:#0ea5e9;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:600">Nieuw wachtwoord instellen</a></p>
+    <p style="font-size:12px;color:#64748b">Heb je dit niet aangevraagd? Negeer deze mail — je wachtwoord blijft ongewijzigd.<br>Werkt de knop niet? Open deze link: ${link}</p>`;
+  Promise.resolve(sendMail({ to: user.email, subject: "Reset je WorkFlow Pro-wachtwoord", html, text: `Stel een nieuw wachtwoord in (1 uur geldig): ${link}` })).catch(() => {});
 }
 
 // Maak een account zónder wachtwoord: pending tot de persoon zelf activeert via
@@ -708,6 +719,46 @@ http.createServer(async (req, res) => {
         sendActivationMail(user, link);
       }
       sendJson(res, 200, { ok: true, message: "Als er een account in afwachting is, sturen we een nieuwe activatiemail." });
+      return;
+    }
+
+    // ── Wachtwoord vergeten: stuur een reset-link (geen account-enumeratie) ────
+    if (url.pathname === "/api/auth/forgot" && req.method === "POST") {
+      const body = await readBody(req);
+      const email = String(body.email || "").trim().toLowerCase();
+      const user = email ? store.getUserByEmail(email) : null;
+      // Enkel actieve accounts met een wachtwoord kunnen resetten. Pending accounts
+      // (nog niet geactiveerd) horen via de activatiemail te lopen, niet via reset.
+      let link = null;
+      if (user && user.active !== false && user.passwordHash) {
+        const { secret, record } = startPasswordReset();
+        store.update("users", user.id, { passwordReset: record });
+        link = `${config.appUrl}/?reset=${encodeURIComponent(activationToken(user.id, secret))}`;
+        sendPasswordResetMail(user, link);
+        store.audit({ actor: user.email, tenantId: user.tenantId || null, action: "password_reset_requested", area: "auth" });
+      }
+      // Altijd identiek antwoord (voorkomt account-enumeratie). In dev/mock geven we
+      // de link terug zodat het testbaar is; in productie nooit.
+      sendJson(res, 200, { ok: true, message: "Als er een account met dit e-mailadres bestaat, sturen we een reset-link.", resetLink: isMailLive() ? null : link });
+      return;
+    }
+
+    // Reset uitvoeren: token + nieuw wachtwoord → instellen en inloggen.
+    if (url.pathname === "/api/auth/reset" && req.method === "POST") {
+      const body = await readBody(req);
+      const parsed = parseActivationToken(body.token);
+      const user = parsed ? store.getUserById(parsed.userId) : null;
+      const chk = user ? checkPasswordReset(user, parsed.secret) : { ok: false, reason: "Ongeldige reset-link" };
+      if (!chk.ok) return sendJson(res, 400, { ok: false, error: chk.reason });
+      try { assertStrongPassword(body.password); }
+      catch (e) { return sendJson(res, 400, { ok: false, error: e.message }); }
+      const now = new Date().toISOString();
+      const updated = store.update("users", user.id, {
+        passwordHash: hashPassword(body.password), passwordReset: null,
+        active: true, lastLoginAt: now, failedLoginCount: 0, lockedUntil: null
+      });
+      store.audit({ actor: updated.email, tenantId: updated.tenantId || null, action: "password_reset_completed", area: "auth" });
+      sendJson(res, 200, { ok: true, token: issueSession(updated), user: safeUser(updated) });
       return;
     }
 

@@ -2539,10 +2539,17 @@ el("login").addEventListener("click", () => {
   setShellAuthenticated(false);
 });
 
-// Wachtwoord vergeten — eerlijke uitleg i.p.v. dode link (geen e-mail reset flow)
-document.getElementById("loginForgot")?.addEventListener("click", event => {
+// Wachtwoord vergeten — vraag e-mail, stuur reset-link (geen account-enumeratie).
+document.getElementById("loginForgot")?.addEventListener("click", async event => {
   event.preventDefault();
-  showToast("Wachtwoord vergeten? Vraag je beheerder om het te resetten via Medewerkers. Beheerders nemen contact op met support.", "info");
+  const f = document.getElementById("loginForm");
+  const prefill = (f && f.elements.email && f.elements.email.value.trim()) || "";
+  const email = prompt("Wachtwoord vergeten? Vul je e-mailadres in — we sturen je een reset-link.", prefill);
+  if (!email) return;
+  try {
+    await api("/api/auth/forgot", { method: "POST", body: JSON.stringify({ email: email.trim() }) });
+  } catch (_) { /* stil: zelfde melding ongeacht uitkomst */ }
+  showToast("Als er een account met dit e-mailadres bestaat, is er een reset-link verstuurd. Check je mailbox.", "success");
 });
 
 // Taalkeuze — EN is voorbereid maar nog niet beschikbaar (eerlijk i.p.v. dode knop)
@@ -3182,6 +3189,56 @@ document.getElementById("activateResend")?.addEventListener("click", async e => 
 document.addEventListener("DOMContentLoaded", showActivateForm);
 window.addEventListener("load", showActivateForm);
 setTimeout(showActivateForm, 0);
+
+// ── Wachtwoord-reset: persoon opent de e-mailink ?reset=<token> ───────────────
+let _resetToken = "";
+function showResetForm() {
+  const params = new URLSearchParams(location.search);
+  _resetToken = params.get("reset") || "";
+  if (!_resetToken) return false;
+  const rf = document.getElementById("resetForm");
+  if (!rf) return false;
+  ["loginForm", "registerForm", "activateForm", "loginToRegister", "loginDemoSection", "ssoLoginRow"].forEach(id => {
+    const n = document.getElementById(id); if (n) n.style.display = "none";
+  });
+  rf.style.display = "";
+  const loginPage = document.getElementById("loginPage");
+  if (loginPage) loginPage.classList.remove("hidden");
+  return true;
+}
+document.getElementById("resetForm")?.addEventListener("submit", async event => {
+  event.preventDefault();
+  const f = event.currentTarget;
+  const notice = document.getElementById("resetNotice");
+  notice.textContent = ""; notice.classList.remove("bad");
+  const password = f.elements.password.value;
+  if (password !== f.elements.password2.value) {
+    notice.textContent = "De wachtwoorden komen niet overeen."; notice.classList.add("bad"); return;
+  }
+  try {
+    const result = await api("/api/auth/reset", { method: "POST", body: JSON.stringify({ token: _resetToken, password }) });
+    if (!result.token) throw new Error(result.error || "Reset mislukt");
+    token = result.token;
+    localStorage.setItem("wfp_token", token);
+    window._wfpCurrentUser = result.user || null;
+    history.replaceState(null, "", location.pathname);
+    setShellAuthenticated(true);
+    const loginPage = document.getElementById("loginPage");
+    if (loginPage) loginPage.classList.add("hidden");
+    if (window.WorkFlowProPlatformRouter) window.WorkFlowProPlatformRouter.showPlatform(result.user.role);
+  } catch (error) {
+    notice.textContent = error.message || "Reset mislukt"; notice.classList.add("bad");
+  }
+});
+document.getElementById("resetToLogin")?.addEventListener("click", e => {
+  e.preventDefault();
+  history.replaceState(null, "", location.pathname);
+  document.getElementById("resetForm").style.display = "none";
+  showLoginForm();
+});
+document.addEventListener("DOMContentLoaded", showResetForm);
+window.addEventListener("load", showResetForm);
+setTimeout(showResetForm, 0);
 
 // ── SAML SSO (add-on): inloggen via de bedrijfs-IdP ───────────────────────────
 // 1) Knop: vraag werk-e-mail → resolve domein → redirect naar de IdP-login.
