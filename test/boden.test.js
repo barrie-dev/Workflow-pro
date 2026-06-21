@@ -83,3 +83,46 @@ test("boden: propose_action registreert voorstel zonder uitvoering", () => {
   assert.ok(bad.error, "geen recht → geen voorstel");
   assert.equal(denyProp.length, 0);
 });
+
+// ── Slimmere Boden: aggregatie + KPI's, strikt rechten-gescoped ──────────────
+test("boden aggregate: som/count/groupBy met rechten-scoping", () => {
+  const store = mkStore(); seedDefaults(store);
+  store.data.invoices.push(
+    { id: "i2", tenantId: "t1", number: "F-2", customerName: "Klant B", total: 200, status: "paid" },
+    { id: "i3", tenantId: "t1", number: "F-3", customerName: "Klant C", total: 50, status: "open" },
+  );
+  store.data.expenses.push(
+    { id: "e1", tenantId: "t1", userId: "u_jan", amount: 50, category: "reizen", status: "ingediend", userName: "Jan" },
+    { id: "e2", tenantId: "t1", userId: "u_jan", amount: 30, category: "reizen", status: "ingediend", userName: "Jan" },
+    { id: "e3", tenantId: "t1", userId: "u_piet", amount: 20, category: "eten", status: "ingediend", userName: "Piet" },
+  );
+
+  // Admin: totaal factuurbedrag = 350; enkel open = 150
+  assert.equal(runTool(store, TENANT, ADMIN, "aggregate", { type: "invoices", metric: "sum", field: "bedrag" }, []).waarde, 350);
+  assert.equal(runTool(store, TENANT, ADMIN, "aggregate", { type: "invoices", metric: "sum", field: "bedrag", status: "open" }, []).waarde, 150);
+  assert.equal(runTool(store, TENANT, ADMIN, "aggregate", { type: "invoices", metric: "count" }, []).waarde, 3);
+
+  // Groeperen: onkosten per categorie
+  const grp = runTool(store, TENANT, ADMIN, "aggregate", { type: "expenses", metric: "sum", field: "bedrag", groupBy: "categorie" }, []);
+  assert.deepEqual(grp.groepen, { reizen: 80, eten: 20 });
+
+  // Employee ziet ENKEL eigen onkosten in de aggregatie (own-scoping)
+  const empSum = runTool(store, TENANT, EMPLOYEE, "aggregate", { type: "expenses", metric: "sum", field: "bedrag" }, []);
+  assert.equal(empSum.waarde, 80, "employee aggregeert enkel eigen onkosten");
+
+  // Employee mag geen facturen aggregeren (geen recht)
+  assert.ok(runTool(store, TENANT, EMPLOYEE, "aggregate", { type: "invoices", metric: "sum", field: "bedrag" }, []).error);
+
+  // sum zonder geldig veld → nette foutmelding i.p.v. verzonnen getal
+  assert.ok(runTool(store, TENANT, ADMIN, "aggregate", { type: "invoices", metric: "sum" }, []).error);
+});
+
+test("boden get_kpis: levert rechten-gefilterde kerncijfers", () => {
+  const store = mkStore(); seedDefaults(store);
+  const admin = runTool(store, TENANT, ADMIN, "get_kpis", {}, []);
+  assert.ok(admin.aantal > 0 && Array.isArray(admin.kpis), "admin krijgt KPI's");
+  assert.ok(admin.kpis.every(k => "label" in k && "waarde" in k), "elke KPI heeft label+waarde");
+  // Employee krijgt enkel persoonlijke KPI's (geen org-totalen zoals teamgrootte)
+  const emp = runTool(store, TENANT, EMPLOYEE, "get_kpis", {}, []);
+  assert.ok(!emp.kpis.some(k => /teamgrootte/i.test(k.label)), "employee ziet geen org-KPI's");
+});

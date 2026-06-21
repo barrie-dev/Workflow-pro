@@ -19,6 +19,8 @@ const { can } = require("../lib/auth");
 const { isModuleEnabled, resolveTenantModules } = require("./entitlements");
 const { hasRealKey, createChat } = require("../lib/openai");
 const { loadPlatformConfig } = require("./platform-config");
+const { availableWidgets, renderWidgets } = require("./dashboards");
+const { terminologyFor } = require("./sectors");
 
 // ── Leesbare record-types → collectie, vereist recht, module-key, samenvatter ──
 const READABLE = {
@@ -115,6 +117,44 @@ function runTool(store, tenant, user, name, input, proposals) {
     return { aantal: out.length, resultaten: out };
   }
 
+  if (name === "aggregate") {
+    const type = String(input.type || "");
+    const d = READABLE[type];
+    if (!d) return { error: `Onbekend type '${type}'. Geldig: ${Object.keys(READABLE).join(", ")}` };
+    if (!hasAny(user, d.perm)) return { error: `Geen toegang: je mag '${d.label}' niet bekijken.` };
+    if (d.module && !isModuleEnabled(store, tenant, d.module)) return { error: `'${d.label}' zit niet in het pakket.` };
+    let rows = store.list(d.collection, tenant.id);
+    if (d.ownable && !hasFull(user, d.perm)) rows = rows.filter(r => r.userId === user.id);
+    if (type === "employees") rows = rows.filter(r => r.role !== "super_admin");
+    if (input.status) rows = rows.filter(r => String(r.status || "").toLowerCase() === String(input.status).toLowerCase());
+    const summ = rows.map(d.sum);
+    const fields = summ.length ? Object.keys(summ[0]) : [];
+    const metric = ["count", "sum", "avg"].includes(input.metric) ? input.metric : "count";
+    const field = input.field && fields.includes(input.field) ? input.field : null;
+    const groupBy = input.groupBy && fields.includes(input.groupBy) ? input.groupBy : null;
+    if ((metric === "sum" || metric === "avg") && !field) {
+      return { error: `Voor metric '${metric}' is een numeriek 'field' nodig. Beschikbaar: ${fields.join(", ")}` };
+    }
+    const num = v => { const n = Number(String(v ?? "").replace(/[^0-9.,-]/g, "").replace(/\.(?=\d{3})/g, "").replace(",", ".")); return isFinite(n) ? n : 0; };
+    const calc = arr => {
+      if (metric === "count") return arr.length;
+      const s = arr.reduce((a, x) => a + num(x[field]), 0);
+      return metric === "avg" ? (arr.length ? +(s / arr.length).toFixed(2) : 0) : +s.toFixed(2);
+    };
+    if (groupBy) {
+      const groups = {};
+      for (const x of summ) { const k = String(x[groupBy] ?? "—"); (groups[k] = groups[k] || []).push(x); }
+      return { type, label: d.label, metric, field, groupBy, totaal_records: summ.length, groepen: Object.fromEntries(Object.entries(groups).map(([k, arr]) => [k, calc(arr)])) };
+    }
+    return { type, label: d.label, metric, field, aantal: summ.length, waarde: calc(summ) };
+  }
+
+  if (name === "get_kpis") {
+    const keys = availableWidgets(store, tenant, user).map(w => w.key);
+    const kpis = renderWidgets(store, tenant, user, keys).map(w => ({ label: w.label, waarde: w.value, detail: w.sub, groep: w.group }));
+    return { aantal: kpis.length, kpis };
+  }
+
   if (name === "propose_action") {
     const action = String(input.action || "");
     const a = ACTIONS[action];
@@ -150,6 +190,14 @@ function toolDefs() {
       limit: { type: "number", description: "Max aantal (default 15, max 40)" },
     }, required: ["type"] }),
     fn("search", "Snel zoeken over alle voor de gebruiker toegankelijke record-types.", { type: "object", properties: { query: { type: "string" } }, required: ["query"] }),
+    fn("aggregate", "Bereken een getal over één record-type (rechten-gescoped): aantal, som of gemiddelde, optioneel gegroepeerd. Gebruik dit voor 'hoeveel', 'totaal', 'gemiddeld' of 'per X'-vragen i.p.v. records op te sommen. Bv. totaal openstaand factuurbedrag (type=invoices, metric=sum, field=bedrag, status=open), of onkosten per categorie (type=expenses, metric=sum, field=bedrag, groupBy=categorie).", { type: "object", properties: {
+      type: { type: "string", enum: Object.keys(READABLE) },
+      metric: { type: "string", enum: ["count", "sum", "avg"], description: "count (standaard), sum of avg" },
+      field: { type: "string", description: "Numeriek veld voor sum/avg (bv. bedrag, dagen, aantal)" },
+      groupBy: { type: "string", description: "Veld om op te groeperen (bv. status, categorie, medewerker)" },
+      status: { type: "string", description: "Optioneel statusfilter vóór de berekening" },
+    }, required: ["type"] }),
+    fn("get_kpis", "Geef de belangrijkste kerncijfers (KPI's) die deze gebruiker mag zien, kant-en-klaar berekend. Ideaal voor 'hoe staan we ervoor', 'geef me een overzicht' of vragen naar omzet, openstaande facturen, teamgrootte, open opdrachten enz.", { type: "object", properties: {} }),
     fn("propose_action", "Stel een actie voor die de gebruiker daarna bevestigt. Voert NIETS uit. 'navigate' brengt de gebruiker naar een scherm (params.view). 'create_leave' (params: startDate,endDate,type,reason) en 'create_expense' (params: amount,category,description,date) maken na bevestiging een aanvraag aan.", { type: "object", properties: {
       action: { type: "string", enum: Object.keys(ACTIONS) },
       params: { type: "object" },
@@ -159,16 +207,27 @@ function toolDefs() {
 
 function systemPrompt(store, tenant, user) {
   const ent = resolveTenantModules(store, tenant);
+  const terms = terminologyFor(tenant);
+  const today = new Date();
+  const dateNL = today.toLocaleDateString("nl-BE", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
   return [
     "Je bent Boden, de behulpzame AI-assistent in WorkFlow Pro — een Belgische B2B SaaS voor KMO's (planning, werkbonnen, tijdregistratie, verlof, onkosten, offertes, facturen/Peppol, klanten, stock, wagenpark).",
+    `Vandaag is ${dateNL} (${today.toISOString().slice(0, 10)}). Reken 'deze maand', 'deze week', 'vandaag' hier vanaf.`,
     `De gebruiker is ${user.name || user.email}, rol "${user.role}", organisatie "${tenant.name}".`,
     `Toegankelijke schermen: ${ent.views.join(", ")}.`,
+    `Vakjargon van deze organisatie: een opdracht heet "${terms.job}" (mv. "${terms.jobPlural}"), een werklocatie heet "${terms.venue}". Gebruik deze woorden.`,
+    "",
+    "WERKWIJZE (wees slim en proactief):",
+    "- Voor 'hoeveel', 'totaal', 'gemiddeld', 'per X' of cijfervragen: gebruik 'aggregate' (count/sum/avg, eventueel groupBy) — som nooit zelf records op uit het hoofd.",
+    "- Voor 'hoe staan we ervoor', overzichten of vragen naar omzet/openstaande facturen/teamgrootte: gebruik 'get_kpis'.",
+    "- Voor specifieke records: 'query_records' of 'search'. Roep 'get_my_context' aan als je twijfelt over de rechten.",
+    "- Combineer gerust meerdere tools en redeneer met de uitkomsten (bv. een cijfer + een korte duiding of suggestie).",
     "",
     "STRIKTE REGELS:",
     "1) Gebruik UITSLUITEND data die je via tools terugkrijgt. Verzin nooit gegevens. Geeft een tool 'geen toegang' of 'niet in pakket', leg dat dan kort uit aan de gebruiker.",
     "2) Toon nooit data van andere gebruikers of modules dan wat de tools teruggeven — de tools bewaken de rechten, jij mag die niet omzeilen.",
     "3) Je voert zelf NOOIT wijzigingen uit. Voor elke aanmaak/wijziging/navigatie gebruik je propose_action en zeg je duidelijk dat de gebruiker moet bevestigen. Beweer nooit dat je iets hebt uitgevoerd.",
-    "4) Antwoord in het Nederlands, kort en concreet. Verwijs naar het juiste scherm waar nuttig.",
+    "4) Antwoord in het Nederlands, kort en concreet. Geef getallen helder weer (bv. bedragen met €). Verwijs naar het juiste scherm waar nuttig.",
   ].join("\n");
 }
 
