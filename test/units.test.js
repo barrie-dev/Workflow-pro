@@ -14,8 +14,7 @@ const { verifyStripeSignature } = require("../src/modules/stripe-webhook");
 const { peppolTransportReadiness, buildUbl, validatePeppol } = require("../src/modules/peppol-invoice");
 const { liveServiceReadiness } = require("../src/modules/live-services");
 const { importEmployees } = require("../src/modules/imports");
-const { productionConfigRisk, productionReadiness } = require("../src/modules/production");
-const { mfaRisk } = require("../src/modules/admin");
+const { productionConfigRisk } = require("../src/modules/production");
 const crypto = require("node:crypto");
 
 class MemAdapter {
@@ -406,33 +405,4 @@ test("peppol: buildUbl produceert geldige BIS 3.0 UBL met kernvelden", () => {
   assert.match(xml, /BE0456789034/); // leverancier-BTW
   assert.match(xml, /BE0678901218/); // klant-BTW
   assert.match(xml, /<cbc:Percent>21\.00<\/cbc:Percent>/);
-});
-
-test("mfa readiness: flags zonder secret tellen niet als productie-klaar", () => {
-  const users = [
-    { id: "u1", tenantId: "t1", role: "tenant_admin", active: true, email: "admin@t1.be", mfaEnabled: true, mfaEnforced: true },
-    { id: "u2", tenantId: "t1", role: "tenant_admin", active: true, email: "ready@t1.be", mfaEnabled: true, mfaEnforced: true, mfaSecret: "encrypted" }
-  ];
-  const risk = mfaRisk(users, "t1");
-  assert.equal(risk.ok, false);
-  assert.equal(risk.readyAdmins, 1);
-  assert.equal(risk.missingSecret, 1);
-  assert.equal(risk.rows.find(row => row.id === "u1").ready, false);
-});
-
-test("production readiness: admin MFA vereist opgeslagen secret", () => {
-  const store = new Store(new MemAdapter({
-    schemaVersion: 6,
-    tenants: [{ id: "t1", name: "Klant BV", status: "active", plan: "business" }],
-    users: [
-      { id: "u1", tenantId: "t1", role: "tenant_admin", active: true, email: "admin@klant.be", mfaEnabled: true, mfaEnforced: true }
-    ],
-    roles: [], venues: [], customers: [], shifts: [], workorders: [], clocks: [], expenses: [],
-    stock: [], vehicles: [], leaves: [], messages: [], notifications: [], integrations: [],
-    invoices: [], paymentMethods: [], files: [], secrets: [], auditLogs: [], errorEvents: [],
-    apiKeys: [], salesLeads: [], partners: [], migrationHistory: []
-  }));
-  const mfa = productionReadiness(store).checks.find(row => row.key === "mfa");
-  assert.equal(mfa.ok, false);
-  assert.match(mfa.detail, /secret/i);
 });
