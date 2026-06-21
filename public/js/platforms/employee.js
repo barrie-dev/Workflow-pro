@@ -41,6 +41,45 @@
     });
   }
 
+  // ── Offline-veilige prikklok (veldwerk zonder signaal) ──────
+  // Configureer de offline-queue met een poster naar de tenant-sync-endpoint.
+  if (window.wfpOfflineQueue) {
+    window.wfpOfflineQueue.configure({ post: payload => api("POST", "/mobile/sync", payload) });
+  }
+  // Probeer online in/uit te klokken; bij netwerkverlies komt de actie in de
+  // IndexedDB-queue en wordt ze later idempotent gesynchroniseerd.
+  async function clockAction(dir) {
+    const path = dir === "in" ? "/me/clock/in" : "/me/clock/out";
+    const action = dir === "in" ? "clock_in" : "clock_out";
+    if (window.wfpOfflineQueue) {
+      const r = await window.wfpOfflineQueue.run(() => api("POST", path, {}), { action, payload: {} });
+      if (r.queued) {
+        window.showToast && window.showToast(`${dir === "in" ? "Inklokken" : "Uitklokken"} offline opgeslagen — wordt gesynchroniseerd zodra je verbinding hebt.`, "info");
+        return;
+      }
+    } else {
+      await api("POST", path, {});
+    }
+    window.showToast && window.showToast(dir === "in" ? "Ingeklokt ✓" : "Uitgeklokt ✓", "success");
+  }
+
+  // Toon een discrete badge zolang er offline acties wachten op synchronisatie.
+  document.addEventListener("wfp:offline-queue", e => {
+    const n = (e.detail && e.detail.pending) || 0;
+    let bar = document.getElementById("empOfflineBar");
+    if (!n) { if (bar) bar.remove(); return; }
+    if (!bar) {
+      bar = document.createElement("div");
+      bar.id = "empOfflineBar";
+      bar.style.cssText = "position:fixed;left:0;right:0;bottom:64px;z-index:50;margin:0 12px;padding:8px 12px;border-radius:10px;background:#fef3c7;color:#92400e;font-size:12.5px;font-weight:600;box-shadow:0 2px 10px rgba(0,0,0,.12);text-align:center";
+      document.body.appendChild(bar);
+    }
+    const online = e.detail && e.detail.online;
+    bar.textContent = online
+      ? `⏳ ${n} actie(s) worden gesynchroniseerd…`
+      : `📴 Offline — ${n} actie(s) bewaard, sync zodra je verbinding hebt`;
+  });
+
   // Verberg tabs voor modules die niet in het pakket van de tenant zitten.
   function applyEntitlements() {
     fetch("/api/me", { headers: { Authorization: "Bearer " + token() } })
@@ -902,19 +941,10 @@ ${(() => {
 })()}`;
 
     document.getElementById("empActClock")?.addEventListener("click", async () => {
-      if (dash.clockedIn) {
-        try {
-          await api("POST", "/me/clock/out");
-          window.showToast && window.showToast("Uitgeklokt ✓", "success");
-          renderToday();
-        } catch(e) { window.showToast(e.message, "error"); }
-      } else {
-        try {
-          await api("POST", "/me/clock/in");
-          window.showToast && window.showToast("Ingeklokt ✓", "success");
-          renderToday();
-        } catch(e) { window.showToast(e.message, "error"); }
-      }
+      try {
+        await clockAction(dash.clockedIn ? "out" : "in");
+        renderToday();
+      } catch(e) { window.showToast(e.message, "error"); }
     });
     document.getElementById("empActWO")?.addEventListener("click", () => switchView("workorders"));
     document.getElementById("empLeaveBalCard")?.addEventListener("click", () => switchView("leaves"));
@@ -1006,15 +1036,11 @@ ${(() => {
     const tid = setInterval(() => { if (_currentView !== "clock") { clearInterval(tid); return; } tick(); }, 1000);
 
     document.getElementById("empClockToggle")?.addEventListener("click", async () => {
-      if (data.active) {
-        await api("POST", "/me/clock/out");
-        window.showToast && window.showToast("Uitgeklokt ✓", "success");
-      } else {
-        await api("POST", "/me/clock/in");
-        window.showToast && window.showToast("Ingeklokt ✓", "success");
-      }
-      clearInterval(tid);
-      renderClock();
+      try {
+        await clockAction(data.active ? "out" : "in");
+        clearInterval(tid);
+        renderClock();
+      } catch(e) { window.showToast(e.message, "error"); }
     });
   }
 

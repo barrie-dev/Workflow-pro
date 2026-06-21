@@ -3,6 +3,7 @@ const {
   validatePhotoPayload,
   validateSignaturePayload
 } = require("./workorder-rules");
+const { clockIn, clockOut } = require("./operations");
 
 function todayPayload(store, user) {
   const tenantId = user.tenantId;
@@ -91,8 +92,11 @@ function signWorkorder(store, tenant, workorderId, payload, actor) {
 
 function processMobileAction(store, tenant, item, actor) {
   const action = String(item.action || "").trim();
-  const workorderId = String(item.workorderId || "").trim();
   const payload = item.payload || {};
+  // Prikklok-acties hebben geen werkbon nodig (veldwerk zonder signaal).
+  if (action === "clock_in") return clockIn(store, tenant, payload, actor);
+  if (action === "clock_out") return clockOut(store, tenant, payload, actor);
+  const workorderId = String(item.workorderId || "").trim();
   if (!workorderId) {
     const error = new Error("Werkbon ontbreekt in offline actie");
     error.status = 400;

@@ -2182,9 +2182,14 @@ http.createServer(async (req, res) => {
         return;
       }
       if (action === "mobile/sync" && req.method === "POST") {
-        assertCan(user, "workorders");
         assertApiKeyWriteAllowed(user, req);
-        sendJson(res, 200, { ok: true, sync: syncMobileQueue(store, tenant, await readBody(req), user) });
+        const syncBody = await readBody(req);
+        const syncItems = Array.isArray(syncBody.items) ? syncBody.items : (Array.isArray(syncBody.queue) ? syncBody.queue : []);
+        // Prikklok is een universele actie (iedere medewerker mag in-/uitklokken);
+        // werkbon-acties vereisen wel het workorders-recht.
+        const onlyClock = syncItems.length > 0 && syncItems.every(it => it.action === "clock_in" || it.action === "clock_out");
+        if (onlyClock) assertInteractiveUser(user); else assertCan(user, "workorders");
+        sendJson(res, 200, { ok: true, sync: syncMobileQueue(store, tenant, syncBody, user) });
         return;
       }
       if (action === "integrations" && req.method === "GET") {

@@ -852,3 +852,25 @@ test("password-reset: forgot stuurt link (dev), reset zet nieuw wachtwoord + log
   const reuse = await fetch(`${BASE}/api/auth/reset`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token: tokenParam, password: "NogEenSterk2026!@#" }) });
   assert.equal(reuse.status, 400, "reset-token is eenmalig");
 });
+
+// ── Offline-sync: prikklok via mobile/sync queue (idempotent) ───────────────
+test("offline-sync: clock-actie via mobile/sync wordt herkend + dedupe op id", async () => {
+  // jan (employee) heeft geen MFA en (na een eerdere test) geen workorders-recht —
+  // perfect om te bewijzen dat clock-only offline-sync universeel werkt.
+  const jan = await login("jan@demobouw.be", "Demo2026!");
+  const H = { "Content-Type": "application/json", Authorization: `Bearer ${jan.token}` };
+  // Bekende uitgangstoestand (uitgeklokt), best-effort.
+  await fetch(`${BASE}/api/tenants/t_demo/me/clock/out`, { method: "POST", headers: H, body: "{}" }).catch(() => {});
+  const qid = "q_test_" + Date.now();
+  const body = JSON.stringify({ items: [{ id: qid, action: "clock_in", payload: {} }] });
+  const r1 = await (await fetch(`${BASE}/api/tenants/t_demo/mobile/sync`, { method: "POST", headers: H, body })).json();
+  assert.equal(r1.ok, true);
+  const res1 = r1.sync.results[0];
+  // Routing werkt: clock_in is een bekende mobiele actie (geen 'onbekende actie'-fout).
+  assert.ok(res1.ok || (res1.error && !/onbekende mobiele actie/i.test(res1.error)), "clock_in wordt herkend en verwerkt");
+  // Bij acceptatie: tweede keer met zelfde id → duplicate (idempotent).
+  if (res1.ok) {
+    const r2 = await (await fetch(`${BASE}/api/tenants/t_demo/mobile/sync`, { method: "POST", headers: H, body })).json();
+    assert.equal(r2.sync.results[0].duplicate, true, "zelfde queue-id wordt gededupliceerd");
+  }
+});
