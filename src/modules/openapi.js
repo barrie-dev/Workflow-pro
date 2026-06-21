@@ -148,6 +148,25 @@ function hostedBillingResponseSchema() {
   };
 }
 
+function pushSubscriptionSchema() {
+  return {
+    type: "object",
+    required: ["endpoint", "keys"],
+    properties: {
+      endpoint: { type: "string", format: "uri", example: "https://fcm.googleapis.com/fcm/send/abc" },
+      expirationTime: { type: "integer", nullable: true },
+      keys: {
+        type: "object",
+        required: ["p256dh", "auth"],
+        properties: {
+          p256dh: { type: "string", example: "BNc...publicKey" },
+          auth: { type: "string", example: "authSecret" }
+        }
+      }
+    }
+  };
+}
+
 function customerStartResponseSchema() {
   return {
     type: "object",
@@ -543,6 +562,39 @@ function openApiSpec() {
       "/api/tenants/{tenantId}/mobile/workorders/{workorderId}/complete": { post: operation("Complete mobile workorder", "post") },
       "/api/tenants/{tenantId}/mobile/workorders/{workorderId}/photo": { post: operation("Attach mobile workorder photo", "post") },
       "/api/tenants/{tenantId}/mobile/workorders/{workorderId}/signature": { post: operation("Sign mobile workorder", "post") },
+      "/api/tenants/{tenantId}/me/push/key": {
+        get: {
+          ...operation("Get web-push VAPID public key"),
+          parameters: [tenantParameter()],
+          description: "Returns whether browser push is configured and the public VAPID key needed by the PWA client. The private key is never exposed."
+        }
+      },
+      "/api/tenants/{tenantId}/me/push/subscribe": {
+        post: {
+          ...operation("Register this device for web-push", "post"),
+          parameters: [tenantParameter()],
+          requestBody: jsonBody({
+            type: "object",
+            properties: {
+              subscription: pushSubscriptionSchema()
+            },
+            additionalProperties: true
+          }),
+          description: "Stores a user-scoped browser PushSubscription for the authenticated user. Requires endpoint plus p256dh/auth keys and deduplicates by endpoint."
+        }
+      },
+      "/api/tenants/{tenantId}/me/push/unsubscribe": {
+        post: {
+          ...operation("Remove this device web-push subscription", "post"),
+          parameters: [tenantParameter()],
+          requestBody: jsonBody({
+            type: "object",
+            required: ["endpoint"],
+            properties: { endpoint: { type: "string", format: "uri" } }
+          }),
+          description: "Removes a user-scoped browser PushSubscription endpoint from the authenticated user."
+        }
+      },
       "/api/tenants/{tenantId}/integrations": {
         get: { ...operation("List integrations with syncSummary and mappingSummary"), parameters: [tenantParameter()] }
       },

@@ -157,6 +157,7 @@ const { sendMail, setRuntimeConfig, isMailLive } = require("./lib/mailer");
 const { loadPlatformConfig, publicPlatformConfig, savePlatformConfig } = require("./modules/platform-config");
 const { createPaymentLink, markInvoicePaidById } = require("./modules/payments");
 const { createSubscriptionCheckout, createBillingPortalSession, applySubscriptionEvent } = require("./modules/subscriptions");
+const { pushConfigured, publicKey: pushPublicKey, saveSubscription: savePushSubscription, removeSubscription: removePushSubscription } = require("./modules/push");
 const { verifyStripeSignature } = require("./modules/stripe-webhook");
 const { seedDemoData, clearDemoData } = require("./modules/demo-seed");
 const { buildUbl, validatePeppol, sendPeppolInvoice } = require("./modules/peppol-invoice");
@@ -2644,6 +2645,23 @@ http.createServer(async (req, res) => {
           store.update("messages", msgId, { readBy: [...readBy, user.id] });
         }
         sendJson(res, 200, { ok: true });
+        return;
+      }
+
+      // Web-push: VAPID public key ophalen + (de)abonneren van dit toestel.
+      if (action === "me/push/key" && req.method === "GET") {
+        sendJson(res, 200, { ok: true, enabled: pushConfigured(), publicKey: pushPublicKey() });
+        return;
+      }
+      if (action === "me/push/subscribe" && req.method === "POST") {
+        if (!pushConfigured()) return sendJson(res, 503, { ok: false, error: "Push is niet geconfigureerd" });
+        const body = await readBody(req);
+        sendJson(res, 200, { ok: true, ...savePushSubscription(store, user, body.subscription || body) });
+        return;
+      }
+      if (action === "me/push/unsubscribe" && req.method === "POST") {
+        const body = await readBody(req);
+        sendJson(res, 200, { ok: true, ...removePushSubscription(store, user, body.endpoint) });
         return;
       }
 

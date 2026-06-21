@@ -4692,10 +4692,14 @@ ${providers.map(p => {
           </div>
         </div>
         <div id="admOrgMsg" style="display:none;padding:8px 12px;border-radius:8px;font-size:13px;margin-bottom:8px;"></div>
-        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#475569;margin:4px 0 12px;cursor:pointer;">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#475569;margin:4px 0 8px;cursor:pointer;">
           <input type="checkbox" id="admEmailNotif" ${tenant.notificationPrefs?.emailEnabled === false ? "" : "checked"}>
           E-mailnotificaties versturen (belangrijke meldingen naar betrokkenen)
         </label>
+        <div style="display:flex;align-items:center;gap:10px;margin:0 0 12px;flex-wrap:wrap;">
+          <button type="button" class="adm-btn adm-btn-secondary adm-btn-sm" id="admPushToggle">🔔 Pushmeldingen op dit toestel</button>
+          <span id="admPushStatus" style="font-size:12px;color:#94a3b8;"></span>
+        </div>
         <div class="adm-form-actions"><button type="submit" class="adm-btn adm-btn-primary">Opslaan</button></div>
       </form>
     </div>
@@ -4910,6 +4914,8 @@ ${providers.map(p => {
       e.preventDefault();
       const msgEl = document.getElementById("admOrgMsg");
       const body = Object.fromEntries(new FormData(e.target).entries());
+      // Voorkom dat de push-toggle-knop als formulierveld wordt meegestuurd.
+      delete body.admPushToggle;
       body.notificationPrefs = { emailEnabled: document.getElementById("admEmailNotif")?.checked !== false };
       try {
         await api("PATCH", "/settings", body);
@@ -4921,6 +4927,42 @@ ${providers.map(p => {
         msgEl.textContent = err.message;
       }
     });
+
+    (async () => {
+      const btn = document.getElementById("admPushToggle");
+      const status = document.getElementById("admPushStatus");
+      if (!btn || !status) return;
+      if (!window.wfpPush) {
+        btn.disabled = true;
+        status.textContent = "Push niet beschikbaar";
+        return;
+      }
+      async function paint() {
+        const s = await window.wfpPush.status();
+        if (!s.supported) {
+          btn.disabled = true;
+          status.textContent = "Browser ondersteunt geen push";
+          return;
+        }
+        btn.textContent = s.subscribed ? "Pushmeldingen uitschakelen" : "Pushmeldingen inschakelen";
+        status.textContent = s.subscribed ? "Actief op dit toestel" : (s.permission === "denied" ? "Geblokkeerd in browser" : "Niet actief");
+      }
+      btn.addEventListener("click", async () => {
+        btn.disabled = true;
+        status.textContent = "Bezig...";
+        try {
+          const s = await window.wfpPush.status();
+          if (s.subscribed) await window.wfpPush.disable();
+          else await window.wfpPush.enable();
+          await paint();
+        } catch (err) {
+          status.textContent = err.message || "Push kon niet worden aangepast";
+        } finally {
+          btn.disabled = false;
+        }
+      });
+      await paint();
+    })();
 
     // Change password
     document.getElementById("admSettingsToBilling")?.addEventListener("click", () => switchView("billing"));

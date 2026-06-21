@@ -1,5 +1,6 @@
 const { sendMail, wrapHtml } = require("../lib/mailer");
 const { config } = require("../lib/config");
+const { pushConfigured, sendPushToUsers } = require("./push");
 
 function publicNotification(row) {
   return row;
@@ -15,11 +16,9 @@ function shouldEmailNotification(notification, tenant) {
   return notification.priority === "high" || notification.priority === "urgent";
 }
 
-// Lost de e-mailontvangers op uit het audience-/userId-veld van de notificatie.
-// Respecteert per-gebruiker opt-out (user.notifyEmail === false).
-function emailRecipients(store, tenantId, notification) {
-  const users = (store.data.users || []).filter(u =>
-    u.tenantId === tenantId && u.active !== false && u.email && u.notifyEmail !== false);
+// Actieve gebruikers die bij het audience-/userId-veld van een notificatie horen.
+function audienceUsers(store, tenantId, notification) {
+  const users = (store.data.users || []).filter(u => u.tenantId === tenantId && u.active !== false);
   if (notification.userId) return users.filter(u => u.id === notification.userId);
   switch (notification.audience) {
     case "managers": return users.filter(u => u.role === "manager");
@@ -28,6 +27,24 @@ function emailRecipients(store, tenantId, notification) {
     case "admins":
     default: return users.filter(u => u.role === "tenant_admin");
   }
+}
+
+// E-mailontvangers: audience ∩ (heeft e-mail, geen opt-out).
+function emailRecipients(store, tenantId, notification) {
+  return audienceUsers(store, tenantId, notification).filter(u => u.email && u.notifyEmail !== false);
+}
+
+// Push-ontvangers: audience ∩ (heeft een push-abonnement = expliciete opt-in per toestel).
+function pushRecipients(store, tenantId, notification) {
+  return audienceUsers(store, tenantId, notification).filter(u => Array.isArray(u.pushSubscriptions) && u.pushSubscriptions.length);
+}
+
+// Verstuur de notificatie als browser-push naar geabonneerde toestellen. Fire-and-forget.
+function deliverNotificationPush(store, tenantId, notification) {
+  if (!pushConfigured()) return;
+  const recipients = pushRecipients(store, tenantId, notification);
+  if (!recipients.length) return;
+  Promise.resolve(sendPushToUsers(store, recipients, notification)).catch(() => {});
 }
 
 // Verstuur (of log) de notificatie per e-mail naar de ontvangers. Fire-and-forget.
@@ -73,6 +90,8 @@ function createNotification(store, tenant, payload, actor) {
   // Bezorg ook per e-mail wanneer dat gepast is (hoge prioriteit / e-mailkanaal).
   const emailed = deliverNotificationEmail(store, tenant.id, row);
   if (emailed) store.update("notifications", row.id, { emailedAt: new Date().toISOString(), emailedCount: emailed });
+  // En als browser-push naar geabonneerde toestellen (opt-in per toestel).
+  deliverNotificationPush(store, tenant.id, row);
   return publicNotification(row);
 }
 
@@ -153,4 +172,4 @@ function notificationSummary(store, tenantId) {
   };
 }
 
-module.exports = { createNotification, listNotifications, markNotificationRead, generateReminders, notificationSummary, hasOpenNotification, shouldEmailNotification, emailRecipients };
+module.exports = { createNotification, listNotifications, markNotificationRead, generateReminders, notificationSummary, hasOpenNotification, shouldEmailNotification, emailRecipients, audienceUsers, pushRecipients };

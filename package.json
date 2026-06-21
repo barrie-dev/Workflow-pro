@@ -75,6 +75,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@node-saml/node-saml": "^5.1.0"
+    "@node-saml/node-saml": "^5.1.0",
+    "web-push": "^3.6.7"
   }
 }

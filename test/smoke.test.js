@@ -86,6 +86,16 @@ test("openapi documenteert subscription billing endpoints", async () => {
   assert.match(portal.description, /Billing Portal/);
 });
 
+test("openapi documenteert web-push endpoints", async () => {
+  const spec = await (await fetch(`${BASE}/api/openapi.json`)).json();
+  assert.ok(spec.paths["/api/tenants/{tenantId}/me/push/key"]?.get, "push key endpoint staat in OpenAPI");
+  const subscribe = spec.paths["/api/tenants/{tenantId}/me/push/subscribe"]?.post;
+  const unsubscribe = spec.paths["/api/tenants/{tenantId}/me/push/unsubscribe"]?.post;
+  assert.ok(subscribe, "push subscribe endpoint staat in OpenAPI");
+  assert.ok(unsubscribe, "push unsubscribe endpoint staat in OpenAPI");
+  assert.equal(subscribe.requestBody.content["application/json"].schema.properties.subscription.required[0], "endpoint");
+});
+
 // ── Rechten: rollen mogen alleen hun eigen domein ──────────────
 async function login(email, password) {
   const r = await fetch(`${BASE}/api/auth/login`, {
@@ -797,6 +807,22 @@ test("billing: checkout + portal endpoints (mock), auth-gating", async () => {
   const portal = await (await fetch(`${BASE}/api/tenants/t_demo/billing/portal`, { method: "POST", headers: H(admin.token), body: "{}" })).json();
   assert.equal(portal.ok, true);
   assert.equal(portal.provider, "mock");
+});
+
+test("push: key endpoint werkt en subscribe blokkeert zonder VAPID-config", async () => {
+  const sara = await login("sara@demobouw.be", "Demo2026!");
+  const H = { "Content-Type": "application/json", Authorization: `Bearer ${sara.token}` };
+  const key = await (await fetch(`${BASE}/api/tenants/t_demo/me/push/key`, { headers: H })).json();
+  assert.equal(key.ok, true);
+  assert.equal(key.enabled, false);
+  assert.equal(key.publicKey, "");
+
+  const subscribe = await fetch(`${BASE}/api/tenants/t_demo/me/push/subscribe`, {
+    method: "POST",
+    headers: H,
+    body: JSON.stringify({ subscription: { endpoint: "https://push.example/sub", keys: { p256dh: "p", auth: "a" } } })
+  });
+  assert.equal(subscribe.status, 503);
 });
 
 test("mfa: verify accepteert token-alias uit frontend contract", async () => {

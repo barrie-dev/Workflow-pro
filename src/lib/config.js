@@ -39,6 +39,11 @@ const config = {
   },
   kbo: {
     provider: process.env.KBO_PROVIDER || "mock"
+  },
+  webpush: {
+    publicKey: process.env.VAPID_PUBLIC_KEY || "",
+    privateKey: process.env.VAPID_PRIVATE_KEY || "",
+    subject: process.env.VAPID_SUBJECT || (process.env.EMAIL_FROM ? `mailto:${(process.env.EMAIL_FROM.match(/<([^>]+)>/) || [])[1] || process.env.EMAIL_FROM}` : "mailto:support@workflowpro.be")
   }
 };
 
