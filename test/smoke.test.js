@@ -5,6 +5,7 @@
 const { test, before, after } = require("node:test");
 const assert = require("node:assert");
 const { spawn } = require("node:child_process");
+const crypto = require("node:crypto");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
@@ -105,6 +106,26 @@ async function activateWithLink(activationLink, password) {
   });
   assert.equal(r.status, 200);
   return r.json();
+}
+
+function testTotp(secret, at = Date.now()) {
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+  const clean = String(secret || "").replace(/=+$/g, "").replace(/\s+/g, "").toUpperCase();
+  let bits = "";
+  for (const char of clean) {
+    const index = alphabet.indexOf(char);
+    if (index >= 0) bits += index.toString(2).padStart(5, "0");
+  }
+  const key = Buffer.from((bits.match(/.{8}/g) || []).map(byte => parseInt(byte, 2)));
+  const counterBuffer = Buffer.alloc(8);
+  counterBuffer.writeBigUInt64BE(BigInt(Math.floor(at / 1000 / 30)));
+  const hmac = crypto.createHmac("sha1", key).update(counterBuffer).digest();
+  const offset = hmac[hmac.length - 1] & 0x0f;
+  const code = ((hmac[offset] & 0x7f) << 24)
+    | ((hmac[offset + 1] & 0xff) << 16)
+    | ((hmac[offset + 2] & 0xff) << 8)
+    | (hmac[offset + 3] & 0xff);
+  return String(code % 1_000_000).padStart(6, "0");
 }
 
 test("rechten: admin kan medewerkers lezen, employee niet", async () => {
@@ -776,6 +797,23 @@ test("billing: checkout + portal endpoints (mock), auth-gating", async () => {
   const portal = await (await fetch(`${BASE}/api/tenants/t_demo/billing/portal`, { method: "POST", headers: H(admin.token), body: "{}" })).json();
   assert.equal(portal.ok, true);
   assert.equal(portal.provider, "mock");
+});
+
+test("mfa: verify accepteert token-alias uit frontend contract", async () => {
+  const sara = await login("sara@demobouw.be", "Demo2026!");
+  const headers = { "Content-Type": "application/json", Authorization: `Bearer ${sara.token}` };
+  const setup = await (await fetch(`${BASE}/api/me/mfa/setup`, { method: "POST", headers, body: "{}" })).json();
+  assert.equal(setup.ok, true);
+  assert.ok(setup.setup?.secret, "setup geeft TOTP secret voor eerste scan");
+  const code = testTotp(setup.setup.secret);
+  const verified = await (await fetch(`${BASE}/api/me/mfa/verify`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ token: code })
+  })).json();
+  assert.equal(verified.ok, true);
+  assert.equal(verified.user.mfaEnabled, true);
+  assert.ok(Array.isArray(verified.recoveryCodes) && verified.recoveryCodes.length > 0);
 });
 
 // ── Wachtwoord vergeten → reset via e-maillink ──────────────────────────────

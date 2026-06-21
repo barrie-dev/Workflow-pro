@@ -924,7 +924,7 @@ http.createServer(async (req, res) => {
       if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
       assertHumanUser(user);
       const body = await readBody(req);
-      const result = verifyMfaSetup(store, user, body.code);
+      const result = verifyMfaSetup(store, user, body.code || body.token || body.mfaCode);
       sendJson(res, 200, { ok: true, user: result.user, recoveryCodes: result.recoveryCodes });
       return;
     }
