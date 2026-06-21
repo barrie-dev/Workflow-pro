@@ -218,7 +218,7 @@ function productionReadiness(store) {
   const demoTenantCount = (store.data.tenants || []).filter(tenant => /^t_demo$/i.test(tenant.id) || /demo/i.test(`${tenant.name || ""} ${tenant.billingEmail || ""}`)).length;
   const demoUserCount = users.filter(user => /demo|workflowpro\.be/i.test(`${user.email || ""} ${user.name || ""}`)).length;
   const adminUsers = users.filter(user => ["tenant_admin", "super_admin"].includes(user.role));
-  const mfaAdmins = adminUsers.filter(user => user.mfaEnabled && user.mfaEnforced);
+  const mfaAdmins = adminUsers.filter(user => user.mfaEnabled && user.mfaEnforced && user.mfaSecret);
   const activeApiKeys = (store.data.apiKeys || []).filter(key => key.status === "active");
   const expiredApiKeys = activeApiKeys.filter(key => isExpired(key));
   const noExpiryApiKeys = activeApiKeys.filter(key => !key.expiresAt);
@@ -282,7 +282,7 @@ function productionReadiness(store) {
       "mfa",
       "Admin MFA",
       adminUsers.length > 0 && mfaAdmins.length === adminUsers.length,
-      `${mfaAdmins.length}/${adminUsers.length} admin accounts hebben MFA actief en enforced.`,
+      `${mfaAdmins.length}/${adminUsers.length} admin accounts hebben MFA actief, enforced en voorzien van een secret.`,
       "P0"
     ),
     check(

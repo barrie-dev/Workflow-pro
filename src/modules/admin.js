@@ -84,7 +84,8 @@ function mfaRisk(users, tenantId = null) {
     .filter(user => ["tenant_admin", "super_admin"].includes(user.role))
     .filter(user => tenantId ? user.tenantId === tenantId || user.role === "super_admin" : true)
     .map(user => {
-      const ready = !!user.mfaEnabled && !!user.mfaEnforced;
+      const hasSecret = !!user.mfaSecret;
+      const ready = !!user.mfaEnabled && !!user.mfaEnforced && hasSecret;
       return {
         id: user.id,
         tenantId: user.tenantId || null,
@@ -93,8 +94,9 @@ function mfaRisk(users, tenantId = null) {
         role: user.role,
         mfaEnabled: !!user.mfaEnabled,
         mfaEnforced: !!user.mfaEnforced,
+        hasSecret,
         ready,
-        action: ready ? "Geen actie nodig." : "Laat deze admin MFA setup afronden voor productie."
+        action: ready ? "Geen actie nodig." : "Laat deze admin MFA setup afronden voor productie en controleer dat er een TOTP secret is opgeslagen."
       };
     });
   return {
@@ -103,6 +105,7 @@ function mfaRisk(users, tenantId = null) {
     readyAdmins: adminUsers.filter(user => user.ready).length,
     missingMfa: adminUsers.filter(user => !user.mfaEnabled).length,
     notEnforced: adminUsers.filter(user => user.mfaEnabled && !user.mfaEnforced).length,
+    missingSecret: adminUsers.filter(user => !user.hasSecret).length,
     rows: adminUsers
   };
 }
