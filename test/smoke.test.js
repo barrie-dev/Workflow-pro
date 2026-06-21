@@ -74,6 +74,17 @@ test("onbekende API-route geeft nette 404 JSON", async () => {
   assert.equal(d.ok, false);
 });
 
+test("openapi documenteert subscription billing endpoints", async () => {
+  const spec = await (await fetch(`${BASE}/api/openapi.json`)).json();
+  const checkout = spec.paths["/api/tenants/{tenantId}/billing/checkout"]?.post;
+  const portal = spec.paths["/api/tenants/{tenantId}/billing/portal"]?.post;
+  assert.ok(checkout, "checkout endpoint staat in OpenAPI");
+  assert.ok(portal, "billing portal endpoint staat in OpenAPI");
+  assert.equal(checkout.requestBody.content["application/json"].schema.required[0], "plan");
+  assert.equal(checkout.responses["200"].content["application/json"].schema.properties.provider.example, "stripe");
+  assert.match(portal.description, /Billing Portal/);
+});
+
 // ── Rechten: rollen mogen alleen hun eigen domein ──────────────
 async function login(email, password) {
   const r = await fetch(`${BASE}/api/auth/login`, {

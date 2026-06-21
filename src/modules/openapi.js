@@ -122,6 +122,32 @@ function supportTicketUpdateSchema() {
   };
 }
 
+function subscriptionCheckoutSchema() {
+  return {
+    type: "object",
+    required: ["plan"],
+    properties: {
+      plan: {
+        type: "string",
+        enum: ["starter", "business", "enterprise"],
+        example: "business",
+        description: "Target bundle. Enterprise/custom bundles return 400 because they require an assisted contract."
+      }
+    }
+  };
+}
+
+function hostedBillingResponseSchema() {
+  return {
+    type: "object",
+    properties: {
+      ok: { type: "boolean", example: true },
+      provider: { type: "string", enum: ["stripe", "mock"], example: "stripe" },
+      url: { type: "string", format: "uri", example: "https://checkout.stripe.com/c/session-id" }
+    }
+  };
+}
+
 function customerStartResponseSchema() {
   return {
     type: "object",
@@ -472,6 +498,38 @@ function openApiSpec() {
         }
       },
       "/api/tenants/{tenantId}/billing/setup-intent": { post: operation("Create Stripe SetupIntent", "post") },
+      "/api/tenants/{tenantId}/billing/checkout": {
+        post: {
+          ...operation("Create Stripe subscription checkout", "post"),
+          parameters: [tenantParameter()],
+          requestBody: jsonBody(subscriptionCheckoutSchema()),
+          description: "Starts a hosted Stripe Checkout session for recurring subscription billing. Requires an interactive billing-capable user. In local/mock mode it returns a mock URL and immediately marks the tenant plan active; in live mode the subscription state is finalized by the Stripe webhook.",
+          responses: {
+            200: {
+              description: "Hosted checkout URL",
+              content: { "application/json": { schema: hostedBillingResponseSchema() } }
+            },
+            400: response("Unknown, inactive or assisted-only plan"),
+            401: response("Unauthorized"),
+            403: response("Forbidden")
+          }
+        }
+      },
+      "/api/tenants/{tenantId}/billing/portal": {
+        post: {
+          ...operation("Create Stripe billing portal session", "post"),
+          parameters: [tenantParameter()],
+          description: "Creates a hosted Stripe Billing Portal session for payment method, upgrade/downgrade and cancellation self-service. Requires an interactive billing-capable user.",
+          responses: {
+            200: {
+              description: "Hosted billing portal URL",
+              content: { "application/json": { schema: hostedBillingResponseSchema() } }
+            },
+            401: response("Unauthorized"),
+            403: response("Forbidden")
+          }
+        }
+      },
       "/api/tenants/{tenantId}/billing/summary": { get: operation("Billing summary") },
       "/api/tenants/{tenantId}/billing/quote": { get: operation("Billing quote") },
       "/api/tenants/{tenantId}/billing/contract-state": { post: operation("Transition contract state", "post") },
