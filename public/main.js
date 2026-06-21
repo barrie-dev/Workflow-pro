@@ -2553,9 +2553,9 @@ document.getElementById("loginForgot")?.addEventListener("click", async event =>
 });
 
 // Taalkeuze — EN is voorbereid maar nog niet beschikbaar (eerlijk i.p.v. dode knop)
-document.getElementById("langEN")?.addEventListener("click", () => {
-  showToast("De Engelstalige interface komt binnenkort. De app is momenteel in het Nederlands.", "info");
-});
+// Taalkeuze NL / FR (België is tweetalig). wfpI18n vertaalt de publieke flows.
+document.getElementById("langNL")?.addEventListener("click", () => window.wfpI18n && window.wfpI18n.setLang("nl"));
+document.getElementById("langFR")?.addEventListener("click", () => window.wfpI18n && window.wfpI18n.setLang("fr"));
 
 // Demo-rol knoppen (CSP blokkeert inline onclick → hier via addEventListener)
 document.querySelectorAll(".login-role-btn[data-demo-email]").forEach(btn => {
@@ -2599,19 +2599,23 @@ function showRegisterForm(mode) {
   const toReseller = document.getElementById("showResellerApply");
   const toTenant = document.getElementById("showTenantRegister");
   const pwHint = document.getElementById("registerPwHint");
+  // Zet zowel het data-i18n-attribuut (zodat een latere taalwissel het juiste
+  // label kiest) als de actuele tekst via wfpI18n.t().
+  const i18n = window.wfpI18n;
+  const setI18n = (el, key) => { if (!el) return; el.setAttribute("data-i18n", key); el.textContent = i18n ? i18n.t(key) : el.textContent; };
   if (mode === "reseller") {
     if (planField) planField.style.display = "none";
     if (pwHint) pwHint.style.display = "none"; // mail volgt pas na goedkeuring
-    title.textContent = "Reseller worden";
-    sub.textContent = "Vraag een partneraccount aan — wij keuren het goed";
-    btn.textContent = "Aanvraag indienen";
+    setI18n(title, "reseller.title");
+    setI18n(sub, "reseller.subtitle");
+    setI18n(btn, "reseller.submit");
     if (toReseller) toReseller.style.display = "none";
     if (toTenant) toTenant.style.display = "";
   } else {
     if (planField) planField.style.display = "";
-    title.textContent = "Account aanmaken";
-    sub.textContent = "Start je eigen WorkFlow Pro — kies je pakket";
-    btn.textContent = "Account aanmaken & starten";
+    setI18n(title, "reg.title");
+    setI18n(sub, "reg.subtitle");
+    setI18n(btn, "reg.submit");
     if (toReseller) toReseller.style.display = "";
     if (toTenant) toTenant.style.display = "none";
     if (pwHint) pwHint.style.display = "";
