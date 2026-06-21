@@ -930,7 +930,8 @@ test("onboarding: register met BTW vult KBO-profiel; wizard slaat sector/team op
   assert.equal(save.tenant.sector, "bouw");
   assert.equal(save.tenant.teamSize, "6-10");
 
-  // /me meldt nu onboarding voltooid
+  // /me meldt nu onboarding voltooid + sector-terminologie
   const me = await (await fetch(`${BASE}/api/me`, { headers: H })).json();
   assert.equal(me.onboarding.completed, true, "onboarding afgerond na wizard");
+  assert.ok(me.terminology && me.terminology.jobPlural, "sector-terminologie staat in /me");
 });

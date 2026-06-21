@@ -61,6 +61,8 @@
     fetch("/api/me", { headers: { Authorization: "Bearer " + token() } })
       .then(r => r.json())
       .then(d => {
+        // Sector-terminologie toepassen (Werkbonnen → Bezoeken/Interventies/…).
+        if (d && d.terminology && window.wfpTerms) window.wfpTerms.set(d.terminology);
         if (d && d.supportSession && d.supportSession.active) renderSupportBanner(d.supportSession);
         // Eerste keer inloggen zonder afgeronde onboarding → toon de wizard.
         if (d && d.onboarding && d.onboarding.completed === false && !d.supportSession) {
@@ -239,7 +241,7 @@
       </a>
       <a class="adm-nav-item" data-view="workorders" href="#">
         <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
-        <span>Werkbonnen</span>
+        <span data-term="jobPlural">Werkbonnen</span>
       </a>
       <a class="adm-nav-item" data-view="clocking" href="#">
         <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
@@ -297,7 +299,7 @@
       </a>
       <a class="adm-nav-item" data-view="venues" href="#">
         <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-        <span>Locaties</span>
+        <span data-term="venuePlural">Locaties</span>
       </a>
 
       <div class="adm-nav-label">Systeem</div>
@@ -766,7 +768,9 @@ table.adm-table { width:100%; border-collapse:collapse; font-size:13px; }
     document.querySelectorAll(".adm-nav-item").forEach(a => {
       a.classList.toggle("active", a.dataset.view === view);
     });
-    document.getElementById("admPageTitle").textContent = VIEW_LABELS[view] || view;
+    // Sector-terminologie voor de paginatitel (Werkbonnen/Locaties → sectorwoord).
+    const termTitle = window.wfpTerms && (view === "workorders" ? window.wfpTerms.t("jobPlural") : view === "venues" ? window.wfpTerms.t("venuePlural") : null);
+    document.getElementById("admPageTitle").textContent = termTitle || VIEW_LABELS[view] || view;
 
     const btn = document.getElementById("admPrimaryAction");
     const hasBtn = VIEW_BTN_LABEL[view];

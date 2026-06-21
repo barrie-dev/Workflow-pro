@@ -133,7 +133,7 @@ const {
   processStripeWebhook
 } = require("./modules/billing");
 const { readiness, applyKbo, createDemoGoldenPath } = require("./modules/golden-path");
-const { SECTORS, TEAM_SIZES, isValidSector, publicSectors, sectorByKey } = require("./modules/sectors");
+const { SECTORS, TEAM_SIZES, isValidSector, publicSectors, sectorByKey, terminologyFor } = require("./modules/sectors");
 const { todayPayload, completeWorkorder, attachWorkorderPhoto, signWorkorder, syncMobileQueue } = require("./modules/mobile");
 const { clockIn, clockOut, approveExpense, managementReport } = require("./modules/operations");
 const { listIntegrations, connectIntegration, updateMapping, runSync, retrySync, listProviders } = require("./modules/integrations");
@@ -913,13 +913,17 @@ http.createServer(async (req, res) => {
       const platform = user.role === "super_admin"
         ? { scopes: platformScopesOf(user), isGod: isPlatformGod(user), allScopes: PLATFORM_SCOPES }
         : null;
-      // Onboarding-status: laat de tenant-admin-shell de wizard tonen tot afgerond.
+      // Onboarding-status + sector-terminologie (voor de tenant-shells).
       let onboarding = null;
-      if (user.role === "tenant_admin") {
+      let terminology = null;
+      if (user.tenantId && user.role !== "super_admin") {
         const myTenant = store.data.tenants.find(t => t.id === user.tenantId);
-        onboarding = { completed: !!(myTenant && myTenant.onboarding && myTenant.onboarding.completed) };
+        terminology = terminologyFor(myTenant || {});
+        if (user.role === "tenant_admin") {
+          onboarding = { completed: !!(myTenant && myTenant.onboarding && myTenant.onboarding.completed) };
+        }
       }
-      sendJson(res, 200, { ok: true, user: safeUser(user), entitlements, supportSession, platform, onboarding });
+      sendJson(res, 200, { ok: true, user: safeUser(user), entitlements, supportSession, platform, onboarding, terminology });
       return;
     }
 

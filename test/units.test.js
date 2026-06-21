@@ -320,6 +320,18 @@ test("subscriptions: webhook-status mapt naar tenant-status + plan", () => {
   assert.equal(applySubscriptionEvent(t, { type: "invoice.paid", data: { object: {} } }), null);
 });
 
+// ── Sector-terminologie ──────────────────────────────────────
+const { terminologyFor, isValidSector } = require("../src/modules/sectors");
+
+test("sectors: terminologie per sector met nette fallback", () => {
+  assert.deepEqual(terminologyFor({ sector: "zorg" }), { venue: "Cliëntadres", venuePlural: "Cliëntadressen", job: "Bezoek", jobPlural: "Bezoeken" });
+  assert.equal(terminologyFor({ sector: "hvac" }).jobPlural, "Interventies");
+  assert.equal(terminologyFor({}).jobPlural, "Werkbonnen");
+  assert.equal(terminologyFor({ sector: "bestaat-niet" }).venue, "Locatie");
+  assert.equal(isValidSector("bouw"), true);
+  assert.equal(isValidSector("xyz"), false);
+});
+
 // ── SAML SSO (add-on) ────────────────────────────────────────
 const saml = require("../src/modules/saml");
 

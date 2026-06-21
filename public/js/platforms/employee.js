@@ -85,6 +85,7 @@
     fetch("/api/me", { headers: { Authorization: "Bearer " + token() } })
       .then(r => r.json())
       .then(d => {
+        if (d && d.terminology && window.wfpTerms) window.wfpTerms.set(d.terminology);
         if (d && d.supportSession && d.supportSession.active) renderSupportBanner(d.supportSession);
         const ent = d && d.entitlements;
         window._wfpEnt = ent || null; // stash voor sectie-gating in 'Meer'
@@ -857,7 +858,7 @@
   </button>
   <button class="emp-action-btn" id="empActWO">
     <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
-    Werkbonnen${dash.openWorkorders > 0 ? ` (${dash.openWorkorders})` : ""}
+    ${(window.wfpTerms && window.wfpTerms.t("jobPlural")) || "Werkbonnen"}${dash.openWorkorders > 0 ? ` (${dash.openWorkorders})` : ""}
   </button>
   <button class="emp-action-btn" id="empActLeave">
     <svg viewBox="0 0 24 24"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
@@ -1696,7 +1697,7 @@ ${data.absentNow ? `<div style="background:#fef3c7;border-radius:10px;padding:12
 <div class="emp-card">
   ${viewEnabled("workorders") ? `<div class="emp-list-item" id="empMoreWO" style="cursor:pointer;">
     <div class="emp-list-icon"><svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg></div>
-    <div class="emp-list-info"><div class="emp-list-title">Werkbonnen</div><div class="emp-list-sub">Mijn werkbonnen bekijken</div></div>
+    <div class="emp-list-info"><div class="emp-list-title">${(window.wfpTerms && window.wfpTerms.t("jobPlural")) || "Werkbonnen"}</div><div class="emp-list-sub">Mijn ${((window.wfpTerms && window.wfpTerms.t("jobPlural")) || "werkbonnen").toLowerCase()} bekijken</div></div>
     <svg viewBox="0 0 24 24" style="width:16px;fill:#94a3b8;flex-shrink:0;"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
   </div>` : ""}
   ${viewEnabled("expenses") ? `<div class="emp-list-item" id="empMoreExp" style="cursor:pointer;">
