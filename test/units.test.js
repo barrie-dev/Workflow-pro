@@ -11,10 +11,11 @@ const {
 const { Store } = require("../src/lib/store");
 const { runSupportAccessReview } = require("../src/modules/support-access");
 const { verifyStripeSignature } = require("../src/modules/stripe-webhook");
-const { peppolTransportReadiness } = require("../src/modules/peppol-invoice");
+const { peppolTransportReadiness, buildUbl, validatePeppol } = require("../src/modules/peppol-invoice");
 const { liveServiceReadiness } = require("../src/modules/live-services");
 const { importEmployees } = require("../src/modules/imports");
-const { productionConfigRisk } = require("../src/modules/production");
+const { productionConfigRisk, productionReadiness } = require("../src/modules/production");
+const { mfaRisk } = require("../src/modules/admin");
 const crypto = require("node:crypto");
 
 class MemAdapter {
@@ -371,4 +372,67 @@ test("saml: buildLoginUrl produceert een SAMLRequest-redirect; validateAcs weige
   const url = await saml.buildLoginUrl(tenant, "");
   assert.match(url, /^https:\/\/idp\.example\/sso\?SAMLRequest=/);
   await assert.rejects(saml.validateAcs(tenant, { SAMLResponse: Buffer.from("<garbage/>").toString("base64") }));
+});
+
+// ── Peppol UBL-opbouw + validatie ────────────────────────────
+const _peppolTenant = {
+  id: "t1", name: "Demo Bouw NV",
+  invoiceProfile: { vat: "BE0456789034", street: "Bouwstraat 1", postalCode: "9000", city: "Gent", country: "BE", iban: "BE68539007547034" }
+};
+const _peppolInvoice = {
+  id: "inv1", number: "F2026-001", invoiceDate: "2026-06-01", dueDate: "2026-07-01",
+  customerName: "Klant BV", customerVatNumber: "BE0678901218", customerAddress: "Klantlaan 2, Brugge",
+  subtotal: 100, vatAmount: 21, total: 121,
+  lines: [{ description: "Werkuren", qty: 1, unitPrice: 100, vatRate: 21, lineSubtotal: 100, lineVat: 21 }]
+};
+
+test("peppol: validatePeppol vangt ontbrekende/foute verplichte velden", () => {
+  assert.equal(validatePeppol(_peppolInvoice, _peppolTenant).ok, true);
+  // klant-BTW ontbreekt
+  const noVat = validatePeppol({ ..._peppolInvoice, customerVatNumber: "" }, _peppolTenant);
+  assert.equal(noVat.ok, false);
+  assert.ok(noVat.errors.some(e => /BTW-nummer van de klant/i.test(e)));
+  // ongeldig BTW (mod-97)
+  const badVat = validatePeppol({ ..._peppolInvoice, customerVatNumber: "BE0000000000" }, _peppolTenant);
+  assert.equal(badVat.ok, false);
+});
+
+test("peppol: buildUbl produceert geldige BIS 3.0 UBL met kernvelden", () => {
+  const xml = buildUbl(_peppolInvoice, _peppolTenant);
+  assert.match(xml, /<Invoice/);
+  assert.match(xml, /poacc:billing:3\.0/);
+  assert.match(xml, /<cbc:ID>F2026-001<\/cbc:ID>/);
+  assert.match(xml, /<cbc:PayableAmount currencyID="EUR">121\.00<\/cbc:PayableAmount>/);
+  assert.match(xml, /BE0456789034/); // leverancier-BTW
+  assert.match(xml, /BE0678901218/); // klant-BTW
+  assert.match(xml, /<cbc:Percent>21\.00<\/cbc:Percent>/);
+});
+
+test("mfa readiness: flags zonder secret tellen niet als productie-klaar", () => {
+  const users = [
+    { id: "u1", tenantId: "t1", role: "tenant_admin", active: true, email: "admin@t1.be", mfaEnabled: true, mfaEnforced: true },
+    { id: "u2", tenantId: "t1", role: "tenant_admin", active: true, email: "ready@t1.be", mfaEnabled: true, mfaEnforced: true, mfaSecret: "encrypted" }
+  ];
+  const risk = mfaRisk(users, "t1");
+  assert.equal(risk.ok, false);
+  assert.equal(risk.readyAdmins, 1);
+  assert.equal(risk.missingSecret, 1);
+  assert.equal(risk.rows.find(row => row.id === "u1").ready, false);
+});
+
+test("production readiness: admin MFA vereist opgeslagen secret", () => {
+  const store = new Store(new MemAdapter({
+    schemaVersion: 6,
+    tenants: [{ id: "t1", name: "Klant BV", status: "active", plan: "business" }],
+    users: [
+      { id: "u1", tenantId: "t1", role: "tenant_admin", active: true, email: "admin@klant.be", mfaEnabled: true, mfaEnforced: true }
+    ],
+    roles: [], venues: [], customers: [], shifts: [], workorders: [], clocks: [], expenses: [],
+    stock: [], vehicles: [], leaves: [], messages: [], notifications: [], integrations: [],
+    invoices: [], paymentMethods: [], files: [], secrets: [], auditLogs: [], errorEvents: [],
+    apiKeys: [], salesLeads: [], partners: [], migrationHistory: []
+  }));
+  const mfa = productionReadiness(store).checks.find(row => row.key === "mfa");
+  assert.equal(mfa.ok, false);
+  assert.match(mfa.detail, /secret/i);
 });
