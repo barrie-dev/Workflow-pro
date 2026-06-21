@@ -2639,6 +2639,24 @@ async function loadRegisterPlans() {
     _plansLoaded = true;
   } catch (_) { /* laat placeholder staan */ }
 }
+// BTW-autofill: haal bedrijfsnaam/adres op via KBO en vul het formulier in.
+document.getElementById("registerKboBtn")?.addEventListener("click", async () => {
+  const vat = (document.getElementById("registerVat")?.value || "").trim();
+  const hint = document.getElementById("registerKboHint");
+  if (vat.length < 8) { if (hint) { hint.style.display = ""; hint.style.color = "#dc2626"; hint.textContent = "Geef een geldig BTW-/ondernemingsnummer."; } return; }
+  try {
+    const r = await api(`/api/public/kbo?vat=${encodeURIComponent(vat)}`);
+    const c = r.company || {};
+    if (regForm && c.name) regForm.elements.companyName.value = c.name;
+    if (hint) {
+      hint.style.display = ""; hint.style.color = "#16a34a";
+      const addr = [c.street, [c.zip, c.city].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+      hint.textContent = c.name ? `✓ ${c.name}${addr ? " · " + addr : ""}` : "Geen gegevens gevonden — vul handmatig in.";
+    }
+  } catch (e) {
+    if (hint) { hint.style.display = ""; hint.style.color = "#dc2626"; hint.textContent = e.message || "Opzoeken mislukt."; }
+  }
+});
 document.getElementById("showRegister")?.addEventListener("click", e => { e.preventDefault(); showRegisterForm("tenant"); });
 document.getElementById("showResellerApply")?.addEventListener("click", e => { e.preventDefault(); showRegisterForm("reseller"); });
 document.getElementById("showTenantRegister")?.addEventListener("click", e => { e.preventDefault(); showRegisterForm("tenant"); });
@@ -2651,6 +2669,7 @@ regForm?.addEventListener("submit", async event => {
   const companyName = f.elements.companyName.value.trim();
   const name = f.elements.name.value.trim();
   const email = f.elements.email.value.trim();
+  const vatNumber = (f.elements.vatNumber && f.elements.vatNumber.value.trim()) || "";
   try {
     if (_registerMode === "reseller") {
       await api("/api/resellers/apply", { method: "POST", body: JSON.stringify({ name: companyName || name, email }) });
@@ -2660,8 +2679,8 @@ regForm?.addEventListener("submit", async event => {
     }
     const plan = f.elements.plan.value;
     // Geen wachtwoord meer bij registratie: de klant verifieert zijn e-mail en
-    // stelt zelf zijn wachtwoord in via de activatielink.
-    await api("/api/auth/register", { method: "POST", body: JSON.stringify({ companyName, name, email, plan }) });
+    // stelt zelf zijn wachtwoord in via de activatielink. BTW-nummer → KBO-autofill.
+    await api("/api/auth/register", { method: "POST", body: JSON.stringify({ companyName, name, email, plan, vatNumber }) });
     showLoginForm();
     showToast("Account aangemaakt — open de activatiemail om je wachtwoord in te stellen.", "success");
   } catch (error) {

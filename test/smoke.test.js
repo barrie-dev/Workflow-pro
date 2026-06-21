@@ -900,3 +900,37 @@ test("offline-sync: clock-actie via mobile/sync wordt herkend + dedupe op id", a
     assert.equal(r2.sync.results[0].duplicate, true, "zelfde queue-id wordt gededupliceerd");
   }
 });
+
+// ── Onboarding: BTW-autofill bij signup + wizard (sector/team/facturatie) ────
+test("onboarding: register met BTW vult KBO-profiel; wizard slaat sector/team op", async () => {
+  // Publieke endpoints
+  const sectors = await (await fetch(`${BASE}/api/sectors`)).json();
+  assert.ok(Array.isArray(sectors.sectors) && sectors.sectors.length >= 5, "sectorlijst beschikbaar");
+  const kbo = await (await fetch(`${BASE}/api/public/kbo?vat=BE0123456789`)).json();
+  assert.equal(kbo.ok, true);
+  assert.ok(kbo.company && kbo.company.name, "KBO-autofill geeft bedrijfsnaam");
+
+  // Self-signup met BTW-nummer → KBO vult het facturatieprofiel automatisch
+  const email = `onb-${Date.now()}@nieuwbedrijf.be`;
+  const reg = await (await fetch(`${BASE}/api/auth/register`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, plan: "business", vatNumber: "BE0123456789" }) })).json();
+  assert.equal(reg.ok, true);
+  assert.ok(reg.activationLink, "activatielink (dev)");
+  const act = await activateWithLink(reg.activationLink, "OnboardSterk2026!@#");
+  const H = { "Content-Type": "application/json", Authorization: `Bearer ${act.token}` };
+
+  // GET /onboarding → KBO-profiel reeds ingevuld, onboarding nog niet afgerond
+  const ob = await (await fetch(`${BASE}/api/tenants/${act.user.tenantId}/onboarding`, { headers: H })).json();
+  assert.equal(ob.ok, true);
+  assert.ok(ob.tenant.invoiceProfile.vat, "BTW staat in profiel via KBO-autofill bij signup");
+  assert.equal(ob.tenant.onboarding.completed, false);
+
+  // POST wizard → sector + team + contact
+  const save = await (await fetch(`${BASE}/api/tenants/${act.user.tenantId}/onboarding`, { method: "POST", headers: H, body: JSON.stringify({ sector: "bouw", teamSize: "6-10", contact: { contactName: "Jan", contactRole: "Zaakvoerder", phone: "+3290000000" }, invoiceProfile: { city: "Gent" } }) })).json();
+  assert.equal(save.ok, true);
+  assert.equal(save.tenant.sector, "bouw");
+  assert.equal(save.tenant.teamSize, "6-10");
+
+  // /me meldt nu onboarding voltooid
+  const me = await (await fetch(`${BASE}/api/me`, { headers: H })).json();
+  assert.equal(me.onboarding.completed, true, "onboarding afgerond na wizard");
+});

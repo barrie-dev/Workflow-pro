@@ -133,6 +133,7 @@ const {
   processStripeWebhook
 } = require("./modules/billing");
 const { readiness, applyKbo, createDemoGoldenPath } = require("./modules/golden-path");
+const { SECTORS, TEAM_SIZES, isValidSector, publicSectors, sectorByKey } = require("./modules/sectors");
 const { todayPayload, completeWorkorder, attachWorkorderPhoto, signWorkorder, syncMobileQueue } = require("./modules/mobile");
 const { clockIn, clockOut, approveExpense, managementReport } = require("./modules/operations");
 const { listIntegrations, connectIntegration, updateMapping, runSync, retrySync, listProviders } = require("./modules/integrations");
@@ -643,12 +644,30 @@ http.createServer(async (req, res) => {
       return;
     }
 
+    // ── Publieke sectorlijst (onboarding-wizard + signup) ─────────────────────
+    if (url.pathname === "/api/sectors" && req.method === "GET") {
+      sendJson(res, 200, { ok: true, sectors: publicSectors() });
+      return;
+    }
+
+    // ── Publieke KBO-opzoeking (BTW-autofill op de registratiepagina) ─────────
+    if (url.pathname === "/api/public/kbo" && req.method === "GET") {
+      const vat = String(url.searchParams.get("vat") || "").trim();
+      if (vat.length < 8) return sendJson(res, 400, { ok: false, error: "Geef een geldig BTW-/ondernemingsnummer" });
+      const company = lookupKbo(vat);
+      sendJson(res, 200, { ok: true, company });
+      return;
+    }
+
     // ── Self-service registratie: klant maakt zelf account + kiest bundel ──────
     if (url.pathname === "/api/auth/register" && req.method === "POST") {
       const body = await readBody(req);
-      const companyName = String(body.companyName || "").trim();
-      const name = String(body.name || "").trim();
+      const vatNumber = String(body.vatNumber || "").trim();
       const email = String(body.email || "").trim().toLowerCase();
+      // BTW-nummer ingevuld? Vul bedrijfsgegevens automatisch aan via KBO.
+      const kbo = vatNumber ? lookupKbo(vatNumber) : null;
+      const companyName = String(body.companyName || (kbo && kbo.name) || "").trim();
+      const name = String(body.name || "").trim();
       if (!companyName) return sendJson(res, 400, { ok: false, error: "Bedrijfsnaam is verplicht" });
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return sendJson(res, 400, { ok: false, error: "Geldig e-mailadres is verplicht" });
       if (store.getUserByEmail(email)) return sendJson(res, 409, { ok: false, error: "Er bestaat al een account met dit e-mailadres" });
@@ -657,11 +676,16 @@ http.createServer(async (req, res) => {
       if (!bundle || bundle.active === false) return sendJson(res, 400, { ok: false, error: "Kies een geldig pakket" });
       if (bundle.custom) return sendJson(res, 400, { ok: false, error: "Dit pakket is op aanvraag — neem contact op." });
       const now = new Date().toISOString();
+      // KBO-gegevens meteen in het facturatieprofiel zetten (volledige onboarding-start).
+      const invoiceProfile = kbo
+        ? { vat: kbo.vat, companyNumber: kbo.companyNumber, name: kbo.name, street: kbo.street || "", zip: kbo.zip || "", city: kbo.city || "" }
+        : {};
       const tenant = store.insert("tenants", {
         id: `tenant_${Date.now()}_${Math.random().toString(16).slice(2)}`,
         name: companyName, plan: bundle.key, status: "trial", billingEmail: email,
-        invoiceProfile: {}, onboarding: {}, billingOps: { invoiceHistory: [] },
-        supportAccess: { allowed: false }, selfSignup: true, createdAt: now
+        invoiceProfile, onboarding: { completed: false }, billingOps: { invoiceHistory: [] },
+        supportAccess: { allowed: false }, selfSignup: true, createdAt: now,
+        kboSyncedAt: kbo ? now : null
       });
       // Geen wachtwoord bij aanmaak: de klant verifieert zijn e-mail en stelt
       // zelf zijn wachtwoord in via de activatielink.
@@ -889,7 +913,13 @@ http.createServer(async (req, res) => {
       const platform = user.role === "super_admin"
         ? { scopes: platformScopesOf(user), isGod: isPlatformGod(user), allScopes: PLATFORM_SCOPES }
         : null;
-      sendJson(res, 200, { ok: true, user: safeUser(user), entitlements, supportSession, platform });
+      // Onboarding-status: laat de tenant-admin-shell de wizard tonen tot afgerond.
+      let onboarding = null;
+      if (user.role === "tenant_admin") {
+        const myTenant = store.data.tenants.find(t => t.id === user.tenantId);
+        onboarding = { completed: !!(myTenant && myTenant.onboarding && myTenant.onboarding.completed) };
+      }
+      sendJson(res, 200, { ok: true, user: safeUser(user), entitlements, supportSession, platform, onboarding });
       return;
     }
 
@@ -1657,6 +1687,55 @@ http.createServer(async (req, res) => {
 
       if (action === "golden-path" && req.method === "GET") {
         sendJson(res, 200, { ok: true, readiness: readiness(store, tenantId) });
+        return;
+      }
+
+      // ── Onboarding-wizard (sector, teamgrootte, facturatie/contact) ──────────
+      if (action === "onboarding" && req.method === "GET") {
+        assertCan(user, "settings");
+        sendJson(res, 200, { ok: true,
+          sectors: publicSectors(), teamSizes: TEAM_SIZES,
+          tenant: {
+            name: tenant.name, sector: tenant.sector || "", teamSize: tenant.teamSize || "",
+            contact: tenant.contact || {}, invoiceProfile: tenant.invoiceProfile || {},
+            onboarding: tenant.onboarding || { completed: false }
+          }
+        });
+        return;
+      }
+      if (action === "onboarding" && req.method === "POST") {
+        assertCan(user, "settings");
+        assertInteractiveUser(user);
+        const body = await readBody(req);
+        const patch = {};
+        if (body.sector !== undefined) patch.sector = isValidSector(body.sector) ? body.sector : tenant.sector || "andere";
+        if (body.teamSize !== undefined) patch.teamSize = TEAM_SIZES.includes(body.teamSize) ? body.teamSize : (tenant.teamSize || "");
+        if (body.contact && typeof body.contact === "object") {
+          patch.contact = {
+            phone: String(body.contact.phone || "").trim(),
+            contactName: String(body.contact.contactName || "").trim(),
+            contactRole: String(body.contact.contactRole || "").trim(),
+          };
+        }
+        // Facturatie/adres aanvullen of corrigeren (bovenop wat KBO al invulde).
+        if (body.invoiceProfile && typeof body.invoiceProfile === "object") {
+          const ip = tenant.invoiceProfile || {};
+          const inn = body.invoiceProfile;
+          patch.invoiceProfile = {
+            ...ip,
+            vat: String(inn.vat ?? ip.vat ?? "").trim(),
+            companyNumber: String(inn.companyNumber ?? ip.companyNumber ?? "").trim(),
+            name: String(inn.name ?? ip.name ?? tenant.name ?? "").trim(),
+            street: String(inn.street ?? ip.street ?? "").trim(),
+            zip: String(inn.zip ?? ip.zip ?? "").trim(),
+            city: String(inn.city ?? ip.city ?? "").trim(),
+          };
+        }
+        if (body.billingEmail) patch.billingEmail = String(body.billingEmail).trim();
+        patch.onboarding = { ...(tenant.onboarding || {}), completed: body.completed === false ? false : true, completedAt: new Date().toISOString(), completedBy: user.email };
+        const next = store.updateTenant(tenant.id, patch);
+        store.audit({ actor: user.email, tenantId: tenant.id, action: "onboarding_completed", area: "tenants", detail: `${patch.sector || tenant.sector || "?"} · ${patch.teamSize || tenant.teamSize || "?"}` });
+        sendJson(res, 200, { ok: true, tenant: { sector: next.sector, teamSize: next.teamSize, contact: next.contact, invoiceProfile: next.invoiceProfile, onboarding: next.onboarding } });
         return;
       }
       if (action === "suggestions/home" && req.method === "GET") {

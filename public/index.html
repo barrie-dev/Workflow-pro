@@ -153,6 +153,13 @@
             <h2 class="login-welcome" data-i18n="reg.title">Account aanmaken</h2>
             <p class="login-welcome-sub" data-i18n="reg.subtitle">Start je eigen WorkFlow Pro — kies je pakket</p>
           </div>
+          <div class="login-field"><label class="login-label" data-i18n="reg.vat">BTW-/ondernemingsnummer</label>
+            <div style="display:flex;gap:8px">
+              <input class="login-input" name="vatNumber" id="registerVat" placeholder="BE0123.456.789" style="flex:1">
+              <button type="button" class="login-btn" id="registerKboBtn" style="width:auto;padding:0 14px;background:#fff;color:#0f172a;border:1px solid #e2e8f0" data-i18n="reg.vatFetch">Ophalen</button>
+            </div>
+            <div id="registerKboHint" style="font-size:0.72rem;color:#16a34a;margin-top:4px;display:none"></div>
+          </div>
           <div class="login-field"><label class="login-label" data-i18n="reg.company">Bedrijfsnaam</label>
             <input class="login-input" name="companyName" required placeholder="Mijn Bedrijf BV"></div>
           <div class="login-field"><label class="login-label" data-i18n="reg.yourName">Jouw naam</label>

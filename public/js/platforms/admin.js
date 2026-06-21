@@ -62,6 +62,10 @@
       .then(r => r.json())
       .then(d => {
         if (d && d.supportSession && d.supportSession.active) renderSupportBanner(d.supportSession);
+        // Eerste keer inloggen zonder afgeronde onboarding → toon de wizard.
+        if (d && d.onboarding && d.onboarding.completed === false && !d.supportSession) {
+          setTimeout(() => { try { showOnboardingWizard(); } catch (_) {} }, 300);
+        }
         const ent = d && d.entitlements;
         window._wfpEnt = ent || null; // stash voor submodule-gating in views
         if (!ent || ent.views === "*") return; // super_admin of geen data → alles tonen
@@ -80,6 +84,88 @@
         });
       })
       .catch(() => {});
+  }
+
+  // ── Onboarding-wizard: sector, teamgrootte, facturatie/contact ──────────────
+  // Verschijnt bij de eerste login tot de tenant-admin de gegevens invult.
+  async function showOnboardingWizard() {
+    if (document.getElementById("admObWizard")) return; // niet dubbel
+    let data;
+    try { data = await api("GET", "/onboarding"); } catch (_) { return; }
+    if (!data || (data.tenant && data.tenant.onboarding && data.tenant.onboarding.completed)) return;
+    const t = data.tenant || {};
+    const ip = t.invoiceProfile || {}; const ct = t.contact || {};
+    const sectors = data.sectors || []; const teamSizes = data.teamSizes || [];
+    const ov = document.createElement("div");
+    ov.id = "admObWizard";
+    ov.style.cssText = "position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:16px;";
+    ov.innerHTML = `
+      <div style="background:#fff;border-radius:16px;max-width:560px;width:100%;max-height:92vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+        <div style="padding:20px 22px;border-bottom:1px solid #f1f5f9">
+          <h2 style="margin:0;font-size:18px;color:#0f172a">Welkom bij WorkFlow Pro 👋</h2>
+          <p style="margin:6px 0 0;font-size:13px;color:#64748b">Vul je bedrijfsgegevens aan zodat we ${esc(t.name || "je organisatie")} correct kunnen instellen. Duurt een minuutje.</p>
+        </div>
+        <form id="admObForm" style="padding:20px 22px;display:flex;flex-direction:column;gap:14px">
+          <div class="adm-form-group"><label>Sector</label>
+            <select name="sector" required>
+              <option value="">Kies je sector…</option>
+              ${sectors.map(s => `<option value="${esc(s.key)}" ${t.sector===s.key?"selected":""}>${esc(s.label)}</option>`).join("")}
+            </select></div>
+          <div class="adm-form-group"><label>Teamgrootte</label>
+            <select name="teamSize" required>
+              <option value="">Aantal medewerkers…</option>
+              ${teamSizes.map(s => `<option value="${esc(s)}" ${t.teamSize===s?"selected":""}>${esc(s)} medewerkers</option>`).join("")}
+            </select></div>
+          <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-top:4px">Facturatiegegevens ${ip.vat ? "(via KBO opgehaald)" : ""}</div>
+          <div class="adm-form-row" style="display:flex;gap:10px">
+            <div class="adm-form-group" style="flex:1"><label>BTW-nummer</label><input name="vat" value="${esc(ip.vat||"")}" placeholder="BE0123.456.789"></div>
+            <div class="adm-form-group" style="flex:1"><label>Ondernemingsnr.</label><input name="companyNumber" value="${esc(ip.companyNumber||"")}" placeholder="0123.456.789"></div>
+          </div>
+          <div class="adm-form-group"><label>Straat + nummer</label><input name="street" value="${esc(ip.street||"")}" placeholder="Kerkstraat 12"></div>
+          <div class="adm-form-row" style="display:flex;gap:10px">
+            <div class="adm-form-group" style="width:120px"><label>Postcode</label><input name="zip" value="${esc(ip.zip||"")}" placeholder="9000"></div>
+            <div class="adm-form-group" style="flex:1"><label>Gemeente</label><input name="city" value="${esc(ip.city||"")}" placeholder="Gent"></div>
+          </div>
+          <div class="adm-form-group"><label>Facturatie-e-mail</label><input name="billingEmail" type="email" value="${esc(t.billingEmail||"")}" placeholder="facturatie@bedrijf.be"></div>
+          <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-top:4px">Contactpersoon</div>
+          <div class="adm-form-row" style="display:flex;gap:10px">
+            <div class="adm-form-group" style="flex:1"><label>Naam</label><input name="contactName" value="${esc(ct.contactName||"")}" placeholder="Voornaam Naam"></div>
+            <div class="adm-form-group" style="flex:1"><label>Functie</label><input name="contactRole" value="${esc(ct.contactRole||"")}" placeholder="Zaakvoerder"></div>
+          </div>
+          <div class="adm-form-group"><label>Telefoon</label><input name="phone" value="${esc(ct.phone||"")}" placeholder="+32 ..."></div>
+          <div id="admObErr" style="display:none;background:#fef2f2;color:#dc2626;border-radius:8px;padding:8px;font-size:12px"></div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
+            <button type="button" class="adm-btn adm-btn-secondary" id="admObLater">Later invullen</button>
+            <button type="submit" class="adm-btn adm-btn-primary">Opslaan &amp; starten</button>
+          </div>
+        </form>
+      </div>`;
+    document.body.appendChild(ov);
+    document.getElementById("admObLater").addEventListener("click", () => ov.remove());
+    document.getElementById("admObForm").addEventListener("submit", async e => {
+      e.preventDefault();
+      const f = e.target;
+      const payload = {
+        sector: f.elements.sector.value,
+        teamSize: f.elements.teamSize.value,
+        billingEmail: f.elements.billingEmail.value.trim(),
+        invoiceProfile: {
+          vat: f.elements.vat.value.trim(), companyNumber: f.elements.companyNumber.value.trim(),
+          street: f.elements.street.value.trim(), zip: f.elements.zip.value.trim(), city: f.elements.city.value.trim(),
+        },
+        contact: {
+          contactName: f.elements.contactName.value.trim(), contactRole: f.elements.contactRole.value.trim(),
+          phone: f.elements.phone.value.trim(),
+        },
+      };
+      try {
+        await api("POST", "/onboarding", payload);
+        ov.remove();
+        window.showToast && window.showToast("Bedrijfsgegevens opgeslagen ✓ Welkom!", "success");
+      } catch (err) {
+        const eEl = document.getElementById("admObErr"); eEl.style.display = "block"; eEl.textContent = err.message;
+      }
+    });
   }
 
   // GDPR-transparantie: toon een vaste banner tijdens een support-sessie.
