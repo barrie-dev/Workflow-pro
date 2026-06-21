@@ -134,6 +134,7 @@ const {
 } = require("./modules/billing");
 const { readiness, applyKbo, createDemoGoldenPath } = require("./modules/golden-path");
 const { SECTORS, TEAM_SIZES, isValidSector, publicSectors, sectorByKey, terminologyFor } = require("./modules/sectors");
+const { availableWidgets, renderWidgets, sanitizeKeys: sanitizeWidgetKeys } = require("./modules/dashboards");
 const { todayPayload, completeWorkorder, attachWorkorderPhoto, signWorkorder, syncMobileQueue } = require("./modules/mobile");
 const { clockIn, clockOut, approveExpense, managementReport } = require("./modules/operations");
 const { listIntegrations, connectIntegration, updateMapping, runSync, retrySync, listProviders } = require("./modules/integrations");
@@ -2628,6 +2629,50 @@ http.createServer(async (req, res) => {
 
       if (action === "me/dashboard" && req.method === "GET") {
         sendJson(res, 200, { ok: true, ...getMyDashboard(store, tenantId, user) });
+        return;
+      }
+
+      // ── Configureerbare dashboards ──────────────────────────────────────────
+      // Builder-data: beschikbare widgets (rechten-gefilterd), eigen config en het
+      // door de admin gepubliceerde org-dashboard.
+      if (action === "me/dashboard/builder" && req.method === "GET") {
+        const pub = tenant.publishedDashboard || null;
+        sendJson(res, 200, { ok: true,
+          available: availableWidgets(store, tenant, user),
+          personal: { widgets: (user.dashboardConfig && user.dashboardConfig.widgets) || [] },
+          published: pub ? { widgets: pub.widgets || [], publishedBy: pub.publishedBy || null, publishedAt: pub.publishedAt || null } : null,
+          canPublish: can(user, "settings") || user.role === "tenant_admin"
+        });
+        return;
+      }
+      // Render: bereken de data voor een modus (personal of org), rechten-gefilterd.
+      if (action === "me/dashboard/render" && req.method === "GET") {
+        const mode = url.searchParams.get("mode") === "org" ? "org" : "personal";
+        const keys = mode === "org"
+          ? ((tenant.publishedDashboard && tenant.publishedDashboard.widgets) || [])
+          : ((user.dashboardConfig && user.dashboardConfig.widgets) || []);
+        sendJson(res, 200, { ok: true, mode, widgets: renderWidgets(store, tenant, user, keys) });
+        return;
+      }
+      // Eigen dashboard opslaan (gesaneerd tot wat de gebruiker mag zien).
+      if (action === "me/dashboard/config" && (req.method === "POST" || req.method === "PUT")) {
+        assertInteractiveUser(user);
+        const body = await readBody(req);
+        const widgets = sanitizeWidgetKeys(store, tenant, user, body.widgets);
+        store.update("users", user.id, { dashboardConfig: { widgets } });
+        sendJson(res, 200, { ok: true, personal: { widgets } });
+        return;
+      }
+      // Org-dashboard publiceren (admin) — niet aanpasbaar voor anderen.
+      if (action === "me/dashboard/publish" && req.method === "POST") {
+        if (!(can(user, "settings") || user.role === "tenant_admin")) return sendJson(res, 403, { ok: false, error: "Alleen een beheerder kan publiceren" });
+        assertInteractiveUser(user);
+        const body = await readBody(req);
+        const widgets = sanitizeWidgetKeys(store, tenant, user, body.widgets);
+        const published = { widgets, publishedBy: user.email, publishedAt: new Date().toISOString() };
+        store.updateTenant(tenant.id, { publishedDashboard: published });
+        store.audit({ actor: user.email, tenantId, action: "dashboard_published", area: "settings", detail: `${widgets.length} widgets` });
+        sendJson(res, 200, { ok: true, published });
         return;
       }
 

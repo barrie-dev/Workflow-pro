@@ -935,3 +935,40 @@ test("onboarding: register met BTW vult KBO-profiel; wizard slaat sector/team op
   assert.equal(me.onboarding.completed, true, "onboarding afgerond na wizard");
   assert.ok(me.terminology && me.terminology.jobPlural, "sector-terminologie staat in /me");
 });
+
+// ── Configureerbaar dashboard: builder, opslaan, publiceren, render ──────────
+test("dashboard-config: admin bouwt + publiceert; rechten-gating in render", async () => {
+  // Verse business-tenant (geïsoleerd, tenant_admin = volledige rechten)
+  const email = `dash-${Date.now()}@nieuwbedrijf.be`;
+  const reg = await (await fetch(`${BASE}/api/auth/register`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ companyName: "Dash BV", email, plan: "business" }) })).json();
+  const act = await activateWithLink(reg.activationLink, "DashSterk2026!@#");
+  const tid = act.user.tenantId;
+  const H = { "Content-Type": "application/json", Authorization: `Bearer ${act.token}` };
+
+  const b = await (await fetch(`${BASE}/api/tenants/${tid}/me/dashboard/builder`, { headers: H })).json();
+  assert.equal(b.ok, true);
+  assert.ok(b.available.length > 0, "admin krijgt beschikbare widgets");
+  assert.ok(b.available.some(w => w.key === "open_workorders"), "org-widget beschikbaar voor admin");
+  assert.equal(b.canPublish, true, "admin mag publiceren");
+
+  // Eigen dashboard opslaan
+  const save = await (await fetch(`${BASE}/api/tenants/${tid}/me/dashboard/config`, { method: "POST", headers: H, body: JSON.stringify({ widgets: ["team_size", "open_workorders", "open_invoices"] }) })).json();
+  assert.deepEqual(save.personal.widgets, ["team_size", "open_workorders", "open_invoices"]);
+
+  // Onbekende/niet-toegestane key wordt weggefilterd
+  const save2 = await (await fetch(`${BASE}/api/tenants/${tid}/me/dashboard/config`, { method: "POST", headers: H, body: JSON.stringify({ widgets: ["team_size", "bestaat_niet"] }) })).json();
+  assert.deepEqual(save2.personal.widgets, ["team_size"], "ongeldige widget gesaneerd");
+
+  // Render persoonlijk → berekende waarden
+  const r = await (await fetch(`${BASE}/api/tenants/${tid}/me/dashboard/render?mode=personal`, { headers: H })).json();
+  assert.ok(Array.isArray(r.widgets) && r.widgets.length === 1 && r.widgets[0].key === "team_size");
+  assert.ok("value" in r.widgets[0], "widget heeft berekende waarde");
+
+  // Publiceren voor de organisatie
+  const pub = await (await fetch(`${BASE}/api/tenants/${tid}/me/dashboard/publish`, { method: "POST", headers: H, body: JSON.stringify({ widgets: ["team_size", "open_workorders"] }) })).json();
+  assert.equal(pub.ok, true);
+  assert.equal(pub.published.widgets.length, 2);
+  const org = await (await fetch(`${BASE}/api/tenants/${tid}/me/dashboard/render?mode=org`, { headers: H })).json();
+  assert.equal(org.mode, "org");
+  assert.equal(org.widgets.length, 2, "org-dashboard rendert de gepubliceerde widgets");
+});

@@ -229,6 +229,10 @@
         <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
         <span>Dashboard</span>
       </a>
+      <a class="adm-nav-item" data-view="myboard" href="#">
+        <svg viewBox="0 0 24 24"><path d="M3 3h8v6H3V3zm0 8h8v10H3V11zm10 6h8v4h-8v-4zm0-14h8v10h-8V3z"/></svg>
+        <span>Mijn dashboard</span>
+      </a>
       <a class="adm-nav-item" data-view="reports" href="#">
         <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
         <span>Rapportages</span>
@@ -752,7 +756,7 @@ table.adm-table { width:100%; border-collapse:collapse; font-size:13px; }
   const VIEW_LABELS = {
     dashboard: "Dashboard", employees: "Medewerkers", planning: "Planning",
     clocking: "Prikklok", leaves: "Verlof", expenses: "Onkosten",
-    workorders: "Werkbonnen", messages: "Berichten", reports: "Rapportages",
+    workorders: "Werkbonnen", messages: "Berichten", myboard: "Mijn dashboard", reports: "Rapportages",
     customers: "Klanten", offertes: "Offertes", facturen: "Facturen", venues: "Locaties", vehicles: "Voertuigen",
     stock: "Stock", billing: "Facturatie",
     integrations: "Integraties", roadmap: "Roadmap", audit: "Audittrail", settings: "Instellingen"
@@ -789,6 +793,7 @@ table.adm-table { width:100%; border-collapse:collapse; font-size:13px; }
       expenses: renderExpenses,
       workorders: renderWorkorders,
       messages: renderMessages,
+      myboard: renderMyDashboard,
       reports: renderReports,
       customers: renderCustomers,
       venues: renderVenues,
@@ -2671,6 +2676,86 @@ ${emp ? `
         }
       });
     }).catch(err => window.showToast(err.message, "error"));
+  }
+
+  // ── Configureerbaar dashboard (persoonlijk + door admin gepubliceerd) ──────
+  let _mbMode = "personal"; // "personal" of "org"
+  async function renderMyDashboard() {
+    const content = document.getElementById("admContent");
+    content.innerHTML = `<div class="adm-loading"><div class="adm-spinner"></div>Laden…</div>`;
+    let b;
+    try { b = await api("GET", "/me/dashboard/builder"); }
+    catch (e) { content.innerHTML = `<div class="adm-card"><div class="adm-card-body">${esc(e.message)}</div></div>`; return; }
+    const available = b.available || [];
+    const personalKeys = (b.personal && b.personal.widgets) || [];
+    const published = b.published || null;
+    const canPublish = !!b.canPublish;
+    const hasOrg = !!(published && (published.widgets || []).length);
+    if (!hasOrg && _mbMode === "org") _mbMode = "personal";
+
+    const kpiCard = w => `<div class="adm-kpi"><div class="adm-kpi-label">${esc(w.label)}</div><div class="adm-kpi-value">${esc(String(w.value))}</div><div class="adm-kpi-sub">${esc(w.sub || "")}</div></div>`;
+    const renderGrid = (widgets) => widgets.length
+      ? `<div class="adm-kpis" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;">${widgets.map(kpiCard).join("")}</div>`
+      : `<div class="adm-empty"><div class="adm-empty-icon">📊</div><div class="adm-empty-text">Nog geen widgets — voeg er hieronder toe.</div></div>`;
+
+    content.innerHTML = `
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+        ${hasOrg ? `<button class="adm-btn ${_mbMode==="org"?"adm-btn-primary":"adm-btn-secondary"} adm-btn-sm" id="mbTabOrg">🏢 Organisatie</button>` : ""}
+        <button class="adm-btn ${_mbMode==="personal"?"adm-btn-primary":"adm-btn-secondary"} adm-btn-sm" id="mbTabMine">👤 Mijn dashboard</button>
+        ${published && published.publishedAt ? `<span style="font-size:11.5px;color:#94a3b8;margin-left:auto">Org-dashboard gepubliceerd ${new Date(published.publishedAt).toLocaleDateString("nl-BE")}${published.publishedBy?` door ${esc(published.publishedBy)}`:""}</span>` : ""}
+      </div>
+      <div id="mbBody"></div>`;
+
+    document.getElementById("mbTabMine")?.addEventListener("click", () => { _mbMode = "personal"; renderMyDashboard(); });
+    document.getElementById("mbTabOrg")?.addEventListener("click", () => { _mbMode = "org"; renderMyDashboard(); });
+    const body = document.getElementById("mbBody");
+
+    if (_mbMode === "org") {
+      // Gepubliceerd org-dashboard: alleen-lezen.
+      const r = await api("GET", "/me/dashboard/render?mode=org").catch(() => ({ widgets: [] }));
+      body.innerHTML = `
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:10px 14px;font-size:12.5px;color:#1e40af;margin-bottom:14px">
+          🔒 Dit dashboard is door je organisatie ingesteld en kun je niet aanpassen. Je ziet enkel de widgets waar je rechten op hebt.
+        </div>
+        ${renderGrid(r.widgets || [])}`;
+      return;
+    }
+
+    // Mijn dashboard: render + builder.
+    const r = await api("GET", "/me/dashboard/render?mode=personal").catch(() => ({ widgets: [] }));
+    const chosen = new Set(personalKeys);
+    body.innerHTML = `
+      ${renderGrid(r.widgets || [])}
+      <div class="adm-card" style="margin-top:18px">
+        <div class="adm-card-header"><h3 class="adm-card-title">Widgets samenstellen</h3></div>
+        <div class="adm-card-body">
+          <p style="font-size:12.5px;color:#64748b;margin:0 0 12px">Kies de blokken die je wil zien. Je ziet enkel widgets waar je rechten op hebt.</p>
+          <div id="mbAvail" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px">
+            ${available.map(w => `<label style="display:flex;align-items:center;gap:8px;font-size:13px;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;cursor:pointer">
+              <input type="checkbox" class="mb-w" value="${esc(w.key)}" ${chosen.has(w.key)?"checked":""}>
+              <span>${esc(w.label)}</span><span style="margin-left:auto;font-size:10px;color:#94a3b8">${esc(w.group)}</span>
+            </label>`).join("") || `<div style="font-size:13px;color:#94a3b8">Geen widgets beschikbaar voor jouw rechten/pakket.</div>`}
+          </div>
+          <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+            <button class="adm-btn adm-btn-primary adm-btn-sm" id="mbSave">Mijn dashboard opslaan</button>
+            ${canPublish ? `<button class="adm-btn adm-btn-secondary adm-btn-sm" id="mbPublish">🏢 Publiceer deze selectie voor de organisatie</button>` : ""}
+            <span id="mbMsg" style="font-size:12.5px;color:#16a34a;align-self:center"></span>
+          </div>
+        </div>
+      </div>`;
+
+    const picked = () => [...document.querySelectorAll(".mb-w:checked")].map(c => c.value);
+    document.getElementById("mbSave")?.addEventListener("click", async () => {
+      const msg = document.getElementById("mbMsg");
+      try { await api("POST", "/me/dashboard/config", { widgets: picked() }); msg.textContent = "Opgeslagen ✓"; renderMyDashboard(); }
+      catch (e) { msg.style.color = "#dc2626"; msg.textContent = e.message; }
+    });
+    document.getElementById("mbPublish")?.addEventListener("click", async () => {
+      if (!confirm("Deze widgetselectie publiceren als vast organisatie-dashboard voor iedereen?")) return;
+      const msg = document.getElementById("mbMsg");
+      try { await api("POST", "/me/dashboard/publish", { widgets: picked() }); msg.textContent = "Gepubliceerd voor de organisatie ✓"; renderMyDashboard(); }
+      catch (e) { msg.style.color = "#dc2626"; msg.textContent = e.message; }
+    });
   }
 
   // ── Reports ────────────────────────────────────────────────

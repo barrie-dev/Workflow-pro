@@ -320,6 +320,23 @@ test("subscriptions: webhook-status mapt naar tenant-status + plan", () => {
   assert.equal(applySubscriptionEvent(t, { type: "invoice.paid", data: { object: {} } }), null);
 });
 
+// ── Configureerbare dashboards: rechten-gating ───────────────
+const { hasFull, hasAny } = require("../src/modules/dashboards");
+
+test("dashboards: org-widget vereist VOLLEDIG recht, eigen-widget ook own:", () => {
+  const employee = { role: "employee", permissions: ["own:workorders", "own:clockings"] };
+  const manager = { role: "manager", permissions: ["workorders", "employees", "clockings"] };
+  // Eigen-data: employee mag (own:), manager ook
+  assert.equal(hasAny(employee, "workorders"), true);
+  assert.equal(hasAny(manager, "workorders"), true);
+  // Org-breed: employee mag NIET (enkel own:), manager wel
+  assert.equal(hasFull(employee, "workorders"), false, "employee ziet geen org-totalen");
+  assert.equal(hasFull(manager, "workorders"), true);
+  // super_admin en wildcard mogen alles
+  assert.equal(hasFull({ role: "super_admin" }, "facturen"), true);
+  assert.equal(hasFull({ role: "tenant_admin", permissions: ["*"] }, "facturen"), true);
+});
+
 // ── Sector-terminologie ──────────────────────────────────────
 const { terminologyFor, isValidSector } = require("../src/modules/sectors");
 
