@@ -4692,6 +4692,10 @@ ${providers.map(p => {
           </div>
         </div>
         <div id="admOrgMsg" style="display:none;padding:8px 12px;border-radius:8px;font-size:13px;margin-bottom:8px;"></div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#475569;margin:4px 0 12px;cursor:pointer;">
+          <input type="checkbox" id="admEmailNotif" ${tenant.notificationPrefs?.emailEnabled === false ? "" : "checked"}>
+          E-mailnotificaties versturen (belangrijke meldingen naar betrokkenen)
+        </label>
         <div class="adm-form-actions"><button type="submit" class="adm-btn adm-btn-primary">Opslaan</button></div>
       </form>
     </div>
@@ -4906,6 +4910,7 @@ ${providers.map(p => {
       e.preventDefault();
       const msgEl = document.getElementById("admOrgMsg");
       const body = Object.fromEntries(new FormData(e.target).entries());
+      body.notificationPrefs = { emailEnabled: document.getElementById("admEmailNotif")?.checked !== false };
       try {
         await api("PATCH", "/settings", body);
         msgEl.style.cssText = "display:block;background:#d1fae5;color:#065f46;padding:8px 12px;border-radius:8px;font-size:13px;margin-bottom:8px;";

@@ -1,5 +1,49 @@
+const { sendMail, wrapHtml } = require("../lib/mailer");
+const { config } = require("../lib/config");
+
 function publicNotification(row) {
   return row;
+}
+
+// Bepaalt (puur) of een notificatie ook per e-mail moet — om inbox-spam te
+// vermijden mailen we enkel expliciete e-mailkanalen of hoge prioriteit, en enkel
+// als de tenant e-mailnotificaties niet heeft uitgezet.
+function shouldEmailNotification(notification, tenant) {
+  const prefs = (tenant && tenant.notificationPrefs) || {};
+  if (prefs.emailEnabled === false) return false;
+  if (notification.email === true || notification.channel === "email") return true;
+  return notification.priority === "high" || notification.priority === "urgent";
+}
+
+// Lost de e-mailontvangers op uit het audience-/userId-veld van de notificatie.
+// Respecteert per-gebruiker opt-out (user.notifyEmail === false).
+function emailRecipients(store, tenantId, notification) {
+  const users = (store.data.users || []).filter(u =>
+    u.tenantId === tenantId && u.active !== false && u.email && u.notifyEmail !== false);
+  if (notification.userId) return users.filter(u => u.id === notification.userId);
+  switch (notification.audience) {
+    case "managers": return users.filter(u => u.role === "manager");
+    case "all":
+    case "employees": return users;
+    case "admins":
+    default: return users.filter(u => u.role === "tenant_admin");
+  }
+}
+
+// Verstuur (of log) de notificatie per e-mail naar de ontvangers. Fire-and-forget.
+function deliverNotificationEmail(store, tenantId, notification) {
+  const tenant = store.get("tenants", tenantId) || { id: tenantId };
+  if (!shouldEmailNotification(notification, tenant)) return 0;
+  const recipients = emailRecipients(store, tenantId, notification);
+  if (!recipients.length) return 0;
+  const appUrl = (config.appUrl || "").replace(/\/+$/, "");
+  const html = wrapHtml(`<h2 style="margin:0 0 10px">${notification.title || "Melding"}</h2>
+    <p>${(notification.body || "").replace(/</g, "&lt;")}</p>
+    ${appUrl ? `<p><a href="${appUrl}" style="display:inline-block;background:#0ea5e9;color:#fff;text-decoration:none;padding:9px 16px;border-radius:8px;font-weight:600">Open WorkFlow Pro</a></p>` : ""}`, notification.title);
+  for (const u of recipients) {
+    Promise.resolve(sendMail({ to: u.email, subject: notification.title || "WorkFlow Pro melding", html, text: `${notification.title || ""}\n\n${notification.body || ""}` })).catch(() => {});
+  }
+  return recipients.length;
 }
 
 function hasOpenNotification(store, tenantId, sourceRef) {
@@ -26,6 +70,9 @@ function createNotification(store, tenant, payload, actor) {
     readAt: null
   });
   store.audit({ actor: actor.email, tenantId: tenant.id, action: "notification_created", area: "notifications", detail: row.title });
+  // Bezorg ook per e-mail wanneer dat gepast is (hoge prioriteit / e-mailkanaal).
+  const emailed = deliverNotificationEmail(store, tenant.id, row);
+  if (emailed) store.update("notifications", row.id, { emailedAt: new Date().toISOString(), emailedCount: emailed });
   return publicNotification(row);
 }
 
@@ -106,4 +153,4 @@ function notificationSummary(store, tenantId) {
   };
 }
 
-module.exports = { createNotification, listNotifications, markNotificationRead, generateReminders, notificationSummary, hasOpenNotification };
+module.exports = { createNotification, listNotifications, markNotificationRead, generateReminders, notificationSummary, hasOpenNotification, shouldEmailNotification, emailRecipients };

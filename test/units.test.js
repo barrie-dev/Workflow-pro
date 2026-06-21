@@ -278,6 +278,31 @@ test("stripe-webhook: HMAC signature valideert exact", () => {
   assert.equal(bad.mode, "signed");
 });
 
+// ── Notificatie-bezorging per e-mail ─────────────────────────
+const { shouldEmailNotification, emailRecipients } = require("../src/modules/notifications");
+
+test("notificaties: e-mail enkel bij hoge prioriteit / e-mailkanaal en niet als tenant uitzet", () => {
+  assert.equal(shouldEmailNotification({ priority: "high" }, {}), true);
+  assert.equal(shouldEmailNotification({ channel: "email", priority: "normal" }, {}), true);
+  assert.equal(shouldEmailNotification({ email: true, priority: "normal" }, {}), true);
+  assert.equal(shouldEmailNotification({ priority: "normal" }, {}), false);
+  assert.equal(shouldEmailNotification({ priority: "high" }, { notificationPrefs: { emailEnabled: false } }), false);
+});
+
+test("notificaties: ontvangers volgen audience/userId en respecteren opt-out", () => {
+  const store = { data: { users: [
+    { id: "a1", tenantId: "t1", role: "tenant_admin", active: true, email: "a1@t1.be" },
+    { id: "m1", tenantId: "t1", role: "manager", active: true, email: "m1@t1.be" },
+    { id: "e1", tenantId: "t1", role: "employee", active: true, email: "e1@t1.be" },
+    { id: "e2", tenantId: "t1", role: "employee", active: true, email: "e2@t1.be", notifyEmail: false },
+    { id: "x1", tenantId: "t2", role: "tenant_admin", active: true, email: "x@t2.be" },
+  ] } };
+  assert.deepEqual(emailRecipients(store, "t1", { audience: "admins" }).map(u => u.id), ["a1"]);
+  assert.deepEqual(emailRecipients(store, "t1", { audience: "managers" }).map(u => u.id), ["m1"]);
+  assert.deepEqual(emailRecipients(store, "t1", { audience: "all" }).map(u => u.id), ["a1", "m1", "e1"]); // e2 opt-out
+  assert.deepEqual(emailRecipients(store, "t1", { userId: "e1" }).map(u => u.id), ["e1"]);
+});
+
 // ── Stripe-abonnementen: pure status-mapper ──────────────────
 const { applySubscriptionEvent } = require("../src/modules/subscriptions");
 

@@ -3514,6 +3514,10 @@ http.createServer(async (req, res) => {
         const allowed = ["name", "vatNumber", "address", "contactEmail", "phone", "invoiceProfile"];
         const patch = {};
         allowed.forEach(k => { if (body[k] !== undefined) patch[k] = body[k]; });
+        // E-mailnotificatie-voorkeur (tenant-breed).
+        if (body.notificationPrefs && typeof body.notificationPrefs === "object") {
+          patch.notificationPrefs = { ...(tenant.notificationPrefs || {}), emailEnabled: body.notificationPrefs.emailEnabled !== false };
+        }
         const updated = store.updateTenant(tenantId, patch);
         store.audit({ actor: user.email, tenantId, action: "settings_updated", area: "settings", detail: JSON.stringify(patch) });
         sendJson(res, 200, { ok: true, tenant: updated });
