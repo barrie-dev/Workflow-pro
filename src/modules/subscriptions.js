@@ -61,6 +61,7 @@ async function createSubscriptionCheckout(store, tenant, planKey, actor) {
   const key = stripeKey(store);
 
   if (isRealStripeKey(key)) {
+    const seats = activeSeats(store, tenant);
     const customerId = await ensureStripeCustomer(store, tenant, key);
     const session = await stripePost(key, "/v1/checkout/sessions", {
       mode: "subscription",
