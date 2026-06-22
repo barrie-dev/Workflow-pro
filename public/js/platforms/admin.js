@@ -4711,6 +4711,12 @@ ${billing.status === "trial" ? `<div style="background:#fffbeb;border:1px solid 
   </div>
 </div>
 
+<!-- Add-ons (optionele betaalde extra's) -->
+<div class="adm-card" id="billAddonsCard" style="margin-top:16px;display:none;">
+  <div class="adm-card-header"><h3 class="adm-card-title">Add-ons</h3></div>
+  <div class="adm-card-body" id="billAddons"></div>
+</div>
+
 <!-- Factuurgeschiedenis -->
 <div class="adm-card" style="margin-top:16px;">
   <div class="adm-card-header"><h3 class="adm-card-title">Factuurgeschiedenis</h3></div>
@@ -4755,6 +4761,38 @@ ${billing.status === "trial" ? `<div style="background:#fffbeb;border:1px solid 
           window.showToast && window.showToast("Het beheerportaal is beschikbaar zodra betalingen live staan (Stripe-sleutel geconfigureerd).", "info");
         } catch(e) { window.showToast && window.showToast(e.message, "error"); }
       });
+
+      // Add-ons: optionele betaalde extra's. Toon prijs + of de organisatie ze al heeft
+      // (entitlements uit /me). Aanvragen loopt via support/beheerder (geen self-grant).
+      (async function loadAddons() {
+        let addons = [];
+        try { addons = ((await (await fetch("/api/plans")).json()).addons || []).filter(a => a.monthly != null); } catch (_) { return; }
+        if (!addons.length) return;
+        const active = new Set((window._wfpEnt && window._wfpEnt.modules) || []);
+        const card = document.getElementById("billAddonsCard");
+        const body = document.getElementById("billAddons");
+        if (!card || !body) return;
+        card.style.display = "";
+        body.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;">
+          ${addons.map(a => {
+            const has = active.has(a.key);
+            return `<div style="border:1.5px solid ${has ? "#16a34a" : "#E2E8F0"};border-radius:12px;padding:14px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                <strong style="font-size:14px;color:#0F172A;">${esc(a.label)}</strong>
+                ${has ? `<span style="font-size:10px;font-weight:700;background:#dcfce7;color:#15803d;border-radius:999px;padding:2px 8px;">ACTIEF</span>` : ""}
+              </div>
+              <div style="font-size:20px;font-weight:800;color:#0F172A;margin:6px 0;">€${a.monthly}<span style="font-size:12px;font-weight:500;color:#94A3B8;">/mnd</span></div>
+              <div style="font-size:12px;color:#64748B;min-height:32px;">${esc(a.description)}</div>
+              ${has
+                ? `<button class="adm-btn adm-btn-secondary adm-btn-sm" disabled style="opacity:.6;width:100%;margin-top:8px;">Inbegrepen</button>`
+                : `<button class="adm-btn adm-btn-primary adm-btn-sm addon-request" data-addon="${esc(a.label)}" style="width:100%;margin-top:8px;">Aanvragen</button>`}
+            </div>`;
+          }).join("")}
+        </div>
+        <div style="font-size:11.5px;color:#94A3B8;margin-top:10px;">Add-ons worden door je accountbeheerder of support geactiveerd. Neem contact op om een add-on toe te voegen.</div>`;
+        body.querySelectorAll(".addon-request").forEach(btn => btn.addEventListener("click", () =>
+          window.showToast && window.showToast(`Bedankt! Vraag '${btn.dataset.addon}' aan via je accountmanager of support — wij activeren het voor je organisatie.`, "info")));
+      })();
     } catch(e) { content.innerHTML = `<div style="padding:20px;color:#dc2626">Fout: ${e.message}</div>`; }
   }
 

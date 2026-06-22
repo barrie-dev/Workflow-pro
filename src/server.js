@@ -49,7 +49,7 @@ const {
   getManagerDashboard, getManagerTeamPlanning
 } = require("./modules/me");
 const { modules } = require("./modules/registry");
-const { MODULE_CATALOG, CORE_MODULES, moduleByKey } = require("./modules/catalog");
+const { MODULE_CATALOG, CORE_MODULES, moduleByKey, listAddons } = require("./modules/catalog");
 const { listBundles, getBundle, saveBundle, deleteBundle } = require("./modules/bundles");
 const { resolveTenantModules, isModuleEnabled, assertModuleEnabled, assertSubmoduleEnabled, grantablePermissions, OPERATIONAL_KEYS, ALWAYS_PERMISSIONS } = require("./modules/entitlements");
 const { bodenChat } = require("./modules/boden");
@@ -641,7 +641,7 @@ http.createServer(async (req, res) => {
           baseMonthly: b.baseMonthly ?? null, custom: !!b.custom,
           modules: Array.isArray(b.modules) ? b.modules.length : 0
         }));
-      sendJson(res, 200, { ok: true, plans });
+      sendJson(res, 200, { ok: true, plans, addons: listAddons() });
       return;
     }
 

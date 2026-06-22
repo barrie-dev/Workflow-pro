@@ -2636,6 +2636,15 @@ async function loadRegisterPlans() {
     const plans = (r.plans || []).filter(p => !p.custom);
     sel.innerHTML = plans.map(p => `<option value="${p.key}">${p.label}${p.baseMonthly != null ? ` — €${p.baseMonthly}/gebruiker/mnd` : ""}</option>`).join("")
       || `<option value="">Geen pakketten beschikbaar</option>`;
+    // Optionele betaalde add-ons tonen (activeren via de beheerder na go-live).
+    const addonBox = document.getElementById("registerAddons");
+    const addons = (r.addons || []).filter(a => a.monthly != null);
+    if (addonBox && addons.length) {
+      addonBox.style.display = "";
+      addonBox.innerHTML = `<strong>Optionele add-ons</strong><br>`
+        + addons.map(a => `+ €${a.monthly}/mnd — ${a.label}`).join("<br>")
+        + `<br><span style="color:#94a3b8">Activeer je later in je account.</span>`;
+    }
     _plansLoaded = true;
   } catch (_) { /* laat placeholder staan */ }
 }

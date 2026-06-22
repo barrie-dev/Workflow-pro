@@ -88,12 +88,14 @@ const MODULE_CATALOG = [
   // leeft in Instellingen. À-la-carte: superadmin zet 'm per tenant aan via
   // moduleOverrides.add (niet standaard in een bundel).
   { key: "sso", label: "Single Sign-On (SAML)", group: "Systeem", core: false,
-    addon: true, actions: ["sso", "saml"], submodules: [] },
+    addon: true, actions: ["sso", "saml"], submodules: [],
+    addonMonthly: 49, addonDesc: "Veilig aanmelden via je eigen identiteitsprovider (Azure AD, Okta, Google). Per organisatie." },
   // Add-on: laat de AI-assistent (Boden) écht acties uitvoeren namens de gebruiker
   // (na bevestiging). Betaalde add-on want de AI-kost van handelen is vooraf niet
   // te bepalen. Zonder deze add-on blijft Boden read-only (vragen/analyse/KPI's).
   { key: "ai_actions", label: "AI-acties (Boden voert uit)", group: "Systeem", core: false,
-    addon: true, actions: [], submodules: [] },
+    addon: true, actions: [], submodules: [],
+    addonMonthly: 29, addonDesc: "Laat de AI-assistent taken uitvoeren (verlof, onkosten, klanten, werkbonnen…) na jouw bevestiging." },
 ];
 
 // Altijd-aan modules: nooit gated, niet in bundels te kiezen.
@@ -109,6 +111,11 @@ const CORE_MODULES = [
 const GATEABLE = MODULE_CATALOG.filter(m => !m.core);
 const gateableKeys = () => GATEABLE.map(m => m.key);
 const allModuleKeys = () => MODULE_CATALOG.map(m => m.key);
+
+// Betaalde add-ons (à-la-carte) met prijs — voor de prijzen-/facturatie-UI.
+const listAddons = () => MODULE_CATALOG
+  .filter(m => m.addon)
+  .map(m => ({ key: m.key, label: m.label, monthly: m.addonMonthly ?? null, description: m.addonDesc || "" }));
 
 function moduleByKey(key) {
   return MODULE_CATALOG.find(m => m.key === key) || CORE_MODULES.find(m => m.key === key) || null;
@@ -136,6 +143,7 @@ module.exports = {
   GATEABLE,
   gateableKeys,
   allModuleKeys,
+  listAddons,
   moduleByKey,
   moduleForAction,
   submoduleKeys,

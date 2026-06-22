@@ -337,6 +337,16 @@ test("dashboards: org-widget vereist VOLLEDIG recht, eigen-widget ook own:", () 
   assert.equal(hasFull({ role: "tenant_admin", permissions: ["*"] }, "facturen"), true);
 });
 
+// ── Betaalde add-ons in de catalogus ─────────────────────────
+const { listAddons } = require("../src/modules/catalog");
+
+test("catalog: add-ons hebben prijs + omschrijving (sso, ai_actions)", () => {
+  const addons = listAddons();
+  const keys = addons.map(a => a.key);
+  assert.ok(keys.includes("sso") && keys.includes("ai_actions"), "sso + ai_actions zijn add-ons");
+  assert.ok(addons.every(a => typeof a.monthly === "number" && a.monthly > 0 && a.description), "elke add-on heeft prijs + omschrijving");
+});
+
 // ── Sector-terminologie ──────────────────────────────────────
 const { terminologyFor, isValidSector } = require("../src/modules/sectors");
 
