@@ -113,9 +113,27 @@ const gateableKeys = () => GATEABLE.map(m => m.key);
 const allModuleKeys = () => MODULE_CATALOG.map(m => m.key);
 
 // Betaalde add-ons (à-la-carte) met prijs — voor de prijzen-/facturatie-UI.
-const listAddons = () => MODULE_CATALOG
-  .filter(m => m.addon)
-  .map(m => ({ key: m.key, label: m.label, monthly: m.addonMonthly ?? null, description: m.addonDesc || "" }));
+// `overrides` (per add-on, door superadmin bewerkbaar) overschrijft naam/prijs/
+// omschrijving; `active:false` verbergt de add-on uit het aanbod. `includeInactive`
+// is voor de superadmin-editor zelf (die wil ook gedeactiveerde add-ons zien).
+function listAddons(overrides, includeInactive) {
+  const ov = overrides || {};
+  return MODULE_CATALOG
+    .filter(m => m.addon)
+    .map(m => {
+      const o = ov[m.key] || {};
+      return {
+        key: m.key,
+        label: o.label || m.label,
+        monthly: o.monthly != null ? o.monthly : (m.addonMonthly ?? null),
+        description: o.description || m.addonDesc || "",
+        active: o.active !== false,
+        // defaults erbij zodat de editor "terug naar standaard" kan tonen
+        defaults: { label: m.label, monthly: m.addonMonthly ?? null, description: m.addonDesc || "" },
+      };
+    })
+    .filter(a => includeInactive || a.active);
+}
 
 function moduleByKey(key) {
   return MODULE_CATALOG.find(m => m.key === key) || CORE_MODULES.find(m => m.key === key) || null;

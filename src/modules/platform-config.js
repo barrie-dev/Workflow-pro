@@ -86,7 +86,10 @@ function loadPlatformConfig(store) {
   const stored = storedRow(store) || {};
   // dummy ← env ← stored
   const withEnv = deepMerge(DUMMY, envOverlay());
-  return deepMerge(withEnv, { stripe: stored.stripe, peppol: stored.peppol, email: stored.email, kbo: stored.kbo, openai: stored.openai });
+  const merged = deepMerge(withEnv, { stripe: stored.stripe, peppol: stored.peppol, email: stored.email, kbo: stored.kbo, openai: stored.openai });
+  // Add-on-overrides (naam/prijs/omschrijving/actief per add-on) — superadmin-bewerkbaar.
+  merged.addons = stored.addons || {};
+  return merged;
 }
 
 const PLACEHOLDER = /DUMMY|replace[_-]?me|replace[_-]?this|changeme|xxxx/i;
@@ -135,6 +138,7 @@ function publicPlatformConfig(store) {
       model: cfg.openai.model,
       configured: isReal(cfg.openai.apiKey),  // echte key → Boden AI actief (anders mock)
     },
+    addons: cfg.addons || {}, // overrides (naam/prijs/omschrijving/actief) — geen secrets
   };
 }
 
@@ -143,7 +147,7 @@ function publicPlatformConfig(store) {
  * zodat de UI veilig de gemaskeerde waarde kan terugsturen zonder te overschrijven.
  */
 function savePlatformConfig(store, patch, actor) {
-  const current = storedRow(store) || { id: CONFIG_ID, tenantId: null, stripe: {}, peppol: {}, email: {}, kbo: {}, openai: {} };
+  const current = storedRow(store) || { id: CONFIG_ID, tenantId: null, stripe: {}, peppol: {}, email: {}, kbo: {}, openai: {}, addons: {} };
   const next = {
     id: CONFIG_ID,
     tenantId: null,
@@ -152,9 +156,22 @@ function savePlatformConfig(store, patch, actor) {
     email: { ...(current.email || {}) },
     kbo: { ...(current.kbo || {}) },
     openai: { ...(current.openai || {}) },
+    addons: { ...(current.addons || {}) },
     updatedAt: new Date().toISOString(),
     updatedBy: actor && actor.email,
   };
+  // Add-on-overrides: superadmin past naam/prijs/omschrijving/actief aan per add-on.
+  if (patch.addons && typeof patch.addons === "object") {
+    for (const [key, ov] of Object.entries(patch.addons)) {
+      if (!ov || typeof ov !== "object") continue;
+      const cur = { ...(next.addons[key] || {}) };
+      if (ov.label !== undefined) cur.label = String(ov.label).trim();
+      if (ov.description !== undefined) cur.description = String(ov.description).trim();
+      if (ov.monthly !== undefined && ov.monthly !== null && ov.monthly !== "") cur.monthly = Math.max(0, Number(ov.monthly) || 0);
+      if (ov.active !== undefined) cur.active = !!ov.active;
+      next.addons[key] = cur;
+    }
+  }
   const isMaskedOrEmpty = v => v === undefined || v === null || v === "" || /••••|dummy — nog niet/.test(String(v));
   const apply = (section, keys) => {
     if (!patch[section]) return;

@@ -641,7 +641,7 @@ http.createServer(async (req, res) => {
           baseMonthly: b.baseMonthly ?? null, custom: !!b.custom,
           modules: Array.isArray(b.modules) ? b.modules.length : 0
         }));
-      sendJson(res, 200, { ok: true, plans, addons: listAddons() });
+      sendJson(res, 200, { ok: true, plans, addons: listAddons(loadPlatformConfig(store).addons) });
       return;
     }
 
@@ -1057,6 +1057,31 @@ http.createServer(async (req, res) => {
       assertPlatformScope(user, "modules");
       assertInteractiveUser(user);
       sendJson(res, 200, { ok: true, modules: MODULE_CATALOG, core: CORE_MODULES });
+      return;
+    }
+
+    // ── Add-ons beheren (superadmin): naam, prijs, omschrijving, actief ──────
+    if (url.pathname === "/api/admin/addons" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "modules");
+      assertInteractiveUser(user);
+      sendJson(res, 200, { ok: true, addons: listAddons(loadPlatformConfig(store).addons, true) });
+      return;
+    }
+    if (url.pathname === "/api/admin/addons" && req.method === "PUT") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "modules");
+      assertInteractiveUser(user);
+      const body = await readBody(req);
+      // Enkel geldige add-on-keys aanvaarden.
+      const valid = new Set(listAddons({}, true).map(a => a.key));
+      const addons = {};
+      for (const [k, v] of Object.entries(body.addons || {})) if (valid.has(k)) addons[k] = v;
+      savePlatformConfig(store, { addons }, user);
+      store.audit({ actor: user.email, tenantId: null, action: "addons_updated", area: "modules", detail: Object.keys(addons).join(",") });
+      sendJson(res, 200, { ok: true, addons: listAddons(loadPlatformConfig(store).addons, true) });
       return;
     }
 

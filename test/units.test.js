@@ -347,6 +347,20 @@ test("catalog: add-ons hebben prijs + omschrijving (sso, ai_actions)", () => {
   assert.ok(addons.every(a => typeof a.monthly === "number" && a.monthly > 0 && a.description), "elke add-on heeft prijs + omschrijving");
 });
 
+// ── Add-on-overrides (superadmin-bewerkbare naam/prijs/actief) ───────────────
+test("catalog: add-on-overrides overschrijven naam/prijs/actief, defaults bewaard", () => {
+  const base = listAddons({}, true);
+  assert.ok(base.find(a => a.key === "ai_actions") && base.find(a => a.key === "sso"), "add-ons aanwezig");
+  const ov = listAddons({ ai_actions: { label: "AI Pro", monthly: 99, active: false } }, true);
+  const ai = ov.find(a => a.key === "ai_actions");
+  assert.equal(ai.label, "AI Pro");
+  assert.equal(ai.monthly, 99);
+  assert.equal(ai.active, false);
+  assert.ok(ai.defaults.label && ai.defaults.label !== "AI Pro", "standaardwaarde blijft beschikbaar voor reset");
+  // Zonder includeInactive verdwijnt een gedeactiveerde add-on uit het aanbod.
+  assert.ok(!listAddons({ ai_actions: { active: false } }).find(a => a.key === "ai_actions"), "inactieve add-on niet in publiek aanbod");
+});
+
 // ── Sector-terminologie ──────────────────────────────────────
 const { terminologyFor, isValidSector } = require("../src/modules/sectors");
 

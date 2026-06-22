@@ -972,3 +972,34 @@ test("dashboard-config: admin bouwt + publiceert; rechten-gating in render", asy
   assert.equal(org.mode, "org");
   assert.equal(org.widgets.length, 2, "org-dashboard rendert de gepubliceerde widgets");
 });
+
+// ── Add-ons: superadmin past naam/prijs aan; klant ziet het; deactiveren verbergt ──
+test("addons: superadmin bewerkt naam/prijs/actief, doorwerking naar /api/plans", async () => {
+  const god = await login("super@workflowpro.be", "Demo2026!");
+  const H = { "Content-Type": "application/json", Authorization: `Bearer ${god.token}` };
+
+  const before = await (await fetch(`${BASE}/api/admin/addons`, { headers: H })).json();
+  assert.ok(before.addons.find(a => a.key === "ai_actions"), "ai_actions add-on aanwezig voor superadmin");
+
+  // Naam + prijs aanpassen
+  await fetch(`${BASE}/api/admin/addons`, { method: "PUT", headers: H, body: JSON.stringify({ addons: { ai_actions: { label: "AI Pro Plus", monthly: 99, description: "Boden voert taken uit", active: true } } }) });
+  const plans = await (await fetch(`${BASE}/api/plans`)).json();
+  const ai = (plans.addons || []).find(a => a.key === "ai_actions");
+  assert.equal(ai.label, "AI Pro Plus", "publieke naam aangepast");
+  assert.equal(ai.monthly, 99, "publieke prijs aangepast");
+
+  // Deactiveren → verdwijnt uit publiek aanbod, blijft in superadmin-editor
+  await fetch(`${BASE}/api/admin/addons`, { method: "PUT", headers: H, body: JSON.stringify({ addons: { ai_actions: { active: false } } }) });
+  const plans2 = await (await fetch(`${BASE}/api/plans`)).json();
+  assert.ok(!(plans2.addons || []).find(a => a.key === "ai_actions"), "gedeactiveerde add-on niet meer publiek");
+  const admin2 = await (await fetch(`${BASE}/api/admin/addons`, { headers: H })).json();
+  assert.ok(admin2.addons.find(a => a.key === "ai_actions" && a.active === false), "superadmin ziet 'm nog (inactief)");
+
+  // Een gewone tenant-gebruiker (geen modules-scope) mag dit niet
+  const jan = await login("jan@demobouw.be", "Demo2026!");
+  const denied = await fetch(`${BASE}/api/admin/addons`, { headers: { Authorization: `Bearer ${jan.token}` } });
+  assert.equal(denied.status, 403, "tenant-gebruiker mag add-ons niet beheren");
+
+  // Heractiveren voor andere tests
+  await fetch(`${BASE}/api/admin/addons`, { method: "PUT", headers: H, body: JSON.stringify({ addons: { ai_actions: { active: true } } }) });
+});

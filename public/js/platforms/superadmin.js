@@ -1252,16 +1252,78 @@ ${canManage ? `
 <div class="sa-filters" style="margin-bottom:16px">
   <button class="sa-btn ${_modTab === "bundles" ? "btn-primary" : "btn-secondary"} sm" id="tabBundles">📦 Bundels samenstellen</button>
   <button class="sa-btn ${_modTab === "tenants" ? "btn-primary" : "btn-secondary"} sm" id="tabTenants">🏢 Vrijgave per tenant</button>
+  <button class="sa-btn ${_modTab === "addons" ? "btn-primary" : "btn-secondary"} sm" id="tabAddons">✨ Add-ons</button>
 </div>
 <div id="modPanel"></div>`;
 
       document.getElementById("tabBundles").addEventListener("click", () => { _modTab = "bundles"; renderPanel(); });
       document.getElementById("tabTenants").addEventListener("click", () => { _modTab = "tenants"; renderPanel(); });
+      document.getElementById("tabAddons").addEventListener("click", () => { _modTab = "addons"; renderPanel(); });
 
       function renderPanel() {
         document.getElementById("tabBundles").className = `sa-btn ${_modTab === "bundles" ? "btn-primary" : "btn-secondary"} sm`;
         document.getElementById("tabTenants").className = `sa-btn ${_modTab === "tenants" ? "btn-primary" : "btn-secondary"} sm`;
-        if (_modTab === "bundles") renderBundles(); else renderTenants();
+        document.getElementById("tabAddons").className = `sa-btn ${_modTab === "addons" ? "btn-primary" : "btn-secondary"} sm`;
+        if (_modTab === "bundles") renderBundles();
+        else if (_modTab === "addons") renderAddons();
+        else renderTenants();
+      }
+
+      // ── Add-ons: naam, prijs, omschrijving, actief — superadmin-bewerkbaar ──
+      async function renderAddons() {
+        const panel = document.getElementById("modPanel");
+        panel.innerHTML = loader();
+        let addons = [];
+        try { addons = (await api("/api/admin/addons")).addons || []; }
+        catch (e) { panel.innerHTML = `<div class="sa-card"><div class="sa-card-body">${esc(e.message)}</div></div>`; return; }
+        panel.innerHTML = `
+<div class="sa-card">
+  <div class="sa-card-head"><div class="sa-card-title">Add-ons (naam, prijs &amp; omschrijving)</div></div>
+  <div class="sa-card-body" style="padding:16px;display:flex;flex-direction:column;gap:14px">
+    <div style="font-size:12.5px;color:#64748b">Pas de commerciële naam, maandprijs en omschrijving van elke add-on aan. Dit verschijnt bij de klant (prijzen/aanbod). À-la-carte toekennen per tenant gebeurt via "Vrijgave per tenant".</div>
+    ${addons.map(a => `
+      <div class="sa-addon-row" data-key="${esc(a.key)}" style="border:1px solid #e2e8f0;border-radius:10px;padding:12px;display:grid;grid-template-columns:1fr 130px;gap:10px">
+        <div>
+          <div style="font-size:11px;color:#94a3b8;font-family:monospace;margin-bottom:4px">${esc(a.key)}</div>
+          <input class="ao-label" value="${esc(a.label)}" placeholder="Naam" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:7px;font-size:13px;font-weight:600;margin-bottom:6px">
+          <textarea class="ao-desc" rows="2" placeholder="Omschrijving" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:7px;font-size:12.5px;resize:vertical">${esc(a.description)}</textarea>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <label style="font-size:11px;color:#64748b">€/maand
+            <input class="ao-monthly" type="number" min="0" step="1" value="${a.monthly ?? ""}" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:7px;font-size:13px">
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:#475569;cursor:pointer">
+            <input class="ao-active" type="checkbox" ${a.active ? "checked" : ""}> Actief
+          </label>
+          <button class="sa-btn btn-secondary sm ao-reset" type="button" data-label="${esc(a.defaults.label)}" data-monthly="${a.defaults.monthly ?? ""}" data-desc="${esc(a.defaults.description)}">Standaard</button>
+        </div>
+      </div>`).join("")}
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="sa-btn btn-primary sm" id="aoSave">Add-ons opslaan</button>
+      <span id="aoMsg" style="font-size:12.5px;color:#16a34a"></span>
+    </div>
+  </div>
+</div>`;
+        panel.querySelectorAll(".ao-reset").forEach(btn => btn.addEventListener("click", () => {
+          const row = btn.closest(".sa-addon-row");
+          row.querySelector(".ao-label").value = btn.dataset.label;
+          row.querySelector(".ao-monthly").value = btn.dataset.monthly;
+          row.querySelector(".ao-desc").value = btn.dataset.desc;
+        }));
+        document.getElementById("aoSave").addEventListener("click", async () => {
+          const payload = { addons: {} };
+          panel.querySelectorAll(".sa-addon-row").forEach(row => {
+            payload.addons[row.dataset.key] = {
+              label: row.querySelector(".ao-label").value.trim(),
+              description: row.querySelector(".ao-desc").value.trim(),
+              monthly: row.querySelector(".ao-monthly").value,
+              active: row.querySelector(".ao-active").checked,
+            };
+          });
+          const msg = document.getElementById("aoMsg"); msg.textContent = "";
+          try { await api("/api/admin/addons", { method: "PUT", body: JSON.stringify(payload) }); msg.textContent = "Opgeslagen ✓"; }
+          catch (e) { msg.style.color = "#dc2626"; msg.textContent = e.message; }
+        });
       }
 
       // ── Bundels samenstellen ──────────────────────────────
