@@ -826,7 +826,7 @@
       <div class="emp-shift-time">${s.start||""}${s.end?`–${s.end}`:""}</div>
       <div class="emp-shift-info">
         <div class="emp-shift-title">${s.location||s.title||"Shift"}</div>
-        <div class="emp-shift-sub">${s.notes||""}</div>
+        <div class="emp-shift-sub">${esc(s.notes||"")}</div>
       </div>
     </div>`).join("")}
   </div>` : ""}

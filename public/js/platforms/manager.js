@@ -323,7 +323,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
           <div class="mgr-avatar" style="width:36px;height:36px;font-size:14px;">${(u.name||"?")[0].toUpperCase()}</div>
           ${u.clockedIn ? '<span class="mgr-status mgr-status-active" style="font-size:10px;">●&nbsp;Live</span>' : ""}
         </div>
-        <div class="mgr-team-card-name">${u.name||u.email}</div>
+        <div class="mgr-team-card-name">${esc(u.name||u.email)}</div>
         <div class="mgr-team-card-role">${u.function||u.jobTitle||u.role||"—"}</div>
         <div class="mgr-team-card-badges">
           ${u.absent ? '<span style="background:#fee2e2;color:#dc2626;border-radius:4px;padding:2px 6px;font-size:10px;">Afwezig</span>' : ""}
@@ -359,7 +359,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
         ${team.map(u => `
         <tr>
           <td><span class="mgr-avatar">${(u.name||"?")[0].toUpperCase()}</span></td>
-          <td>${u.name||u.email}</td>
+          <td>${esc(u.name||u.email)}</td>
           <td>${u.function||u.jobTitle||"—"}</td>
           <td>${u.clockedIn ? '<span class="mgr-status mgr-status-active">Ingeklokt</span>' : '<span class="mgr-status mgr-status-pending">Niet geklokt</span>'}</td>
           <td>${u.absent ? "✓" : "—"}</td>

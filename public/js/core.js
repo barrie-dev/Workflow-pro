@@ -19,6 +19,19 @@
   }
   function esc(v) { return String(v == null ? "" : v).replace(/[&<>"']/g, c => ESC[c]); }
 
+  // Veilige tagged-template: escapet ELKE interpolatie automatisch. Markeer bewust
+  // vertrouwde HTML met wfpCore.raw(x) om escaping over te slaan.
+  //   el.innerHTML = wfpCore.html`<td>${user.name}</td>`;  // user.name wordt geëscaped
+  function raw(s) { return { __raw: String(s == null ? "" : s) }; }
+  function html(strings, ...values) {
+    return strings.reduce((acc, str, i) => {
+      if (i === 0) return str;
+      const v = values[i - 1];
+      const piece = v && v.__raw !== undefined ? v.__raw : esc(Array.isArray(v) ? v.join("") : v);
+      return acc + piece + str;
+    }, "");
+  }
+
   // Gedeelde fetch-engine. `fullPath` is het volledige /api-pad. opts: {method, body, headers}.
   // body wordt verwacht als reeds-geserialiseerde string (zoals de shells het doorgeven).
   function request(fullPath, opts) {
@@ -42,5 +55,5 @@
     });
   }
 
-  window.wfpCore = { token, tenantId, esc, request };
+  window.wfpCore = { token, tenantId, esc, html, raw, request };
 })();

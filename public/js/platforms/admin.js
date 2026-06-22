@@ -842,7 +842,7 @@ table.adm-table { width:100%; border-collapse:collapse; font-size:13px; }
         <tbody>
           ${(dash.teamList || []).slice(0,8).map(u => `
           <tr class="adm-row-link adm-dash-team" data-id="${esc(u.id||"")}" title="Open medewerker">
-            <td><span class="adm-avatar">${(u.name||"?")[0]}</span> ${u.name||u.email}</td>
+            <td><span class="adm-avatar">${esc((u.name||"?")[0])}</span> ${esc(u.name||u.email)}</td>
             <td>${u.absent ? '<span class="adm-status adm-status-inactive">Afwezig</span>' : u.clockedIn ? '<span class="adm-status adm-status-active">Ingeklokt</span>' : '<span class="adm-status adm-status-pending">Niet geklokt</span>'}</td>
             <td>${u.planned ? "✓" : "—"}</td>
           </tr>`).join("") || '<tr><td colspan="3" class="adm-empty">Geen teamleden</td></tr>'}
@@ -883,7 +883,7 @@ ${(() => {
   const expensesPending = (expData.expenses || []).filter(e => e.status === "pending" || !e.status);
   const items = [
     ...overdueInv.map(i => ({ icon:"🔴", text:`Factuur ${i.number} vervallen — ${new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR"}).format(i.total)}`, view:"facturen", urgent:true })),
-    ...expensesPending.slice(0,3).map(e => ({ icon:"🟡", text:`Onkostennota €${e.amount||0} van ${e.userName||e.userId||"medewerker"} wacht op goedkeuring`, view:"expenses", urgent:false })),
+    ...expensesPending.slice(0,3).map(e => ({ icon:"🟡", text:`Onkostennota €${e.amount||0} van ${esc(e.userName||e.userId||"medewerker")} wacht op goedkeuring`, view:"expenses", urgent:false })),
     ...openInv.slice(0,2).map(i => ({ icon:"🔵", text:`Factuur ${i.number} openstaand — ${new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR"}).format(i.total)}`, view:"facturen", urgent:false }))
   ];
   if (!items.length) return "";
@@ -1401,7 +1401,7 @@ ${emp ? `
       return `<tr>
         <td style="font-weight:500;">
           <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${fg};margin-right:5px;vertical-align:middle;"></span>
-          ${u.name}
+          ${esc(u.name)}
           <span style="font-size:10px;color:#94a3b8;margin-left:4px;">${totalShifts}×</span>
         </td>
         ${days.map(d => {
@@ -2882,7 +2882,7 @@ ${emp ? `
         document.getElementById("repClocksTable").innerHTML = hourRows.length
           ? `<div style="padding:8px 0;">${hourRows.map((r,i) => `
             <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #f8fafc;">
-              <div style="width:110px;font-size:12px;font-weight:500;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${r.name}">${r.name}</div>
+              <div style="width:110px;font-size:12px;font-weight:500;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(r.name)}">${esc(r.name)}</div>
               <div style="flex:1;background:#f1f5f9;border-radius:4px;height:18px;overflow:hidden;">
                 <div style="width:${(r.hours/maxHours*100).toFixed(1)}%;background:${BAR_COLORS[i%BAR_COLORS.length]};height:100%;border-radius:4px;transition:width .4s;"></div>
               </div>
@@ -2896,14 +2896,14 @@ ${emp ? `
         // ── Onkosten ──────────────────────────────────────────
         document.getElementById("repExpensesTable").innerHTML = expenses.length
           ? `<table class="adm-table"><thead><tr><th>Medewerker</th><th>Datum</th><th>Categorie</th><th>Bedrag</th><th>Status</th></tr></thead><tbody>
-             ${expenses.map(e => `<tr><td>${e.userName||e.userId}</td><td>${e.date}</td><td>${e.category||"—"}</td><td>€${Number(e.amount||0).toFixed(2)}</td><td><span class="adm-status adm-status-${e.status}">${e.status}</span></td></tr>`).join("")}
+             ${expenses.map(e => `<tr><td>${esc(e.userName||e.userId)}</td><td>${esc(e.date)}</td><td>${esc(e.category||"—")}</td><td>€${Number(e.amount||0).toFixed(2)}</td><td><span class="adm-status adm-status-${esc(e.status)}">${esc(e.status)}</span></td></tr>`).join("")}
              </tbody></table>`
           : '<div class="adm-empty">Geen onkosten in deze periode</div>';
 
         // ── Verlof ────────────────────────────────────────────
         document.getElementById("repLeavesTable").innerHTML = leaves.length
           ? `<table class="adm-table"><thead><tr><th>Medewerker</th><th>Type</th><th>Van</th><th>Tot</th><th>Status</th></tr></thead><tbody>
-             ${leaves.map(l => `<tr><td>${l.userName||l.userId}</td><td>${l.type||"—"}</td><td>${l.startDate}</td><td>${l.endDate}</td><td><span class="adm-status adm-status-${l.status}">${l.status}</span></td></tr>`).join("")}
+             ${leaves.map(l => `<tr><td>${esc(l.userName||l.userId)}</td><td>${esc(l.type||"—")}</td><td>${esc(l.startDate)}</td><td>${esc(l.endDate)}</td><td><span class="adm-status adm-status-${esc(l.status)}">${esc(l.status)}</span></td></tr>`).join("")}
              </tbody></table>`
           : '<div class="adm-empty">Geen verlof in deze periode</div>';
 
