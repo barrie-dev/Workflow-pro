@@ -12,29 +12,15 @@
   let _platform = null; // { scopes, isGod, allScopes } — platform-rechten van de ingelogde super_admin
 
   // ── Helpers ────────────────────────────────────────────────
-  const token  = () => localStorage.getItem("wfp_token") || "";
-  const esc    = v => String(v ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  const token  = () => window.wfpCore.token();
+  const esc    = v => window.wfpCore.esc(v);
   const fmtD   = iso => iso ? new Date(iso).toLocaleDateString("nl-BE") : "—";
   const fmtDT  = iso => iso ? new Date(iso).toLocaleString("nl-BE",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}) : "—";
   const fmtEur = n  => new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR",maximumFractionDigits:0}).format(Number(n||0));
 
-  async function api(path, opts = {}) {
-    const r = await fetch(path, {
-      ...opts,
-      headers: { "Content-Type":"application/json", Authorization:`Bearer ${token()}`, ...(opts.headers||{}) }
-    });
-    const d = await r.json();
-    if (!r.ok) {
-      // Sessie verlopen → netjes terug naar login (behalve op /auth/-paden zelf)
-      if (r.status === 401 && !path.startsWith("/api/auth/")) {
-        localStorage.removeItem("wfp_token");
-        window.showToast && window.showToast("Je sessie is verlopen — log opnieuw in.", "warning");
-        setTimeout(() => location.reload(), 1200);
-      }
-      throw new Error(d.error || `HTTP ${r.status}`);
-    }
-    return d;
-  }
+  // Dunne wrapper rond de gedeelde fetch-engine (core.js). Superadmin-paden zijn
+  // al volledige /api-paden (geen tenant-prefix).
+  function api(path, opts = {}) { return window.wfpCore.request(path, opts); }
 
   const planColor  = { starter:"badge-blue", business:"badge-green", enterprise:"badge-purple" };
   const statusColor= { active:"badge-green", trial:"badge-yellow", suspended:"badge-red", churned:"badge-gray" };

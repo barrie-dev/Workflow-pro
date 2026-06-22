@@ -1,0 +1,46 @@
+"use strict";
+/**
+ * Gedeelde frontend-kern. Vóór dit dupliceerde elke platform-shell zijn eigen
+ * token()/tenantId()/esc() + fetch-met-401-afhandeling. Die staan nu één keer hier;
+ * de shells houden hun eigen api()-signatuur als dunne wrapper rond wfpCore.request.
+ *
+ * - wfpCore.token()        → bearer-token uit localStorage
+ * - wfpCore.tenantId()     → tenant-id uit het token-payload
+ * - wfpCore.esc(v)         → HTML-escape (incl. ' — strikt veiliger)
+ * - wfpCore.request(p,opt) → fetch met auth-header, 401→login, JSON terug, gooit bij !ok
+ */
+(function () {
+  const ESC = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+
+  function token() { return localStorage.getItem("wfp_token") || ""; }
+  function tenantId() {
+    try { return JSON.parse(atob(token().split(".")[0])).tenantId || ""; }
+    catch (_) { return ""; }
+  }
+  function esc(v) { return String(v == null ? "" : v).replace(/[&<>"']/g, c => ESC[c]); }
+
+  // Gedeelde fetch-engine. `fullPath` is het volledige /api-pad. opts: {method, body, headers}.
+  // body wordt verwacht als reeds-geserialiseerde string (zoals de shells het doorgeven).
+  function request(fullPath, opts) {
+    const o = opts || {};
+    return fetch(fullPath, {
+      method: o.method || "GET",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + token(), ...(o.headers || {}) },
+      body: o.body !== undefined ? o.body : undefined,
+    }).then(async r => {
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        // Sessie verlopen → terug naar login (behalve op /auth/-paden zelf).
+        if (r.status === 401 && !/\/api\/auth\//.test(fullPath)) {
+          localStorage.removeItem("wfp_token");
+          window.showToast && window.showToast("Je sessie is verlopen — log opnieuw in.", "warning");
+          setTimeout(() => location.reload(), 1200);
+        }
+        throw Object.assign(new Error(data.error || ("API fout " + r.status)), { status: r.status, data });
+      }
+      return data;
+    });
+  }
+
+  window.wfpCore = { token, tenantId, esc, request };
+})();

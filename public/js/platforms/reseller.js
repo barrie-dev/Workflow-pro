@@ -3,8 +3,8 @@
 // klantgegevens (GDPR). Zie [[project-support-access]] en docs/SECTORPROFIELEN.md.
 (function () {
   "use strict";
-  function token() { return localStorage.getItem("wfp_token") || ""; }
-  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+  const token = () => window.wfpCore.token();
+  const esc = s => window.wfpCore.esc(s);
   function eur(n) { try { return new Intl.NumberFormat("nl-BE", { style: "currency", currency: "EUR" }).format(Number(n) || 0); } catch (_) { return "€" + (Number(n) || 0).toFixed(2); } }
   async function api(method, path, body) {
     const r = await fetch(path, {

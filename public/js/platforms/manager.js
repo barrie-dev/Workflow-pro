@@ -8,34 +8,15 @@
   let _currentView = "dashboard";
 
   // ── API ────────────────────────────────────────────────────
-  function token() { return localStorage.getItem("wfp_token") || ""; }
-
-  function tenantId() {
-    try { return JSON.parse(atob(token().split(".")[0])).tenantId || ""; }
-    catch (_) { return ""; }
-  }
+  // Gedeelde kern (token/tenantId/esc/fetch+401) → public/js/core.js
+  const token = () => window.wfpCore.token();
+  const tenantId = () => window.wfpCore.tenantId();
 
   function api(method, path, body) {
     const tid = tenantId();
     const skipPrefix = !tid || path.startsWith("/tenants/") || path.startsWith("/auth/");
     const fullPath = skipPrefix ? path : `/tenants/${tid}${path}`;
-    return fetch("/api" + fullPath, {
-      method,
-      headers: { "Content-Type": "application/json", Authorization: "Bearer " + token() },
-      body: body ? JSON.stringify(body) : undefined
-    }).then(async r => {
-      const data = await r.json();
-      if (!r.ok) {
-        // Sessie verlopen → netjes terug naar login (behalve op /auth/-paden zelf)
-        if (r.status === 401 && !fullPath.startsWith("/auth/")) {
-          localStorage.removeItem("wfp_token");
-          window.showToast && window.showToast("Je sessie is verlopen — log opnieuw in.", "warning");
-          setTimeout(() => location.reload(), 1200);
-        }
-        throw Object.assign(new Error(data.error || "API fout"), { status: r.status, data });
-      }
-      return data;
-    });
+    return window.wfpCore.request("/api" + fullPath, { method, body: body ? JSON.stringify(body) : undefined });
   }
 
   // Verberg nav-items voor modules die niet in het pakket van de tenant zitten.
@@ -259,7 +240,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
   }
 
   // ── Nav ────────────────────────────────────────────────────
-  const esc = v => String(v ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  const esc = v => window.wfpCore.esc(v);
 
   const LABELS = {
     dashboard: "Dashboard", team: "Mijn team", planning: "Planning",
