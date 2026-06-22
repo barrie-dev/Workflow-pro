@@ -89,6 +89,11 @@ const MODULE_CATALOG = [
   // moduleOverrides.add (niet standaard in een bundel).
   { key: "sso", label: "Single Sign-On (SAML)", group: "Systeem", core: false,
     addon: true, actions: ["sso", "saml"], submodules: [] },
+  // Add-on: laat de AI-assistent (Boden) écht acties uitvoeren namens de gebruiker
+  // (na bevestiging). Betaalde add-on want de AI-kost van handelen is vooraf niet
+  // te bepalen. Zonder deze add-on blijft Boden read-only (vragen/analyse/KPI's).
+  { key: "ai_actions", label: "AI-acties (Boden voert uit)", group: "Systeem", core: false,
+    addon: true, actions: [], submodules: [] },
 ];
 
 // Altijd-aan modules: nooit gated, niet in bundels te kiezen.

@@ -47,11 +47,24 @@ const READABLE = {
 };
 
 // ── Bevestig-acties: server-allowlist; UI roept bij bevestiging het endpoint aan ──
+// `full: true` → vereist het volledige recht (niet own:), want het endpoint is
+// een beheer-endpoint (geen me/*). De server-endpoints blijven de finale bewaker.
 const ACTIONS = {
   navigate:        { label: "Naar scherm gaan", needsConfirm: false },
-  create_leave:    { label: "Verlof aanvragen",  perm: "leaves",   path: "me/leaves",   method: "POST", fields: ["startDate", "endDate", "type", "reason"] },
-  create_expense:  { label: "Onkost indienen",   perm: "expenses", path: "me/expenses", method: "POST", fields: ["amount", "category", "description", "date"] },
+  // Persoonlijke acties (me/*): elke medewerker mag deze voor zichzelf.
+  clock_in:        { label: "Inklokken",         perm: "clockings", path: "me/clock/in",  method: "POST", fields: [], needsConfirm: false },
+  clock_out:       { label: "Uitklokken",        perm: "clockings", path: "me/clock/out", method: "POST", fields: [], needsConfirm: false },
+  create_leave:    { label: "Verlof aanvragen",  perm: "leaves",    path: "me/leaves",    method: "POST", fields: ["startDate", "endDate", "type", "reason"] },
+  create_expense:  { label: "Onkost indienen",   perm: "expenses",  path: "me/expenses",  method: "POST", fields: ["amount", "category", "description", "date"] },
+  // Beheer-acties: vereisen het volledige recht (admin/manager of toegekend).
+  create_customer: { label: "Klant aanmaken",    perm: "customers", full: true, path: "customers",  method: "POST", fields: ["name", "email", "vatNumber", "phone"] },
+  create_workorder:{ label: "Werkbon aanmaken",  perm: "workorders",full: true, path: "workorders", method: "POST", fields: ["title", "clientName", "date", "description"] },
+  create_quote:    { label: "Offerte aanmaken",  perm: "billing",   full: true, path: "offertes",   method: "POST", fields: ["customerName", "lines", "notes"] },
+  create_message:  { label: "Bericht plaatsen",  perm: "messages",  full: true, path: "messages",   method: "POST", fields: ["title", "body", "audience"] },
+  create_venue:    { label: "Locatie aanmaken",  perm: "venues",    full: true, path: "venues",      method: "POST", fields: ["name", "address", "city"] },
 };
+
+const ACTIONS_ADDON = "ai_actions"; // betaalde add-on om écht te handelen
 
 function hasFull(user, perm) {
   if (["tenant_admin", "manager"].includes(user.role)) return true;
@@ -159,7 +172,14 @@ function runTool(store, tenant, user, name, input, proposals) {
     const action = String(input.action || "");
     const a = ACTIONS[action];
     if (!a) return { error: `Onbekende actie '${action}'.` };
-    if (a.perm && !hasAny(user, a.perm)) return { error: `Geen toegang om '${a.label}' uit te voeren.` };
+    // 'navigate' is gratis UX (geen kost, geen wijziging). Écht handelen (alles met
+    // een endpoint) zit achter de betaalde add-on 'ai_actions'.
+    if (a.path && !isModuleEnabled(store, tenant, ACTIONS_ADDON)) {
+      return { error: "actions_addon_uit: Boden mag in dit pakket geen acties uitvoeren. Verwijs de gebruiker naar het juiste scherm of vermeld dat de AI-acties-add-on nodig is." };
+    }
+    if (a.perm && (a.full ? !hasFull(user, a.perm) : !hasAny(user, a.perm))) {
+      return { error: `Geen toegang om '${a.label}' uit te voeren.` };
+    }
     const params = (input.params && typeof input.params === "object") ? input.params : {};
     const proposal = {
       id: `prop_${proposals.length + 1}`,
@@ -198,9 +218,9 @@ function toolDefs() {
       status: { type: "string", description: "Optioneel statusfilter vóór de berekening" },
     }, required: ["type"] }),
     fn("get_kpis", "Geef de belangrijkste kerncijfers (KPI's) die deze gebruiker mag zien, kant-en-klaar berekend. Ideaal voor 'hoe staan we ervoor', 'geef me een overzicht' of vragen naar omzet, openstaande facturen, teamgrootte, open opdrachten enz.", { type: "object", properties: {} }),
-    fn("propose_action", "Stel een actie voor die de gebruiker daarna bevestigt. Voert NIETS uit. 'navigate' brengt de gebruiker naar een scherm (params.view). 'create_leave' (params: startDate,endDate,type,reason) en 'create_expense' (params: amount,category,description,date) maken na bevestiging een aanvraag aan.", { type: "object", properties: {
+    fn("propose_action", "Stel een actie voor die de gebruiker bevestigt en die daarna ECHT wordt uitgevoerd (de gebruiker klikt bevestigen → het beveiligde endpoint draait). Jij voert zelf niets uit. 'navigate' brengt de gebruiker naar een scherm (params.view) — altijd beschikbaar. De overige acties (clock_in, clock_out, create_leave, create_expense, create_customer, create_workorder, create_quote, create_message, create_venue) vereisen de AI-acties-add-on én het juiste recht; geef params mee volgens de velden van de actie.", { type: "object", properties: {
       action: { type: "string", enum: Object.keys(ACTIONS) },
-      params: { type: "object" },
+      params: { type: "object", description: "Veldwaarden voor de actie" },
     }, required: ["action"] }),
   ];
 }
@@ -216,6 +236,9 @@ function systemPrompt(store, tenant, user) {
     `De gebruiker is ${user.name || user.email}, rol "${user.role}", organisatie "${tenant.name}".`,
     `Toegankelijke schermen: ${ent.views.join(", ")}.`,
     `Vakjargon van deze organisatie: een opdracht heet "${terms.job}" (mv. "${terms.jobPlural}"), een werklocatie heet "${terms.venue}". Gebruik deze woorden.`,
+    isModuleEnabled(store, tenant, "ai_actions")
+      ? "Je MAG acties uitvoeren namens de gebruiker via propose_action (de gebruiker bevestigt, daarna draait het echt). Wees behulpzaam en stel concreet de juiste actie voor met ingevulde velden."
+      : "De AI-acties-add-on staat NIET aan: je kunt geen wijzigingen uitvoeren. Beantwoord vragen en verwijs de gebruiker naar het juiste scherm; vermeld zo nodig dat hiervoor de AI-acties-add-on nodig is. 'navigate' mag je wel gebruiken.",
     "",
     "WERKWIJZE (wees slim en proactief):",
     "- Voor 'hoeveel', 'totaal', 'gemiddeld', 'per X' of cijfervragen: gebruik 'aggregate' (count/sum/avg, eventueel groupBy) — som nooit zelf records op uit het hoofd.",

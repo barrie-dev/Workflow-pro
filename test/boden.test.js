@@ -71,15 +71,17 @@ test("boden: module uit pakket → geen toegang", () => {
 
 test("boden: propose_action registreert voorstel zonder uitvoering", () => {
   const store = mkStore(); seedDefaults(store);
+  // Acties vereisen de AI-acties-add-on.
+  const tenantAI = { id: "t1", name: "Demo NV", plan: "business", moduleOverrides: { add: ["ai_actions"], remove: [] } };
   const proposals = [];
-  const r = runTool(store, TENANT, EMPLOYEE, "propose_action", { action: "create_leave", params: { startDate: "2027-02-01", endDate: "2027-02-03" } }, proposals);
+  const r = runTool(store, tenantAI, EMPLOYEE, "propose_action", { action: "create_leave", params: { startDate: "2027-02-01", endDate: "2027-02-03" } }, proposals);
   assert.ok(r.ok, "voorstel ok");
   assert.equal(proposals.length, 1);
   assert.equal(proposals[0].path, "me/leaves");
   assert.equal(proposals[0].method, "POST");
-  // employee zonder onkost-recht? employee heeft own:expenses → create_expense mag
+  // employee zonder onkost-recht → geen voorstel (ook met add-on)
   const denyProp = [];
-  const bad = runTool(store, TENANT, { id: "u_x", role: "employee", permissions: [] }, "propose_action", { action: "create_expense", params: {} }, denyProp);
+  const bad = runTool(store, tenantAI, { id: "u_x", role: "employee", permissions: [] }, "propose_action", { action: "create_expense", params: {} }, denyProp);
   assert.ok(bad.error, "geen recht → geen voorstel");
   assert.equal(denyProp.length, 0);
 });
@@ -125,4 +127,34 @@ test("boden get_kpis: levert rechten-gefilterde kerncijfers", () => {
   // Employee krijgt enkel persoonlijke KPI's (geen org-totalen zoals teamgrootte)
   const emp = runTool(store, TENANT, EMPLOYEE, "get_kpis", {}, []);
   assert.ok(!emp.kpis.some(k => /teamgrootte/i.test(k.label)), "employee ziet geen org-KPI's");
+});
+
+// ── AI-acties achter add-on + rechten-scoping ───────────────────────────────
+const TENANT_AI = { id: "t1", name: "Demo NV", plan: "business", moduleOverrides: { add: ["ai_actions"], remove: [] } };
+
+test("boden acties: zonder add-on geen uitvoer, navigate blijft vrij", () => {
+  const store = mkStore(); seedDefaults(store);
+  const leave = runTool(store, TENANT, EMPLOYEE, "propose_action", { action: "create_leave", params: { startDate: "2026-07-01", endDate: "2026-07-02", type: "vakantie" } }, []);
+  assert.ok(leave.error && /actions_addon_uit/.test(leave.error), "zonder add-on → geen actie-uitvoer");
+  // navigate is gratis UX en blijft werken
+  const props = [];
+  const nav = runTool(store, TENANT, EMPLOYEE, "propose_action", { action: "navigate", params: { view: "leaves" } }, props);
+  assert.ok(nav.ok && props.length === 1, "navigate blijft beschikbaar zonder add-on");
+});
+
+test("boden acties: met add-on uitvoeren, met rol-rechten-scoping", () => {
+  const store = mkStore(); seedDefaults(store);
+  // Admin met add-on mag een klant voorstellen (beheer-actie, full perm)
+  let props = [];
+  const cust = runTool(store, TENANT_AI, ADMIN, "propose_action", { action: "create_customer", params: { name: "Nieuwe Klant", email: "n@k.be" } }, props);
+  assert.ok(cust.ok && props[0].path === "customers", "admin: klant-actie voorgesteld + uitvoerbaar");
+
+  // Employee mag beheer-actie (create_workorder, full) NIET — ook met add-on
+  const wo = runTool(store, TENANT_AI, EMPLOYEE, "propose_action", { action: "create_workorder", params: { title: "x" } }, []);
+  assert.ok(wo.error && /Geen toegang/.test(wo.error), "employee zonder volledig werkbonrecht → geweigerd");
+
+  // Maar een persoonlijke actie (verlof) mag de employee wél met add-on
+  props = [];
+  const leave = runTool(store, TENANT_AI, EMPLOYEE, "propose_action", { action: "create_leave", params: { startDate: "2026-07-01", endDate: "2026-07-02", type: "vakantie" } }, props);
+  assert.ok(leave.ok && props[0].path === "me/leaves", "employee: eigen verlof-actie mag met add-on");
 });
