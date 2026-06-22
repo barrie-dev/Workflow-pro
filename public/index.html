@@ -104,9 +104,9 @@
     <!-- Rechts: login formulier -->
     <div class="login-panel">
       <div class="login-panel-inner">
-        <div class="login-panel-lang">
-          <button class="lpv-lang-btn active" type="button" id="langNL" data-lang-btn="nl">NL</button>
-          <button class="lpv-lang-btn" type="button" id="langFR" data-lang-btn="fr">FR</button>
+        <div class="login-panel-lang" role="group" aria-label="Taalkeuze">
+          <button class="lpv-lang-btn active" type="button" id="langNL" data-lang-btn="nl" aria-label="Nederlands" lang="nl">NL</button>
+          <button class="lpv-lang-btn" type="button" id="langFR" data-lang-btn="fr" aria-label="Frans" lang="fr">FR</button>
         </div>
 
         <div class="login-form-header">
@@ -116,22 +116,22 @@
 
         <form id="loginForm" class="login-card">
           <div class="login-field">
-            <label class="login-label" data-i18n="login.email">E-mail</label>
-            <input class="login-input" name="email" type="email" required autocomplete="username" placeholder="naam@bedrijf.be" autofocus>
+            <label class="login-label" for="loginEmail" data-i18n="login.email">E-mail</label>
+            <input class="login-input" id="loginEmail" name="email" type="email" required autocomplete="username" placeholder="naam@bedrijf.be" autofocus>
           </div>
           <div class="login-field">
-            <label class="login-label" style="position:relative">
+            <label class="login-label" for="loginPassword" style="position:relative">
               <span data-i18n="login.password">Wachtwoord</span>
               <a href="#" id="loginForgot" class="login-forgot" style="position:absolute;right:0;top:0;font-size:0.75rem" data-i18n="login.forgot">Vergeten?</a>
             </label>
-            <input class="login-input" name="password" type="password" required autocomplete="current-password" placeholder="••••••••••••">
+            <input class="login-input" id="loginPassword" name="password" type="password" required autocomplete="current-password" placeholder="••••••••••••">
           </div>
           <div class="login-field" id="loginMfaField" style="display:none">
-            <label class="login-label" data-i18n="login.mfa">🛡️ Authenticator-code</label>
-            <input class="login-input login-input-mono" name="mfaCode" inputmode="numeric" autocomplete="one-time-code" maxlength="20" placeholder="6-cijferige code of recovery code" style="letter-spacing:2px;text-align:center">
-            <span class="login-forgot" style="cursor:default;color:#94a3b8" data-i18n="login.mfaHint">Open je authenticator-app of gebruik een recovery code</span>
+            <label class="login-label" for="loginMfaCode" data-i18n="login.mfa">🛡️ Authenticator-code</label>
+            <input class="login-input login-input-mono" id="loginMfaCode" name="mfaCode" inputmode="numeric" autocomplete="one-time-code" maxlength="20" placeholder="6-cijferige code of recovery code" style="letter-spacing:2px;text-align:center" aria-describedby="loginMfaHint">
+            <span id="loginMfaHint" class="login-forgot" style="cursor:default;color:#94a3b8" data-i18n="login.mfaHint">Open je authenticator-app of gebruik een recovery code</span>
           </div>
-          <div id="loginNotice" class="login-notice"></div>
+          <div id="loginNotice" class="login-notice" role="alert" aria-live="assertive"></div>
           <button class="login-btn" type="submit">
             <span data-i18n="login.submit">Inloggen</span>
             <svg viewBox="0 0 20 20" fill="currentColor" style="width:16px;height:16px"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
@@ -153,25 +153,25 @@
             <h2 class="login-welcome" data-i18n="reg.title">Account aanmaken</h2>
             <p class="login-welcome-sub" data-i18n="reg.subtitle">Start je eigen WorkFlow Pro — kies je pakket</p>
           </div>
-          <div class="login-field"><label class="login-label" data-i18n="reg.vat">BTW-/ondernemingsnummer</label>
+          <div class="login-field"><label class="login-label" for="registerVat" data-i18n="reg.vat">BTW-/ondernemingsnummer</label>
             <div style="display:flex;gap:8px">
               <input class="login-input" name="vatNumber" id="registerVat" placeholder="BE0123.456.789" style="flex:1">
               <button type="button" class="login-btn" id="registerKboBtn" style="width:auto;padding:0 14px;background:#fff;color:#0f172a;border:1px solid #e2e8f0" data-i18n="reg.vatFetch">Ophalen</button>
             </div>
             <div id="registerKboHint" style="font-size:0.72rem;color:#16a34a;margin-top:4px;display:none"></div>
           </div>
-          <div class="login-field"><label class="login-label" data-i18n="reg.company">Bedrijfsnaam</label>
-            <input class="login-input" name="companyName" required placeholder="Mijn Bedrijf BV"></div>
-          <div class="login-field"><label class="login-label" data-i18n="reg.yourName">Jouw naam</label>
-            <input class="login-input" name="name" placeholder="Voornaam Naam"></div>
-          <div class="login-field"><label class="login-label" data-i18n="login.email">E-mail</label>
-            <input class="login-input" name="email" type="email" required autocomplete="email" placeholder="naam@bedrijf.be"></div>
-          <div class="login-field"><label class="login-label" data-i18n="reg.plan">Pakket</label>
+          <div class="login-field"><label class="login-label" for="regCompany" data-i18n="reg.company">Bedrijfsnaam</label>
+            <input class="login-input" id="regCompany" name="companyName" required placeholder="Mijn Bedrijf BV"></div>
+          <div class="login-field"><label class="login-label" for="regName" data-i18n="reg.yourName">Jouw naam</label>
+            <input class="login-input" id="regName" name="name" placeholder="Voornaam Naam"></div>
+          <div class="login-field"><label class="login-label" for="regEmail" data-i18n="login.email">E-mail</label>
+            <input class="login-input" id="regEmail" name="email" type="email" required autocomplete="email" placeholder="naam@bedrijf.be"></div>
+          <div class="login-field"><label class="login-label" for="registerPlan" data-i18n="reg.plan">Pakket</label>
             <select class="login-input" name="plan" id="registerPlan"><option value="">Pakketten laden…</option></select>
           </div>
           <div id="registerAddons" style="display:none;font-size:0.78rem;color:#475569;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;margin-bottom:4px"></div>
           <p id="registerPwHint" class="login-welcome-sub" style="font-size:0.75rem;margin:0 0 4px" data-i18n="reg.pwHint">Je ontvangt een e-mail om je wachtwoord veilig in te stellen.</p>
-          <div id="registerNotice" class="login-notice"></div>
+          <div id="registerNotice" class="login-notice" role="alert" aria-live="assertive"></div>
           <button class="login-btn" type="submit" data-i18n="reg.submit">Account aanmaken</button>
           <div style="text-align:center;margin-top:12px;font-size:0.8125rem;color:#64748b">
             <span data-i18n="reg.haveAccount">Al een account?</span> <a href="#" id="showLogin" style="color:#0ea5e9;font-weight:600" data-i18n="reg.login">Inloggen</a>
@@ -185,11 +185,11 @@
             <h2 class="login-welcome" data-i18n="activate.title">Stel je wachtwoord in</h2>
             <p class="login-welcome-sub" data-i18n="activate.subtitle">Activeer je WorkFlow Pro-account</p>
           </div>
-          <div class="login-field"><label class="login-label" data-i18n="activate.newPw">Nieuw wachtwoord</label>
-            <input class="login-input" name="password" type="password" required autocomplete="new-password" placeholder="Sterk wachtwoord (12+ tekens)" autofocus></div>
-          <div class="login-field"><label class="login-label" data-i18n="activate.repeatPw">Herhaal wachtwoord</label>
-            <input class="login-input" name="password2" type="password" required autocomplete="new-password" placeholder="Herhaal je wachtwoord"></div>
-          <div id="activateNotice" class="login-notice"></div>
+          <div class="login-field"><label class="login-label" for="actPw" data-i18n="activate.newPw">Nieuw wachtwoord</label>
+            <input class="login-input" id="actPw" name="password" type="password" required autocomplete="new-password" placeholder="Sterk wachtwoord (12+ tekens)" autofocus></div>
+          <div class="login-field"><label class="login-label" for="actPw2" data-i18n="activate.repeatPw">Herhaal wachtwoord</label>
+            <input class="login-input" id="actPw2" name="password2" type="password" required autocomplete="new-password" placeholder="Herhaal je wachtwoord"></div>
+          <div id="activateNotice" class="login-notice" role="alert" aria-live="assertive"></div>
           <button class="login-btn" type="submit" data-i18n="activate.submit">Wachtwoord instellen &amp; inloggen</button>
           <div style="text-align:center;margin-top:12px;font-size:0.8125rem;color:#64748b">
             <a href="#" id="activateResend" style="color:#0ea5e9;font-weight:600" data-i18n="activate.resend">Activatielink verlopen? Stuur opnieuw</a>
@@ -201,11 +201,11 @@
             <h2 class="login-welcome" data-i18n="reset.title">Nieuw wachtwoord</h2>
             <p class="login-welcome-sub" data-i18n="reset.subtitle">Kies een nieuw wachtwoord voor je account</p>
           </div>
-          <div class="login-field"><label class="login-label" data-i18n="activate.newPw">Nieuw wachtwoord</label>
-            <input class="login-input" name="password" type="password" required autocomplete="new-password" placeholder="Sterk wachtwoord (12+ tekens)" autofocus></div>
-          <div class="login-field"><label class="login-label" data-i18n="activate.repeatPw">Herhaal wachtwoord</label>
-            <input class="login-input" name="password2" type="password" required autocomplete="new-password" placeholder="Herhaal je wachtwoord"></div>
-          <div id="resetNotice" class="login-notice"></div>
+          <div class="login-field"><label class="login-label" for="resPw" data-i18n="activate.newPw">Nieuw wachtwoord</label>
+            <input class="login-input" id="resPw" name="password" type="password" required autocomplete="new-password" placeholder="Sterk wachtwoord (12+ tekens)" autofocus></div>
+          <div class="login-field"><label class="login-label" for="resPw2" data-i18n="activate.repeatPw">Herhaal wachtwoord</label>
+            <input class="login-input" id="resPw2" name="password2" type="password" required autocomplete="new-password" placeholder="Herhaal je wachtwoord"></div>
+          <div id="resetNotice" class="login-notice" role="alert" aria-live="assertive"></div>
           <button class="login-btn" type="submit" data-i18n="reset.submit">Wachtwoord opslaan &amp; inloggen</button>
           <div style="text-align:center;margin-top:12px;font-size:0.8125rem;color:#64748b">
             <a href="#" id="resetToLogin" style="color:#0ea5e9;font-weight:600" data-i18n="reset.backToLogin">Terug naar inloggen</a>

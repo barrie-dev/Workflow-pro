@@ -157,7 +157,7 @@
   </main>
 
   <!-- Bottom tab bar -->
-  <nav class="emp-tabbar">
+  <nav class="emp-tabbar" aria-label="Hoofdnavigatie">
     <button class="emp-tab active" data-view="today">
       <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
       <span>Vandaag</span>
@@ -766,7 +766,9 @@
   function switchView(view) {
     _currentView = view;
     document.querySelectorAll(".emp-tab").forEach(b => {
-      b.classList.toggle("active", b.dataset.view === view);
+      const isActive = b.dataset.view === view;
+      b.classList.toggle("active", isActive);
+      if (isActive) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
     });
     const main = document.getElementById("empMain");
     main.innerHTML = `<div class="emp-loading">Laden…</div>`;

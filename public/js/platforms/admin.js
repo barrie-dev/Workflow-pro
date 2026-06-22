@@ -198,7 +198,7 @@
       </div>
     </div>
 
-    <nav class="adm-nav">
+    <nav class="adm-nav" aria-label="Hoofdnavigatie">
       <!-- Hoofdmenu -->
       <div class="adm-nav-label">Overzicht</div>
       <a class="adm-nav-item active" data-view="dashboard" href="#">
@@ -746,7 +746,9 @@ table.adm-table { width:100%; border-collapse:collapse; font-size:13px; }
   function switchView(view) {
     _currentView = view;
     document.querySelectorAll(".adm-nav-item").forEach(a => {
-      a.classList.toggle("active", a.dataset.view === view);
+      const isActive = a.dataset.view === view;
+      a.classList.toggle("active", isActive);
+      if (isActive) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
     });
     // Sector-terminologie voor de paginatitel (Werkbonnen/Locaties → sectorwoord).
     const termTitle = window.wfpTerms && (view === "workorders" ? window.wfpTerms.t("jobPlural") : view === "venues" ? window.wfpTerms.t("venuePlural") : null);
@@ -1309,9 +1311,9 @@ ${emp ? `
   <div class="adm-card-header">
     <h3 class="adm-card-title">Planning</h3>
     <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admPrevWeek">‹</button>
+      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admPrevWeek" aria-label="Vorige week" title="Vorige week">‹</button>
       <span style="font-size:13px;font-weight:500;min-width:160px;text-align:center;">${weekLabel}</span>
-      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admNextWeek">›</button>
+      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admNextWeek" aria-label="Volgende week" title="Volgende week">›</button>
       ${_planningWeekOffset !== 0 ? `<button class="adm-btn adm-btn-secondary adm-btn-sm" id="admTodayWeek">Vandaag</button>` : ""}
       <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admCopyWeek" title="Kopieer alle shifts naar volgende week">⧉ Kopieer week</button>
       <button class="adm-btn adm-btn-primary adm-btn-sm" id="admAddShift">+ Shift</button>
