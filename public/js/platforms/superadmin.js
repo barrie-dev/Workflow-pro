@@ -704,8 +704,9 @@
   async function billing() {
     const c = content(); c.innerHTML = loader();
     try {
-      const bd = await api("/api/admin/billing");
+      const [bd, lc] = await Promise.all([api("/api/admin/billing"), api("/api/admin/lifecycle").catch(() => ({}))]);
       const rows = bd.rows||[];
+      const life = (lc && lc.lifecycle) || null;
       c.innerHTML = `
 <div class="sa-kpis">
   <div class="sa-kpi kpi-green">
@@ -730,6 +731,20 @@
   </div>
 </div>
 <div class="sa-alert alert-info" style="margin-bottom:16px">ℹ️ Schattingen gebaseerd op plan × gebruikers. Koppel Stripe voor werkelijke facturatie.</div>
+${life ? `<div class="sa-card" style="margin-bottom:16px"><div class="sa-card-head"><div class="sa-card-title">Lifecycle &amp; conversie</div></div>
+  <div class="sa-card-body" style="padding:14px 16px">
+    <div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:10px">
+      <div><div style="font-size:11px;color:#64748b">Trials</div><div style="font-size:20px;font-weight:800;color:#d97706">${life.counts.trial}</div></div>
+      <div><div style="font-size:11px;color:#64748b">Actief (betalend)</div><div style="font-size:20px;font-weight:800;color:#16a34a">${life.counts.active}</div></div>
+      <div><div style="font-size:11px;color:#64748b">Opgezegd</div><div style="font-size:20px;font-weight:800;color:#dc2626">${life.counts.canceled}</div></div>
+      <div><div style="font-size:11px;color:#64748b">Conversie</div><div style="font-size:20px;font-weight:800">${life.conversionPct}%</div></div>
+      <div><div style="font-size:11px;color:#64748b">Nieuw (30d)</div><div style="font-size:20px;font-weight:800">${life.recentSignups}</div></div>
+    </div>
+    ${life.trials.length ? `<div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:4px">Trials (oudste eerst — opvolgen)</div>
+    <div class="sa-tbl-wrap"><table class="sa-tbl"><thead><tr><th>Tenant</th><th>Plan</th><th>Trial-leeftijd</th><th>Laatste activiteit</th></tr></thead><tbody>
+      ${life.trials.slice(0,15).map(t => `<tr><td>${esc(t.tenant)}</td><td>${esc(t.plan||"—")}</td><td>${t.ageDays!=null?t.ageDays+" d":"—"}</td><td>${t.lastActivityAt?fmtDT(t.lastActivityAt):"nooit"}</td></tr>`).join("")}
+    </tbody></table></div>` : "<div style='font-size:12.5px;color:#64748b'>Geen openstaande trials.</div>"}
+  </div></div>` : ""}
 <div class="sa-card">
   <div class="sa-card-head"><div class="sa-card-title">MRR per tenant</div></div>
   <div class="sa-tbl-wrap">
@@ -827,11 +842,19 @@
   async function resellers() {
     const c = content(); c.innerHTML = loader();
     try {
-      const d = await api("/api/admin/resellers");
+      const [d, po] = await Promise.all([api("/api/admin/resellers"), api("/api/admin/reseller-payouts").catch(() => ({}))]);
       const rows = d.resellers || [];
       const canManage = !!d.canManage;
+      const payouts = (po && po.rows) || [];
       c.innerHTML = `
 <div class="sa-page-head"><h1>Resellers<span class="cnt">${rows.length}</span></h1></div>
+${payouts.length ? `<div class="sa-card" style="margin-bottom:16px"><div class="sa-card-head"><div class="sa-card-title">Uit te betalen commissie (per maand)</div>
+  <button class="sa-btn btn-secondary sm" id="poCsv">⬇ CSV</button></div>
+  <div class="sa-card-body" style="padding:0 0 6px">
+    <div style="padding:12px 16px;font-size:13px;color:#475569">Totaal verschuldigd: <strong>${fmtEur(po.totalMonthly||0)}/maand</strong></div>
+    <div class="sa-tbl-wrap"><table class="sa-tbl"><thead><tr><th>Reseller</th><th>Klanten</th><th>MRR</th><th>Commissie/maand</th></tr></thead><tbody>
+      ${payouts.map(r => `<tr><td>${esc(r.reseller)}</td><td>${r.clients}</td><td>${fmtEur(r.mrr)}</td><td style="font-weight:700;color:#15803d">${fmtEur(r.commissionMonthly)}</td></tr>`).join("")}
+    </tbody></table></div></div></div>` : ""}
 <div class="sa-card" style="margin-bottom:16px"><div style="padding:14px 16px;font-size:13px;color:#475569;line-height:1.5">
   Resellers brengen klanten aan en verdienen een terugkerende commissie (% van het abonnement). Ze beheren hun eigen klanten via het reseller-portaal en zien enkel commerciële gegevens — geen operationele klantdata.
   ${canManage ? "" : "<br><strong>Alleen de hoofd-superadmin kan resellers aanmaken of wijzigen.</strong>"}
@@ -852,6 +875,18 @@ ${canManage ? `
   <thead><tr><th>Reseller</th><th>Status</th><th>Commissie</th><th>Klanten</th><th>MRR</th><th>Commissie/mnd</th><th></th></tr></thead>
   <tbody id="rsBody"></tbody>
 </table></div></div>`;
+
+      // CSV-export via geautoriseerde fetch (geen token in URL) → blob-download.
+      document.getElementById("poCsv")?.addEventListener("click", async () => {
+        try {
+          const r = await fetch("/api/admin/reseller-payouts?format=csv", { headers: { Authorization: "Bearer " + token() } });
+          if (!r.ok) throw new Error("Export mislukt");
+          const blob = await r.blob();
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(blob); a.download = "reseller-payouts.csv";
+          document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(a.href);
+        } catch (e) { window.showToast && window.showToast(e.message, "error"); }
+      });
 
       function render() {
         const tb = document.getElementById("rsBody");
@@ -1350,7 +1385,9 @@ ${canManage ? `
       <span id="aoMsg" style="font-size:12.5px;color:#16a34a"></span>
     </div>
   </div>
-</div>`;
+</div>
+<div id="planPricesCard" style="margin-top:16px"></div>`;
+        renderPlanPrices();
         panel.querySelectorAll(".ao-reset").forEach(btn => btn.addEventListener("click", () => {
           const row = btn.closest(".sa-addon-row");
           row.querySelector(".ao-label").value = btn.dataset.label;
@@ -1369,6 +1406,44 @@ ${canManage ? `
           });
           const msg = document.getElementById("aoMsg"); msg.textContent = "";
           try { await api("/api/admin/addons", { method: "PUT", body: JSON.stringify(payload) }); msg.textContent = "Opgeslagen ✓"; }
+          catch (e) { msg.style.color = "#dc2626"; msg.textContent = e.message; }
+        });
+      }
+
+      // ── Bundel-prijzen (basis/jaar + per seat/jaar + inbegrepen seats) ──────
+      async function renderPlanPrices() {
+        const card = document.getElementById("planPricesCard");
+        if (!card) return;
+        let plans = [];
+        try { plans = (await api("/api/admin/plan-prices")).plans || []; } catch (_) { return; }
+        card.innerHTML = `
+<div class="sa-card"><div class="sa-card-head"><div class="sa-card-title">Bundel-prijzen</div></div>
+  <div class="sa-card-body" style="padding:16px">
+    <div style="font-size:12.5px;color:#64748b;margin-bottom:10px">Basisprijs per jaar + prijs per extra gebruiker/jaar + inbegrepen gebruikers, per bundel. €0 basis = 'op aanvraag' (bv. enterprise).</div>
+    <div class="sa-tbl-wrap"><table class="sa-tbl"><thead><tr><th>Bundel</th><th>Basis €/jaar</th><th>Per seat €/jaar</th><th>Inbegrepen seats</th></tr></thead><tbody>
+      ${plans.map(p => `<tr class="pp-row" data-key="${esc(p.key)}">
+        <td><strong>${esc(p.label)}</strong></td>
+        <td><input class="pp-base" type="number" min="0" value="${p.baseAnnual}" style="width:100px;padding:6px;border:1px solid #e2e8f0;border-radius:6px"></td>
+        <td><input class="pp-seat" type="number" min="0" value="${p.seatAnnual}" style="width:100px;padding:6px;border:1px solid #e2e8f0;border-radius:6px"></td>
+        <td><input class="pp-inc" type="number" min="0" value="${p.includedSeats}" style="width:80px;padding:6px;border:1px solid #e2e8f0;border-radius:6px"></td>
+      </tr>`).join("")}
+    </tbody></table></div>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:10px">
+      <button class="sa-btn btn-primary sm" id="ppSave">Prijzen opslaan</button>
+      <span id="ppMsg" style="font-size:12.5px;color:#16a34a"></span>
+    </div>
+  </div></div>`;
+        document.getElementById("ppSave").addEventListener("click", async () => {
+          const planPrices = {};
+          card.querySelectorAll(".pp-row").forEach(row => {
+            planPrices[row.dataset.key] = {
+              baseAnnual: row.querySelector(".pp-base").value,
+              seatAnnual: row.querySelector(".pp-seat").value,
+              includedSeats: row.querySelector(".pp-inc").value,
+            };
+          });
+          const msg = document.getElementById("ppMsg"); msg.textContent = "";
+          try { await api("/api/admin/plan-prices", { method: "PUT", body: JSON.stringify({ planPrices }) }); msg.textContent = "Opgeslagen ✓"; }
           catch (e) { msg.style.color = "#dc2626"; msg.textContent = e.message; }
         });
       }

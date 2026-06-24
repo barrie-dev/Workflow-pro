@@ -59,8 +59,32 @@ function bundleFeatures(bundle, fallbackKey) {
 
 // Vaste prijs voor een bundel-key (enkel de standaardbundels hebben een prijs).
 // Een bundel zónder bekende prijs is "op aanvraag" en niet zelf te kiezen.
+// Superadmin-bewerkbare prijs-overrides (uit platform-config), overschrijven de
+// PLAN_PACKAGES-defaults per plan-key (baseAnnual/seatAnnual/includedSeats).
+let PRICE_OVERRIDES = {};
+function setPlanPriceOverrides(overrides) { PRICE_OVERRIDES = (overrides && typeof overrides === "object") ? overrides : {}; }
+function effectivePackage(key) {
+  const k = String(key || "").toLowerCase();
+  const base = PLAN_PACKAGES[k];
+  if (!base) return null;
+  const ov = PRICE_OVERRIDES[k] || {};
+  return {
+    ...base,
+    baseAnnual: ov.baseAnnual != null ? Number(ov.baseAnnual) : base.baseAnnual,
+    seatAnnual: ov.seatAnnual != null ? Number(ov.seatAnnual) : base.seatAnnual,
+    includedSeats: ov.includedSeats != null ? Number(ov.includedSeats) : base.includedSeats,
+  };
+}
+// Effectieve prijzen + defaults voor de superadmin-editor.
+function planPricing() {
+  return Object.keys(PLAN_PACKAGES).map(k => {
+    const eff = effectivePackage(k);
+    return { key: k, label: PLAN_PACKAGES[k].label, baseAnnual: eff.baseAnnual, seatAnnual: eff.seatAnnual, includedSeats: eff.includedSeats,
+      defaults: { baseAnnual: PLAN_PACKAGES[k].baseAnnual, seatAnnual: PLAN_PACKAGES[k].seatAnnual, includedSeats: PLAN_PACKAGES[k].includedSeats } };
+  });
+}
 function pricingFor(key) {
-  const p = PLAN_PACKAGES[String(key || "").toLowerCase()];
+  const p = effectivePackage(key);
   return p && p.baseAnnual > 0 ? p : null;
 }
 
@@ -729,5 +753,7 @@ module.exports = {
   acceptDpa,
   createGdprRequest,
   processGdprRequest,
-  processStripeWebhook
+  processStripeWebhook,
+  setPlanPriceOverrides,
+  planPricing
 };

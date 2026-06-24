@@ -89,6 +89,8 @@ function loadPlatformConfig(store) {
   const merged = deepMerge(withEnv, { stripe: stored.stripe, peppol: stored.peppol, email: stored.email, kbo: stored.kbo, openai: stored.openai });
   // Add-on-overrides (naam/prijs/omschrijving/actief per add-on) — superadmin-bewerkbaar.
   merged.addons = stored.addons || {};
+  // Plan-prijs-overrides (baseAnnual/seatAnnual/includedSeats per bundel-key).
+  merged.planPrices = stored.planPrices || {};
   return merged;
 }
 
@@ -139,6 +141,7 @@ function publicPlatformConfig(store) {
       configured: isReal(cfg.openai.apiKey),  // echte key → Boden AI actief (anders mock)
     },
     addons: cfg.addons || {}, // overrides (naam/prijs/omschrijving/actief) — geen secrets
+    planPrices: cfg.planPrices || {},
   };
 }
 
@@ -157,6 +160,7 @@ function savePlatformConfig(store, patch, actor) {
     kbo: { ...(current.kbo || {}) },
     openai: { ...(current.openai || {}) },
     addons: { ...(current.addons || {}) },
+    planPrices: { ...(current.planPrices || {}) },
     updatedAt: new Date().toISOString(),
     updatedBy: actor && actor.email,
   };
@@ -170,6 +174,17 @@ function savePlatformConfig(store, patch, actor) {
       if (ov.monthly !== undefined && ov.monthly !== null && ov.monthly !== "") cur.monthly = Math.max(0, Number(ov.monthly) || 0);
       if (ov.active !== undefined) cur.active = !!ov.active;
       next.addons[key] = cur;
+    }
+  }
+  // Plan-prijs-overrides: numerieke velden per plan-key.
+  if (patch.planPrices && typeof patch.planPrices === "object") {
+    for (const [key, ov] of Object.entries(patch.planPrices)) {
+      if (!ov || typeof ov !== "object") continue;
+      const cur = { ...(next.planPrices[key] || {}) };
+      for (const f of ["baseAnnual", "seatAnnual", "includedSeats"]) {
+        if (ov[f] !== undefined && ov[f] !== null && ov[f] !== "") cur[f] = Math.max(0, Number(ov[f]) || 0);
+      }
+      next.planPrices[key] = cur;
     }
   }
   const isMaskedOrEmpty = v => v === undefined || v === null || v === "" || /••••|dummy — nog niet/.test(String(v));

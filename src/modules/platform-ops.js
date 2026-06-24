@@ -43,4 +43,53 @@ function backupSummary(store, listBackups, staleDays = 7) {
   };
 }
 
-module.exports = { eventLog, backupSummary };
+// Tenant-lifecycle: status-verdeling, trials (met leeftijd), recente signups,
+// laatste activiteit per tenant. Enkel commerciële metadata (geen PII-inhoud).
+function lifecycle(store, now = Date.now()) {
+  const users = store.data.users || [];
+  const lastLoginByTenant = {};
+  for (const u of users) {
+    if (!u.tenantId || !u.lastLoginAt) continue;
+    const t = lastLoginByTenant[u.tenantId];
+    if (!t || u.lastLoginAt > t) lastLoginByTenant[u.tenantId] = u.lastLoginAt;
+  }
+  const counts = { trial: 0, active: 0, suspended: 0, canceled: 0, other: 0 };
+  const trials = [];
+  let recentSignups = 0;
+  for (const t of store.data.tenants || []) {
+    const st = String(t.status || "").toLowerCase();
+    if (counts[st] !== undefined) counts[st]++; else counts.other++;
+    const created = t.createdAt ? new Date(t.createdAt).getTime() : null;
+    if (created && now - created <= 30 * 86400000) recentSignups++;
+    if (st === "trial") {
+      const ageDays = created ? Math.floor((now - created) / 86400000) : null;
+      trials.push({ tenantId: t.id, tenant: t.name || t.id, plan: t.plan || null, ageDays, lastActivityAt: lastLoginByTenant[t.id] || null });
+    }
+  }
+  trials.sort((a, b) => (b.ageDays || 0) - (a.ageDays || 0));
+  const tot = (store.data.tenants || []).length;
+  const paying = counts.active;
+  return {
+    counts, total: tot, recentSignups,
+    conversionPct: tot ? Math.round((paying / tot) * 100) : 0,
+    trials,
+  };
+}
+
+// Reseller-payouts: per actieve reseller de maandcommissie + totaal verschuldigd.
+function resellerPayouts(store, commissionOverview) {
+  const rows = (store.data.resellers || [])
+    .filter(r => r.status === "active")
+    .map(r => {
+      const ov = commissionOverview(store, r) || {};
+      return {
+        resellerId: r.id, reseller: r.name, contactEmail: r.contactEmail || "",
+        clients: (ov.rows || ov.clients || []).length,
+        mrr: ov.totalMrr || ov.mrr || 0,
+        commissionMonthly: ov.totalCommission || ov.commission || 0,
+      };
+    });
+  return { rows, totalMonthly: rows.reduce((s, r) => s + (r.commissionMonthly || 0), 0) };
+}
+
+module.exports = { eventLog, backupSummary, lifecycle, resellerPayouts };

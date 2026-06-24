@@ -157,7 +157,8 @@ const { listReports, getReport, generateStatusBundle } = require("./modules/repo
 const { listAuditEvents } = require("./modules/audit");
 const { sendMail, setRuntimeConfig, isMailLive, recentMail } = require("./lib/mailer");
 const { productionReadiness } = require("./modules/production");
-const { eventLog, backupSummary } = require("./modules/platform-ops");
+const { eventLog, backupSummary, lifecycle, resellerPayouts } = require("./modules/platform-ops");
+const { setPlanPriceOverrides, planPricing } = require("./modules/billing");
 const { loadPlatformConfig, publicPlatformConfig, savePlatformConfig } = require("./modules/platform-config");
 const { createPaymentLink, markInvoicePaidById } = require("./modules/payments");
 const { createSubscriptionCheckout, createBillingPortalSession, applySubscriptionEvent } = require("./modules/subscriptions");
@@ -985,6 +986,7 @@ http.createServer(async (req, res) => {
       const config2 = savePlatformConfig(store, body, user);
       // Pas e-mailconfig meteen toe op de mailer
       try { setRuntimeConfig(loadPlatformConfig(store).email); } catch (_) {}
+      try { setPlanPriceOverrides(loadPlatformConfig(store).planPrices); } catch (_) {}
       sendJson(res, 200, { ok: true, config: config2 });
       return;
     }
@@ -1084,6 +1086,53 @@ http.createServer(async (req, res) => {
       savePlatformConfig(store, { addons }, user);
       store.audit({ actor: user.email, tenantId: null, action: "addons_updated", area: "modules", detail: Object.keys(addons).join(",") });
       sendJson(res, 200, { ok: true, addons: listAddons(loadPlatformConfig(store).addons, true) });
+      return;
+    }
+
+    // ── Bundel-prijzen (superadmin-bewerkbaar) ───────────────────────────────
+    if (url.pathname === "/api/admin/plan-prices" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "modules");
+      sendJson(res, 200, { ok: true, plans: planPricing() });
+      return;
+    }
+    if (url.pathname === "/api/admin/plan-prices" && req.method === "PUT") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "modules");
+      assertInteractiveUser(user);
+      const body = await readBody(req);
+      savePlatformConfig(store, { planPrices: body.planPrices || {} }, user);
+      setPlanPriceOverrides(loadPlatformConfig(store).planPrices);
+      store.audit({ actor: user.email, tenantId: null, action: "plan_prices_updated", area: "modules", detail: Object.keys(body.planPrices || {}).join(",") });
+      sendJson(res, 200, { ok: true, plans: planPricing() });
+      return;
+    }
+
+    // ── Tenant-lifecycle (superadmin): status, trials, conversie ─────────────
+    if (url.pathname === "/api/admin/lifecycle" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "tenants");
+      sendJson(res, 200, { ok: true, lifecycle: lifecycle(store) });
+      return;
+    }
+
+    // ── Reseller-payouts (superadmin): commissie verschuldigd + CSV-export ────
+    if (url.pathname === "/api/admin/reseller-payouts" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const payouts = resellerPayouts(store, commissionOverview);
+      if (url.searchParams.get("format") === "csv") {
+        const head = "reseller,contact,clients,mrr,commissie_maand";
+        const lines = payouts.rows.map(r => [r.reseller, r.contactEmail, r.clients, r.mrr, r.commissionMonthly].map(v => `"${String(v).replace(/"/g, '""')}"`).join(","));
+        res.writeHead(200, { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": "attachment; filename=\"reseller-payouts.csv\"" });
+        res.end([head, ...lines].join("\n"));
+        return;
+      }
+      sendJson(res, 200, { ok: true, ...payouts });
       return;
     }
 
@@ -3828,6 +3877,7 @@ http.createServer(async (req, res) => {
 
   // Pas opgeslagen e-mailconfig toe op de mailer (DB overschrijft env)
   try { setRuntimeConfig(loadPlatformConfig(store).email); } catch (_) {}
+  try { setPlanPriceOverrides(loadPlatformConfig(store).planPrices); } catch (_) {}
 
   // Auto-backup bij opstarten (max 1 per dag per tenant)
   setImmediate(() => {

@@ -485,3 +485,52 @@ test("platform-ops: backupSummary markeert ontbrekend/oud per tenant", () => {
   assert.equal(s.stale, 1);   // t2
   assert.equal(s.rows.find(r=>r.tenantId==="t1").status, "ok");
 });
+
+// ── Plan-prijs-overrides (superadmin-bewerkbare bundelprijzen) ──
+const { setPlanPriceOverrides, planPricing } = require("../src/modules/billing");
+const { lifecycle, resellerPayouts } = require("../src/modules/platform-ops");
+
+test("billing: plan-prijs-override overschrijft default, planPricing toont beide", () => {
+  setPlanPriceOverrides({ starter: { baseAnnual: 720, includedSeats: 4 } });
+  const plans = planPricing();
+  const starter = plans.find(p => p.key === "starter");
+  assert.equal(starter.baseAnnual, 720, "override actief");
+  assert.equal(starter.includedSeats, 4);
+  assert.equal(starter.defaults.baseAnnual, 590, "default blijft zichtbaar");
+  setPlanPriceOverrides({}); // reset zodat andere tests de defaults zien
+  assert.equal(planPricing().find(p => p.key === "starter").baseAnnual, 590);
+});
+
+test("platform-ops: lifecycle telt status + trials + conversie", () => {
+  const now = Date.now();
+  const recent = new Date(now - 5 * 86400000).toISOString();
+  const oldTrial = new Date(now - 20 * 86400000).toISOString();
+  const store = { data: {
+    tenants: [
+      { id:"t1", name:"A", status:"active", createdAt: recent },
+      { id:"t2", name:"B", status:"trial", createdAt: oldTrial, plan:"business" },
+      { id:"t3", name:"C", status:"trial", createdAt: recent },
+      { id:"t4", name:"D", status:"canceled", createdAt: "2024-01-01T00:00:00Z" },
+    ],
+    users: [{ tenantId:"t2", lastLoginAt: recent }],
+  } };
+  const lc = lifecycle(store, now);
+  assert.equal(lc.counts.trial, 2);
+  assert.equal(lc.counts.active, 1);
+  assert.equal(lc.counts.canceled, 1);
+  assert.equal(lc.conversionPct, 25); // 1 active / 4 total
+  assert.equal(lc.trials[0].tenant, "B", "oudste trial eerst");
+  assert.equal(lc.trials[0].lastActivityAt, recent);
+});
+
+test("platform-ops: resellerPayouts sommeert commissie van actieve resellers", () => {
+  const store = { data: { resellers: [
+    { id:"r1", name:"Partner X", status:"active", contactEmail:"x@p.be" },
+    { id:"r2", name:"Inactief", status:"paused" },
+  ] } };
+  const fakeOverview = (s, r) => r.id === "r1" ? { rows:[{},{}], totalMrr: 400, totalCommission: 60 } : { rows:[], totalMrr:0, totalCommission:0 };
+  const po = resellerPayouts(store, fakeOverview);
+  assert.equal(po.rows.length, 1, "enkel actieve resellers");
+  assert.equal(po.rows[0].clients, 2);
+  assert.equal(po.totalMonthly, 60);
+});

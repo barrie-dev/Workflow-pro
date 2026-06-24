@@ -1024,3 +1024,33 @@ test("ops: platform-operations endpoints + scope-gating", async () => {
   const restore = await fetch(`${BASE}/api/admin/backups/t_demo/x/restore`, { method: "POST", headers: { ...H(jan.token), "Content-Type": "application/json" }, body: "{}" });
   assert.equal(restore.status, 403);
 });
+
+// ── SA-commercieel: plan-prijzen, lifecycle, reseller-payouts ───────────────
+test("commercieel: plan-prijzen GET/PUT + lifecycle + payouts(csv) + gating", async () => {
+  const god = await login("super@workflowpro.be", "Demo2026!");
+  const H = t => ({ Authorization: `Bearer ${t}` });
+  // plan-prijzen ophalen
+  const pg = await fetch(`${BASE}/api/admin/plan-prices`, { headers: H(god.token) });
+  assert.equal(pg.status, 200);
+  const pd = await pg.json();
+  assert.ok(Array.isArray(pd.plans) && pd.plans.find(p => p.key === "starter"));
+  // override opslaan → effect zichtbaar
+  const put = await fetch(`${BASE}/api/admin/plan-prices`, { method: "PUT", headers: { ...H(god.token), "Content-Type": "application/json" }, body: JSON.stringify({ planPrices: { starter: { baseAnnual: 777 } } }) });
+  assert.equal(put.status, 200);
+  const after = await put.json();
+  assert.equal(after.plans.find(p => p.key === "starter").baseAnnual, 777);
+  // herstel naar default (lege override blijft staan → zet expliciet terug)
+  await fetch(`${BASE}/api/admin/plan-prices`, { method: "PUT", headers: { ...H(god.token), "Content-Type": "application/json" }, body: JSON.stringify({ planPrices: { starter: { baseAnnual: 590 } } }) });
+  // lifecycle
+  const lc = await (await fetch(`${BASE}/api/admin/lifecycle`, { headers: H(god.token) })).json();
+  assert.equal(lc.ok, true);
+  assert.ok(lc.lifecycle && typeof lc.lifecycle.conversionPct === "number");
+  // payouts CSV
+  const csv = await fetch(`${BASE}/api/admin/reseller-payouts?format=csv`, { headers: H(god.token) });
+  assert.equal(csv.status, 200);
+  assert.match(csv.headers.get("content-type") || "", /text\/csv/);
+  assert.match(await csv.text(), /reseller,contact,clients/);
+  // gating: gewone tenant-gebruiker mag niet aan plan-prijzen
+  const jan = await login("jan@demobouw.be", "Demo2026!");
+  assert.equal((await fetch(`${BASE}/api/admin/plan-prices`, { headers: H(jan.token) })).status, 403);
+});
