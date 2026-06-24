@@ -534,3 +534,39 @@ test("platform-ops: resellerPayouts sommeert commissie van actieve resellers", (
   assert.equal(po.rows[0].clients, 2);
   assert.equal(po.totalMonthly, 60);
 });
+
+// ── Governance: security-center + GDPR/DPA-overzicht ──
+const { securityCenter, gdprOverview } = require("../src/modules/platform-ops");
+
+test("platform-ops: securityCenter aggregeert MFA, vergrendelde accounts, support-toegang", () => {
+  const now = Date.now();
+  const future = new Date(now + 3600000).toISOString();
+  const fakeMfa = () => ({ totalAdmins: 2, readyAdmins: 1, missingMfa: 1, notEnforced: 0, rows: [{ ready: true }, { ready: false }] });
+  const store = { data: {
+    users: [
+      { id:"u1", email:"a@x.be", lockedUntil: future, failedLogins: 5 },
+      { id:"u2", email:"b@x.be" },
+    ],
+    tenants: [
+      { id:"t1", name:"A", supportAccess: { allowed: true, allowedAt: "2026-01-01" } },
+      { id:"t2", name:"B", supportAccess: { allowed: false } },
+    ],
+  } };
+  const sc = securityCenter(store, fakeMfa, now);
+  assert.equal(sc.mfa.readyAdmins, 1);
+  assert.equal(sc.locked.length, 1);
+  assert.equal(sc.locked[0].email, "a@x.be");
+  assert.equal(sc.supportAccess.length, 1, "enkel tenants met consent");
+});
+
+test("platform-ops: gdprOverview telt DPA-ontbreekt + open verzoeken", () => {
+  const store = { data: { tenants: [
+    { id:"t1", name:"A", compliance: { dpaAcceptedAt: "2026-01-01", gdprRequests: [{ status:"received" }, { status:"processed" }] } },
+    { id:"t2", name:"B", compliance: {} },
+  ] } };
+  const g = gdprOverview(store);
+  assert.equal(g.tenants, 2);
+  assert.equal(g.dpaMissing, 1);       // t2
+  assert.equal(g.openRequests, 1);     // t1 received
+  assert.equal(g.rows.find(r=>r.tenantId==="t1").totalRequests, 2);
+});

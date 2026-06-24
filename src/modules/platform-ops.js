@@ -92,4 +92,46 @@ function resellerPayouts(store, commissionOverview) {
   return { rows, totalMonthly: rows.reduce((s, r) => s + (r.commissionMonthly || 0), 0) };
 }
 
-module.exports = { eventLog, backupSummary, lifecycle, resellerPayouts };
+// Security-center: MFA-status van admins, vergrendelde accounts, support-toegang.
+// Geen PII-inhoud — enkel security-metadata die de operator nodig heeft.
+function securityCenter(store, mfaRisk, now = Date.now()) {
+  const users = store.data.users || [];
+  const mfa = mfaRisk(users);
+  const locked = users
+    .filter(u => u.lockedUntil && new Date(u.lockedUntil).getTime() > now)
+    .map(u => ({ id: u.id, name: u.name, email: u.email, tenantId: u.tenantId || null, lockedUntil: u.lockedUntil, failedLogins: u.failedLogins || 0 }));
+  const supportTenants = (store.data.tenants || [])
+    .filter(t => t.supportAccess && t.supportAccess.allowed === true)
+    .map(t => ({ tenantId: t.id, tenant: t.name || t.id, allowedAt: t.supportAccess.allowedAt || null, reviewDueAt: t.supportAccess.reviewDueAt || null }));
+  return {
+    mfa: { totalAdmins: mfa.totalAdmins, readyAdmins: mfa.readyAdmins, missingMfa: mfa.missingMfa, notEnforced: mfa.notEnforced, rows: mfa.rows },
+    locked,
+    supportAccess: supportTenants,
+  };
+}
+
+// GDPR/DPA-overzicht platformbreed: per tenant DPA-aanvaarding + openstaande
+// betrokkene-verzoeken (export/verwijdering).
+function gdprOverview(store) {
+  const OPEN = new Set(["received", "draft", "processing"]);
+  const rows = (store.data.tenants || []).map(t => {
+    const comp = t.compliance || {};
+    const reqs = comp.gdprRequests || [];
+    return {
+      tenantId: t.id, tenant: t.name || t.id,
+      dpaAccepted: !!comp.dpaAcceptedAt,
+      dpaAcceptedAt: comp.dpaAcceptedAt || null,
+      openRequests: reqs.filter(r => OPEN.has(r.status)).length,
+      totalRequests: reqs.length,
+      supportAccess: !!(t.supportAccess && t.supportAccess.allowed === true),
+    };
+  });
+  return {
+    rows,
+    tenants: rows.length,
+    dpaMissing: rows.filter(r => !r.dpaAccepted).length,
+    openRequests: rows.reduce((s, r) => s + r.openRequests, 0),
+  };
+}
+
+module.exports = { eventLog, backupSummary, lifecycle, resellerPayouts, securityCenter, gdprOverview };

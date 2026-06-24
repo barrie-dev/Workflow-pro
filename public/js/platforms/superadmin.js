@@ -254,6 +254,10 @@
         <svg viewBox="0 0 24 24"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>Operations
         <span class="nav-badge" id="navBadgeOps" style="display:none">0</span>
       </button>
+      <button class="sa-nav-item" data-view="security">
+        <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>Beveiliging
+        <span class="nav-badge" id="navBadgeSecurity" style="display:none">0</span>
+      </button>
       <button class="sa-nav-item" data-view="support">
         <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>Support-toegang
         <span class="nav-badge" id="navBadgeSupport" style="display:none">0</span>
@@ -307,7 +311,7 @@
         _view = btn.dataset.view;
         document.getElementById("saTopTitle").textContent = {
           dashboard:"Dashboard", tenants:"Tenants",
-          billing:"Facturatie / MRR", modules:"Modules & Bundels", integrations:"Integraties", system:"Systeem", ops:"Operations", support:"Support",
+          billing:"Facturatie / MRR", modules:"Modules & Bundels", integrations:"Integraties", system:"Systeem", ops:"Operations", security:"Beveiliging &amp; governance", support:"Support",
           staff:"Platformteam", resellers:"Resellers", audit:"Audit Log", settings:"Instellingen"
         }[_view] || _view;
         document.getElementById("saTopActions").innerHTML = "";
@@ -354,7 +358,7 @@
       document.querySelectorAll(".sa-nav-item[data-view]").forEach(btn => {
         const v = btn.getAttribute("data-view");
         if (v === "dashboard") return;
-        const reqScope = v === "ops" ? "system" : v; // ops valt onder de system-scope
+        const reqScope = (v === "ops" || v === "security") ? "system" : v; // ops/security vallen onder de system-scope
         if (v === "staff" || !scopes.has(reqScope)) btn.style.display = "none";
       });
       if (_view !== "dashboard" && !scopes.has(_view)) { _view = "dashboard"; renderView(); }
@@ -417,8 +421,53 @@
     }));
   }
 
+  // ── Beveiliging & governance: MFA, vergrendelde accounts, GDPR/DPA, API-keys ─
+  async function security() {
+    const c = content(); c.innerHTML = loader();
+    let sec = {}, gd = {}, kg = {};
+    try {
+      [sec, gd, kg] = await Promise.all([
+        api("/api/admin/security").catch(() => ({})),
+        api("/api/admin/gdpr-overview").catch(() => ({})),
+        api("/api/admin/api-key-governance").catch(() => ({})),
+      ]);
+    } catch (e) { c.innerHTML = `<div class="sa-card"><div class="sa-card-body">${esc(e.message)}</div></div>`; return; }
+    const s = sec.security || { mfa: { rows: [] }, locked: [], supportAccess: [] };
+    const mfa = s.mfa || { rows: [] };
+    const gdprRows = gd.rows || [];
+    const gov = kg.governance || { rows: [], blockers: 0, warnings: 0, checked: 0 };
+    c.innerHTML = `
+<div class="sa-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px">
+  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:#64748b">Admins met MFA klaar</div><div style="font-size:26px;font-weight:800;color:${mfa.readyAdmins===mfa.totalAdmins?"#16a34a":"#d97706"}">${mfa.readyAdmins||0}/${mfa.totalAdmins||0}</div><div style="font-size:12px;color:#64748b">${mfa.missingMfa||0} zonder MFA</div></div></div>
+  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:#64748b">Vergrendelde accounts</div><div style="font-size:26px;font-weight:800;color:${(s.locked||[]).length?"#dc2626":"#16a34a"}">${(s.locked||[]).length}</div><div style="font-size:12px;color:#64748b">na mislukte logins</div></div></div>
+  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:#64748b">DPA ontbreekt</div><div style="font-size:26px;font-weight:800;color:${(gd.dpaMissing||0)?"#d97706":"#16a34a"}">${gd.dpaMissing||0}</div><div style="font-size:12px;color:#64748b">van ${gd.tenants||0} tenants</div></div></div>
+  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:#64748b">Open GDPR-verzoeken</div><div style="font-size:26px;font-weight:800;color:${(gd.openRequests||0)?"#d97706":"#16a34a"}">${gd.openRequests||0}</div><div style="font-size:12px;color:#64748b">export/verwijdering</div></div></div>
+  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:#64748b">API-key-issues</div><div style="font-size:26px;font-weight:800;color:${gov.blockers?"#dc2626":gov.warnings?"#d97706":"#16a34a"}">${gov.blockers||0}/${gov.warnings||0}</div><div style="font-size:12px;color:#64748b">P0/P1 · ${gov.checked||0} keys</div></div></div>
+</div>
+
+<div class="sa-card" style="margin-bottom:16px"><div class="sa-card-head"><div class="sa-card-title">MFA-status admins</div></div>
+  <div class="sa-tbl-wrap"><table class="sa-tbl"><thead><tr><th>Naam</th><th>E-mail</th><th>Rol</th><th>Status</th></tr></thead><tbody>
+    ${(mfa.rows||[]).map(u => `<tr><td>${esc(u.name||"—")}</td><td>${esc(u.email)}</td><td>${esc(u.role)}</td><td>${u.ready?badge("klaar","badge-green"):badge(u.mfaEnabled?"niet afgedwongen":"geen MFA","badge-red")}</td></tr>`).join("") || "<tr><td colspan=4 style='color:#64748b'>Geen admins gevonden.</td></tr>"}
+  </tbody></table></div></div>
+
+${(s.locked||[]).length ? `<div class="sa-card" style="margin-bottom:16px"><div class="sa-card-head"><div class="sa-card-title">Vergrendelde accounts</div></div>
+  <div class="sa-tbl-wrap"><table class="sa-tbl"><thead><tr><th>E-mail</th><th>Mislukte logins</th><th>Vergrendeld tot</th></tr></thead><tbody>
+    ${s.locked.map(u => `<tr><td>${esc(u.email)}</td><td>${u.failedLogins}</td><td>${fmtDT(u.lockedUntil)}</td></tr>`).join("")}
+  </tbody></table></div></div>` : ""}
+
+<div class="sa-card" style="margin-bottom:16px"><div class="sa-card-head"><div class="sa-card-title">GDPR / DPA per tenant</div></div>
+  <div class="sa-tbl-wrap"><table class="sa-tbl"><thead><tr><th>Tenant</th><th>DPA</th><th>Open verzoeken</th><th>Totaal</th><th>Support-toegang</th></tr></thead><tbody>
+    ${gdprRows.map(r => `<tr><td>${esc(r.tenant)}</td><td>${r.dpaAccepted?badge("aanvaard","badge-green"):badge("ontbreekt","badge-red")}</td><td>${r.openRequests||0}</td><td>${r.totalRequests||0}</td><td>${r.supportAccess?badge("aan","badge-yellow"):"—"}</td></tr>`).join("") || "<tr><td colspan=5 style='color:#64748b'>Geen tenants.</td></tr>"}
+  </tbody></table></div></div>
+
+<div class="sa-card"><div class="sa-card-head"><div class="sa-card-title">API-key-governance</div></div>
+  <div class="sa-card-body" style="padding:12px 16px">
+    ${(gov.openP0||[]).concat(gov.openP1||[]).length ? (gov.openP0||[]).concat(gov.openP1||[]).map(i => `<div style="display:flex;gap:8px;align-items:center;font-size:13px;margin-bottom:4px"><span>${i.priority==="P0"?"⛔":"⚠️"}</span><strong>${esc((i.key&&i.key.label)||(i.key&&i.key.id)||"key")}</strong><span style="color:#64748b">${esc(i.detail||i.code||"")}</span></div>`).join("") : "<div style='color:#16a34a;font-size:13px'>✅ Geen openstaande API-key-issues.</div>"}
+  </div></div>`;
+  }
+
   // ── Router ─────────────────────────────────────────────────
-  const VIEWS = { dashboard, tenants, billing, modules, integrations, system, ops, support, staff, resellers, audit, settings };
+  const VIEWS = { dashboard, tenants, billing, modules, integrations, system, ops, security, support, staff, resellers, audit, settings };
   function renderView() { (VIEWS[_view] || dashboard)(); }
 
   // ══════════════════════════════════════════════════════════

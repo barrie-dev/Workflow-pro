@@ -1054,3 +1054,21 @@ test("commercieel: plan-prijzen GET/PUT + lifecycle + payouts(csv) + gating", as
   const jan = await login("jan@demobouw.be", "Demo2026!");
   assert.equal((await fetch(`${BASE}/api/admin/plan-prices`, { headers: H(jan.token) })).status, 403);
 });
+
+// ── SA-governance: security-center, GDPR-overzicht, API-key-governance ──────
+test("governance: security/gdpr/api-key endpoints + gating", async () => {
+  const god = await login("super@workflowpro.be", "Demo2026!");
+  const H = t => ({ Authorization: `Bearer ${t}` });
+  const sec = await (await fetch(`${BASE}/api/admin/security`, { headers: H(god.token) })).json();
+  assert.equal(sec.ok, true);
+  assert.ok(sec.security && sec.security.mfa && Array.isArray(sec.security.locked));
+  const gd = await (await fetch(`${BASE}/api/admin/gdpr-overview`, { headers: H(god.token) })).json();
+  assert.equal(gd.ok, true);
+  assert.ok(typeof gd.dpaMissing === "number" && Array.isArray(gd.rows));
+  const kg = await (await fetch(`${BASE}/api/admin/api-key-governance`, { headers: H(god.token) })).json();
+  assert.equal(kg.ok, true);
+  assert.ok(kg.governance && typeof kg.governance.blockers === "number");
+  // gating
+  const jan = await login("jan@demobouw.be", "Demo2026!");
+  assert.equal((await fetch(`${BASE}/api/admin/security`, { headers: H(jan.token) })).status, 403);
+});

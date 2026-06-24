@@ -140,7 +140,7 @@ const { clockIn, clockOut, approveExpense, managementReport } = require("./modul
 const { listIntegrations, connectIntegration, updateMapping, runSync, retrySync, listProviders } = require("./modules/integrations");
 const { commissionOverview, publicReseller, commissionPctFor } = require("./modules/resellers");
 const saml = require("./modules/saml");
-const { tenantStatus, unlockUser, listBackups, createBackup, backupPreview, restoreBackup, publicStatus } = require("./modules/admin");
+const { tenantStatus, unlockUser, listBackups, createBackup, backupPreview, restoreBackup, publicStatus, mfaRisk } = require("./modules/admin");
 const { createNotification, listNotifications, markNotificationRead, generateReminders, notificationSummary } = require("./modules/notifications");
 const { importEmployees } = require("./modules/imports");
 const { runSupportAccessReview } = require("./modules/support-access");
@@ -157,7 +157,7 @@ const { listReports, getReport, generateStatusBundle } = require("./modules/repo
 const { listAuditEvents } = require("./modules/audit");
 const { sendMail, setRuntimeConfig, isMailLive, recentMail } = require("./lib/mailer");
 const { productionReadiness } = require("./modules/production");
-const { eventLog, backupSummary, lifecycle, resellerPayouts } = require("./modules/platform-ops");
+const { eventLog, backupSummary, lifecycle, resellerPayouts, securityCenter, gdprOverview } = require("./modules/platform-ops");
 const { setPlanPriceOverrides, planPricing } = require("./modules/billing");
 const { loadPlatformConfig, publicPlatformConfig, savePlatformConfig } = require("./modules/platform-config");
 const { createPaymentLink, markInvoicePaidById } = require("./modules/payments");
@@ -1133,6 +1133,29 @@ http.createServer(async (req, res) => {
         return;
       }
       sendJson(res, 200, { ok: true, ...payouts });
+      return;
+    }
+
+    // ── Governance: security-center, GDPR/DPA-overzicht, API-key-governance ──
+    if (url.pathname === "/api/admin/security" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "system");
+      sendJson(res, 200, { ok: true, security: securityCenter(store, mfaRisk) });
+      return;
+    }
+    if (url.pathname === "/api/admin/gdpr-overview" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "support");
+      sendJson(res, 200, { ok: true, ...gdprOverview(store) });
+      return;
+    }
+    if (url.pathname === "/api/admin/api-key-governance" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "integrations");
+      sendJson(res, 200, { ok: true, governance: apiKeyGovernance(store, { strict: url.searchParams.get("strict") === "1" }) });
       return;
     }
 
