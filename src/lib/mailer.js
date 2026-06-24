@@ -212,22 +212,35 @@ async function sendViaSmtp(mail) {
  * @param {object} mail  - { to, subject, html, text, from? }
  * @returns {Promise<{ok:boolean, provider:string}>}
  */
+// Lichte in-memory ring-buffer van recente verzendpogingen — geeft de superadmin
+// zicht op deliverability (laatste 100). Best-effort: per server-instance, reset
+// bij herstart. (Voor audit-grade logging → externe provider-dashboards.)
+const MAIL_LOG = [];
+function recordMail(entry) { MAIL_LOG.push(entry); if (MAIL_LOG.length > 100) MAIL_LOG.shift(); }
+function recentMail() { return MAIL_LOG.slice().reverse(); }
+
 async function sendMail(mail) {
   if (!mail?.to || !mail?.subject) {
     throw new Error("sendMail: 'to' en 'subject' zijn verplicht");
   }
 
   const provider = activeProvider();
+  const to = Array.isArray(mail.to) ? mail.to.join(", ") : String(mail.to);
+  const base = { to, subject: String(mail.subject), provider, at: new Date().toISOString() };
   try {
+    let res;
     switch (provider) {
-      case "smtp":      return await sendViaSmtp(mail);
-      case "resend":    return await sendViaResend(mail);
-      case "sendgrid":  return await sendViaSendGrid(mail);
-      default:          return await sendViaLog(mail);   // "log" + onbekende waarden
+      case "smtp":      res = await sendViaSmtp(mail); break;
+      case "resend":    res = await sendViaResend(mail); break;
+      case "sendgrid":  res = await sendViaSendGrid(mail); break;
+      default:          res = await sendViaLog(mail); break;   // "log" + onbekende waarden
     }
+    recordMail({ ...base, ok: res.ok !== false, provider: res.provider || provider });
+    return res;
   } catch (err) {
     // E-mail-fouten loggen maar NOOIT de request laten crashen; val terug op log
     console.error(`[mailer] Verzenden mislukt (${provider}): ${err.message} — fallback naar log`);
+    recordMail({ ...base, ok: false, error: err.message });
     await sendViaLog(mail).catch(() => {});
     return { ok: false, provider, error: err.message };
   }
@@ -294,4 +307,4 @@ function isMailLive() {
   return false; // "log" of onbekend → niet live
 }
 
-module.exports = { sendMail, wrapHtml, EMAIL_FROM, setRuntimeConfig, isMailLive };
+module.exports = { sendMail, wrapHtml, EMAIL_FROM, setRuntimeConfig, isMailLive, recentMail };

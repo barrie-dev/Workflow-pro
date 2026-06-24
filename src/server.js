@@ -155,7 +155,9 @@ const { salesSummary, salesLaunchReadiness, advanceLead, addPartnerNote } = requ
 const { goLiveReadiness } = require("./modules/go-live");
 const { listReports, getReport, generateStatusBundle } = require("./modules/reports");
 const { listAuditEvents } = require("./modules/audit");
-const { sendMail, setRuntimeConfig, isMailLive } = require("./lib/mailer");
+const { sendMail, setRuntimeConfig, isMailLive, recentMail } = require("./lib/mailer");
+const { productionReadiness } = require("./modules/production");
+const { eventLog, backupSummary } = require("./modules/platform-ops");
 const { loadPlatformConfig, publicPlatformConfig, savePlatformConfig } = require("./modules/platform-config");
 const { createPaymentLink, markInvoicePaidById } = require("./modules/payments");
 const { createSubscriptionCheckout, createBillingPortalSession, applySubscriptionEvent } = require("./modules/subscriptions");
@@ -1567,6 +1569,53 @@ http.createServer(async (req, res) => {
       const limit = Number(url.searchParams.get("limit") || 100);
       const errors = (store.data.errorEvents || []).slice().reverse().slice(0, limit);
       sendJson(res, 200, { ok: true, errors });
+      return;
+    }
+
+    // ── Platform-operations (superadmin): readiness, events, mail-log, backups ──
+    if (url.pathname === "/api/admin/readiness" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "system");
+      sendJson(res, 200, { ok: true, readiness: productionReadiness(store) });
+      return;
+    }
+    if (url.pathname === "/api/admin/events" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "system");
+      sendJson(res, 200, { ok: true, ...eventLog(store, Number(url.searchParams.get("limit") || 60)) });
+      return;
+    }
+    if (url.pathname === "/api/admin/mail-log" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "system");
+      sendJson(res, 200, { ok: true, mail: recentMail(), live: isMailLive() });
+      return;
+    }
+    if (url.pathname === "/api/admin/backups" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "system");
+      sendJson(res, 200, { ok: true, ...backupSummary(store, listBackups) });
+      return;
+    }
+    const adminBackupMatch = url.pathname.match(/^\/api\/admin\/backups\/([^/]+)(?:\/([^/]+)\/restore)?$/);
+    if (adminBackupMatch && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      const tenant = store.data.tenants.find(t => t.id === adminBackupMatch[1]);
+      if (!tenant) return sendJson(res, 404, { ok: false, error: "Tenant niet gevonden" });
+      if (adminBackupMatch[2]) {
+        // Herstel = destructief → enkel de hoofd-superadmin (god).
+        assertPlatformGod(user);
+        const body = await readBody(req).catch(() => ({}));
+        sendJson(res, 200, { ok: true, result: restoreBackup(store, tenant, adminBackupMatch[2], user, body.confirm === true) });
+      } else {
+        assertPlatformScope(user, "system");
+        sendJson(res, 201, { ok: true, backup: createBackup(store, tenant, user) });
+      }
       return;
     }
 

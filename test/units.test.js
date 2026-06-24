@@ -459,3 +459,29 @@ test("peppol: buildUbl produceert geldige BIS 3.0 UBL met kernvelden", () => {
   assert.match(xml, /BE0678901218/); // klant-BTW
   assert.match(xml, /<cbc:Percent>21\.00<\/cbc:Percent>/);
 });
+
+// ── Platform-ops aggregaties (superadmin Operations) ─────────
+const { eventLog, backupSummary } = require("../src/modules/platform-ops");
+
+test("platform-ops: eventLog aggregeert events platformbreed, telt fouten", () => {
+  const store = { data: { tenants: [
+    { id: "t1", name: "A", billingOps: { stripeEvents: [ { id:"e1", type:"invoice.payment_succeeded", status:"processed", action:"invoice_paid", at:"2026-06-01T10:00:00Z" } ] } },
+    { id: "t2", name: "B", billingOps: { stripeEvents: [ { id:"e2", type:"invoice.payment_failed", status:"failed", action:"payment_failed", at:"2026-06-02T10:00:00Z" } ] } },
+  ] } };
+  const r = eventLog(store, 10);
+  assert.equal(r.total, 2);
+  assert.equal(r.failed, 1);
+  assert.equal(r.events[0].tenant, "B", "nieuwste event eerst");
+});
+
+test("platform-ops: backupSummary markeert ontbrekend/oud per tenant", () => {
+  const store = { data: { tenants: [{ id:"t1", name:"A" }, { id:"t2", name:"B" }, { id:"t3", name:"C" }] } };
+  const old = new Date(Date.now() - 40 * 86400000).toISOString();
+  const fresh = new Date().toISOString();
+  const stub = tid => tid === "t1" ? [{ createdAt: fresh }] : tid === "t2" ? [{ createdAt: old }] : [];
+  const s = backupSummary(store, stub, 7);
+  assert.equal(s.tenants, 3);
+  assert.equal(s.missing, 1); // t3
+  assert.equal(s.stale, 1);   // t2
+  assert.equal(s.rows.find(r=>r.tenantId==="t1").status, "ok");
+});

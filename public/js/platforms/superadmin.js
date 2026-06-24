@@ -250,6 +250,10 @@
         <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>Systeem
         <span class="nav-badge" id="navBadgeErrors" style="display:none">0</span>
       </button>
+      <button class="sa-nav-item" data-view="ops">
+        <svg viewBox="0 0 24 24"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>Operations
+        <span class="nav-badge" id="navBadgeOps" style="display:none">0</span>
+      </button>
       <button class="sa-nav-item" data-view="support">
         <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>Support-toegang
         <span class="nav-badge" id="navBadgeSupport" style="display:none">0</span>
@@ -303,7 +307,7 @@
         _view = btn.dataset.view;
         document.getElementById("saTopTitle").textContent = {
           dashboard:"Dashboard", tenants:"Tenants",
-          billing:"Facturatie / MRR", modules:"Modules & Bundels", integrations:"Integraties", system:"Systeem", support:"Support",
+          billing:"Facturatie / MRR", modules:"Modules & Bundels", integrations:"Integraties", system:"Systeem", ops:"Operations", support:"Support",
           staff:"Platformteam", resellers:"Resellers", audit:"Audit Log", settings:"Instellingen"
         }[_view] || _view;
         document.getElementById("saTopActions").innerHTML = "";
@@ -350,14 +354,71 @@
       document.querySelectorAll(".sa-nav-item[data-view]").forEach(btn => {
         const v = btn.getAttribute("data-view");
         if (v === "dashboard") return;
-        if (v === "staff" || !scopes.has(v)) btn.style.display = "none";
+        const reqScope = v === "ops" ? "system" : v; // ops valt onder de system-scope
+        if (v === "staff" || !scopes.has(reqScope)) btn.style.display = "none";
       });
       if (_view !== "dashboard" && !scopes.has(_view)) { _view = "dashboard"; renderView(); }
     } catch (_) {}
   }
 
+  // ── Operations: backups, webhook-/betaal-events, e-mail-log, readiness ──────
+  async function ops() {
+    const c = content(); c.innerHTML = loader();
+    let rd = {}, ev = {}, ml = {}, bk = {};
+    try {
+      [rd, ev, ml, bk] = await Promise.all([
+        api("/api/admin/readiness").catch(() => ({})),
+        api("/api/admin/events").catch(() => ({})),
+        api("/api/admin/mail-log").catch(() => ({})),
+        api("/api/admin/backups").catch(() => ({})),
+      ]);
+    } catch (e) { c.innerHTML = `<div class="sa-card"><div class="sa-card-body">${esc(e.message)}</div></div>`; return; }
+    const r = rd.readiness || { score: 0, blockers: 0, checks: [] };
+    const evRows = ev.events || [];
+    const mail = ml.mail || [];
+    const bkRows = bk.rows || [];
+    const evStatus = s => s === "failed" || s === "payment_failed" ? "badge-red" : (s === "processed" || s === "invoice_paid" || s === "active" ? "badge-green" : "badge-gray");
+    c.innerHTML = `
+<div class="sa-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px">
+  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:#64748b">Productie-readiness</div><div style="font-size:26px;font-weight:800;color:${r.score>=90?"#16a34a":r.score>=60?"#d97706":"#dc2626"}">${r.score}%</div><div style="font-size:12px;color:#64748b">${r.blockers} P0-blockers</div></div></div>
+  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:#64748b">Betaal-events (fout)</div><div style="font-size:26px;font-weight:800;color:${(ev.failed||0)?"#dc2626":"#16a34a"}">${ev.failed||0}</div><div style="font-size:12px;color:#64748b">${ev.total||0} totaal</div></div></div>
+  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:#64748b">Backups ontbreken/oud</div><div style="font-size:26px;font-weight:800;color:${(bk.missing||0)+(bk.stale||0)?"#d97706":"#16a34a"}">${(bk.missing||0)+(bk.stale||0)}</div><div style="font-size:12px;color:#64748b">van ${bk.tenants||0} tenants</div></div></div>
+  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:#64748b">E-mail live</div><div style="font-size:26px;font-weight:800;color:${ml.live?"#16a34a":"#d97706"}">${ml.live?"Ja":"Log"}</div><div style="font-size:12px;color:#64748b">${mail.filter(m=>!m.ok).length} recente fouten</div></div></div>
+</div>
+
+<div class="sa-card" style="margin-bottom:16px"><div class="sa-card-head"><div class="sa-card-title">Productie-readiness</div></div>
+  <div class="sa-card-body" style="padding:12px 16px;display:flex;flex-direction:column;gap:5px">
+    ${(r.checks||[]).map(ch => `<div style="display:flex;gap:8px;align-items:center;font-size:13px">
+      <span>${ch.ok?"✅":(ch.priority==="P0"?"⛔":"⚠️")}</span>
+      <strong style="min-width:200px">${esc(ch.label)}</strong>
+      <span style="color:#64748b">${esc(ch.detail||"")}</span></div>`).join("") || "<div style='color:#64748b'>Geen checks.</div>"}
+  </div></div>
+
+<div class="sa-card" style="margin-bottom:16px"><div class="sa-card-head"><div class="sa-card-title">Backups per tenant</div></div>
+  <div class="sa-tbl-wrap"><table class="sa-tbl"><thead><tr><th>Tenant</th><th>Aantal</th><th>Laatste</th><th>Status</th><th></th></tr></thead><tbody>
+    ${bkRows.map(b => `<tr data-bk="${esc(b.tenantId)}"><td>${esc(b.tenant)}</td><td>${b.count}</td><td>${b.latestAt?fmtDT(b.latestAt):"—"}</td>
+      <td>${badge(b.status==="ok"?"vers":b.status==="stale"?`${b.ageDays}d oud`:"ontbreekt", b.status==="ok"?"badge-green":b.status==="stale"?"badge-yellow":"badge-red")}</td>
+      <td><button class="sa-btn btn-secondary sm bk-make" data-id="${esc(b.tenantId)}">Backup maken</button></td></tr>`).join("") || "<tr><td colspan=5 style='color:#64748b'>Geen tenants.</td></tr>"}
+  </tbody></table></div></div>
+
+<div class="sa-card" style="margin-bottom:16px"><div class="sa-card-head"><div class="sa-card-title">Webhook-/betaal-events</div></div>
+  <div class="sa-tbl-wrap"><table class="sa-tbl"><thead><tr><th>Tijd</th><th>Tenant</th><th>Type</th><th>Actie</th><th>Status</th></tr></thead><tbody>
+    ${evRows.map(e => `<tr><td>${fmtDT(e.at)}</td><td>${esc(e.tenant)}</td><td style="font-family:monospace;font-size:12px">${esc(e.type)}</td><td>${esc(e.action||"—")}</td><td>${badge(e.status||"—", evStatus(e.status||e.action))}</td></tr>`).join("") || "<tr><td colspan=5 style='color:#64748b'>Nog geen events.</td></tr>"}
+  </tbody></table></div></div>
+
+<div class="sa-card"><div class="sa-card-head"><div class="sa-card-title">E-mail-log (recent)</div></div>
+  <div class="sa-tbl-wrap"><table class="sa-tbl"><thead><tr><th>Tijd</th><th>Aan</th><th>Onderwerp</th><th>Provider</th><th>Status</th></tr></thead><tbody>
+    ${mail.map(m => `<tr><td>${fmtDT(m.at)}</td><td>${esc(m.to)}</td><td>${esc(m.subject)}</td><td>${esc(m.provider)}</td><td>${badge(m.ok?"ok":"fout", m.ok?"badge-green":"badge-red")}</td></tr>`).join("") || "<tr><td colspan=5 style='color:#64748b'>Nog geen verzendingen op deze server-instance.</td></tr>"}
+  </tbody></table></div></div>`;
+    c.querySelectorAll(".bk-make").forEach(btn => btn.addEventListener("click", async () => {
+      btn.disabled = true; btn.textContent = "Bezig…";
+      try { await api(`/api/admin/backups/${btn.dataset.id}`, { method: "POST" }); window.showToast && window.showToast("Backup gemaakt ✓", "success"); ops(); }
+      catch (e) { window.showToast && window.showToast(e.message, "error"); btn.disabled = false; btn.textContent = "Backup maken"; }
+    }));
+  }
+
   // ── Router ─────────────────────────────────────────────────
-  const VIEWS = { dashboard, tenants, billing, modules, integrations, system, support, staff, resellers, audit, settings };
+  const VIEWS = { dashboard, tenants, billing, modules, integrations, system, ops, support, staff, resellers, audit, settings };
   function renderView() { (VIEWS[_view] || dashboard)(); }
 
   // ══════════════════════════════════════════════════════════

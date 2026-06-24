@@ -1003,3 +1003,24 @@ test("addons: superadmin bewerkt naam/prijs/actief, doorwerking naar /api/plans"
   // Heractiveren voor andere tests
   await fetch(`${BASE}/api/admin/addons`, { method: "PUT", headers: H, body: JSON.stringify({ addons: { ai_actions: { active: true } } }) });
 });
+
+// ── Platform-operations (superadmin): readiness/events/mail-log/backups ─────
+test("ops: platform-operations endpoints + scope-gating", async () => {
+  const god = await login("super@workflowpro.be", "Demo2026!");
+  const H = t => ({ Authorization: `Bearer ${t}` });
+  for (const path of ["readiness", "events", "mail-log", "backups"]) {
+    const r = await fetch(`${BASE}/api/admin/${path}`, { headers: H(god.token) });
+    assert.equal(r.status, 200, `${path} → 200 voor superadmin`);
+    const d = await r.json(); assert.equal(d.ok, true);
+  }
+  // readiness bevat een score + checks
+  const rd = await (await fetch(`${BASE}/api/admin/readiness`, { headers: H(god.token) })).json();
+  assert.ok(typeof rd.readiness.score === "number" && Array.isArray(rd.readiness.checks));
+  // gewone tenant-gebruiker mag niet
+  const jan = await login("jan@demobouw.be", "Demo2026!");
+  const denied = await fetch(`${BASE}/api/admin/backups`, { headers: H(jan.token) });
+  assert.equal(denied.status, 403, "tenant-gebruiker → 403 op platform-ops");
+  // backup-restore is god-only en destructief → niet-god krijgt 403 (geen herstel)
+  const restore = await fetch(`${BASE}/api/admin/backups/t_demo/x/restore`, { method: "POST", headers: { ...H(jan.token), "Content-Type": "application/json" }, body: "{}" });
+  assert.equal(restore.status, 403);
+});
