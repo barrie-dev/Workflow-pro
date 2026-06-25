@@ -1688,7 +1688,10 @@ ${canManage ? `
   async function integrations() {
     const c = content(); c.innerHTML = loader();
     try {
-      const d = await api("/api/admin/integrations");
+      const [d, tint] = await Promise.all([
+        api("/api/admin/integrations"),
+        api("/api/admin/tenant-integrations").catch(() => ({ rows: [], total: 0, connected: 0 })),
+      ]);
       const cfg = d.config || {};
       const statusPill = ok => ok ? badge("Geconfigureerd","badge-green") : badge("Dummy","badge-orange");
       c.innerHTML = `
@@ -1702,6 +1705,7 @@ ${canManage ? `
 </div>
 
 <form id="saIntegrationsForm">
+  <div class="sa-int-sec">Betalingen</div>
   <div class="sa-card">
     <div class="sa-card-head"><div class="sa-card-title">💳 Stripe — betalingen</div><div class="sa-card-sub">${statusPill(cfg.stripe?.configured)} ${cfg.stripe?.mode?badge(cfg.stripe.mode, cfg.stripe.mode==="live"?"badge-green":"badge-blue"):""}</div></div>
     <div style="padding:16px;display:grid;gap:12px">
@@ -1710,6 +1714,7 @@ ${canManage ? `
     </div>
   </div>
 
+  <div class="sa-int-sec">E-facturatie (Peppol)</div>
   <div class="sa-card">
     <div class="sa-card-head"><div class="sa-card-title">📧 Peppol — e-facturatie (BE)</div><div class="sa-card-sub">${statusPill(cfg.peppol?.configured)}</div></div>
     <div style="padding:16px;display:grid;gap:12px">
@@ -1722,6 +1727,7 @@ ${canManage ? `
     </div>
   </div>
 
+  <div class="sa-int-sec">Communicatie</div>
   <div class="sa-card">
     <div class="sa-card-head"><div class="sa-card-title">✉️ E-mail — verzending</div><div class="sa-card-sub">${statusPill(cfg.email?.configured)}</div></div>
     <div style="padding:16px;display:grid;gap:12px">
@@ -1735,6 +1741,7 @@ ${canManage ? `
     </div>
   </div>
 
+  <div class="sa-int-sec">Bedrijfsdata</div>
   <div class="sa-card">
     <div class="sa-card-head"><div class="sa-card-title">🏢 KBO — bedrijfsopzoeking</div><div class="sa-card-sub">${statusPill(cfg.kbo?.configured)}</div></div>
     <div style="padding:16px;display:grid;gap:12px">
@@ -1747,10 +1754,11 @@ ${canManage ? `
     </div>
   </div>
 
+  <div class="sa-int-sec">Compliance (BE bouw)</div>
   <div class="sa-card">
-    <div class="sa-card-head"><div class="sa-card-title">🦺 CIAW — Checkin@Work (BE bouw)</div><div class="sa-card-sub">${statusPill(cfg.ciaw?.configured)}</div></div>
+    <div class="sa-card-head"><div class="sa-card-title">🦺 Checkin@Work (CIAW) + Limosa — RSZ-gateway</div><div class="sa-card-sub">${statusPill(cfg.ciaw?.configured)}</div></div>
     <div style="padding:16px;display:grid;gap:12px">
-      <div style="font-size:12px;color:#64748b;font-weight:400">Aanwezigheidsregistratie op werven naar RSZ/ONSS. Zonder live provider draait dit in mock-modus. Het RSZ-werkgeversnummer staat per tenant (compliance).</div>
+      <div style="font-size:12px;color:#64748b;font-weight:400">Deze RSZ-gateway dekt <strong>zowel de Checkin@Work-aanwezigheidsaangiftes als de Limosa-meldingen</strong>. Zonder live provider draait alles in mock-modus. Het RSZ-werkgeversnummer stelt elke klant zelf in (Compliance → Checkin@Work).</div>
       <label class="sa-fld"><span>Provider</span>
         <select name="ciaw.provider">
           ${["mock","rsz"].map(p=>`<option value="${p}" ${cfg.ciaw?.provider===p?"selected":""}>${p}</option>`).join("")}
@@ -1761,6 +1769,7 @@ ${canManage ? `
     </div>
   </div>
 
+  <div class="sa-int-sec">AI-assistent</div>
   <div class="sa-card">
     <div class="sa-card-head"><div class="sa-card-title">🤖 Boden — AI-assistent (OpenAI)</div><div class="sa-card-sub">${statusPill(cfg.openai?.configured)}</div></div>
     <div style="padding:16px;display:grid;gap:12px">
@@ -1775,7 +1784,16 @@ ${canManage ? `
     <span id="saIntStatus" style="font-size:13px"></span>
   </div>
 </form>
+
+<div class="sa-card" style="margin-top:8px">
+  <div class="sa-card-head"><div class="sa-card-title">🔌 Klant-koppelingen (alleen-lezen)</div><div class="sa-card-sub">${(tint.connected||0)}/${(tint.total||0)} verbonden · eigen ERP/boekhouding van klanten — beheerd door de klant zelf</div></div>
+  <div class="sa-tbl-wrap"><table class="sa-tbl"><thead><tr><th>Tenant</th><th>Koppeling</th><th>Status</th><th>Sleutel</th><th>Laatste sync</th></tr></thead><tbody>
+    ${(tint.rows||[]).map(r => `<tr><td>${esc(r.tenant)}</td><td>${esc(r.provider)}</td><td>${esc(r.status)}</td><td>${r.hasSecret?badge("ingesteld","badge-green"):badge("geen","badge-gray")}</td><td style="font-size:12px;color:#64748b">${r.lastSyncAt?fmtDT(r.lastSyncAt):"—"}</td></tr>`).join("") || "<tr><td colspan=5 style='color:#64748b;padding:14px'>Nog geen klant-koppelingen. Klanten verbinden hun ERP via hun eigen Koppelingen-scherm.</td></tr>"}
+  </tbody></table></div>
+</div>
 <style>
+.sa-int-sec{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#64748b;margin:20px 4px 8px;padding-top:6px;border-top:1px solid #eef2f7}
+.sa-int-sec:first-of-type{border-top:none;margin-top:4px;padding-top:0}
 .sa-fld{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:600;color:#334155}
 .sa-fld input,.sa-fld select{padding:9px 11px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;font-weight:400}
 .sa-fld input:focus,.sa-fld select:focus{outline:none;border-color:#2563EB;box-shadow:0 0 0 3px rgba(37,99,235,.12)}

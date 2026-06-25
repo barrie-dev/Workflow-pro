@@ -1168,3 +1168,19 @@ test("robaws: document-sync bouwt manifest per werf (mock)", async () => {
   assert.equal(sj.result.log.kind, "documents");
   assert.ok(sj.result.manifest && typeof sj.result.manifest.totals.projects === "number");
 });
+
+// ── Koppelingen-herindeling: klant-koppelingen-overzicht + limosaMode ───────
+test("koppelingen: superadmin tenant-integrations overzicht + posted_workers limosaMode", async () => {
+  const god = await login("super@workflowpro.be", "Demo2026!");
+  const H = { Authorization: `Bearer ${god.token}` };
+  const ov = await (await fetch(`${BASE}/api/admin/tenant-integrations`, { headers: H })).json();
+  assert.equal(ov.ok, true);
+  assert.ok(Array.isArray(ov.rows) && typeof ov.total === "number");
+  // posted_workers (super omzeilt module-gate) bevat de limosaMode-indicator
+  const pw = await (await fetch(`${BASE}/api/tenants/t_demo/posted_workers`, { headers: H })).json();
+  assert.equal(pw.ok, true);
+  assert.ok(pw.limosaMode === "live" || pw.limosaMode === "mock");
+  // gating: gewone gebruiker mag het overzicht niet
+  const jan = await login("jan@demobouw.be", "Demo2026!");
+  assert.equal((await fetch(`${BASE}/api/admin/tenant-integrations`, { headers: { Authorization: `Bearer ${jan.token}` } })).status, 403);
+});

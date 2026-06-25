@@ -295,7 +295,7 @@
       <div class="adm-nav-label">Systeem</div>
       <a class="adm-nav-item" data-view="integrations" href="#">
         <svg viewBox="0 0 24 24"><path d="M22 7h-7V2H9v5H2v15h20V7zM11 4h2v3h-2V4zm9 16H4V9h16v11zM9 13h2v2H9v-2zm4 0h2v2h-2v-2z"/></svg>
-        <span>Integraties</span>
+        <span>Koppelingen</span>
       </a>
       <a class="adm-nav-item" data-view="roadmap" href="#">
         <svg viewBox="0 0 24 24"><path d="M21 3L3 10.53v.98l6.84 2.65L12.48 21h.98L21 3z"/></svg>
@@ -451,7 +451,7 @@
     customers: "Klanten", offertes: "Offertes", facturen: "Facturen", venues: "Locaties", vehicles: "Voertuigen",
     stock: "Stock", billing: "Facturatie",
     ciaw: "Checkin@Work (CIAW)", posted_workers: "A1 / Limosa detachering",
-    integrations: "Integraties", roadmap: "Roadmap", audit: "Audittrail", settings: "Instellingen"
+    integrations: "Koppelingen", roadmap: "Roadmap", audit: "Audittrail", settings: "Instellingen"
   };
 
   const VIEW_BTN_LABEL = {
@@ -4533,10 +4533,7 @@ ${billing.status === "trial" ? `<div style="background:#fffbeb;border:1px solid 
     const byProvider = Object.fromEntries((data.rows || []).map(r => [r.provider, r]));
     const fmtDT = s => s ? new Date(s).toLocaleString("nl-BE") : "—";
 
-    content.innerHTML = `
-<div style="font-size:13px;color:#64748b;margin-bottom:14px">Koppel je boekhouding en werfsoftware. Sleutels worden versleuteld bewaard; zonder geldige sleutel draait een sync in testmodus.</div>
-<div class="adm-grid-2">
-${providers.map(p => {
+    const providerCard = p => {
   const conn = byProvider[p.key];
   const ss = (conn && conn.syncSummary) || {};
   return `
@@ -4565,8 +4562,15 @@ ${providers.map(p => {
     `}
   </div>
 </div>`;
-}).join("")}
-</div>`;
+    };
+    const categories = [...new Set(providers.map(p => p.category))];
+    content.innerHTML = `
+<div style="font-size:13px;color:#64748b;margin-bottom:14px">Koppel je boekhouding en werfsoftware. Sleutels worden versleuteld bewaard; zonder geldige sleutel draait een sync in testmodus.</div>
+<div class="adm-card" style="margin-bottom:16px;background:#f0f9ff;border:1px solid #bae6fd"><div class="adm-card-body" style="font-size:13px;color:#075985">ℹ️ <strong>Compliance-aangiftes</strong> (Checkin@Work / CIAW en Limosa) verlopen <strong>automatisch</strong> bij in-/uitklokken — die beheer je niet hier maar onder <strong>Compliance → Checkin@Work</strong> en <strong>A1 / Limosa</strong>.</div></div>
+${categories.map(cat => `
+  <div class="adm-nav-label" style="margin:18px 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#64748b">${esc(cat)}</div>
+  <div class="adm-grid-2">${providers.filter(p => p.category === cat).map(providerCard).join("")}</div>
+`).join("")}`;
 
     content.querySelectorAll("form[data-connect]").forEach(form => {
       form.addEventListener("submit", async e => {
@@ -5361,6 +5365,7 @@ ${enrolled.map(e => `
     c.innerHTML = `
 <div class="adm-card" style="padding:14px 16px;margin-bottom:14px">
   <div style="font-size:13px;color:#475569;margin-bottom:6px">Detacheringsdossiers van (onder)aannemers en buitenlandse werknemers. Bewaak de geldigheid van A1-attesten en dien Limosa-meldingen in.</div>
+  <div style="font-size:12px;margin-bottom:6px">Limosa-provider: ${data.limosaMode === "live" ? '<span style="color:#15803d;font-weight:600">● actief (live)</span>' : '<span style="color:#a16207;font-weight:600">● testmodus (mock)</span> — meldingen worden gesimuleerd tot de provider live staat'}</div>
   <div style="display:flex;gap:14px;font-size:12px;color:#64748b">
     <span>${data.total || 0} dossiers</span>
     ${data.expired ? `<span style="color:#b91c1c">⛔ ${data.expired} verlopen</span>` : ""}

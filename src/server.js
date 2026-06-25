@@ -988,6 +988,22 @@ http.createServer(async (req, res) => {
       sendJson(res, 200, { ok: true, config: publicPlatformConfig(store) });
       return;
     }
+    // Read-only overzicht van de eigen koppelingen (Robaws/Exact/…) per tenant.
+    // De config zelf blijft tenant-zijde; dit is enkel operatorzicht (geen secrets).
+    if (url.pathname === "/api/admin/tenant-integrations" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "integrations");
+      const tenantName = {};
+      for (const t of store.data.tenants || []) tenantName[t.id] = t.name || t.id;
+      const rows = (store.data.integrations || []).map(i => ({
+        tenantId: i.tenantId, tenant: tenantName[i.tenantId] || i.tenantId,
+        provider: i.provider, status: i.status || "—",
+        hasSecret: !!i.encryptedSecret, lastSyncAt: i.lastSyncAt || null,
+      })).sort((a, b) => String(a.tenant).localeCompare(String(b.tenant)));
+      sendJson(res, 200, { ok: true, rows, total: rows.length, connected: rows.filter(r => r.hasSecret).length });
+      return;
+    }
     if (url.pathname === "/api/admin/integrations" && req.method === "PUT") {
       const user = actor(req);
       if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
@@ -3328,7 +3344,9 @@ http.createServer(async (req, res) => {
       // ── A1 / Limosa — detachering van (onder)aannemers (compliance-add-on) ──
       if (action === "posted_workers" && req.method === "GET") {
         assertInteractiveUser(user);
-        sendJson(res, 200, { ok: true, ...listPostedWorkers(store, tenant) });
+        const ciawCfg = (loadPlatformConfig(store).ciaw) || {};
+        const limosaMode = (ciawCfg.provider && ciawCfg.provider !== "mock" && !/DUMMY|replace|changeme|xxxx/i.test(String(ciawCfg.apiKey || ""))) ? "live" : "mock";
+        sendJson(res, 200, { ok: true, ...listPostedWorkers(store, tenant), limosaMode });
         return;
       }
       if (action === "posted_workers" && req.method === "POST") {
