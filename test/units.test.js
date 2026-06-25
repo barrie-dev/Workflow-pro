@@ -620,15 +620,15 @@ test("geo: verifyClockGeo binnen/buiten geofence + randgevallen", () => {
 const { buildCheckinDeclaration, submitCheckin, validInsz } = require("../src/modules/ciaw");
 
 test("ciaw: validInsz + buildCheckinDeclaration valideert verplichte velden", () => {
-  assert.equal(validInsz("90.02.01-123.45"), true);
+  assert.equal(validInsz("93.05.18-223.61"), true);
   assert.equal(validInsz("123"), false);
   const tenant = { compliance: { rszEmployerId: "12345678" } };
-  const user = { name: "Jan", insz: "90020112345" };
+  const user = { name: "Jan", insz: "93051822361" };
   const venue = { id: "v1", name: "Werf A" };
   const ok = buildCheckinDeclaration({ tenant, clock: { id: "c1", date: "2026-06-25", clockIn: "08:00" }, user, venue, action: "in" });
   assert.equal(ok.valid, true);
   assert.equal(ok.declaration.action, "IN");
-  assert.equal(ok.declaration.worker.insz, "90020112345");
+  assert.equal(ok.declaration.worker.insz, "93051822361");
   // ontbrekend RSZ-nummer + INSZ → errors
   const bad = buildCheckinDeclaration({ tenant: {}, clock: { id: "c2", date: "2026-06-25" }, user: {}, venue: null, action: "in" });
   assert.equal(bad.valid, false);
@@ -637,7 +637,7 @@ test("ciaw: validInsz + buildCheckinDeclaration valideert verplichte velden", ()
 
 test("ciaw: submitCheckin valt terug op mock zonder live provider", async () => {
   const tenant = { compliance: { rszEmployerId: "12345678" } };
-  const user = { name: "Jan", insz: "90020112345" };
+  const user = { name: "Jan", insz: "93051822361" };
   const venue = { id: "v1", name: "Werf A" };
   const res = await submitCheckin({ config: {}, tenant, clock: { id: "c1", date: "2026-06-25", clockIn: "08:00" }, user, venue, action: "in" });
   assert.equal(res.ok, true);
@@ -762,11 +762,11 @@ test("ciaw: buildCheckinDeclaration leest user.nationalId als INSZ", () => {
   const r = buildCheckinDeclaration({
     tenant: { compliance: { rszEmployerId: "12345678" } },
     clock: { id: "c1", date: "2026-06-25", clockIn: "08:00" },
-    user: { name: "Jan", nationalId: "90.02.01-123.45" },
+    user: { name: "Jan", nationalId: "93.05.18-223.61" },
     venue: { id: "v1", name: "Werf A" }, action: "in"
   });
   assert.equal(r.valid, true, "nationalId wordt als geldig INSZ herkend");
-  assert.equal(r.declaration.worker.insz, "90020112345");
+  assert.equal(r.declaration.worker.insz, "93051822361");
 });
 
 // ── Kern-flow diepgang: geklokte uren → werkbon → factuur (DEPTH) ──
@@ -836,4 +836,59 @@ test("billing: werkbon zonder uren/tarief geeft duidelijke, bruikbare foutmeldin
     () => createInvoice(store, store.data.tenants[0], { fromWorkorders: true }, { email: "a@b.be" }),
     e => e.status === 422 && /geen .*uren/i.test(e.message)
   );
+});
+
+// ── CIAW diepgang: echte INSZ mod-97 + aanwezigheidsregister (DEPTH) ──
+const ciaw2 = require("../src/modules/ciaw");
+
+test("ciaw: validInsz controleert het mod-97 controlegetal (echt rijksregisternr)", () => {
+  // Geldig voorbeeld (geboren <2000): 93051822361 → 97-(930518223 mod 97)=61
+  assert.equal(ciaw2.validInsz("93.05.18-223.61"), true);
+  // Verkeerd controlegetal
+  assert.equal(ciaw2.validInsz("93051822360"), false);
+  // Te kort
+  assert.equal(ciaw2.validInsz("930518223"), false);
+  // Geldig voorbeeld geboren ≥2000: prepend "2": 00010100135 → 97-(2000101001 mod 97)
+  const base = "000101001";
+  const r = (() => { const m = 97 - (Number("2" + base) % 97); return m === 0 ? 97 : m; })();
+  assert.equal(ciaw2.validInsz(base + String(r).padStart(2, "0")), true);
+});
+
+test("ciaw: buildPresenceRegister toont enkel ingeklokte werknemers + CIAW-status", () => {
+  const now = new Date("2026-06-25T10:00:00Z");
+  const reg = ciaw2.buildPresenceRegister({
+    clocks: [
+      { userId: "u1", venueId: "v1", date: "2026-06-25", clockIn: "08:00", clockOut: null, ciaw: { status: "confirmed", reference: "MOCK-1" } },
+      { userId: "u2", venueId: "v1", date: "2026-06-25", clockIn: "08:30", clockOut: null, ciaw: { status: "rejected" } },
+      { userId: "u3", venueId: "v1", date: "2026-06-25", clockIn: "07:00", clockOut: "12:00" }, // uitgeklokt → niet aanwezig
+    ],
+    users: [
+      { id: "u1", name: "Jan", nationalId: "93051822361" },
+      { id: "u2", name: "Piet", nationalId: "000" },
+    ],
+    venues: [{ id: "v1", name: "Werf A" }],
+    now,
+  });
+  assert.equal(reg.present, 2, "enkel niet-uitgeklokte werknemers");
+  assert.equal(reg.confirmed, 1);
+  assert.equal(reg.issues, 1);
+  const jan = reg.rows.find(r => r.name === "Jan");
+  assert.equal(jan.inszValid, true);
+  assert.equal(jan.ciawStatus, "confirmed");
+  assert.equal(reg.rows.find(r => r.name === "Piet").inszValid, false);
+});
+
+// ── A1-bestand (DECA-B diepgang): upload-validatie + lijst strip blob ──
+test("posted-workers: A1-bestand wordt gevalideerd + niet in de lijst-blob teruggegeven", () => {
+  const store = reviewStore([{ id: "t1", name: "T" }]);
+  store.data.postedWorkers = [];
+  const tenant = store.data.tenants[0]; const actor = { email: "a@b.be" };
+  const pdf = "data:application/pdf;base64,JVBERi0xLjQK";
+  const rec = pw.createPostedWorker(store, tenant, { workerName: "Piotr", country: "PL", documentFile: pdf, documentFileName: "a1.pdf" }, actor);
+  assert.equal(store.get("postedWorkers", rec.id).documentFile, pdf, "blob bewaard in de store");
+  const list = pw.listPostedWorkers(store, tenant);
+  assert.equal(list.rows[0].hasFile, true);
+  assert.equal(list.rows[0].documentFile, undefined, "blob niet in de lijst");
+  // verkeerd type → fout
+  assert.throws(() => pw.createPostedWorker(store, tenant, { workerName: "X", country: "PL", documentFile: "data:text/plain;base64,QQ==" }, actor), e => e.status === 400);
 });

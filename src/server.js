@@ -167,7 +167,7 @@ const { pushConfigured, publicKey: pushPublicKey, saveSubscription: savePushSubs
 const { verifyStripeSignature } = require("./modules/stripe-webhook");
 const { seedDemoData, clearDemoData } = require("./modules/demo-seed");
 const { buildUbl, validatePeppol, sendPeppolInvoice } = require("./modules/peppol-invoice");
-const { submitCheckin } = require("./modules/ciaw");
+const { submitCheckin, buildPresenceRegister } = require("./modules/ciaw");
 const { listPostedWorkers, createPostedWorker, updatePostedWorker, deletePostedWorker, submitLimosa } = require("./modules/posted-workers");
 const {
   leaveSubmittedToAdmin,
@@ -3306,6 +3306,24 @@ http.createServer(async (req, res) => {
         sendJson(res, 200, { ok: true, declarations: rows, rszEmployerId: (tenant.compliance && tenant.compliance.rszEmployerId) || "" });
         return;
       }
+      // Aanwezigheidsregister voor werfcontrole (wie is nu ingeklokt + CIAW-status).
+      if (action === "ciaw/presence" && req.method === "GET") {
+        assertCan(user, "clockings");
+        const reg = buildPresenceRegister({
+          clocks: store.list("clocks", tenantId),
+          users: store.list("users", tenantId),
+          venues: store.list("venues", tenantId),
+        });
+        if (url.searchParams.get("format") === "csv") {
+          const head = "werf,medewerker,insz,insz_geldig,sinds,ciaw_status,referentie";
+          const lines = reg.rows.map(r => [r.venue, r.name, r.insz || "", r.inszValid ? "ja" : "nee", r.since || "", r.ciawStatus, r.ciawReference].map(v => `"${String(v).replace(/"/g, '""')}"`).join(","));
+          res.writeHead(200, { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="aanwezigheidsregister-${reg.at.slice(0,10)}.csv"` });
+          res.end([head, ...lines].join("\n"));
+          return;
+        }
+        sendJson(res, 200, { ok: true, ...reg });
+        return;
+      }
 
       // ── A1 / Limosa — detachering van (onder)aannemers (compliance-add-on) ──
       if (action === "posted_workers" && req.method === "GET") {
@@ -3316,6 +3334,20 @@ http.createServer(async (req, res) => {
       if (action === "posted_workers" && req.method === "POST") {
         assertCan(user, "employees");
         sendJson(res, 201, { ok: true, record: createPostedWorker(store, tenant, await readBody(req), user) });
+        return;
+      }
+      // A1-attest downloaden (base64 data-URL → bestand).
+      const pwFileMatch = action.match(/^posted_workers\/([^/]+)\/file$/);
+      if (pwFileMatch && req.method === "GET") {
+        assertInteractiveUser(user);
+        const rec = store.get("postedWorkers", pwFileMatch[1]);
+        if (!rec || rec.tenantId !== tenantId || !rec.documentFile) return sendJson(res, 404, { ok: false, error: "Geen A1-bestand" });
+        const m = /^data:([^;]+);base64,(.*)$/s.exec(String(rec.documentFile));
+        if (!m) return sendJson(res, 422, { ok: false, error: "Bestandsformaat ongeldig" });
+        const buf = Buffer.from(m[2], "base64");
+        const ext = m[1] === "application/pdf" ? "pdf" : (m[1].split("/")[1] || "bin");
+        res.writeHead(200, { "Content-Type": m[1], "Content-Disposition": `inline; filename="${(rec.documentFileName || "A1").replace(/[^\w.-]/g, "_")}.${ext}"` });
+        res.end(buf);
         return;
       }
       const pwMatch = action.match(/^posted_workers\/([^/]+)(\/limosa)?$/);

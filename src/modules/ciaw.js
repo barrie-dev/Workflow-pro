@@ -16,9 +16,16 @@ const https = require("https");
 function normalizeInsz(value) {
   return String(value || "").replace(/[^0-9]/g, "");
 }
+// Echte validatie van het Belgische rijksregisternummer: 11 cijfers met een
+// mod-97 controlegetal op de laatste 2. Voor geboorten vanaf 2000 wordt "2"
+// vooraan het 9-cijferige basisgetal geplaatst vóór de mod-berekening.
 function validInsz(value) {
   const d = normalizeInsz(value);
-  return d.length === 11;
+  if (d.length !== 11) return false;
+  const base = d.slice(0, 9);
+  const check = Number(d.slice(9, 11));
+  const expect = mod => { const r = 97 - (mod % 97); return r === 0 ? 97 : r; };
+  return check === expect(Number(base)) || check === expect(Number("2" + base));
 }
 
 function isRealKey(k) {
@@ -125,4 +132,40 @@ async function submitCheckin({ config = {}, tenant, clock, user, venue, action }
   }
 }
 
-module.exports = { normalizeInsz, validInsz, ciawReadiness, buildCheckinDeclaration, submitCheckin };
+/**
+ * Aanwezigheidsregister voor een werfcontrole: wie is er NU ingeklokt, met hun
+ * CIAW-aangiftestatus en INSZ-geldigheid. Puur + testbaar. Toont enkel lopende
+ * registraties (nog niet uitgeklokt) — het bewijs dat een inspecteur op de werf wil.
+ */
+function buildPresenceRegister({ clocks = [], users = [], venues = [], now = new Date() }) {
+  const userById = new Map(users.map(u => [u.id, u]));
+  const venueById = new Map(venues.map(v => [v.id, v.name || v.id]));
+  const rows = clocks
+    .filter(c => !c.clockOut)
+    .map(c => {
+      const u = userById.get(c.userId) || {};
+      const insz = normalizeInsz(u.insz || u.nationalNumber || u.nationalId);
+      const ciaw = c.ciaw || {};
+      return {
+        userId: c.userId,
+        name: u.name || c.userId,
+        insz: insz || null,
+        inszValid: validInsz(insz),
+        venueId: c.venueId || null,
+        venue: c.venueId ? (venueById.get(c.venueId) || c.venueId) : "—",
+        since: c.date && c.clockIn ? `${c.date}T${c.clockIn}` : (c.date || null),
+        ciawStatus: ciaw.status || "none",
+        ciawReference: ciaw.reference || "",
+      };
+    })
+    .sort((a, b) => String(a.venue).localeCompare(String(b.venue)) || String(a.name).localeCompare(String(b.name)));
+  return {
+    at: now.toISOString(),
+    present: rows.length,
+    confirmed: rows.filter(r => r.ciawStatus === "confirmed" || r.ciawStatus === "sent").length,
+    issues: rows.filter(r => r.ciawStatus !== "confirmed" && r.ciawStatus !== "sent").length,
+    rows,
+  };
+}
+
+module.exports = { normalizeInsz, validInsz, ciawReadiness, buildCheckinDeclaration, submitCheckin, buildPresenceRegister };

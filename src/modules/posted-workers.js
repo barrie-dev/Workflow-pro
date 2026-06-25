@@ -44,6 +44,14 @@ function normalizeRecord(payload) {
   const validFrom = payload.validFrom || null;
   const validTo = payload.validTo || null;
   if (validFrom && validTo && new Date(validTo) < new Date(validFrom)) errors.push("Einddatum ligt vóór begindatum");
+  // Optionele upload van het A1-attest (PDF/afbeelding), base64 data-URL, max ~5MB.
+  // Bij een update is de bestaande waarde al in payload gemerged (zie updatePostedWorker).
+  const documentFile = payload.documentFile || null;
+  const documentFileName = documentFile ? String(payload.documentFileName || "A1-attest").slice(0, 120) : null;
+  if (documentFile) {
+    if (!/^data:(application\/pdf|image\/(?:png|jpeg|jpg|webp));base64,/.test(String(documentFile))) errors.push("A1-bestand moet een PDF of afbeelding zijn");
+    else if (String(documentFile).length > 7 * 1024 * 1024) errors.push("A1-bestand is te groot (max ~5MB)");
+  }
   if (errors.length) throw apiError(errors.join("; "), 400);
   return {
     workerName,
@@ -51,6 +59,8 @@ function normalizeRecord(payload) {
     country,
     idNumber: String(payload.idNumber || "").trim(),
     documentRef: String(payload.documentRef || "").trim(),
+    documentFile: documentFile || null,
+    documentFileName: documentFile ? documentFileName : null,
     validFrom,
     validTo,
     note: String(payload.note || "").slice(0, 500),
@@ -89,7 +99,11 @@ function deletePostedWorker(store, tenant, id, actor) {
 
 // Overzicht met afgeleide A1-status + tellers (voor compliance-bewaking).
 function listPostedWorkers(store, tenant, now = Date.now()) {
-  const rows = store.list("postedWorkers", tenant.id).map(r => ({ ...r, a1Status: a1Status(r, now) }));
+  // De base64-blob niet meesturen in de lijst (zwaar) — enkel of er een bestand is.
+  const rows = store.list("postedWorkers", tenant.id).map(r => {
+    const { documentFile, ...rest } = r;
+    return { ...rest, a1Status: a1Status(r, now), hasFile: !!documentFile };
+  });
   return {
     rows,
     total: rows.length,

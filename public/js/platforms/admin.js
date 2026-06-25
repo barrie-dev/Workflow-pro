@@ -5261,8 +5261,13 @@ ${enrolled.map(e => `
   // ── Compliance: Checkin@Work (CIAW) ────────────────────────
   async function renderCiaw() {
     const c = document.getElementById("admContent");
-    let data = {};
-    try { data = await api("GET", "/ciaw/declarations"); }
+    let data = {}, presence = { rows: [], present: 0, issues: 0 };
+    try {
+      [data, presence] = await Promise.all([
+        api("GET", "/ciaw/declarations"),
+        api("GET", "/ciaw/presence").catch(() => ({ rows: [], present: 0, issues: 0 })),
+      ]);
+    }
     catch (e) { c.innerHTML = `<div class="adm-card" style="padding:16px;color:#dc2626">${esc(e.message)}</div>`; return; }
     const rows = data.declarations || [];
     const statusBadge = s => {
@@ -5286,24 +5291,59 @@ ${enrolled.map(e => `
     <span id="ciawRszMsg" style="font-size:12px;color:#16a34a"></span>
   </div>
 </div>
+<div class="adm-card" style="margin-bottom:14px">
+  <div class="adm-card-header" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+    <div style="font-weight:700;font-size:13px">Aanwezigheidsregister (werfcontrole) <span style="font-weight:400;color:#64748b">— ${presence.present} aanwezig${presence.issues ? `, <span style="color:#b91c1c">${presence.issues} zonder bevestigde aangifte</span>` : ""}</span></div>
+    <button class="adm-btn adm-btn-secondary adm-btn-sm" id="ciawPresenceCsv">⬇ Export voor controle (CSV)</button>
+  </div>
+  <div class="adm-table-wrap"><table class="adm-table"><thead><tr><th>Werf</th><th>Medewerker</th><th>INSZ</th><th>Sinds</th><th>CIAW</th></tr></thead><tbody>
+    ${(presence.rows || []).map(r => `<tr>
+      <td>${esc(r.venue)}</td>
+      <td>${esc(r.name)}</td>
+      <td style="font-family:monospace;font-size:12px">${r.insz ? esc(r.insz) : '<span style="color:#b91c1c">ontbreekt</span>'}${r.insz && !r.inszValid ? ' <span title="ongeldig controlegetal" style="color:#b91c1c">⚠</span>' : ""}</td>
+      <td style="font-size:12px;color:#64748b">${esc((r.since || "").replace("T", " "))}</td>
+      <td>${statusBadge(r.ciawStatus === "none" ? "—" : r.ciawStatus)}</td>
+    </tr>`).join("") || `<tr><td colspan="5" style="padding:18px;text-align:center;color:#94a3b8">Niemand momenteel ingeklokt.</td></tr>`}
+  </tbody></table></div>
+</div>
 <div class="adm-card" style="overflow:auto">
-  <table class="adm-table"><thead><tr><th>Datum</th><th>Type</th><th>Locatie (geo)</th><th>Status</th><th>Referentie</th><th>Modus</th></tr></thead><tbody>
-    ${rows.map(d => `<tr>
+  <table class="adm-table"><thead><tr><th>Datum</th><th>Type</th><th>Locatie (geo)</th><th>Status</th><th>Referentie</th><th>Modus</th><th></th></tr></thead><tbody>
+    ${rows.map(d => {
+      const failed = d.status === "failed" || d.status === "rejected";
+      return `<tr>
       <td>${esc(d.date || (d.at || "").slice(0, 10))}</td>
       <td>${d.action === "OUT" ? "Uitklokken" : "Inklokken"}</td>
       <td>${geoBadge(d)}</td>
       <td>${statusBadge(d.status)}</td>
       <td style="font-family:monospace;font-size:12px">${esc(d.reference || "—")}${d.error ? `<div style="color:#b91c1c;font-size:11px">${esc(d.error)}</div>` : ""}</td>
       <td>${d.live ? "live" : "<span style='color:#64748b'>mock</span>"}</td>
-    </tr>`).join("") || `<tr><td colspan="6" style="padding:24px;text-align:center;color:#94a3b8">Nog geen aangiftes. Ze verschijnen zodra medewerkers in-/uitklokken.</td></tr>`}
+      <td>${failed ? `<button class="adm-btn adm-btn-secondary adm-btn-sm ciaw-retry" data-clock="${esc(d.clockId)}" data-action="${d.action === "OUT" ? "out" : "in"}" style="padding:3px 9px;font-size:12px">↻ Opnieuw</button>` : ""}</td>
+    </tr>`;}).join("") || `<tr><td colspan="7" style="padding:24px;text-align:center;color:#94a3b8">Nog geen aangiftes. Ze verschijnen zodra medewerkers in-/uitklokken.</td></tr>`}
   </tbody></table>
 </div>`;
     document.getElementById("ciawRefresh").addEventListener("click", renderCiaw);
+    document.getElementById("ciawPresenceCsv").addEventListener("click", async () => {
+      try {
+        const r = await fetch(`/api/tenants/${tenantId()}/ciaw/presence?format=csv`, { headers: { Authorization: "Bearer " + token() } });
+        if (!r.ok) throw new Error("Export mislukt");
+        const blob = await r.blob(); const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob); a.download = "aanwezigheidsregister.csv";
+        document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(a.href);
+      } catch (e) { window.showToast && window.showToast(e.message, "error"); }
+    });
     document.getElementById("ciawRszSave").addEventListener("click", async () => {
       const msg = document.getElementById("ciawRszMsg"); msg.textContent = "";
       try { await api("POST", "/compliance/rsz", { rszEmployerId: document.getElementById("ciawRsz").value }); msg.style.color = "#16a34a"; msg.textContent = "Opgeslagen ✓"; }
       catch (e) { msg.style.color = "#dc2626"; msg.textContent = e.message; }
     });
+    c.querySelectorAll(".ciaw-retry").forEach(b => b.addEventListener("click", async () => {
+      b.disabled = true; b.textContent = "Bezig…";
+      try {
+        const r = await api("POST", "/ciaw/checkin", { clockId: b.dataset.clock, action: b.dataset.action });
+        window.showToast && window.showToast(r.ok ? "Aangifte opnieuw ingediend ✓" : ("Nog steeds geweigerd: " + (r.error || "")), r.ok ? "success" : "error");
+        renderCiaw();
+      } catch (e) { window.showToast && window.showToast(e.message, "error"); b.disabled = false; b.textContent = "↻ Opnieuw"; }
+    }));
   }
 
   // ── Compliance: A1 / Limosa detachering ────────────────────
@@ -5337,6 +5377,7 @@ ${enrolled.map(e => `
     <label style="font-size:12px;font-weight:600;color:#334155">A1-referentie<input id="pwRef" class="adm-input" placeholder="A1-nr"></label>
     <label style="font-size:12px;font-weight:600;color:#334155">Geldig van<input id="pwFrom" type="date" class="adm-input"></label>
     <label style="font-size:12px;font-weight:600;color:#334155">Geldig tot<input id="pwTo" type="date" class="adm-input"></label>
+    <label style="font-size:12px;font-weight:600;color:#334155">A1-attest (PDF/foto)<input id="pwFile" type="file" accept="application/pdf,image/*" class="adm-input" style="padding:6px"></label>
     <button class="adm-btn-primary" id="pwAdd">Toevoegen</button>
   </div>
   <div id="pwMsg" style="font-size:12px;margin-top:8px"></div>
@@ -5347,7 +5388,7 @@ ${enrolled.map(e => `
       <td>${esc(r.workerName)}</td>
       <td>${esc(r.subcontractor || "—")}</td>
       <td>${esc(r.country || "—")}</td>
-      <td>${a1Badge(r.a1Status)}${r.documentRef ? `<div style="font-size:11px;color:#64748b;font-family:monospace">${esc(r.documentRef)}</div>` : ""}</td>
+      <td>${a1Badge(r.a1Status)}${r.documentRef ? `<div style="font-size:11px;color:#64748b;font-family:monospace">${esc(r.documentRef)}</div>` : ""}${r.hasFile ? ` <a class="pw-file" data-id="${esc(r.id)}" href="#" style="font-size:11px">📎 attest</a>` : ""}</td>
       <td style="font-size:12px;color:#475569">${esc(r.validFrom || "?")} → ${esc(r.validTo || "?")}</td>
       <td>${r.limosa && r.limosa.reference ? `<span style="font-size:12px;color:#15803d">✓ ${esc(r.limosa.reference)}</span>` : `<button class="adm-btn-secondary pw-limosa" data-id="${esc(r.id)}" style="padding:4px 10px;font-size:12px">Indienen</button>`}</td>
       <td><button class="pw-del" data-id="${esc(r.id)}" title="Verwijderen" style="border:none;background:none;cursor:pointer;color:#b91c1c;font-size:16px">🗑</button></td>
@@ -5364,9 +5405,26 @@ ${enrolled.map(e => `
         validTo: document.getElementById("pwTo").value || null,
       };
       const msg = document.getElementById("pwMsg"); msg.textContent = "";
+      // Optioneel A1-attest als base64 data-URL meesturen.
+      const fileInp = document.getElementById("pwFile");
+      const file = fileInp && fileInp.files && fileInp.files[0];
+      if (file) {
+        if (file.size > 5 * 1024 * 1024) { msg.style.color = "#dc2626"; msg.textContent = "A1-bestand is te groot (max 5MB)"; return; }
+        payload.documentFile = await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(file); });
+        payload.documentFileName = file.name;
+      }
       try { await api("POST", "/posted_workers", payload); renderPostedWorkers(); window.showToast && window.showToast("Dossier toegevoegd ✓", "success"); }
       catch (e) { msg.style.color = "#dc2626"; msg.textContent = e.message; }
     });
+    c.querySelectorAll(".pw-file").forEach(a => a.addEventListener("click", async e => {
+      e.preventDefault();
+      try {
+        const r = await fetch(`/api/tenants/${tenantId()}/posted_workers/${a.dataset.id}/file`, { headers: { Authorization: "Bearer " + token() } });
+        if (!r.ok) throw new Error("Bestand niet gevonden");
+        const blob = await r.blob(); const u = URL.createObjectURL(blob);
+        window.open(u, "_blank"); setTimeout(() => URL.revokeObjectURL(u), 60000);
+      } catch (err) { window.showToast && window.showToast(err.message, "error"); }
+    }));
     c.querySelectorAll(".pw-limosa").forEach(b => b.addEventListener("click", async () => {
       b.disabled = true; b.textContent = "Bezig…";
       try { await api("POST", `/posted_workers/${b.dataset.id}/limosa`, {}); renderPostedWorkers(); window.showToast && window.showToast("Limosa-melding ingediend ✓", "success"); }
