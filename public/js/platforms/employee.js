@@ -359,17 +359,18 @@
   transition: color .15s;
 }
 .emp-tab svg { width: 20px; height: 20px; fill: currentColor; }
-.emp-tab.active { color: #0ea5e9; }
-.emp-tab-clock { color: #0ea5e9; }
+.emp-tab.active { color: var(--wf-blue); }
+.emp-tab-clock { color: var(--wf-blue); }
 .emp-tab-clock.clocked-in { color: #10b981; }
 
 /* ── Cards ──────────────────────────────────── */
 .emp-card {
   background: #fff;
-  border-radius: 14px;
+  border-radius: 16px;
   padding: 16px;
-  margin-bottom: 12px;
-  box-shadow: 0 1px 4px rgba(0,0,0,.06);
+  margin-bottom: 14px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-xs);
 }
 .emp-card-title {
   font-size: 11px;
@@ -406,7 +407,7 @@
 }
 .emp-clock-btn svg { width: 24px; height: 24px; fill: currentColor; }
 .emp-clock-btn:active { transform: scale(.95); }
-.emp-clock-btn-in { background: #0ea5e9; color: #fff; }
+.emp-clock-btn-in { background: var(--wf-blue); color: #fff; }
 .emp-clock-btn-out { background: #ef4444; color: #fff; }
 .emp-clock-status {
   margin-top: 12px;
@@ -431,7 +432,7 @@
 .emp-shift-item:last-child { border-bottom: none; }
 .emp-shift-time {
   background: #e0f2fe;
-  color: #0284c7;
+  color: var(--wf-blue-d);
   border-radius: 8px;
   padding: 8px 10px;
   font-size: 13px;
@@ -475,8 +476,8 @@
   color: #374151;
   text-align: center;
 }
-.emp-action-btn svg { width: 22px; height: 22px; fill: currentColor; color: #0ea5e9; }
-.emp-action-btn:hover { background: #f8fafc; border-color: #0ea5e9; }
+.emp-action-btn svg { width: 22px; height: 22px; fill: currentColor; color: var(--wf-blue); }
+.emp-action-btn:hover { background: #f8fafc; border-color: var(--wf-blue); }
 .emp-action-btn-danger { border-color: #fca5a5; background: #fef2f2; color: #dc2626; }
 .emp-action-btn-danger svg { color: #ef4444; }
 .emp-action-btn-danger:hover { background: #fee2e2; border-color: #f87171; }
@@ -497,7 +498,7 @@
   display: grid; place-items: center;
   flex-shrink: 0;
 }
-.emp-list-icon svg { width: 18px; height: 18px; fill: #0284c7; }
+.emp-list-icon svg { width: 18px; height: 18px; fill: var(--wf-blue-d); }
 .emp-list-info { flex: 1; min-width: 0; }
 .emp-list-title { font-size: 13px; font-weight: 500; color: #0f172a; }
 .emp-list-sub { font-size: 11px; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -511,9 +512,9 @@
   cursor: pointer;
   border: none;
 }
-.emp-btn-primary { background: #0ea5e9; color: #fff; }
-.emp-btn-primary:hover { background: #0284c7; }
-.emp-btn-outline { background: transparent; color: #0ea5e9; border: 1.5px solid #0ea5e9; }
+.emp-btn-primary { background: var(--wf-blue); color: #fff; }
+.emp-btn-primary:hover { background: var(--wf-blue-d); }
+.emp-btn-outline { background: transparent; color: var(--wf-blue); border: 1.5px solid var(--wf-blue); }
 .emp-btn-full { width: 100%; margin-top: 8px; }
 .emp-btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
 
@@ -530,7 +531,7 @@
 }
 .emp-form-group input:focus, .emp-form-group select:focus, .emp-form-group textarea:focus {
   outline: none;
-  border-color: #0ea5e9;
+  border-color: var(--wf-blue);
   box-shadow: 0 0 0 3px rgba(14,165,233,.15);
 }
 .emp-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -592,8 +593,8 @@
   min-width: 44px;
   border: 1.5px solid transparent;
 }
-.emp-day-pill.today { border-color: #0ea5e9; color: #0ea5e9; }
-.emp-day-pill.has-shift { background: #0ea5e9; color: #fff; }
+.emp-day-pill.today { border-color: var(--wf-blue); color: var(--wf-blue); }
+.emp-day-pill.has-shift { background: var(--wf-blue); color: #fff; }
 .emp-day-num { font-size: 16px; font-weight: 700; line-height: 1.2; }
 
 /* ── Breed scherm: medewerker op pc krijgt een echte pc-view ──
@@ -1456,7 +1457,7 @@ ${data.absentNow ? `<div style="background:#fef3c7;border-radius:10px;padding:12
     main.innerHTML = `
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
   <div style="font-size:16px;font-weight:600;">Berichten${unread>0?` <span style="background:#ef4444;color:#fff;border-radius:999px;padding:1px 7px;font-size:11px;vertical-align:middle;">${unread}</span>`:""}</div>
-  <button id="empComposeBtn" style="background:#0ea5e9;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;">+ Bericht</button>
+  <button id="empComposeBtn" style="background:var(--wf-blue);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;">+ Bericht</button>
 </div>
 <div class="emp-card">
   ${messages.length ? messages.map(m => {
@@ -1464,7 +1465,7 @@ ${data.absentNow ? `<div style="background:#fef3c7;border-radius:10px;padding:12
     return `
   <div class="emp-list-item emp-msg-item" data-id="${esc(m.id)}" style="background:${isUnread?"#eff6ff":"#fff"};border-radius:10px;margin-bottom:4px;cursor:pointer;">
     <div class="emp-list-icon" style="background:${isUnread?"#dbeafe":"#e0f2fe"};">
-      <svg viewBox="0 0 24 24" style="fill:${isUnread?"var(--wf-blue)":"#0284c7"}"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+      <svg viewBox="0 0 24 24" style="fill:${isUnread?"var(--wf-blue)":"var(--wf-blue-d)"}"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
     </div>
     <div class="emp-list-info" style="flex:1;min-width:0;">
       <div class="emp-list-title" style="${isUnread?"font-weight:700;":""}">
@@ -1558,7 +1559,7 @@ ${data.absentNow ? `<div style="background:#fef3c7;border-radius:10px;padding:12
       <textarea name="body" required rows="3" placeholder="Schrijf je bericht…" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;resize:none"></textarea>
     </div>
     <div id="empComposeErr" style="display:none;background:#fef2f2;color:#dc2626;border-radius:8px;padding:8px 10px;font-size:12px"></div>
-    <button type="submit" style="padding:11px;background:#0ea5e9;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;">Versturen</button>
+    <button type="submit" style="padding:11px;background:var(--wf-blue);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;">Versturen</button>
   </form>
 </div>`;
 
@@ -1703,7 +1704,7 @@ ${data.absentNow ? `<div style="background:#fef3c7;border-radius:10px;padding:12
     <svg viewBox="0 0 24 24" style="width:16px;fill:#94a3b8;flex-shrink:0;"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
   </div>` : ""}
   ${viewEnabled("messages") ? `<div class="emp-list-item" id="empMoreMsg" style="cursor:pointer;">
-    <div class="emp-list-icon" style="background:#e0f2fe;"><svg viewBox="0 0 24 24" style="fill:#0284c7"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg></div>
+    <div class="emp-list-icon" style="background:#e0f2fe;"><svg viewBox="0 0 24 24" style="fill:var(--wf-blue-d)"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg></div>
     <div class="emp-list-info"><div class="emp-list-title">Berichten</div><div class="emp-list-sub">Team communicatie</div></div>
     <svg viewBox="0 0 24 24" style="width:16px;fill:#94a3b8;flex-shrink:0;"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
   </div>` : ""}
@@ -1735,7 +1736,7 @@ ${data.absentNow ? `<div style="background:#fef3c7;border-radius:10px;padding:12
       <input name="iban" value="${profile.iban||""}" placeholder="BE68 5390 0754 7034" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:monospace;" autocomplete="off">
     </div>
     <div id="empProfileMsg" style="display:none;padding:8px 10px;border-radius:8px;font-size:12px;"></div>
-    <button type="submit" style="padding:10px;background:#0ea5e9;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Opslaan</button>
+    <button type="submit" style="padding:10px;background:var(--wf-blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Opslaan</button>
   </form>
 </div>
 

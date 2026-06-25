@@ -142,7 +142,7 @@
         <div id="mgrNotifPanel" style="position:absolute;right:0;top:calc(100% + 8px);width:320px;background:#fff;border-radius:12px;border:1px solid #e2e8f0;box-shadow:0 8px 32px rgba(0,0,0,.12);z-index:400;display:none">
           <div style="padding:12px 16px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px">
             <span style="font-size:13px;font-weight:700;color:#0f172a;flex:1">Notificaties</span>
-            <button id="mgrNotifMarkAll" style="background:none;border:none;cursor:pointer;font-size:11px;color:#0ea5e9;font-weight:600;padding:3px 6px;border-radius:6px">Alles gelezen</button>
+            <button id="mgrNotifMarkAll" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--wf-blue);font-weight:600;padding:3px 6px;border-radius:6px">Alles gelezen</button>
           </div>
           <div id="mgrNotifList" style="max-height:320px;overflow-y:auto"><div style="padding:28px;text-align:center;font-size:13px;color:#94a3b8">Laden…</div></div>
         </div>
@@ -156,20 +156,20 @@
 
 <style>
 #platform-manager { font-family:'Inter',system-ui,sans-serif; height:100vh; overflow:hidden; }
-.mgr-layout { display:flex; height:100vh; background:#f8f9fb; }
-.mgr-sidebar { width:220px; background:#0f172a; color:#e2e8f0; display:flex; flex-direction:column; flex-shrink:0; }
+.mgr-layout { display:flex; height:100vh; background:var(--bg); }
+.mgr-sidebar { width:220px; background:var(--wf-navy); color:#e2e8f0; display:flex; flex-direction:column; flex-shrink:0; }
 .mgr-logo { display:flex; align-items:center; gap:10px; padding:20px 16px; border-bottom:1px solid #1e293b; }
-.mgr-logo-mark { background:#0ea5e9; color:#fff; width:32px; height:32px; border-radius:8px; display:grid; place-items:center; font-weight:700; font-size:13px; flex-shrink:0; }
+.mgr-logo-mark { background:var(--wf-blue); color:#fff; width:32px; height:32px; border-radius:8px; display:grid; place-items:center; font-weight:700; font-size:13px; flex-shrink:0; }
 .mgr-logo-text { font-weight:600; font-size:15px; }
 .mgr-nav { padding:12px 8px; flex:1; }
 .mgr-nav-item { display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:8px; color:#94a3b8; text-decoration:none; font-size:13.5px; transition:background .15s,color .15s; }
 .mgr-nav-item svg { width:18px; height:18px; fill:currentColor; flex-shrink:0; }
 .mgr-nav-item:hover { background:#1e293b; color:#e2e8f0; }
-.mgr-nav-item.active { background:#0ea5e9; color:#fff; }
+.mgr-nav-item.active { background:var(--wf-blue); color:#fff; font-weight:600; box-shadow:0 4px 14px rgba(30,107,230,.4); }
 .mgr-badge { margin-left:auto; background:#ef4444; color:#fff; border-radius:999px; font-size:11px; padding:1px 6px; font-weight:600; }
 .mgr-sidebar-footer { padding:12px; border-top:1px solid #1e293b; display:flex; align-items:center; gap:8px; }
 .mgr-user-chip { display:flex; align-items:center; gap:8px; flex:1; min-width:0; }
-.mgr-user-avatar { width:32px; height:32px; border-radius:50%; background:#0ea5e9; color:#fff; display:grid; place-items:center; font-weight:600; font-size:13px; flex-shrink:0; }
+.mgr-user-avatar { width:32px; height:32px; border-radius:50%; background:var(--wf-blue); color:#fff; display:grid; place-items:center; font-weight:600; font-size:13px; flex-shrink:0; }
 .mgr-user-info { min-width:0; }
 .mgr-user-name { font-size:13px; font-weight:500; color:#e2e8f0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .mgr-user-role { font-size:11px; color:#64748b; }
@@ -182,37 +182,38 @@
 .mgr-menu-toggle svg { width:20px; height:20px; fill:currentColor; display:block; }
 .mgr-page-title { font-size:16px; font-weight:600; flex:1; color:#0f172a; margin:0; }
 .mgr-content { flex:1; overflow-y:auto; padding:20px; }
-.mgr-btn { padding:7px 14px; border-radius:8px; font-size:13px; font-weight:500; cursor:pointer; border:none; }
-.mgr-btn-primary { background:#0ea5e9; color:#fff; }
-.mgr-btn-primary:hover { background:#0284c7; }
+.mgr-btn { padding:9px 16px; border-radius:10px; font-size:13px; font-weight:600; cursor:pointer; border:none; transition:background .14s, transform .08s; }
+.mgr-btn:active { transform:translateY(1px); }
+.mgr-btn-primary { background:var(--wf-blue); color:#fff; }
+.mgr-btn-primary:hover { background:var(--wf-blue-d); }
 .mgr-btn-success { background:#10b981; color:#fff; }
 .mgr-btn-danger { background:#ef4444; color:#fff; }
 .mgr-btn-secondary { background:#f1f5f9; color:#475569; border:1px solid #e2e8f0; }
 .mgr-btn-sm { padding:4px 10px; font-size:12px; }
 .mgr-kpis { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:14px; margin-bottom:20px; }
-.mgr-kpi { background:#fff; border-radius:12px; padding:14px 16px; border:1px solid #e2e8f0; }
+.mgr-kpi { background:#fff; border-radius:16px; padding:18px; border:1px solid var(--line); box-shadow:var(--shadow-xs); }
 .mgr-kpi-link { cursor:pointer; transition:transform .12s, box-shadow .12s; }
 .mgr-kpi-link:hover { transform:translateY(-2px); box-shadow:0 6px 18px rgba(15,23,42,.10); }
 .mgr-kpi-label { font-size:11px; color:#64748b; text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px; }
 .mgr-kpi-value { font-size:28px; font-weight:700; color:#0f172a; }
 .mgr-kpi-sub { font-size:11px; color:#94a3b8; margin-top:2px; }
-.mgr-card { background:#fff; border-radius:12px; border:1px solid #e2e8f0; margin-bottom:16px; }
+.mgr-card { background:#fff; border-radius:16px; border:1px solid var(--line); margin-bottom:18px; box-shadow:var(--shadow-xs); overflow:hidden; }
 .mgr-card-header { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid #f1f5f9; }
 .mgr-card-title { font-size:14px; font-weight:600; color:#0f172a; margin:0; }
 .mgr-card-body { padding:16px; }
 .mgr-table-wrap { overflow-x:auto; }
 table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
 .mgr-table th { text-align:left; padding:8px 12px; color:#64748b; font-weight:500; border-bottom:2px solid #f1f5f9; }
-.mgr-table td { padding:10px 12px; border-bottom:1px solid #f8f9fb; color:#374151; vertical-align:middle; }
+.mgr-table td { padding:10px 12px; border-bottom:1px solid var(--bg); color:#374151; vertical-align:middle; }
 .mgr-table tr:last-child td { border-bottom:none; }
-.mgr-table tr:hover td { background:#f8f9fb; }
+.mgr-table tr:hover td { background:var(--bg); }
 .mgr-status { display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:999px; font-size:11px; font-weight:500; }
 .mgr-status::before { content:''; width:6px; height:6px; border-radius:50%; background:currentColor; }
 .mgr-status-active,.mgr-status-goedgekeurd { background:#d1fae5; color:#059669; }
 .mgr-status-pending,.mgr-status-aangevraagd,.mgr-status-ingediend { background:#fef3c7; color:#d97706; }
 .mgr-status-inactive,.mgr-status-geweigerd { background:#fee2e2; color:#dc2626; }
 .mgr-status-open { background:#dbeafe; color:var(--wf-blue); }
-.mgr-avatar { width:28px; height:28px; border-radius:50%; background:#e0f2fe; color:#0284c7; display:inline-grid; place-items:center; font-size:11px; font-weight:600; }
+.mgr-avatar { width:28px; height:28px; border-radius:50%; background:#e0f2fe; color:var(--wf-blue-d); display:inline-grid; place-items:center; font-size:11px; font-weight:600; }
 .mgr-team-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; }
 .mgr-team-card { background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:14px; }
 .mgr-team-card-name { font-size:13px; font-weight:600; color:#0f172a; margin:8px 0 4px; }
@@ -425,7 +426,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
       <thead>
         <tr>
           <th>Medewerker</th>
-          ${days.map(d => { const dd = new Date(d); return `<th style="${d===todayStr?"color:#0ea5e9;font-weight:700;background:#f0f9ff":""}">${dd.toLocaleDateString("nl-BE",{weekday:"short",day:"numeric",month:"numeric"})}</th>`; }).join("")}
+          ${days.map(d => { const dd = new Date(d); return `<th style="${d===todayStr?"color:var(--wf-blue);font-weight:700;background:#f0f9ff":""}">${dd.toLocaleDateString("nl-BE",{weekday:"short",day:"numeric",month:"numeric"})}</th>`; }).join("")}
         </tr>
       </thead>
       <tbody>
@@ -520,7 +521,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
       ${isEdit ? `<button type="button" id="shiftDelete" style="padding:8px 14px;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:8px;font-size:13px;cursor:pointer;">🗑 Verwijderen</button>` : ""}
       <div style="display:flex;gap:8px;">
         <button type="button" id="shiftCancel" style="padding:8px 16px;border:1px solid #e2e8f0;background:#fff;border-radius:8px;font-size:13px;cursor:pointer">Annuleren</button>
-        <button type="submit" style="padding:8px 20px;background:#0ea5e9;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">${isEdit ? "Opslaan" : "Aanmaken"}</button>
+        <button type="submit" style="padding:8px 20px;background:var(--wf-blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">${isEdit ? "Opslaan" : "Aanmaken"}</button>
       </div>
     </div>
   </form>
@@ -712,7 +713,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     <div id="clkCorrErr" style="display:none;background:#fef2f2;color:#dc2626;border-radius:8px;padding:10px;font-size:13px"></div>
     <div style="display:flex;gap:10px;justify-content:flex-end">
       <button type="button" id="clkCorrCancel" style="padding:8px 16px;border:1px solid #e2e8f0;background:#fff;border-radius:8px;font-size:13px;cursor:pointer">Annuleren</button>
-      <button type="submit" style="padding:8px 20px;background:#0ea5e9;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Opslaan</button>
+      <button type="submit" style="padding:8px 20px;background:var(--wf-blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Opslaan</button>
     </div>
   </form>
 </div>`;
@@ -1090,7 +1091,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     content.innerHTML = `
 <div class="mgr-card">
   <div class="mgr-card-header">
-    <h3 class="mgr-card-title">Werkbonnen <span style="background:#e0f2fe;color:#0284c7;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:600">${workorders.length}</span></h3>
+    <h3 class="mgr-card-title">Werkbonnen <span style="background:#e0f2fe;color:var(--wf-blue-d);border-radius:999px;padding:2px 9px;font-size:11px;font-weight:600">${workorders.length}</span></h3>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <input id="woSearch" placeholder="Zoek titel, klant…" style="padding:5px 9px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;min-width:160px;">
       <select id="woFilter" style="padding:5px 9px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px">
@@ -1303,7 +1304,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     <div id="woErr" style="display:none;background:#fef2f2;color:#dc2626;border-radius:8px;padding:10px;font-size:13px"></div>
     <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:4px">
       <button type="button" id="woCancel" style="padding:8px 16px;border:1px solid #e2e8f0;background:#fff;border-radius:8px;font-size:13px;cursor:pointer">Annuleren</button>
-      <button type="submit" style="padding:8px 20px;background:#0ea5e9;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Aanmaken</button>
+      <button type="submit" style="padding:8px 20px;background:var(--wf-blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Aanmaken</button>
     </div>
   </form>
 </div>`;
@@ -1348,7 +1349,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     ${messages.length === 0 ? `<div class="mgr-empty">Geen berichten</div>` :
     messages.map(m => `
     <div style="display:flex;gap:12px;padding:12px 0;border-bottom:1px solid #f1f5f9;align-items:flex-start">
-      <div style="width:34px;height:34px;border-radius:50%;background:#e0f2fe;color:#0284c7;display:grid;place-items:center;font-size:12px;font-weight:700;flex-shrink:0">${(m.fromName||"?")[0].toUpperCase()}</div>
+      <div style="width:34px;height:34px;border-radius:50%;background:#e0f2fe;color:var(--wf-blue-d);display:grid;place-items:center;font-size:12px;font-weight:700;flex-shrink:0">${(m.fromName||"?")[0].toUpperCase()}</div>
       <div style="flex:1">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
           <span style="font-size:13px;font-weight:600;color:#0f172a">${esc(m.fromName||m.fromId||"System")}</span>
@@ -1399,7 +1400,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     <div id="msgErr" style="display:none;background:#fef2f2;color:#dc2626;border-radius:8px;padding:10px;font-size:13px"></div>
     <div style="display:flex;gap:10px;justify-content:flex-end">
       <button type="button" id="msgCancel" style="padding:8px 16px;border:1px solid #e2e8f0;background:#fff;border-radius:8px;font-size:13px;cursor:pointer">Annuleren</button>
-      <button type="submit" style="padding:8px 20px;background:#0ea5e9;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Versturen</button>
+      <button type="submit" style="padding:8px 20px;background:var(--wf-blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Versturen</button>
     </div>
   </form>
 </div>`;
@@ -1433,7 +1434,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     content.innerHTML = `
 <div class="mgr-card">
   <div class="mgr-card-header">
-    <h3 class="mgr-card-title">Voertuigen <span style="background:#e0f2fe;color:#0284c7;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${vehicles.length}</span></h3>
+    <h3 class="mgr-card-title">Voertuigen <span style="background:#e0f2fe;color:var(--wf-blue-d);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${vehicles.length}</span></h3>
     <button class="mgr-btn mgr-btn-primary mgr-btn-sm" id="mgrNewVehicle">+ Voertuig</button>
   </div>
   ${vehicles.length === 0 ? `<div class="mgr-card-body"><div class="mgr-empty">Nog geen voertuigen — klik "+ Voertuig" om te starten</div></div>` : `
@@ -1508,7 +1509,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
       ${isEdit ? `<button type="button" id="vehDelete" style="padding:8px 12px;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:8px;font-size:12px;cursor:pointer;">🗑 Verwijderen</button>` : ""}
       <div style="display:flex;gap:8px;">
         <button type="button" id="vehCancel" style="padding:8px 16px;border:1px solid #e2e8f0;background:#fff;border-radius:8px;font-size:13px;cursor:pointer;">Annuleren</button>
-        <button type="submit" style="padding:8px 20px;background:#0ea5e9;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">${isEdit?"Opslaan":"Aanmaken"}</button>
+        <button type="submit" style="padding:8px 20px;background:var(--wf-blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">${isEdit?"Opslaan":"Aanmaken"}</button>
       </div>
     </div>
   </form>
@@ -1569,7 +1570,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     <div id="mileageErr" style="display:none;color:#ef4444;font-size:12px;"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;">
       <button type="button" id="mileageCancel" style="padding:8px 16px;border:1px solid #e2e8f0;background:#fff;border-radius:8px;font-size:13px;cursor:pointer;">Annuleren</button>
-      <button type="submit" style="padding:8px 20px;background:#0ea5e9;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Opslaan</button>
+      <button type="submit" style="padding:8px 20px;background:var(--wf-blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Opslaan</button>
     </div>
   </form>
 </div>`;
@@ -1799,7 +1800,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
       mgrList.innerHTML = _mgrNotifs.slice(0, 15).map(n => {
         const isRead = n.status === "read";
         return `<div class="mgr-notif-item" data-nid="${esc(n.id)}" style="padding:10px 16px;border-bottom:1px solid #f8fafc;cursor:pointer;display:flex;gap:10px;background:${isRead?"#fff":"#eff6ff"}">
-          <div style="width:7px;height:7px;border-radius:50%;background:${isRead?"#cbd5e1":"#0ea5e9"};margin-top:5px;flex-shrink:0"></div>
+          <div style="width:7px;height:7px;border-radius:50%;background:${isRead?"#cbd5e1":"var(--wf-blue)"};margin-top:5px;flex-shrink:0"></div>
           <div style="flex:1">
             <div style="font-size:12.5px;color:#374151;font-weight:${isRead?400:600}">${esc(n.title||n.message||"Notificatie")}</div>
             ${n.body ? `<div style="font-size:11.5px;color:#64748b;margin-top:2px">${esc(n.body)}</div>` : ""}
