@@ -645,3 +645,50 @@ test("ciaw: submitCheckin valt terug op mock zonder live provider", async () => 
   assert.equal(res.status, "confirmed");
   assert.match(res.reference, /^MOCK-CIAW-/);
 });
+
+// ── A1 / Limosa detachering (DECA-B) ──
+const pw = require("../src/modules/posted-workers");
+
+test("posted-workers: a1Status valid/expiring/expired/missing", () => {
+  const now = Date.UTC(2026, 5, 25);
+  assert.equal(pw.a1Status({ documentRef: "A1-1", validTo: "2027-01-01" }, now), "valid");
+  assert.equal(pw.a1Status({ documentRef: "A1-1", validTo: "2026-07-10" }, now), "expiring"); // <30d
+  assert.equal(pw.a1Status({ documentRef: "A1-1", validTo: "2026-01-01" }, now), "expired");
+  assert.equal(pw.a1Status({ validTo: "2027-01-01" }, now), "missing"); // geen documentRef
+});
+
+test("posted-workers: normalizeRecord verplicht naam + land en valideert datums", () => {
+  assert.throws(() => pw.normalizeRecord({ country: "PL" }), e => e.status === 400); // geen naam
+  assert.throws(() => pw.normalizeRecord({ workerName: "X" }), e => e.status === 400); // geen land
+  assert.throws(() => pw.normalizeRecord({ workerName: "X", country: "PL", validFrom: "2026-06-10", validTo: "2026-06-01" }), e => e.status === 400);
+  const ok = pw.normalizeRecord({ workerName: " Piotr ", country: "pl", idNumber: "123" });
+  assert.equal(ok.workerName, "Piotr");
+  assert.equal(ok.country, "PL");
+});
+
+test("posted-workers: CRUD + Limosa mock via store", async () => {
+  const store = reviewStore([{ id: "t1", name: "Bouw BV", vat: "BE0123" }]);
+  store.data.postedWorkers = [];
+  const tenant = store.data.tenants[0];
+  const actor = { email: "admin@bouw.be" };
+  const rec = pw.createPostedWorker(store, tenant, { workerName: "Piotr", country: "PL", documentRef: "A1-77", validFrom: "2026-06-01", validTo: "2027-06-01" }, actor);
+  assert.ok(rec.id);
+  const list = pw.listPostedWorkers(store, tenant, Date.UTC(2026, 5, 25));
+  assert.equal(list.total, 1);
+  assert.equal(list.rows[0].a1Status, "valid");
+  const lim = await pw.submitLimosa(store, tenant, rec.id, { config: {} }, actor);
+  assert.equal(lim.ok, true);
+  assert.equal(lim.limosa.live, false);
+  assert.match(lim.limosa.reference, /^MOCK-LIMOSA-/);
+  pw.deletePostedWorker(store, tenant, rec.id, actor);
+  assert.equal(pw.listPostedWorkers(store, tenant).total, 0);
+});
+
+test("posted-workers: buildLimosaDeclaration vereist werknemer/land/begindatum", () => {
+  const bad = pw.buildLimosaDeclaration({ tenant: { name: "X" }, record: { workerName: "", country: "" } });
+  assert.equal(bad.valid, false);
+  assert.ok(bad.errors.length >= 2);
+  const ok = pw.buildLimosaDeclaration({ tenant: { name: "X", vat: "BE1" }, record: { workerName: "Piotr", country: "PL", validFrom: "2026-06-01", idNumber: "1" } });
+  assert.equal(ok.valid, true);
+  assert.equal(ok.declaration.worker.country, "PL");
+});

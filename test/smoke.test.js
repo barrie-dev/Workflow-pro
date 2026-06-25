@@ -1098,21 +1098,39 @@ test("communicatie: announcement PUT → publiek zichtbaar, clear, gating", asyn
 });
 
 // ── DECA-A: geo-klok end-to-end (geo wordt op de klokregistratie bewaard) ────
-// Gebruikt een verse medewerker zodat er geen botsing is met andere kloktests
-// (assertNoCompletedOverlap op hetzelfde tijdstip).
+// Gebruikt de superadmin (stabiel token, omzeilt tenant-guards) + een verse
+// medewerker zodat er geen botsing is met andere kloktests (overlap-check).
 test("geo-klok: inklokken bewaart geo + geoStatus op de klokregistratie", async () => {
-  const admin = await login("admin@demobouw.be", "Demo2026!");
-  if (!admin.token) { return; } // admin-login al gewijzigd door een latere test → overslaan
-  const AH = { Authorization: `Bearer ${admin.token}`, "Content-Type": "application/json" };
+  const god = await login("super@workflowpro.be", "Demo2026!");
+  const H = { Authorization: `Bearer ${god.token}`, "Content-Type": "application/json" };
   const stamp = Date.now().toString(36);
-  const created = await fetch(`${BASE}/api/tenants/t_demo/employees`, { method: "POST", headers: AH, body: JSON.stringify({ name: `Geo Test ${stamp}`, email: `geo-${stamp}@demobouw.be`, role: "employee" }) });
-  if (created.status !== 201 && created.status !== 200) { return; } // omgeving staat aanmaken niet toe → overslaan
+  const created = await fetch(`${BASE}/api/tenants/t_demo/employees`, { method: "POST", headers: H, body: JSON.stringify({ name: `Geo Test ${stamp}`, email: `geo-${stamp}@demobouw.be`, role: "employee" }) });
+  assert.ok(created.status === 201 || created.status === 200, "verse medewerker aangemaakt");
   const emp = await created.json();
   const empId = (emp.user && emp.user.id) || emp.id;
-  const H = AH;
   const r = await fetch(`${BASE}/api/tenants/t_demo/clock/in`, { method: "POST", headers: H, body: JSON.stringify({ userId: empId, geo: { lat: 50.8503, lng: 4.3517, accuracy: 12 } }) });
   assert.equal(r.status, 201, "inklokken lukt voor verse medewerker");
   const d = await r.json();
   assert.ok(d.row.geo && d.row.geo.lat === 50.8503, "geo vastgelegd op klokregistratie");
   assert.ok(typeof d.row.geoStatus === "string", "geoStatus gezet");
+});
+
+// ── DECA-B: A1/Limosa detachering — CRUD + Limosa-mock + entitlement-gate ────
+test("posted-workers: superadmin CRUD + Limosa-mock; niet-entitled tenant → 403", async () => {
+  const god = await login("super@workflowpro.be", "Demo2026!");
+  const H = { Authorization: `Bearer ${god.token}`, "Content-Type": "application/json" };
+  // superadmin omzeilt de module-gate → CRUD werkt direct op t_demo
+  const created = await fetch(`${BASE}/api/tenants/t_demo/posted_workers`, { method: "POST", headers: H, body: JSON.stringify({ workerName: "Piotr K.", country: "PL", documentRef: "A1-2026-77", validFrom: "2026-06-01", validTo: "2027-06-01" }) });
+  assert.equal(created.status, 201);
+  const rec = (await created.json()).record;
+  const list = await (await fetch(`${BASE}/api/tenants/t_demo/posted_workers`, { headers: H })).json();
+  assert.ok(list.rows.some(r => r.id === rec.id) && list.rows.find(r => r.id === rec.id).a1Status === "valid");
+  const lim = await (await fetch(`${BASE}/api/tenants/t_demo/posted_workers/${rec.id}/limosa`, { method: "POST", headers: H, body: "{}" })).json();
+  assert.equal(lim.ok, true);
+  assert.match(lim.limosa.reference, /^MOCK-LIMOSA-/);
+  await fetch(`${BASE}/api/tenants/t_demo/posted_workers/${rec.id}`, { method: "DELETE", headers: H });
+  // entitlement-gate: gewone tenant-gebruiker zonder de add-on → 403
+  const jan = await login("jan@demobouw.be", "Demo2026!");
+  const denied = await fetch(`${BASE}/api/tenants/t_demo/posted_workers`, { headers: { Authorization: `Bearer ${jan.token}` } });
+  assert.equal(denied.status, 403, "posted_workers add-on niet in pakket → 403");
 });

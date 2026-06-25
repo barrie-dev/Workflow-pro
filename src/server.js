@@ -167,6 +167,7 @@ const { verifyStripeSignature } = require("./modules/stripe-webhook");
 const { seedDemoData, clearDemoData } = require("./modules/demo-seed");
 const { buildUbl, validatePeppol, sendPeppolInvoice } = require("./modules/peppol-invoice");
 const { submitCheckin } = require("./modules/ciaw");
+const { listPostedWorkers, createPostedWorker, updatePostedWorker, deletePostedWorker, submitLimosa } = require("./modules/posted-workers");
 const {
   leaveSubmittedToAdmin,
   leaveReviewedToEmployee,
@@ -3283,6 +3284,38 @@ http.createServer(async (req, res) => {
           .map(c => ({ clockId: c.id, userId: c.userId, venueId: c.venueId, date: c.date, geoVerified: !!c.geoVerified, geoDistanceM: c.geoDistanceM ?? null, ...c.ciaw }));
         sendJson(res, 200, { ok: true, declarations: rows });
         return;
+      }
+
+      // ── A1 / Limosa — detachering van (onder)aannemers (compliance-add-on) ──
+      if (action === "posted_workers" && req.method === "GET") {
+        assertInteractiveUser(user);
+        sendJson(res, 200, { ok: true, ...listPostedWorkers(store, tenant) });
+        return;
+      }
+      if (action === "posted_workers" && req.method === "POST") {
+        assertCan(user, "employees");
+        sendJson(res, 201, { ok: true, record: createPostedWorker(store, tenant, await readBody(req), user) });
+        return;
+      }
+      const pwMatch = action.match(/^posted_workers\/([^/]+)(\/limosa)?$/);
+      if (pwMatch) {
+        const pwId = pwMatch[1];
+        if (pwMatch[2] && req.method === "POST") {
+          assertCan(user, "employees");
+          const result = await submitLimosa(store, tenant, pwId, { config: loadPlatformConfig(store) }, user);
+          sendJson(res, result.ok ? 200 : 400, { ok: result.ok, ...result });
+          return;
+        }
+        if (req.method === "PUT") {
+          assertCan(user, "employees");
+          sendJson(res, 200, { ok: true, record: updatePostedWorker(store, tenant, pwId, await readBody(req), user) });
+          return;
+        }
+        if (req.method === "DELETE") {
+          assertCan(user, "employees");
+          sendJson(res, 200, { ok: true, ...deletePostedWorker(store, tenant, pwId, user) });
+          return;
+        }
       }
 
       // Peppol e-facturatie verzenden
