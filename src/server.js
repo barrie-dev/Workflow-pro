@@ -137,6 +137,7 @@ const { SECTORS, TEAM_SIZES, isValidSector, publicSectors, sectorByKey, terminol
 const { availableWidgets, renderWidgets, sanitizeKeys: sanitizeWidgetKeys } = require("./modules/dashboards");
 const { todayPayload, completeWorkorder, attachWorkorderPhoto, signWorkorder, syncMobileQueue } = require("./modules/mobile");
 const { clockIn, clockOut, approveExpense, managementReport } = require("./modules/operations");
+const { leaveConflictOn } = require("./modules/planning-rules");
 const { listIntegrations, connectIntegration, updateMapping, runSync, retrySync, listProviders } = require("./modules/integrations");
 const { commissionOverview, publicReseller, commissionPctFor } = require("./modules/resellers");
 const saml = require("./modules/saml");
@@ -3107,6 +3108,9 @@ http.createServer(async (req, res) => {
         if (!body.start)  return sendJson(res, 400, { ok: false, error: "Starttijd is verplicht" });
         if (!body.end)    return sendJson(res, 400, { ok: false, error: "Eindtijd is verplicht" });
         if (String(body.end) <= String(body.start)) return sendJson(res, 400, { ok: false, error: "Eindtijd moet na de starttijd liggen" });
+        // Verlof-aware planning: medewerker met goedgekeurd verlof niet inplannen.
+        const leaveClash = leaveConflictOn(store, tenantId, body.userId, body.date);
+        if (leaveClash) return sendJson(res, 409, { ok: false, error: `Medewerker heeft goedgekeurd verlof op ${body.date} (${leaveClash.startDate} t/m ${leaveClash.endDate}) en kan niet ingepland worden.` });
         const shift = store.insert("shifts", {
           id: `shift_${Date.now()}_${Math.random().toString(16).slice(2)}`,
           tenantId,
@@ -3779,10 +3783,32 @@ http.createServer(async (req, res) => {
       // ── Berichten lijst (admin/manager) ──────────────────────────────────────
       if (action === "messages" && req.method === "GET") {
         assertCan(user, "messages");
-        const messages = store.list("messages", tenantId)
+        // Werf-chat: filter op ?venueId voor de gespreksgroep van één werf.
+        const venueFilter = url.searchParams.get("venueId");
+        let messages = store.list("messages", tenantId);
+        if (venueFilter) messages = messages.filter(m => m.venueId === venueFilter);
+        messages = messages
           .sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""))
           .slice(0, 100);
         sendJson(res, 200, { ok: true, messages });
+        return;
+      }
+      // Werf-gespreksgroepen: per werf het aantal berichten + laatste activiteit.
+      if (action === "messages/venues" && req.method === "GET") {
+        assertCan(user, "messages");
+        const byVenue = new Map();
+        for (const m of store.list("messages", tenantId)) {
+          if (!m.venueId) continue;
+          const cur = byVenue.get(m.venueId) || { venueId: m.venueId, count: 0, lastAt: "" };
+          cur.count++;
+          if ((m.createdAt || "") > cur.lastAt) cur.lastAt = m.createdAt || "";
+          byVenue.set(m.venueId, cur);
+        }
+        const venuesById = new Map(store.list("venues", tenantId).map(v => [v.id, v.name]));
+        const threads = [...byVenue.values()]
+          .map(t => ({ ...t, venue: venuesById.get(t.venueId) || t.venueId }))
+          .sort((a, b) => b.lastAt.localeCompare(a.lastAt));
+        sendJson(res, 200, { ok: true, threads });
         return;
       }
 
@@ -3806,6 +3832,7 @@ http.createServer(async (req, res) => {
           recipientId: body.recipientId || null,
           toRole: toRole || null,
           toName: toName || null,
+          venueId: body.venueId || null,     // werf-chat: koppel bericht aan een werf
           subject: body.subject || "",
           body: body.body || "",
           readBy: [],

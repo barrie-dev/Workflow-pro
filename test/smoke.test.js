@@ -1134,3 +1134,21 @@ test("posted-workers: superadmin CRUD + Limosa-mock; niet-entitled tenant → 40
   const denied = await fetch(`${BASE}/api/tenants/t_demo/posted_workers`, { headers: { Authorization: `Bearer ${jan.token}` } });
   assert.equal(denied.status, 403, "posted_workers add-on niet in pakket → 403");
 });
+
+// ── DECA-C: werf-chat (venue-gescoorde berichten-threads) ───────────────────
+test("werf-chat: bericht met venueId verschijnt in werf-thread + threadoverzicht", async () => {
+  const god = await login("super@workflowpro.be", "Demo2026!");
+  const H = { Authorization: `Bearer ${god.token}`, "Content-Type": "application/json" };
+  const venues = await (await fetch(`${BASE}/api/tenants/t_demo/venues`, { headers: H })).json();
+  const venueId = (venues.venues || venues.rows || [])[0]?.id;
+  assert.ok(venueId, "demo-tenant heeft minstens één werf");
+  const stamp = Date.now().toString(36);
+  const post = await fetch(`${BASE}/api/tenants/t_demo/messages`, { method: "POST", headers: H, body: JSON.stringify({ venueId, body: `Werfbericht ${stamp}` }) });
+  assert.equal(post.status, 201);
+  // werf-thread bevat het bericht
+  const thread = await (await fetch(`${BASE}/api/tenants/t_demo/messages?venueId=${venueId}`, { headers: H })).json();
+  assert.ok(thread.messages.some(m => m.body === `Werfbericht ${stamp}` && m.venueId === venueId));
+  // threadoverzicht per werf
+  const threads = await (await fetch(`${BASE}/api/tenants/t_demo/messages/venues`, { headers: H })).json();
+  assert.ok(threads.threads.some(t => t.venueId === venueId && t.count >= 1));
+});

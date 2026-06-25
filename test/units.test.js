@@ -692,3 +692,29 @@ test("posted-workers: buildLimosaDeclaration vereist werknemer/land/begindatum",
   assert.equal(ok.valid, true);
   assert.equal(ok.declaration.worker.country, "PL");
 });
+
+// ── Verlof-aware planning (DECA-C) ──
+const { leaveConflictOn, validatePlanningRules } = require("../src/modules/planning-rules");
+
+test("planning: leaveConflictOn vindt goedgekeurd verlof op datum, negeert rest", () => {
+  const store = reviewStore([{ id: "t1", name: "T" }]);
+  store.data.leaves = [
+    { id: "l1", tenantId: "t1", userId: "u1", status: "goedgekeurd", startDate: "2026-07-01", endDate: "2026-07-05" },
+    { id: "l2", tenantId: "t1", userId: "u2", status: "aangevraagd", startDate: "2026-07-01", endDate: "2026-07-05" },
+  ];
+  assert.ok(leaveConflictOn(store, "t1", "u1", "2026-07-03"), "binnen goedgekeurd verlof → conflict");
+  assert.equal(leaveConflictOn(store, "t1", "u1", "2026-07-10"), null, "buiten periode → geen conflict");
+  assert.equal(leaveConflictOn(store, "t1", "u2", "2026-07-03"), null, "enkel aangevraagd → geen blok");
+  assert.equal(leaveConflictOn(store, "t1", "u3", "2026-07-03"), null, "andere medewerker → geen conflict");
+});
+
+test("planning: validatePlanningRules blokkeert shift op goedgekeurd verlof (409)", () => {
+  const store = reviewStore([{ id: "t1", name: "T" }]);
+  store.data.leaves = [{ id: "l1", tenantId: "t1", userId: "u1", status: "goedgekeurd", startDate: "2026-07-01", endDate: "2026-07-05" }];
+  assert.throws(
+    () => validatePlanningRules(store, "t1", { userId: "u1", date: "2026-07-03", start: "08:00", end: "17:00" }),
+    e => e.status === 409 && /verlof/i.test(e.message)
+  );
+  // geen verlof → geen worp
+  assert.doesNotThrow(() => validatePlanningRules(store, "t1", { userId: "u1", date: "2026-08-01", start: "08:00", end: "17:00" }));
+});

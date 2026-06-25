@@ -8,9 +8,26 @@ function shiftWindowSafe(shift) {
   return windowFromTimesSafe(shift.start, shift.end);
 }
 
+// Goedgekeurd verlof dat een datum overlapt (verlof-aware planning).
+function leaveConflictOn(store, tenantId, userId, date) {
+  if (!userId || !date) return null;
+  return store.list("leaves", tenantId).find(l =>
+    l.userId === userId && l.status === "goedgekeurd" && l.startDate <= date && l.endDate >= date
+  ) || null;
+}
+
 function validatePlanningRules(store, tenantId, payload, existing = null) {
   const shift = { ...(existing || {}), ...(payload || {}), tenantId };
   const window = shiftWindow(shift);
+
+  // Verlof-aware planning: blokkeer inplannen van een medewerker met goedgekeurd verlof.
+  const leave = leaveConflictOn(store, tenantId, shift.userId, shift.date);
+  if (leave) {
+    throw apiError(
+      `Medewerker heeft goedgekeurd verlof op ${shift.date} (${leave.startDate} t/m ${leave.endDate}) en kan niet ingepland worden.`,
+      409
+    );
+  }
 
   const sameUserSameDay = store
     .list("shifts", tenantId)
@@ -101,4 +118,4 @@ function planningInsights(shifts) {
   };
 }
 
-module.exports = { validatePlanningRules, planningInsights };
+module.exports = { validatePlanningRules, planningInsights, leaveConflictOn };
