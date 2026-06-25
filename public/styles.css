@@ -40,9 +40,14 @@
   --text:     #334155;
   --muted:    #64748b;
   --line:     #e2e8f0;
+  --wf-blue-d:      #1551b5;
+  --radius-sm: 0.5rem;
   --radius:   0.75rem;
-  --shadow:   0 1px 3px rgba(0,0,0,.06), 0 4px 12px rgba(0,0,0,.04);
-  --shadow-m: 0 4px 24px rgba(0,0,0,.10);
+  --radius-lg: 1rem;
+  --shadow-xs: 0 1px 2px rgba(15,23,42,.05);
+  --shadow:   0 1px 3px rgba(15,23,42,.06), 0 6px 16px rgba(15,23,42,.05);
+  --shadow-m: 0 8px 28px rgba(15,23,42,.10);
+  --ring:     0 0 0 3px rgba(30,107,230,.15);
 
   /* Legacy aliases kept for main.js compat */
   --navy:      var(--wf-navy);

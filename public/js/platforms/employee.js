@@ -454,7 +454,7 @@
 .emp-pill-green { background: #d1fae5; color: #059669; }
 .emp-pill-amber { background: #fef3c7; color: #d97706; }
 .emp-pill-red { background: #fee2e2; color: #dc2626; }
-.emp-pill-blue { background: #dbeafe; color: #2563eb; }
+.emp-pill-blue { background: #dbeafe; color: var(--wf-blue); }
 .emp-pill-gray { background: #f1f5f9; color: #64748b; }
 
 /* ── Action row ─────────────────────────────── */
@@ -1464,7 +1464,7 @@ ${data.absentNow ? `<div style="background:#fef3c7;border-radius:10px;padding:12
     return `
   <div class="emp-list-item emp-msg-item" data-id="${esc(m.id)}" style="background:${isUnread?"#eff6ff":"#fff"};border-radius:10px;margin-bottom:4px;cursor:pointer;">
     <div class="emp-list-icon" style="background:${isUnread?"#dbeafe":"#e0f2fe"};">
-      <svg viewBox="0 0 24 24" style="fill:${isUnread?"#2563eb":"#0284c7"}"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+      <svg viewBox="0 0 24 24" style="fill:${isUnread?"var(--wf-blue)":"#0284c7"}"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
     </div>
     <div class="emp-list-info" style="flex:1;min-width:0;">
       <div class="emp-list-title" style="${isUnread?"font-weight:700;":""}">

@@ -211,7 +211,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
 .mgr-status-active,.mgr-status-goedgekeurd { background:#d1fae5; color:#059669; }
 .mgr-status-pending,.mgr-status-aangevraagd,.mgr-status-ingediend { background:#fef3c7; color:#d97706; }
 .mgr-status-inactive,.mgr-status-geweigerd { background:#fee2e2; color:#dc2626; }
-.mgr-status-open { background:#dbeafe; color:#2563eb; }
+.mgr-status-open { background:#dbeafe; color:var(--wf-blue); }
 .mgr-avatar { width:28px; height:28px; border-radius:50%; background:#e0f2fe; color:#0284c7; display:inline-grid; place-items:center; font-size:11px; font-weight:600; }
 .mgr-team-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; }
 .mgr-team-card { background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:14px; }
@@ -327,7 +327,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
         <div class="mgr-team-card-role">${u.function||u.jobTitle||u.role||"—"}</div>
         <div class="mgr-team-card-badges">
           ${u.absent ? '<span style="background:#fee2e2;color:#dc2626;border-radius:4px;padding:2px 6px;font-size:10px;">Afwezig</span>' : ""}
-          ${u.planned ? '<span style="background:#dbeafe;color:#2563eb;border-radius:4px;padding:2px 6px;font-size:10px;">Ingepland</span>' : ""}
+          ${u.planned ? '<span style="background:#dbeafe;color:var(--wf-blue);border-radius:4px;padding:2px 6px;font-size:10px;">Ingepland</span>' : ""}
         </div>
       </div>`).join("") || '<p style="color:#94a3b8;font-size:13px;">Geen teamleden</p>'}
     </div>
@@ -853,7 +853,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
       const isWeekend = dow === 0 || dow === 6;
       const isToday = dateStr === new Date().toISOString().slice(0,10);
       cells += `<div style="min-height:52px;border-radius:8px;padding:4px 6px;background:${isToday?"#eff6ff":isWeekend?"#f8fafc":"#fff"};border:1px solid ${isToday?"#bfdbfe":"#e2e8f0"};">
-        <div style="font-size:11px;font-weight:${isToday?"700":"500"};color:${isWeekend?"#94a3b8":isToday?"#2563eb":"#374151"};margin-bottom:2px;">${d}</div>
+        <div style="font-size:11px;font-weight:${isToday?"700":"500"};color:${isWeekend?"#94a3b8":isToday?"var(--wf-blue)":"#374151"};margin-bottom:2px;">${d}</div>
         ${userIds.slice(0,3).map(uid=>`<div style="font-size:10px;background:#dbeafe;color:#1e40af;border-radius:4px;padding:1px 4px;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(empMap[uid]||uid)}">${esc((empMap[uid]||uid).split(" ")[0])}</div>`).join("")}
         ${userIds.length>3?`<div style="font-size:10px;color:#64748b;">+${userIds.length-3}</div>`:""}
       </div>`;
