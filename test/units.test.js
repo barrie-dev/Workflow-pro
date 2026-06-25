@@ -590,3 +590,58 @@ test("platform-config: announcement normaliseert niveau + kapt bericht, en kan u
   assert.equal(a.active, false);
   assert.equal(a.level, "maintenance");
 });
+
+// ── Geo-klok (locatie-geverifieerd inklokken) ──
+const { verifyClockGeo, distanceMeters, normalizeGeo } = require("../src/modules/geo");
+
+test("geo: distanceMeters ~ haversine (Brussel→Antwerpen ≈ 40km)", () => {
+  const d = distanceMeters({ lat: 50.8503, lng: 4.3517 }, { lat: 51.2194, lng: 4.4025 });
+  assert.ok(d > 38000 && d < 43000, `verwacht ~40km, kreeg ${d}`);
+});
+
+test("geo: verifyClockGeo binnen/buiten geofence + randgevallen", () => {
+  const venue = { id: "v1", geo: { lat: 50.85, lng: 4.35, radiusM: 150 } };
+  const inside = verifyClockGeo({ lat: 50.8501, lng: 4.3501, accuracy: 10 }, venue);
+  assert.equal(inside.verified, true);
+  assert.equal(inside.status, "within_fence");
+  const outside = verifyClockGeo({ lat: 50.86, lng: 4.36, accuracy: 10 }, venue);
+  assert.equal(outside.verified, false);
+  assert.equal(outside.status, "outside_fence");
+  assert.ok(outside.distanceM > 150);
+  // geen toestel-locatie
+  assert.equal(verifyClockGeo(null, venue).status, "no_device_location");
+  // geen werf-locatie
+  assert.equal(verifyClockGeo({ lat: 50.85, lng: 4.35 }, { id: "v2" }).status, "no_venue_location");
+  // te onnauwkeurig
+  assert.equal(verifyClockGeo({ lat: 50.85, lng: 4.35, accuracy: 500 }, venue).status, "low_accuracy");
+});
+
+// ── CIAW / Checkin@Work ──
+const { buildCheckinDeclaration, submitCheckin, validInsz } = require("../src/modules/ciaw");
+
+test("ciaw: validInsz + buildCheckinDeclaration valideert verplichte velden", () => {
+  assert.equal(validInsz("90.02.01-123.45"), true);
+  assert.equal(validInsz("123"), false);
+  const tenant = { compliance: { rszEmployerId: "12345678" } };
+  const user = { name: "Jan", insz: "90020112345" };
+  const venue = { id: "v1", name: "Werf A" };
+  const ok = buildCheckinDeclaration({ tenant, clock: { id: "c1", date: "2026-06-25", clockIn: "08:00" }, user, venue, action: "in" });
+  assert.equal(ok.valid, true);
+  assert.equal(ok.declaration.action, "IN");
+  assert.equal(ok.declaration.worker.insz, "90020112345");
+  // ontbrekend RSZ-nummer + INSZ → errors
+  const bad = buildCheckinDeclaration({ tenant: {}, clock: { id: "c2", date: "2026-06-25" }, user: {}, venue: null, action: "in" });
+  assert.equal(bad.valid, false);
+  assert.ok(bad.errors.length >= 2);
+});
+
+test("ciaw: submitCheckin valt terug op mock zonder live provider", async () => {
+  const tenant = { compliance: { rszEmployerId: "12345678" } };
+  const user = { name: "Jan", insz: "90020112345" };
+  const venue = { id: "v1", name: "Werf A" };
+  const res = await submitCheckin({ config: {}, tenant, clock: { id: "c1", date: "2026-06-25", clockIn: "08:00" }, user, venue, action: "in" });
+  assert.equal(res.ok, true);
+  assert.equal(res.live, false);
+  assert.equal(res.status, "confirmed");
+  assert.match(res.reference, /^MOCK-CIAW-/);
+});

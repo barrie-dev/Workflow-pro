@@ -31,6 +31,11 @@ const DUMMY = {
     provider: "mock",                 // mock | cbe-open-data
     apiKey: "",
   },
+  ciaw: {
+    provider: "mock",                 // mock | rsz | (gateway-provider)
+    apiKey: "ciaw_DUMMY_0000000000",
+    baseHost: "api.checkinatwork.be",
+  },
   openai: {
     apiKey: "sk-DUMMY000000000000000000",   // echte OpenAI-key → Boden AI live; anders mock-modus
     model: "gpt-4o-mini",                    // instelbaar bij go-live (bv. gpt-4o voor meer kwaliteit)
@@ -55,6 +60,11 @@ function envOverlay() {
     kbo: {
       provider: process.env.KBO_PROVIDER || undefined,
       apiKey: process.env.KBO_API_KEY || undefined,
+    },
+    ciaw: {
+      provider: process.env.CIAW_PROVIDER || undefined,
+      apiKey: process.env.CIAW_API_KEY || undefined,
+      baseHost: process.env.CIAW_BASE_HOST || undefined,
     },
     openai: {
       apiKey: process.env.OPENAI_API_KEY || undefined,
@@ -86,7 +96,7 @@ function loadPlatformConfig(store) {
   const stored = storedRow(store) || {};
   // dummy ← env ← stored
   const withEnv = deepMerge(DUMMY, envOverlay());
-  const merged = deepMerge(withEnv, { stripe: stored.stripe, peppol: stored.peppol, email: stored.email, kbo: stored.kbo, openai: stored.openai });
+  const merged = deepMerge(withEnv, { stripe: stored.stripe, peppol: stored.peppol, email: stored.email, kbo: stored.kbo, openai: stored.openai, ciaw: stored.ciaw });
   // Add-on-overrides (naam/prijs/omschrijving/actief per add-on) — superadmin-bewerkbaar.
   merged.addons = stored.addons || {};
   // Plan-prijs-overrides (baseAnnual/seatAnnual/includedSeats per bundel-key).
@@ -137,6 +147,12 @@ function publicPlatformConfig(store) {
       apiKey: mask(cfg.kbo.apiKey),
       configured: cfg.kbo.provider !== "mock" && isReal(cfg.kbo.apiKey),
     },
+    ciaw: {
+      provider: cfg.ciaw.provider,
+      apiKey: mask(cfg.ciaw.apiKey),
+      baseHost: cfg.ciaw.baseHost,
+      configured: cfg.ciaw.provider !== "mock" && isReal(cfg.ciaw.apiKey),
+    },
     openai: {
       apiKey: mask(cfg.openai.apiKey),
       model: cfg.openai.model,
@@ -160,6 +176,7 @@ function savePlatformConfig(store, patch, actor) {
     peppol: { ...(current.peppol || {}) },
     email: { ...(current.email || {}) },
     kbo: { ...(current.kbo || {}) },
+    ciaw: { ...(current.ciaw || {}) },
     openai: { ...(current.openai || {}) },
     addons: { ...(current.addons || {}) },
     planPrices: { ...(current.planPrices || {}) },
@@ -215,6 +232,7 @@ function savePlatformConfig(store, patch, actor) {
   apply("peppol", ["provider", "apiKey"]);
   apply("email", ["provider", "apiKey", "from"]);
   apply("kbo", ["provider", "apiKey"]);
+  apply("ciaw", ["provider", "apiKey", "baseHost"]);
   apply("openai", ["apiKey", "model"]);
 
   const existing = storedRow(store);

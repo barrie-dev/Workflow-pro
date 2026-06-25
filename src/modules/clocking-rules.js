@@ -5,6 +5,7 @@ const {
   windowFromTimesSafe,
   windowsOverlap
 } = require("./time-utils");
+const { verifyClockGeo } = require("./geo");
 
 const MAX_CLOCK_MINUTES = 16 * 60;
 
@@ -65,6 +66,12 @@ function normalizeClockIn(store, tenantId, payload, actor, fallbackTime) {
   const instantWindow = { start: clockInMinutes, end: clockInMinutes + 1 };
   assertNoCompletedOverlap(store, tenantId, userId, date, instantWindow);
 
+  // Locatie-verificatie ("coördinaten tegen valsspelen"): vergelijk de positie van
+  // het toestel met de geofence van de werf. Best-effort — zonder geo of werf-geo
+  // blokkeert het inklokken niet, maar het resultaat wordt wél vastgelegd.
+  const venue = venueId ? store.get("venues", venueId) : null;
+  const geoCheck = verifyClockGeo(payload.geo, venue);
+
   return {
     userId,
     date,
@@ -72,7 +79,11 @@ function normalizeClockIn(store, tenantId, payload, actor, fallbackTime) {
     venueId,
     shiftId: payload.shiftId || matchingShift?.id || null,
     note: payload.note || "",
-    planningMatch: matchingShift ? "matched" : "unplanned"
+    planningMatch: matchingShift ? "matched" : "unplanned",
+    geo: geoCheck.geo,
+    geoStatus: geoCheck.status,
+    geoVerified: geoCheck.verified,
+    geoDistanceM: geoCheck.distanceM ?? null
   };
 }
 

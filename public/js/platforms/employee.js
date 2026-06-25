@@ -29,17 +29,31 @@
   }
   // Probeer online in/uit te klokken; bij netwerkverlies komt de actie in de
   // IndexedDB-queue en wordt ze later idempotent gesynchroniseerd.
+  // Best-effort GPS-positie voor locatie-geverifieerd inklokken ("coördinaten
+  // tegen valsspelen"). Faalt stil → inklokken blijft mogelijk zonder geo.
+  function currentPosition() {
+    return new Promise(resolve => {
+      if (!navigator.geolocation) return resolve(null);
+      navigator.geolocation.getCurrentPosition(
+        p => resolve({ lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy, at: new Date().toISOString() }),
+        () => resolve(null),
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
+      );
+    });
+  }
+
   async function clockAction(dir) {
     const path = dir === "in" ? "/me/clock/in" : "/me/clock/out";
     const action = dir === "in" ? "clock_in" : "clock_out";
+    const payload = dir === "in" ? { geo: await currentPosition() } : {};
     if (window.wfpOfflineQueue) {
-      const r = await window.wfpOfflineQueue.run(() => api("POST", path, {}), { action, payload: {} });
+      const r = await window.wfpOfflineQueue.run(() => api("POST", path, payload), { action, payload });
       if (r.queued) {
         window.showToast && window.showToast(`${dir === "in" ? "Inklokken" : "Uitklokken"} offline opgeslagen — wordt gesynchroniseerd zodra je verbinding hebt.`, "info");
         return;
       }
     } else {
-      await api("POST", path, {});
+      await api("POST", path, payload);
     }
     window.showToast && window.showToast(dir === "in" ? "Ingeklokt ✓" : "Uitgeklokt ✓", "success");
   }

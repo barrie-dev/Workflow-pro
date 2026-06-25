@@ -78,6 +78,17 @@ const MODULE_CATALOG = [
   { key: "venues", label: "Locaties / werven", group: "Middelen", core: false,
     view: "venues", actions: ["venues"], submodules: [] },
 
+  // ── Compliance (Belgische bouw) ───────────────────────────
+  // CIAW / Checkin@Work — verplichte aanwezigheidsregistratie naar RSZ/ONSS.
+  // À-la-carte add-on: superadmin zet 'm per tenant aan (moduleOverrides.add).
+  { key: "ciaw", label: "Checkin@Work (CIAW)", group: "Compliance", core: false,
+    addon: true, view: "ciaw", actions: ["ciaw"], submodules: [],
+    addonMonthly: 39, addonDesc: "Registreer aanwezigheid op de werf automatisch bij de overheid (RSZ/ONSS), met geo-geverifieerd inklokken." },
+  // A1 / Limosa — detacheringsdocumenten van (onder)aannemers beheren + indienen.
+  { key: "posted_workers", label: "A1 / Limosa detachering", group: "Compliance", core: false,
+    addon: true, view: "posted_workers", actions: ["posted_workers"], submodules: [],
+    addonMonthly: 29, addonDesc: "Beheer A1-attesten van onderaannemers en buitenlandse werknemers en dien Limosa-meldingen in." },
+
   // ── Inzicht & Systeem ─────────────────────────────────────
   { key: "reports", label: "Rapportages", group: "Inzicht", core: false,
     view: "reports", actions: ["reports"],

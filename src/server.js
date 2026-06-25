@@ -166,6 +166,7 @@ const { pushConfigured, publicKey: pushPublicKey, saveSubscription: savePushSubs
 const { verifyStripeSignature } = require("./modules/stripe-webhook");
 const { seedDemoData, clearDemoData } = require("./modules/demo-seed");
 const { buildUbl, validatePeppol, sendPeppolInvoice } = require("./modules/peppol-invoice");
+const { submitCheckin } = require("./modules/ciaw");
 const {
   leaveSubmittedToAdmin,
   leaveReviewedToEmployee,
@@ -2967,8 +2968,10 @@ http.createServer(async (req, res) => {
       }
 
       // me/clock/in en me/clock/out — medewerker klokt zichzelf in/uit
+      // (geo wordt meegestuurd voor locatie-geverifieerd inklokken op de werf)
       if (action === "me/clock/in" && req.method === "POST") {
-        sendJson(res, 201, { ok: true, row: clockIn(store, tenant, { userId: user.id }, user) });
+        const body = await readBody(req).catch(() => ({}));
+        sendJson(res, 201, { ok: true, row: clockIn(store, tenant, { userId: user.id, geo: body.geo, venueId: body.venueId }, user) });
         return;
       }
       if (action === "me/clock/out" && req.method === "POST") {
@@ -3256,6 +3259,32 @@ http.createServer(async (req, res) => {
         sendJson(res, 201, { ok: true, invoice });
         return;
       }
+      // ── CIAW / Checkin@Work: aanwezigheidsaangifte voor een klokregistratie ──
+      if (action === "ciaw/checkin" && req.method === "POST") {
+        assertInteractiveUser(user);
+        const body = await readBody(req);
+        const clock = store.get("clocks", String(body.clockId || ""));
+        if (!clock || clock.tenantId !== tenantId) return sendJson(res, 404, { ok: false, error: "Klokregistratie niet gevonden" });
+        const clockUser = store.get("users", clock.userId) || null;
+        const venue = clock.venueId ? store.get("venues", clock.venueId) : null;
+        const result = await submitCheckin({ config: loadPlatformConfig(store), tenant, clock, user: clockUser, venue, action: body.action || "in" });
+        const ciaw = { status: result.status, reference: result.reference || "", live: !!result.live, provider: result.provider, error: result.error || null, action: (body.action === "out" ? "OUT" : "IN"), at: new Date().toISOString() };
+        store.update("clocks", clock.id, { ciaw });
+        store.audit({ actor: user.email, tenantId, action: "ciaw_checkin", area: "clockings", detail: `${clock.id}:${ciaw.status}` });
+        sendJson(res, result.ok ? 200 : 400, { ok: result.ok, ciaw, error: result.error || undefined });
+        return;
+      }
+      if (action === "ciaw/declarations" && req.method === "GET") {
+        assertCan(user, "clockings");
+        const rows = store.list("clocks", tenantId)
+          .filter(c => c.ciaw)
+          .sort((a, b) => String(b.ciaw.at || "").localeCompare(String(a.ciaw.at || "")))
+          .slice(0, 100)
+          .map(c => ({ clockId: c.id, userId: c.userId, venueId: c.venueId, date: c.date, geoVerified: !!c.geoVerified, geoDistanceM: c.geoDistanceM ?? null, ...c.ciaw }));
+        sendJson(res, 200, { ok: true, declarations: rows });
+        return;
+      }
+
       // Peppol e-facturatie verzenden
       const invoicePeppolMatch = action.match(/^facturen\/([^/]+)\/peppol$/);
       if (invoicePeppolMatch && req.method === "POST") {

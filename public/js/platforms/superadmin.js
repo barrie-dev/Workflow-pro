@@ -1748,6 +1748,20 @@ ${canManage ? `
   </div>
 
   <div class="sa-card">
+    <div class="sa-card-head"><div class="sa-card-title">🦺 CIAW — Checkin@Work (BE bouw)</div><div class="sa-card-sub">${statusPill(cfg.ciaw?.configured)}</div></div>
+    <div style="padding:16px;display:grid;gap:12px">
+      <div style="font-size:12px;color:#64748b;font-weight:400">Aanwezigheidsregistratie op werven naar RSZ/ONSS. Zonder live provider draait dit in mock-modus. Het RSZ-werkgeversnummer staat per tenant (compliance).</div>
+      <label class="sa-fld"><span>Provider</span>
+        <select name="ciaw.provider">
+          ${["mock","rsz"].map(p=>`<option value="${p}" ${cfg.ciaw?.provider===p?"selected":""}>${p}</option>`).join("")}
+        </select>
+      </label>
+      <label class="sa-fld"><span>API-sleutel</span><input name="ciaw.apiKey" value="${esc(cfg.ciaw?.apiKey||"")}" placeholder="ciaw_..."></label>
+      <label class="sa-fld"><span>API-host</span><input name="ciaw.baseHost" value="${esc(cfg.ciaw?.baseHost||"")}" placeholder="api.checkinatwork.be"></label>
+    </div>
+  </div>
+
+  <div class="sa-card">
     <div class="sa-card-head"><div class="sa-card-title">🤖 Boden — AI-assistent (OpenAI)</div><div class="sa-card-sub">${statusPill(cfg.openai?.configured)}</div></div>
     <div style="padding:16px;display:grid;gap:12px">
       <div style="font-size:12px;color:#64748b;font-weight:400">Zonder echte sleutel draait Boden in <strong>gratis demo-modus</strong> (gesimuleerde antwoorden, ideaal voor QA). Vul de OpenAI-sleutel in om de echte AI te activeren. Boden respecteert altijd de rechten van de ingelogde gebruiker.</div>
@@ -1770,7 +1784,7 @@ ${canManage ? `
       document.getElementById("saIntegrationsForm").addEventListener("submit", async e => {
         e.preventDefault();
         const fd = new FormData(e.target);
-        const body = { stripe:{}, peppol:{}, email:{}, kbo:{}, openai:{} };
+        const body = { stripe:{}, peppol:{}, email:{}, kbo:{}, ciaw:{}, openai:{} };
         for (const [k,v] of fd.entries()) { const [s,f]=k.split("."); if(body[s]) body[s][f]=v; }
         const st = document.getElementById("saIntStatus");
         st.textContent = "Opslaan…"; st.style.color = "#64748b";

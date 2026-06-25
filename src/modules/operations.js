@@ -2,6 +2,26 @@ const { planningInsights } = require("./planning-rules");
 const { clockingInsights, normalizeClockIn, normalizeClockOut } = require("./clocking-rules");
 const { expenseInsights, validateExpenseForApproval } = require("./expense-rules");
 const { workorderInsights } = require("./workorder-rules");
+const { isModuleEnabled } = require("./entitlements");
+const { loadPlatformConfig } = require("./platform-config");
+const { submitCheckin } = require("./ciaw");
+
+// CIAW / Checkin@Work: als de tenant de add-on heeft, meld aanwezigheid
+// automatisch aan (RSZ/ONSS) bij in-/uitklokken. Best-effort, niet-blokkerend:
+// faalt de aangifte, dan blijft de klokregistratie staan met een foutstatus.
+function maybeAutoCiaw(store, tenant, clock, action) {
+  try {
+    if (!isModuleEnabled(store, tenant, "ciaw")) return;
+    const user = clock.userId ? store.get("users", clock.userId) : null;
+    const venue = clock.venueId ? store.get("venues", clock.venueId) : null;
+    const config = loadPlatformConfig(store);
+    Promise.resolve(submitCheckin({ config, tenant, clock, user, venue, action }))
+      .then(result => {
+        store.update("clocks", clock.id, { ciaw: { status: result.status, reference: result.reference || "", live: !!result.live, provider: result.provider, error: result.error || null, action: action === "out" ? "OUT" : "IN", at: new Date().toISOString() } });
+      })
+      .catch(() => {});
+  } catch (_) { /* auto-aangifte mag het klokken nooit breken */ }
+}
 
 function today() {
   return new Date().toISOString().slice(0, 10);
@@ -28,9 +48,14 @@ function clockIn(store, tenant, payload, actor) {
     clockOut: null,
     status: "active",
     planningMatch: normalized.planningMatch,
-    note: normalized.note
+    note: normalized.note,
+    geo: normalized.geo,
+    geoStatus: normalized.geoStatus,
+    geoVerified: normalized.geoVerified,
+    geoDistanceM: normalized.geoDistanceM
   });
   store.audit({ actor: actor.email, tenantId: tenant.id, action: "clock_in", area: "clockings", detail: row.id });
+  maybeAutoCiaw(store, tenant, row, "in");
   return row;
 }
 
@@ -46,6 +71,7 @@ function clockOut(store, tenant, payload, actor) {
   const normalized = normalizeClockOut(store, tenant.id, active, payload, new Date().toTimeString().slice(0, 5));
   const row = store.update("clocks", active.id, normalized);
   store.audit({ actor: actor.email, tenantId: tenant.id, action: "clock_out", area: "clockings", detail: row.id });
+  maybeAutoCiaw(store, tenant, row, "out");
   return row;
 }
 

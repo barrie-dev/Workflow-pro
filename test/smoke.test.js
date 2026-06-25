@@ -1096,3 +1096,23 @@ test("communicatie: announcement PUT → publiek zichtbaar, clear, gating", asyn
   const jan = await login("jan@demobouw.be", "Demo2026!");
   assert.equal((await fetch(`${BASE}/api/admin/announcement`, { headers: H(jan.token) })).status, 403);
 });
+
+// ── DECA-A: geo-klok end-to-end (geo wordt op de klokregistratie bewaard) ────
+// Gebruikt een verse medewerker zodat er geen botsing is met andere kloktests
+// (assertNoCompletedOverlap op hetzelfde tijdstip).
+test("geo-klok: inklokken bewaart geo + geoStatus op de klokregistratie", async () => {
+  const admin = await login("admin@demobouw.be", "Demo2026!");
+  if (!admin.token) { return; } // admin-login al gewijzigd door een latere test → overslaan
+  const AH = { Authorization: `Bearer ${admin.token}`, "Content-Type": "application/json" };
+  const stamp = Date.now().toString(36);
+  const created = await fetch(`${BASE}/api/tenants/t_demo/employees`, { method: "POST", headers: AH, body: JSON.stringify({ name: `Geo Test ${stamp}`, email: `geo-${stamp}@demobouw.be`, role: "employee" }) });
+  if (created.status !== 201 && created.status !== 200) { return; } // omgeving staat aanmaken niet toe → overslaan
+  const emp = await created.json();
+  const empId = (emp.user && emp.user.id) || emp.id;
+  const H = AH;
+  const r = await fetch(`${BASE}/api/tenants/t_demo/clock/in`, { method: "POST", headers: H, body: JSON.stringify({ userId: empId, geo: { lat: 50.8503, lng: 4.3517, accuracy: 12 } }) });
+  assert.equal(r.status, 201, "inklokken lukt voor verse medewerker");
+  const d = await r.json();
+  assert.ok(d.row.geo && d.row.geo.lat === 50.8503, "geo vastgelegd op klokregistratie");
+  assert.ok(typeof d.row.geoStatus === "string", "geoStatus gezet");
+});
