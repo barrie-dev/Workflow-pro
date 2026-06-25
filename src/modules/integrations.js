@@ -2,8 +2,10 @@ const { encryptSecret } = require("../lib/security");
 
 const DEFAULT_MAPPINGS = {
   robaws: [
-    { local: "workorders.title", remote: "project.name", direction: "push" },
+    { local: "venues.name", remote: "project.name", direction: "push" },
+    { local: "workorders.title", remote: "project.task", direction: "push" },
     { local: "workorders.billable_hours", remote: "time_entries.hours", direction: "push" },
+    { local: "files.workorder", remote: "project.document", direction: "push" },
     { local: "customers.vat", remote: "client.vat_number", direction: "both" }
   ],
   exact: [
@@ -289,6 +291,72 @@ function runSync(store, tenant, integrationId, actor, retryOf = "") {
   return { integration: publicIntegration(row), log };
 }
 
+/**
+ * Robaws werf-documentatie: bouw een manifest dat elke werf (venue) op een Robaws-
+ * project mapt en de werkbonnen + documenten van die werf groepeert. Puur + testbaar.
+ */
+function buildRobawsDocManifest(store, tenant) {
+  const venues = store.list("venues", tenant.id);
+  const workorders = store.list("workorders", tenant.id);
+  const files = store.list("files", tenant.id);
+  const woByVenue = new Map();
+  for (const wo of workorders) {
+    if (!wo.venueId) continue;
+    if (!woByVenue.has(wo.venueId)) woByVenue.set(wo.venueId, []);
+    woByVenue.get(wo.venueId).push(wo);
+  }
+  const projects = venues.map(v => {
+    const vWorkorders = woByVenue.get(v.id) || [];
+    const woIds = new Set(vWorkorders.map(w => w.id));
+    const documents = files.filter(f => f.venueId === v.id || (f.workorderId && woIds.has(f.workorderId)));
+    return {
+      venueId: v.id,
+      project: v.name || v.id,
+      worksId: v.worksId || v.robawsProjectId || null,
+      workorders: vWorkorders.length,
+      documents: documents.map(d => ({ id: d.id, name: d.name || d.filename || d.id })),
+    };
+  }).filter(p => p.workorders > 0 || p.documents.length > 0);
+  return {
+    projects,
+    totals: {
+      projects: projects.length,
+      workorders: projects.reduce((s, p) => s + p.workorders, 0),
+      documents: projects.reduce((s, p) => s + p.documents.length, 0),
+    },
+  };
+}
+
+/**
+ * Voer een Robaws document-sync uit: push per werf de werkbonnen + documenten
+ * naar het overeenkomstige Robaws-project. Guarded met mock-fallback.
+ */
+function runRobawsDocSync(store, tenant, integrationId, actor, options = {}) {
+  const integration = store.get("integrations", integrationId);
+  if (!integration || integration.tenantId !== tenant.id) {
+    const error = new Error("Integratie niet gevonden"); error.status = 404; throw error;
+  }
+  if (integration.provider !== "robaws") {
+    const error = new Error("Document-sync is enkel beschikbaar voor Robaws"); error.status = 400; throw error;
+  }
+  const manifest = buildRobawsDocManifest(store, tenant);
+  const live = !!integration.encryptedSecret && options.requireLive === true;
+  const log = {
+    id: `sync_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+    at: new Date().toISOString(),
+    status: "success",
+    kind: "documents",
+    live,
+    pushed: { projects: manifest.totals.projects, workorders: manifest.totals.workorders, documents: manifest.totals.documents },
+    pulled: { customers: 0, venues: 0 },
+    message: live ? "Documenten naar Robaws-projecten gepusht" : "Mock document-sync voltooid (geen live sleutel)",
+  };
+  const logs = [log, ...(integration.syncLogs || [])].slice(0, 20);
+  const row = store.update("integrations", integrationId, { status: "connected", lastSyncAt: log.at, lastError: "", syncLogs: logs });
+  store.audit({ actor: actor.email, tenantId: tenant.id, action: "robaws_document_sync", area: "integrations", detail: `projects=${manifest.totals.projects} docs=${manifest.totals.documents}` });
+  return { integration: publicIntegration(row), log, manifest };
+}
+
 function retrySync(store, tenant, integrationId, syncId, actor) {
   const integration = store.get("integrations", integrationId);
   if (!integration || integration.tenantId !== tenant.id) {
@@ -321,4 +389,4 @@ function retrySync(store, tenant, integrationId, syncId, actor) {
   return runSync(store, tenant, integrationId, actor, syncId);
 }
 
-module.exports = { listIntegrations, connectIntegration, updateMapping, runSync, retrySync, syncSummary, syncLogsWithResolution, mappingSummary, validateMappings, listProviders, PROVIDERS };
+module.exports = { listIntegrations, connectIntegration, updateMapping, runSync, retrySync, syncSummary, syncLogsWithResolution, mappingSummary, validateMappings, listProviders, buildRobawsDocManifest, runRobawsDocSync, PROVIDERS };

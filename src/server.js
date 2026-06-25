@@ -138,7 +138,7 @@ const { availableWidgets, renderWidgets, sanitizeKeys: sanitizeWidgetKeys } = re
 const { todayPayload, completeWorkorder, attachWorkorderPhoto, signWorkorder, syncMobileQueue } = require("./modules/mobile");
 const { clockIn, clockOut, approveExpense, managementReport } = require("./modules/operations");
 const { leaveConflictOn } = require("./modules/planning-rules");
-const { listIntegrations, connectIntegration, updateMapping, runSync, retrySync, listProviders } = require("./modules/integrations");
+const { listIntegrations, connectIntegration, updateMapping, runSync, retrySync, listProviders, runRobawsDocSync } = require("./modules/integrations");
 const { commissionOverview, publicReseller, commissionPctFor } = require("./modules/resellers");
 const saml = require("./modules/saml");
 const { tenantStatus, unlockUser, listBackups, createBackup, backupPreview, restoreBackup, publicStatus, mfaRisk } = require("./modules/admin");
@@ -2488,7 +2488,7 @@ http.createServer(async (req, res) => {
         sendJson(res, 201, { ok: true, row: connectIntegration(store, tenant, await readBody(req), user) });
         return;
       }
-      const integrationActionMatch = action.match(/^integrations\/([^/]+)\/(mapping|sync|retry)$/);
+      const integrationActionMatch = action.match(/^integrations\/([^/]+)\/(mapping|sync|retry|sync-documents)$/);
       if (integrationActionMatch && req.method === "POST") {
         assertCan(user, "integrations");
         const integrationId = integrationActionMatch[1];
@@ -2501,6 +2501,11 @@ http.createServer(async (req, res) => {
         }
         if (integrationAction === "sync") {
           sendJson(res, 200, { ok: true, result: runSync(store, tenant, integrationId, user) });
+          return;
+        }
+        // Robaws werf-documentatie: push werkbonnen + documenten per werf naar het project.
+        if (integrationAction === "sync-documents") {
+          sendJson(res, 200, { ok: true, result: runRobawsDocSync(store, tenant, integrationId, user) });
           return;
         }
         if (integrationAction === "retry") {

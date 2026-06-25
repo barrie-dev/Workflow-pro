@@ -1152,3 +1152,19 @@ test("werf-chat: bericht met venueId verschijnt in werf-thread + threadoverzicht
   const threads = await (await fetch(`${BASE}/api/tenants/t_demo/messages/venues`, { headers: H })).json();
   assert.ok(threads.threads.some(t => t.venueId === venueId && t.count >= 1));
 });
+
+// ── DECA-D: Robaws werf-documentatie-sync ───────────────────────────────────
+test("robaws: document-sync bouwt manifest per werf (mock)", async () => {
+  const god = await login("super@workflowpro.be", "Demo2026!");
+  const H = { Authorization: `Bearer ${god.token}`, "Content-Type": "application/json" };
+  const conn = await fetch(`${BASE}/api/tenants/t_demo/integrations/connect`, { method: "POST", headers: H, body: JSON.stringify({ provider: "robaws", apiKey: "robaws_test_key_123", baseUrl: "https://app.robaws.be/api/v2" }) });
+  assert.ok(conn.status === 200 || conn.status === 201, "robaws-integratie verbonden");
+  const cj = await conn.json();
+  const intId = (cj.row && cj.row.id) || (cj.integration && cj.integration.id) || cj.id;
+  assert.ok(intId, "integratie-id ontvangen");
+  const sync = await fetch(`${BASE}/api/tenants/t_demo/integrations/${intId}/sync-documents`, { method: "POST", headers: H, body: "{}" });
+  assert.equal(sync.status, 200);
+  const sj = await sync.json();
+  assert.equal(sj.result.log.kind, "documents");
+  assert.ok(sj.result.manifest && typeof sj.result.manifest.totals.projects === "number");
+});

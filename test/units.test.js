@@ -718,3 +718,40 @@ test("planning: validatePlanningRules blokkeert shift op goedgekeurd verlof (409
   // geen verlof → geen worp
   assert.doesNotThrow(() => validatePlanningRules(store, "t1", { userId: "u1", date: "2026-08-01", start: "08:00", end: "17:00" }));
 });
+
+// ── Robaws werf-documentatie-sync (DECA-D) ──
+const { buildRobawsDocManifest, runRobawsDocSync } = require("../src/modules/integrations");
+
+test("integrations: buildRobawsDocManifest groepeert werkbonnen + documenten per werf", () => {
+  const store = reviewStore([{ id: "t1", name: "T" }]);
+  store.data.venues = [{ id: "v1", tenantId: "t1", name: "Werf A" }, { id: "v2", tenantId: "t1", name: "Werf B (leeg)" }];
+  store.data.workorders = [{ id: "w1", tenantId: "t1", venueId: "v1", title: "Ruwbouw" }];
+  store.data.files = [
+    { id: "f1", tenantId: "t1", venueId: "v1", name: "plan.pdf" },
+    { id: "f2", tenantId: "t1", workorderId: "w1", name: "foto.jpg" },
+  ];
+  const m = buildRobawsDocManifest(store, store.data.tenants[0]);
+  assert.equal(m.totals.projects, 1, "lege werf wordt weggelaten");
+  const p = m.projects[0];
+  assert.equal(p.venueId, "v1");
+  assert.equal(p.workorders, 1);
+  assert.equal(p.documents.length, 2, "venue-doc + workorder-doc geteld");
+  assert.equal(m.totals.documents, 2);
+});
+
+test("integrations: runRobawsDocSync logt mock-sync; weigert niet-Robaws", () => {
+  const store = reviewStore([{ id: "t1", name: "T" }]);
+  store.data.venues = [{ id: "v1", tenantId: "t1", name: "Werf A" }];
+  store.data.workorders = [{ id: "w1", tenantId: "t1", venueId: "v1", title: "X" }];
+  store.data.files = [{ id: "f1", tenantId: "t1", venueId: "v1", name: "plan.pdf" }];
+  store.data.integrations = [
+    { id: "i1", tenantId: "t1", provider: "robaws", syncLogs: [] },
+    { id: "i2", tenantId: "t1", provider: "exact", syncLogs: [] },
+  ];
+  const tenant = store.data.tenants[0];
+  const r = runRobawsDocSync(store, tenant, "i1", { email: "a@b.be" });
+  assert.equal(r.log.kind, "documents");
+  assert.equal(r.log.live, false);
+  assert.equal(r.manifest.totals.documents, 1);
+  assert.throws(() => runRobawsDocSync(store, tenant, "i2", { email: "a@b.be" }), e => e.status === 400);
+});
