@@ -892,3 +892,36 @@ test("posted-workers: A1-bestand wordt gevalideerd + niet in de lijst-blob terug
   // verkeerd type → fout
   assert.throws(() => pw.createPostedWorker(store, tenant, { workerName: "X", country: "PL", documentFile: "data:text/plain;base64,QQ==" }, actor), e => e.status === 400);
 });
+
+// ── Geharde HTTP-client (DECA #4): timeout + statuscode-afhandeling ──
+const { httpsRequest, postJson } = require("../src/lib/http-client");
+const { EventEmitter } = require("node:events");
+
+// Fake transport die nooit antwoordt → moet door de timeout afgebroken worden.
+function hangingTransport() {
+  return { request() { const req = new EventEmitter(); req.setTimeout = (ms, cb) => { req._to = setTimeout(cb, ms); }; req.write = () => {}; req.end = () => {}; req.destroy = err => req.emit("error", err); return req; } };
+}
+// Fake transport die met een gegeven status + body antwoordt.
+function respondingTransport(statusCode, bodyText) {
+  return { request(opts, cb) {
+    const req = new EventEmitter(); req.setTimeout = () => {}; req.write = () => {}; req.destroy = () => {};
+    req.end = () => { const res = new EventEmitter(); res.statusCode = statusCode; cb(res); res.emit("data", bodyText); res.emit("end"); };
+    return req;
+  } };
+}
+
+test("http-client: breekt af met ETIMEDOUT als de provider niet antwoordt", async () => {
+  await assert.rejects(
+    httpsRequest({ hostname: "x", path: "/", body: "{}", timeoutMs: 50, transport: hangingTransport() }),
+    e => e.code === "ETIMEDOUT"
+  );
+});
+
+test("http-client: postJson geeft JSON bij 2xx en gooit bij 4xx/5xx", async () => {
+  const ok = await postJson("x", "/", {}, { a: 1 }, { transport: respondingTransport(200, '{"ref":"R1"}') });
+  assert.equal(ok.ref, "R1");
+  await assert.rejects(
+    postJson("x", "/", {}, {}, { transport: respondingTransport(500, '{"error":{"message":"kapot"}}') }),
+    e => /kapot/.test(e.message)
+  );
+});

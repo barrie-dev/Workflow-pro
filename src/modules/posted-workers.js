@@ -12,7 +12,7 @@
  * met mock-fallback (zelfde patroon als CIAW/Peppol).
  */
 
-const https = require("https");
+const { postJson } = require("../lib/http-client");
 
 const EXPIRY_WARN_DAYS = 30;
 
@@ -133,24 +133,6 @@ function buildLimosaDeclaration({ tenant, record }) {
   return { valid: errors.length === 0, errors, declaration };
 }
 
-function httpsPostJson(hostname, path, headers, body) {
-  return new Promise((resolve, reject) => {
-    const req = https.request({ hostname, path, method: "POST", headers }, res => {
-      let data = "";
-      res.on("data", c => (data += c));
-      res.on("end", () => {
-        let json = {};
-        try { json = JSON.parse(data || "{}"); } catch (_) { json = {}; }
-        if (res.statusCode >= 200 && res.statusCode < 300) resolve(json);
-        else reject(new Error(json.error?.message || json.message || `Limosa-provider ${res.statusCode}`));
-      });
-    });
-    req.on("error", reject);
-    req.write(typeof body === "string" ? body : JSON.stringify(body));
-    req.end();
-  });
-}
-
 // Dien de Limosa-melding in. Mock-fallback zonder live provider.
 async function submitLimosa(store, tenant, id, { config = {}, requireLive = false } = {}, actor) {
   const record = store.get("postedWorkers", id);
@@ -165,7 +147,7 @@ async function submitLimosa(store, tenant, id, { config = {}, requireLive = fals
     result = { status: "confirmed", reference: `MOCK-LIMOSA-${Date.now()}`, live: false };
   } else {
     try {
-      const json = await httpsPostJson(String(ciaw.baseHost || "api.limosa.be"), "/v1/declarations", { "Content-Type": "application/json", Authorization: `Bearer ${ciaw.apiKey}` }, built.declaration);
+      const json = await postJson(String(ciaw.baseHost || "api.limosa.be"), "/v1/declarations", { Authorization: `Bearer ${ciaw.apiKey}` }, built.declaration);
       result = { status: json.status || "sent", reference: json.reference || json.id || "", live: true };
     } catch (err) {
       result = { status: "failed", reference: "", live: true, error: err.message };

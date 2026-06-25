@@ -10,7 +10,7 @@
  * Verplicht in België sinds 1 jan 2026 voor B2B. De leverancier-gegevens komen
  * uit tenant.invoiceProfile (ingevuld via de KBO-onboarding).
  */
-const https = require("https");
+const { postJson } = require("../lib/http-client");
 const { config } = require("../lib/config");
 const { loadPlatformConfig } = require("./platform-config");
 const { isValidBelgianVat, structuredCommunication } = require("./be-locale");
@@ -159,21 +159,6 @@ function buildUbl(invoice, tenant) {
 </Invoice>`;
 }
 
-function httpsPostJson(hostname, path, headers, body) {
-  return new Promise((resolve, reject) => {
-    const data = typeof body === "string" ? body : JSON.stringify(body);
-    const req = https.request({ hostname, path, method: "POST", headers: { "Content-Length": Buffer.byteLength(data), ...headers } }, res => {
-      let raw = ""; res.on("data", c => raw += c);
-      res.on("end", () => {
-        let json = {}; try { json = JSON.parse(raw); } catch (_) {}
-        if (res.statusCode >= 200 && res.statusCode < 300) resolve(json);
-        else reject(new Error(json.error?.message || json.message || `Peppol-provider ${res.statusCode}`));
-      });
-    });
-    req.on("error", reject); req.write(data); req.end();
-  });
-}
-
 function isRealKey(k) {
   return !!k && !/DUMMY|replace[_-]?me|xxxx|test[_-]?key/i.test(String(k));
 }
@@ -252,7 +237,7 @@ async function sendPeppolInvoice(store, tenant, invoice) {
     // Belgische opties. Faalt netjes als de provider een fout teruggeeft.
     const hosts = { billit: "api.billit.be", digiteal: "api.digiteal.eu", unifiedpost: "api.unifiedpost.com" };
     const host = hosts[provider] || hosts.billit;
-    const resp = await httpsPostJson(host, "/v1/peppol/outbound", {
+    const resp = await postJson(host, "/v1/peppol/outbound", {
       Authorization: `Bearer ${key}`, "Content-Type": "application/xml",
     }, ubl);
     reference = resp.id || resp.transmissionId || `${provider}_${Date.now()}`;

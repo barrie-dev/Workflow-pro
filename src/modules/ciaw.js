@@ -10,7 +10,7 @@
  * klokregistratie zodat een controle op de werf bewijs heeft van de aangifte.
  */
 
-const https = require("https");
+const { postJson } = require("../lib/http-client");
 
 // Belgisch rijksregisternummer / INSZ: 11 cijfers (opmaak wordt gladgestreken).
 function normalizeInsz(value) {
@@ -83,23 +83,6 @@ function buildCheckinDeclaration({ tenant, clock, user, venue, action }) {
   return { valid: errors.length === 0, errors, declaration };
 }
 
-function httpsPostJson(hostname, path, headers, body) {
-  return new Promise((resolve, reject) => {
-    const req = https.request({ hostname, path, method: "POST", headers }, res => {
-      let data = "";
-      res.on("data", c => (data += c));
-      res.on("end", () => {
-        let json = {};
-        try { json = JSON.parse(data || "{}"); } catch (_) { json = {}; }
-        if (res.statusCode >= 200 && res.statusCode < 300) resolve(json);
-        else reject(new Error(json.error?.message || json.message || `CIAW-provider ${res.statusCode}`));
-      });
-    });
-    req.on("error", reject);
-    req.write(typeof body === "string" ? body : JSON.stringify(body));
-    req.end();
-  });
-}
 
 /**
  * Verstuur één aangifte. Mock-fallback wanneer geen live provider.
@@ -120,10 +103,10 @@ async function submitCheckin({ config = {}, tenant, clock, user, venue, action }
   // Echte provider (endpoint provider-afhankelijk; voorbeeld-vorm).
   try {
     const ciaw = config.ciaw || {};
-    const json = await httpsPostJson(
+    const json = await postJson(
       String(ciaw.baseHost || "api.checkinatwork.be"),
       "/v1/declarations",
-      { "Content-Type": "application/json", Authorization: `Bearer ${ciaw.apiKey}` },
+      { Authorization: `Bearer ${ciaw.apiKey}` },
       built.declaration
     );
     return { ok: true, live: true, provider: readiness.provider, status: json.status || "sent", reference: json.reference || json.id || "" };

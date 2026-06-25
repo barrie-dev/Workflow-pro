@@ -7,7 +7,7 @@
  * - Geen/dummy sleutel → mock-betaallink (/betaal/:token) die de factuur
  *   lokaal als betaald markeert. Zo werkt de volledige flow ook zonder account.
  */
-const https = require("https");
+const { httpsRequest } = require("../lib/http-client");
 const crypto = require("crypto");
 const { config } = require("../lib/config");
 const { loadPlatformConfig } = require("./platform-config");
@@ -26,27 +26,16 @@ function formEncode(obj, prefix, pairs = []) {
   return pairs;
 }
 
-function stripePost(secretKey, path, payload) {
-  return new Promise((resolve, reject) => {
-    const data = formEncode(payload).join("&");
-    const req = https.request({
-      hostname: "api.stripe.com", path, method: "POST",
-      headers: {
-        Authorization: `Bearer ${secretKey}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-        "Content-Length": Buffer.byteLength(data),
-      },
-    }, res => {
-      let raw = ""; res.on("data", c => raw += c);
-      res.on("end", () => {
-        let json = {}; try { json = JSON.parse(raw); } catch (_) {}
-        if (res.statusCode >= 200 && res.statusCode < 300) resolve(json);
-        else reject(new Error(json.error?.message || `Stripe ${res.statusCode}`));
-      });
-    });
-    req.on("error", reject);
-    req.write(data); req.end();
+async function stripePost(secretKey, path, payload) {
+  const data = formEncode(payload).join("&");
+  const res = await httpsRequest({
+    hostname: "api.stripe.com", path, method: "POST",
+    headers: { Authorization: `Bearer ${secretKey}`, "Content-Type": "application/x-www-form-urlencoded" },
+    body: data,
   });
+  const json = res.json || {};
+  if (res.statusCode >= 200 && res.statusCode < 300) return json;
+  throw new Error(json.error?.message || `Stripe ${res.statusCode}`);
 }
 
 /**
