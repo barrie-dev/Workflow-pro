@@ -2192,9 +2192,15 @@ ${emp ? `
   }
 
   // ── Messages ───────────────────────────────────────────────
+  let _msgVenueFilter = "";
   async function renderMessages() {
-    const data = await api("GET", "/messages");
+    const [data, vdata] = await Promise.all([
+      api("GET", _msgVenueFilter ? `/messages?venueId=${encodeURIComponent(_msgVenueFilter)}` : "/messages"),
+      api("GET", "/venues").catch(() => ({ venues: [] }))
+    ]);
     const messages = data.messages || data || [];
+    const venues = vdata.venues || vdata.rows || [];
+    const venueName = id => (venues.find(v => v.id === id) || {}).name || (id ? "Werf" : "—");
 
     const toLabel = m => {
       if (m.recipientId) return `👤 Persoonlijk`;
@@ -2207,17 +2213,24 @@ ${emp ? `
     const content = document.getElementById("admContent");
     content.innerHTML = `
 <div class="adm-card">
-  <div class="adm-card-header">
+  <div class="adm-card-header" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
     <h3 class="adm-card-title">Berichten <span style="background:#e0f2fe;color:#0284c7;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${messages.length}</span></h3>
+    <label style="font-size:12px;color:#475569;display:flex;align-items:center;gap:6px">Werf-chat:
+      <select id="admMsgVenueFilter" class="adm-input" style="max-width:200px">
+        <option value="">Alle berichten</option>
+        ${venues.map(v => `<option value="${esc(v.id)}" ${_msgVenueFilter === v.id ? "selected" : ""}>${esc(v.name || v.id)}</option>`).join("")}
+      </select>
+    </label>
   </div>
   <div class="adm-card-body adm-table-wrap">
     <table class="adm-table">
-      <thead><tr><th>Van</th><th>Aan</th><th>Onderwerp</th><th>Bericht</th><th>Datum</th><th>Acties</th></tr></thead>
+      <thead><tr><th>Van</th><th>Aan</th><th>Werf</th><th>Onderwerp</th><th>Bericht</th><th>Datum</th><th>Acties</th></tr></thead>
       <tbody>
         ${messages.length ? messages.map(m => `
         <tr>
           <td>${esc(m.senderName||m.senderId||"Systeem")}</td>
           <td><span style="font-size:11px;background:#f1f5f9;border-radius:4px;padding:2px 6px;">${toLabel(m)}</span></td>
+          <td>${m.venueId ? `<span style="font-size:11px;background:#fef3c7;color:#92400e;border-radius:4px;padding:2px 6px;">🏗 ${esc(venueName(m.venueId))}</span>` : '<span style="color:#cbd5e1">—</span>'}</td>
           <td style="font-weight:500;">${esc(m.subject||"—")}</td>
           <td style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#64748b;font-size:12px;" title="${esc(m.body||m.message||"")}">${esc(m.body||m.message||"—")}</td>
           <td style="white-space:nowrap;font-size:12px;color:#94a3b8;">${m.createdAt?.slice(0,16)||""}</td>
@@ -2225,11 +2238,13 @@ ${emp ? `
             <button class="adm-btn adm-btn-secondary adm-btn-sm adm-msg-view" data-id="${esc(m.id)}" title="Bekijk bericht">👁</button>
             <button class="adm-btn adm-btn-danger adm-btn-sm adm-msg-del" data-id="${esc(m.id)}" title="Verwijder" style="margin-left:4px;">🗑</button>
           </td>
-        </tr>`).join("") : '<tr><td colspan="6" class="adm-empty">Geen berichten</td></tr>'}
+        </tr>`).join("") : `<tr><td colspan="7" class="adm-empty">${_msgVenueFilter ? "Nog geen berichten in deze werf-chat" : "Geen berichten"}</td></tr>`}
       </tbody>
     </table>
   </div>
 </div>`;
+
+    document.getElementById("admMsgVenueFilter")?.addEventListener("change", e => { _msgVenueFilter = e.target.value; renderMessages(); });
 
     content.querySelectorAll(".adm-msg-view").forEach(btn => {
       btn.addEventListener("click", () => {
@@ -2276,9 +2291,10 @@ ${emp ? `
       ? Promise.resolve({ employees: _state.employees })
       : api("GET", "/employees");
 
-    employeesReady.then(data => {
+    Promise.all([employeesReady, api("GET", "/venues").catch(() => ({ venues: [] }))]).then(([data, vdata]) => {
       const employees = data.employees || [];
       _state.employees = employees;
+      const venues = vdata.venues || vdata.rows || [];
       const title = document.getElementById("admDrawerTitle");
       const body = document.getElementById("admDrawerBody");
       title.textContent = "Nieuw bericht";
@@ -2294,6 +2310,12 @@ ${emp ? `
     <select name="recipientId" id="admMsgRecipient" style="display:none;">
       <option value="">— Kies persoon —</option>
       ${employees.map(u => `<option value="${esc(u.id)}">${esc(u.name || u.email)} (${esc(u.role||"")})</option>`).join("")}
+    </select>
+  </div>
+  <div class="adm-form-group"><label>Werf (optioneel — voor werf-chat)</label>
+    <select name="venueId" id="admMsgVenue">
+      <option value="">— Algemeen (geen werf) —</option>
+      ${venues.map(v => `<option value="${esc(v.id)}">${esc(v.name || v.id)}</option>`).join("")}
     </select>
   </div>
   <div class="adm-form-group"><label>Onderwerp</label><input name="subject" required placeholder="Onderwerp van het bericht"></div>
@@ -2321,7 +2343,8 @@ ${emp ? `
 
         const body = {
           subject: fd.get("subject"),
-          body: fd.get("body")
+          body: fd.get("body"),
+          venueId: fd.get("venueId") || null
         };
 
         if (toMode === "person") {
@@ -4503,6 +4526,7 @@ ${providers.map(p => {
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="adm-btn adm-btn-primary adm-btn-sm" data-sync="${esc(conn.id)}">↻ Nu synchroniseren</button>
+        ${p.key === "robaws" ? `<button class="adm-btn adm-btn-secondary adm-btn-sm" data-syncdocs="${esc(conn.id)}">📁 Werf-documenten synchroniseren</button>` : ""}
         <button class="adm-btn adm-btn-secondary adm-btn-sm" data-reconnect="${esc(p.key)}">Sleutel bijwerken</button>
       </div>
     ` : `
@@ -4536,6 +4560,15 @@ ${providers.map(p => {
         window.showToast && window.showToast(ok ? "Synchronisatie voltooid ✓" : "Sync mislukt — controleer sleutel/mapping", ok ? "success" : "error");
         renderIntegraties();
       } catch (e) { window.showToast && window.showToast(e.message, "error"); btn.disabled = false; btn.textContent = "↻ Nu synchroniseren"; }
+    }));
+    content.querySelectorAll("[data-syncdocs]").forEach(btn => btn.addEventListener("click", async () => {
+      btn.disabled = true; const orig = btn.textContent; btn.textContent = "Bezig…";
+      try {
+        const r = await api("POST", `/integrations/${btn.dataset.syncdocs}/sync-documents`, {});
+        const t = r.result && r.result.manifest && r.result.manifest.totals;
+        window.showToast && window.showToast(t ? `Werf-documenten gesynchroniseerd ✓ (${t.projects} projecten, ${t.documents} docs)` : "Document-sync voltooid ✓", "success");
+        renderIntegraties();
+      } catch (e) { window.showToast && window.showToast(e.message, "error"); btn.disabled = false; btn.textContent = orig; }
     }));
     content.querySelectorAll("[data-reconnect]").forEach(btn => btn.addEventListener("click", async () => {
       const p = providers.find(x => x.key === btn.dataset.reconnect) || {};
@@ -5207,10 +5240,20 @@ ${enrolled.map(e => `
       return `<span style="background:${bg};color:${fg};padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600">${esc(label)}</span>`;
     };
     const geoBadge = d => d.geoVerified ? `<span title="binnen geofence" style="color:#15803d">📍 ✓${d.geoDistanceM != null ? ` ${d.geoDistanceM}m` : ""}</span>` : (d.geoDistanceM != null ? `<span title="buiten geofence" style="color:#d97706">📍 ${d.geoDistanceM}m</span>` : `<span style="color:#94a3b8">—</span>`);
+    const rsz = data.rszEmployerId || "";
     c.innerHTML = `
 <div class="adm-card" style="padding:14px 16px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
   <div style="font-size:13px;color:#475569">Aanwezigheidsaangiftes (RSZ/ONSS) gebeuren <strong>automatisch</strong> bij in- en uitklokken. Hieronder de recente aangiftes met locatieverificatie.</div>
   <button class="adm-btn-secondary" id="ciawRefresh" style="white-space:nowrap">↻ Vernieuwen</button>
+</div>
+<div class="adm-card" style="padding:14px 16px;margin-bottom:14px">
+  <div style="font-weight:700;font-size:13px;margin-bottom:6px">RSZ-werkgeversnummer</div>
+  <div style="font-size:12.5px;color:#64748b;margin-bottom:8px">Vereist voor geldige Checkin@Work-aangiftes. Het rijksregisternummer van elke medewerker stel je in op de medewerkersfiche.${rsz ? "" : ` <strong style="color:#b91c1c">Nog niet ingesteld — aangiftes worden geweigerd.</strong>`}</div>
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <input id="ciawRsz" class="adm-input" value="${esc(rsz)}" placeholder="bv. 12345678" style="max-width:220px">
+    <button class="adm-btn-primary" id="ciawRszSave">Opslaan</button>
+    <span id="ciawRszMsg" style="font-size:12px;color:#16a34a"></span>
+  </div>
 </div>
 <div class="adm-card" style="overflow:auto">
   <table class="adm-table"><thead><tr><th>Datum</th><th>Type</th><th>Locatie (geo)</th><th>Status</th><th>Referentie</th><th>Modus</th></tr></thead><tbody>
@@ -5225,6 +5268,11 @@ ${enrolled.map(e => `
   </tbody></table>
 </div>`;
     document.getElementById("ciawRefresh").addEventListener("click", renderCiaw);
+    document.getElementById("ciawRszSave").addEventListener("click", async () => {
+      const msg = document.getElementById("ciawRszMsg"); msg.textContent = "";
+      try { await api("POST", "/compliance/rsz", { rszEmployerId: document.getElementById("ciawRsz").value }); msg.style.color = "#16a34a"; msg.textContent = "Opgeslagen ✓"; }
+      catch (e) { msg.style.color = "#dc2626"; msg.textContent = e.message; }
+    });
   }
 
   // ── Compliance: A1 / Limosa detachering ────────────────────

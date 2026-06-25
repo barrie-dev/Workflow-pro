@@ -755,3 +755,16 @@ test("integrations: runRobawsDocSync logt mock-sync; weigert niet-Robaws", () =>
   assert.equal(r.manifest.totals.documents, 1);
   assert.throws(() => runRobawsDocSync(store, tenant, "i2", { email: "a@b.be" }), e => e.status === 400);
 });
+
+// ── CIAW leest nationalId van de medewerkersfiche (DECA-A UI-fix) ──
+test("ciaw: buildCheckinDeclaration leest user.nationalId als INSZ", () => {
+  const { buildCheckinDeclaration } = require("../src/modules/ciaw");
+  const r = buildCheckinDeclaration({
+    tenant: { compliance: { rszEmployerId: "12345678" } },
+    clock: { id: "c1", date: "2026-06-25", clockIn: "08:00" },
+    user: { name: "Jan", nationalId: "90.02.01-123.45" },
+    venue: { id: "v1", name: "Werf A" }, action: "in"
+  });
+  assert.equal(r.valid, true, "nationalId wordt als geldig INSZ herkend");
+  assert.equal(r.declaration.worker.insz, "90020112345");
+});

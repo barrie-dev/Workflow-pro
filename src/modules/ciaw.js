@@ -55,7 +55,8 @@ function buildCheckinDeclaration({ tenant, clock, user, venue, action }) {
   const employerId = String((tenant && tenant.compliance && tenant.compliance.rszEmployerId) || "").trim();
   if (!employerId) errors.push("RSZ-werkgeversnummer ontbreekt op de tenant (compliance.rszEmployerId)");
 
-  const insz = normalizeInsz(user && (user.insz || user.nationalNumber));
+  // De medewerker-fiche bewaart het rijksregisternummer als `nationalId`.
+  const insz = normalizeInsz(user && (user.insz || user.nationalNumber || user.nationalId));
   if (!validInsz(insz)) errors.push("Geldig INSZ/rijksregisternummer van de werknemer ontbreekt");
 
   const act = action === "out" || action === "checkout" ? "OUT" : "IN";

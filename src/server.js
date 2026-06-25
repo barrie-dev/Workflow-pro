@@ -2425,6 +2425,17 @@ http.createServer(async (req, res) => {
         sendJson(res, 200, { ok: true, tenant: acceptDpa(store, tenant, await readBody(req), user) });
         return;
       }
+      // RSZ-werkgeversnummer instellen (vereist voor CIAW/Checkin@Work-aangiftes).
+      if (action === "compliance/rsz" && req.method === "POST") {
+        assertCan(user, "settings");
+        assertInteractiveUser(user);
+        const body = await readBody(req);
+        const rszEmployerId = String(body.rszEmployerId || "").replace(/[^0-9]/g, "").slice(0, 12);
+        const next = store.updateTenant(tenant.id, { compliance: { ...(tenant.compliance || {}), rszEmployerId } });
+        store.audit({ actor: user.email, tenantId: tenant.id, action: "rsz_employer_set", area: "compliance", detail: rszEmployerId ? "set" : "cleared" });
+        sendJson(res, 200, { ok: true, rszEmployerId: next.compliance.rszEmployerId });
+        return;
+      }
       if (action === "compliance/gdpr-requests" && req.method === "POST") {
         assertCan(user, "settings");
         assertInteractiveUser(user);
@@ -3291,7 +3302,7 @@ http.createServer(async (req, res) => {
           .sort((a, b) => String(b.ciaw.at || "").localeCompare(String(a.ciaw.at || "")))
           .slice(0, 100)
           .map(c => ({ clockId: c.id, userId: c.userId, venueId: c.venueId, date: c.date, geoVerified: !!c.geoVerified, geoDistanceM: c.geoDistanceM ?? null, ...c.ciaw }));
-        sendJson(res, 200, { ok: true, declarations: rows });
+        sendJson(res, 200, { ok: true, declarations: rows, rszEmployerId: (tenant.compliance && tenant.compliance.rszEmployerId) || "" });
         return;
       }
 
@@ -3640,7 +3651,9 @@ http.createServer(async (req, res) => {
           mfaEnabled: false,
           mfaEnforced: false,
           function: body.function || null,
-          phone: body.phone || null
+          phone: body.phone || null,
+          // Rijksregisternummer (INSZ) — nodig voor CIAW/Checkin@Work-aangiftes.
+          nationalId: body.nationalId ? String(body.nationalId).replace(/[^0-9]/g, "").slice(0, 11) : null
         });
         store.audit({ actor: user.email, tenantId, action: "employee_created", area: "employees", detail: `${email} (${role})` });
         sendJson(res, 201, { ok: true, user: { ...newUser, passwordHash: undefined }, activationLink });
