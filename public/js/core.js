@@ -55,5 +55,23 @@
     });
   }
 
-  window.wfpCore = { token, tenantId, esc, html, raw, request };
+  // Platform-aankondiging / onderhoudsbanner — getoond bovenaan elke shell.
+  // Best-effort: faalt stil als het endpoint niet bereikbaar is.
+  function showAnnouncementBanner() {
+    fetch("/api/announcement").then(r => r.json()).then(d => {
+      const a = d && d.announcement;
+      const el = document.getElementById("wfp-announcement");
+      if (!a || !a.active || !a.message) { if (el) el.remove(); return; }
+      const colors = { info: "#2563eb", warning: "#d97706", maintenance: "#dc2626" };
+      const bar = el || document.createElement("div");
+      bar.id = "wfp-announcement";
+      bar.setAttribute("role", "status");
+      bar.style.cssText = `position:fixed;top:0;left:0;right:0;z-index:9999;background:${colors[a.level] || colors.info};color:#fff;padding:8px 16px;text-align:center;font-size:13.5px;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.15)`;
+      bar.textContent = (a.level === "maintenance" ? "🛠 " : a.level === "warning" ? "⚠ " : "ℹ ") + a.message;
+      if (!el) document.body.prepend(bar);
+      document.body.style.paddingTop = bar.offsetHeight + "px";
+    }).catch(() => {});
+  }
+
+  window.wfpCore = { token, tenantId, esc, html, raw, request, showAnnouncementBanner };
 })();

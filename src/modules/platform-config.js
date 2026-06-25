@@ -91,6 +91,8 @@ function loadPlatformConfig(store) {
   merged.addons = stored.addons || {};
   // Plan-prijs-overrides (baseAnnual/seatAnnual/includedSeats per bundel-key).
   merged.planPrices = stored.planPrices || {};
+  // Platform-aankondiging / onderhoudsbanner (getoond aan alle gebruikers).
+  merged.announcement = stored.announcement || { active: false, level: "info", message: "" };
   return merged;
 }
 
@@ -161,6 +163,7 @@ function savePlatformConfig(store, patch, actor) {
     openai: { ...(current.openai || {}) },
     addons: { ...(current.addons || {}) },
     planPrices: { ...(current.planPrices || {}) },
+    announcement: { ...(current.announcement || {}) },
     updatedAt: new Date().toISOString(),
     updatedBy: actor && actor.email,
   };
@@ -186,6 +189,17 @@ function savePlatformConfig(store, patch, actor) {
       }
       next.planPrices[key] = cur;
     }
+  }
+  // Platform-aankondiging: actief-vlag, niveau (info/warning/maintenance), bericht.
+  if (patch.announcement && typeof patch.announcement === "object") {
+    const a = patch.announcement;
+    const levels = ["info", "warning", "maintenance"];
+    next.announcement = {
+      active: !!a.active,
+      level: levels.includes(a.level) ? a.level : "info",
+      message: String(a.message || "").slice(0, 500),
+      updatedAt: new Date().toISOString(),
+    };
   }
   const isMaskedOrEmpty = v => v === undefined || v === null || v === "" || /••••|dummy — nog niet/.test(String(v));
   const apply = (section, keys) => {

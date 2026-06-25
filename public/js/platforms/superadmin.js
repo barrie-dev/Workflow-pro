@@ -271,6 +271,9 @@
       <button class="sa-nav-item" data-view="audit">
         <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6zm2-8h8v2H8zm0 4h5v2H8z"/></svg>Audit Log
       </button>
+      <button class="sa-nav-item" data-view="communication">
+        <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12zM6 7h12v2H6zm0 4h8v2H6z"/></svg>Communicatie
+      </button>
       <button class="sa-nav-item" data-view="settings">
         <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>Instellingen
       </button>
@@ -312,7 +315,7 @@
         document.getElementById("saTopTitle").textContent = {
           dashboard:"Dashboard", tenants:"Tenants",
           billing:"Facturatie / MRR", modules:"Modules & Bundels", integrations:"Integraties", system:"Systeem", ops:"Operations", security:"Beveiliging &amp; governance", support:"Support",
-          staff:"Platformteam", resellers:"Resellers", audit:"Audit Log", settings:"Instellingen"
+          staff:"Platformteam", resellers:"Resellers", audit:"Audit Log", communication:"Communicatie", settings:"Instellingen"
         }[_view] || _view;
         document.getElementById("saTopActions").innerHTML = "";
         document.getElementById("saSidebar").classList.remove("open");
@@ -358,7 +361,7 @@
       document.querySelectorAll(".sa-nav-item[data-view]").forEach(btn => {
         const v = btn.getAttribute("data-view");
         if (v === "dashboard") return;
-        const reqScope = (v === "ops" || v === "security") ? "system" : v; // ops/security vallen onder de system-scope
+        const reqScope = (v === "ops" || v === "security") ? "system" : (v === "communication" ? "settings" : v); // ops/security→system, communicatie→settings
         if (v === "staff" || !scopes.has(reqScope)) btn.style.display = "none";
       });
       if (_view !== "dashboard" && !scopes.has(_view)) { _view = "dashboard"; renderView(); }
@@ -466,8 +469,60 @@ ${(s.locked||[]).length ? `<div class="sa-card" style="margin-bottom:16px"><div 
   </div></div>`;
   }
 
+  // ── Communicatie: platform-aankondiging/onderhoudsbanner + releases ────────
+  async function communication() {
+    const c = content(); c.innerHTML = loader();
+    let ann = { active: false, level: "info", message: "" }, rel = {};
+    try {
+      const [a, r] = await Promise.all([
+        api("/api/admin/announcement").catch(() => ({})),
+        fetch("/api/releases").then(x => x.json()).catch(() => ({})),
+      ]);
+      ann = a.announcement || ann;
+      rel = (r && r.release) || {};
+    } catch (_) {}
+    const lvl = (v, label) => `<option value="${v}" ${ann.level === v ? "selected" : ""}>${label}</option>`;
+    const notes = rel.notes || rel.changelog || [];
+    c.innerHTML = `
+<div class="sa-card" style="margin-bottom:16px"><div class="sa-card-head"><div class="sa-card-title">Platform-aankondiging / onderhoudsbanner</div></div>
+  <div class="sa-card-body" style="padding:16px;max-width:640px">
+    <div style="font-size:12.5px;color:#64748b;margin-bottom:12px">Wordt bovenaan elke gebruiker-shell getoond zolang ze actief staat. Gebruik 'onderhoud' om een geplande downtime aan te kondigen.</div>
+    <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:14px;font-weight:600">
+      <input type="checkbox" id="annActive" ${ann.active ? "checked" : ""}> Banner actief
+    </label>
+    <label style="display:block;font-size:12.5px;font-weight:600;margin-bottom:4px">Niveau</label>
+    <select id="annLevel" style="padding:8px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:12px;width:200px">
+      ${lvl("info", "Info (blauw)")}${lvl("warning", "Waarschuwing (oranje)")}${lvl("maintenance", "Onderhoud (rood)")}
+    </select>
+    <label style="display:block;font-size:12.5px;font-weight:600;margin-bottom:4px">Bericht</label>
+    <textarea id="annMessage" rows="3" maxlength="500" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:12px" placeholder="Bv. Gepland onderhoud zondag 02:00–04:00. Excuses voor het ongemak.">${esc(ann.message || "")}</textarea>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="sa-btn btn-primary sm" id="annSave">Opslaan</button>
+      <span id="annMsg" style="font-size:12.5px;color:#16a34a"></span>
+    </div>
+  </div></div>
+
+<div class="sa-card"><div class="sa-card-head"><div class="sa-card-title">Releases &amp; roadmap</div>${rel.version ? badge("v" + esc(rel.version), "badge-blue") : ""}</div>
+  <div class="sa-card-body" style="padding:16px">
+    ${notes.length ? notes.map(n => `<div style="margin-bottom:12px">
+        <div style="font-weight:700;font-size:13.5px">${esc(n.version || n.title || "")} ${n.date ? `<span style="font-weight:400;color:#64748b;font-size:12px">— ${esc(n.date)}</span>` : ""}</div>
+        ${Array.isArray(n.items || n.changes) ? `<ul style="margin:4px 0 0 18px;font-size:13px;color:#475569">${(n.items || n.changes).map(i => `<li>${esc(i)}</li>`).join("")}</ul>` : (n.summary ? `<div style="font-size:13px;color:#475569">${esc(n.summary)}</div>` : "")}
+      </div>`).join("") : "<div style='font-size:13px;color:#64748b'>Geen release-notes beschikbaar.</div>"}
+  </div></div>`;
+    document.getElementById("annSave").addEventListener("click", async () => {
+      const payload = { announcement: {
+        active: document.getElementById("annActive").checked,
+        level: document.getElementById("annLevel").value,
+        message: document.getElementById("annMessage").value.trim(),
+      } };
+      const msg = document.getElementById("annMsg"); msg.textContent = "";
+      try { await api("/api/admin/announcement", { method: "PUT", body: JSON.stringify(payload) }); msg.textContent = "Opgeslagen ✓ — banner wordt direct toegepast."; }
+      catch (e) { msg.style.color = "#dc2626"; msg.textContent = e.message; }
+    });
+  }
+
   // ── Router ─────────────────────────────────────────────────
-  const VIEWS = { dashboard, tenants, billing, modules, integrations, system, ops, security, support, staff, resellers, audit, settings };
+  const VIEWS = { dashboard, tenants, billing, modules, integrations, system, ops, security, support, staff, resellers, audit, communication, settings };
   function renderView() { (VIEWS[_view] || dashboard)(); }
 
   // ══════════════════════════════════════════════════════════

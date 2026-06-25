@@ -25,6 +25,8 @@
       const initFn = window[`${platformId.replace("platform-", "wfp_")}Init`];
       if (typeof initFn === "function") initFn();
     }
+    // Platform-aankondiging / onderhoudsbanner tonen (best-effort).
+    if (window.wfpCore && window.wfpCore.showAnnouncementBanner) window.wfpCore.showAnnouncementBanner();
   }
 
   function showLogin() {

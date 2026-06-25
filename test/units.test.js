@@ -570,3 +570,23 @@ test("platform-ops: gdprOverview telt DPA-ontbreekt + open verzoeken", () => {
   assert.equal(g.openRequests, 1);     // t1 received
   assert.equal(g.rows.find(r=>r.tenantId==="t1").totalRequests, 2);
 });
+
+// ── Platform-aankondiging (banner) normalisatie in platform-config ──
+const { savePlatformConfig: savePC, loadPlatformConfig: loadPC } = require("../src/modules/platform-config");
+
+test("platform-config: announcement normaliseert niveau + kapt bericht, en kan uit", () => {
+  const store = reviewStore([]);
+  store.data.platformConfig = [];
+  store.insert = store.insert.bind(store);
+  // onbekend niveau → info; te lang bericht → 500 tekens
+  savePC(store, { announcement: { active: true, level: "rommel", message: "x".repeat(600) } }, { email: "super@wf.be" });
+  let a = loadPC(store).announcement;
+  assert.equal(a.active, true);
+  assert.equal(a.level, "info");
+  assert.equal(a.message.length, 500);
+  // uitzetten
+  savePC(store, { announcement: { active: false, level: "maintenance", message: "Onderhoud" } }, { email: "super@wf.be" });
+  a = loadPC(store).announcement;
+  assert.equal(a.active, false);
+  assert.equal(a.level, "maintenance");
+});

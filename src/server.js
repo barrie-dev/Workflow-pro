@@ -516,6 +516,13 @@ http.createServer(async (req, res) => {
       return;
     }
 
+    // Publieke platform-aankondiging / onderhoudsbanner — getoond aan alle shells.
+    if (url.pathname === "/api/announcement" && req.method === "GET") {
+      const a = loadPlatformConfig(store).announcement || {};
+      sendJson(res, 200, { ok: true, announcement: a.active ? { active: true, level: a.level || "info", message: a.message || "" } : { active: false } });
+      return;
+    }
+
     if (url.pathname === "/api/webhooks/stripe" && req.method === "POST") {
       const rawBody = await readRawBody(req);
       const signature = verifyStripeSignature(rawBody, req.headers["stripe-signature"], {
@@ -1156,6 +1163,26 @@ http.createServer(async (req, res) => {
       if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
       assertPlatformScope(user, "integrations");
       sendJson(res, 200, { ok: true, governance: apiKeyGovernance(store, { strict: url.searchParams.get("strict") === "1" }) });
+      return;
+    }
+
+    // ── Platform-aankondiging beheren (superadmin) ───────────────────────────
+    if (url.pathname === "/api/admin/announcement" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "settings");
+      sendJson(res, 200, { ok: true, announcement: loadPlatformConfig(store).announcement || { active: false, level: "info", message: "" } });
+      return;
+    }
+    if (url.pathname === "/api/admin/announcement" && req.method === "PUT") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "settings");
+      assertInteractiveUser(user);
+      const body = await readBody(req);
+      savePlatformConfig(store, { announcement: body.announcement || {} }, user);
+      store.audit({ actor: user.email, tenantId: null, action: "announcement_updated", area: "settings", detail: (body.announcement && body.announcement.active) ? "active" : "off" });
+      sendJson(res, 200, { ok: true, announcement: loadPlatformConfig(store).announcement });
       return;
     }
 

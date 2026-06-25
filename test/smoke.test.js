@@ -1072,3 +1072,27 @@ test("governance: security/gdpr/api-key endpoints + gating", async () => {
   const jan = await login("jan@demobouw.be", "Demo2026!");
   assert.equal((await fetch(`${BASE}/api/admin/security`, { headers: H(jan.token) })).status, 403);
 });
+
+// ── SA-communicatie: aankondiging-banner + releases ─────────────────────────
+test("communicatie: announcement PUT → publiek zichtbaar, clear, gating", async () => {
+  const god = await login("super@workflowpro.be", "Demo2026!");
+  const H = t => ({ Authorization: `Bearer ${t}` });
+  // zet banner aan
+  const put = await fetch(`${BASE}/api/admin/announcement`, { method: "PUT", headers: { ...H(god.token), "Content-Type": "application/json" }, body: JSON.stringify({ announcement: { active: true, level: "maintenance", message: "Gepland onderhoud zondag." } }) });
+  assert.equal(put.status, 200);
+  // publiek endpoint toont hem (geen auth nodig)
+  const pub = await (await fetch(`${BASE}/api/announcement`)).json();
+  assert.equal(pub.announcement.active, true);
+  assert.equal(pub.announcement.level, "maintenance");
+  assert.match(pub.announcement.message, /onderhoud/i);
+  // uitzetten → publiek inactief
+  await fetch(`${BASE}/api/admin/announcement`, { method: "PUT", headers: { ...H(god.token), "Content-Type": "application/json" }, body: JSON.stringify({ announcement: { active: false } }) });
+  const off = await (await fetch(`${BASE}/api/announcement`)).json();
+  assert.equal(off.announcement.active, false);
+  // releases publiek
+  const rel = await (await fetch(`${BASE}/api/releases`)).json();
+  assert.ok(rel.release && Array.isArray(rel.release.notes));
+  // gating: gewone gebruiker mag de banner niet beheren
+  const jan = await login("jan@demobouw.be", "Demo2026!");
+  assert.equal((await fetch(`${BASE}/api/admin/announcement`, { headers: H(jan.token) })).status, 403);
+});
