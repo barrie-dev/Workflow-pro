@@ -43,6 +43,7 @@ function clockIn(store, tenant, payload, actor) {
     userId: normalized.userId,
     venueId: normalized.venueId,
     shiftId: normalized.shiftId,
+    workorderId: normalized.workorderId,
     date: normalized.date,
     clockIn: normalized.clockIn,
     clockOut: null,

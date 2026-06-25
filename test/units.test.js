@@ -768,3 +768,71 @@ test("ciaw: buildCheckinDeclaration leest user.nationalId als INSZ", () => {
   assert.equal(r.valid, true, "nationalId wordt als geldig INSZ herkend");
   assert.equal(r.declaration.worker.insz, "90020112345");
 });
+
+// ── Kern-flow diepgang: geklokte uren → werkbon → factuur (DEPTH) ──
+const wr = require("../src/modules/workorder-rules");
+const { createInvoice } = require("../src/modules/billing");
+
+test("workorder-rules: clockedHoursForWorkorder somt enkel afgesloten clocks van die werkbon", () => {
+  const clocks = [
+    { workorderId: "w1", clockOut: "17:00", durationMinutes: 480 }, // 8u
+    { workorderId: "w1", clockOut: "12:00", durationMinutes: 120 }, // 2u
+    { workorderId: "w1", clockOut: null, durationMinutes: 0 },        // open → niet meetellen
+    { workorderId: "w2", clockOut: "17:00", durationMinutes: 300 },   // andere werkbon
+    { workorderId: "w1", clockOut: "10:15", durationMinutes: 75 },    // 1.25u
+  ];
+  assert.equal(wr.clockedHoursForWorkorder(clocks, "w1"), 11.25);
+  assert.equal(wr.clockedHoursForWorkorder(clocks, "w2"), 5);
+  assert.equal(wr.clockedHoursForWorkorder(clocks, "onbekend"), 0);
+  assert.equal(wr.clockedHoursForWorkorder(clocks, null), 0);
+});
+
+test("workorder-rules: completion vult billableHours uit geklokte uren, respecteert handmatig + not_billable", () => {
+  const actor = { email: "a@b.be" };
+  const base = { id: "w1", status: "Gepland", checklist: [] };
+  // auto-fill uit geklokte uren
+  const auto = wr.buildCompletionPatch(base, { clockedHours: 7.5 }, actor);
+  assert.equal(auto.billableStatus, "ready_for_invoice");
+  assert.equal(auto.billableHours, 7.5);
+  assert.equal(auto.clockedHours, 7.5);
+  // handmatige uren blijven leidend → patch laat billableHours ongemoeid
+  const manual = wr.buildCompletionPatch({ ...base, billableHours: 4 }, { clockedHours: 7.5 }, actor);
+  assert.equal(manual.billableHours, undefined, "patch overschrijft handmatige uren niet");
+  // vaste prijs → geen uren-override
+  const fixed = wr.buildCompletionPatch({ ...base, fixedPrice: 500 }, { clockedHours: 7.5 }, actor);
+  assert.equal(fixed.billableHours, undefined);
+  // niet-factureerbaar
+  const nb = wr.buildCompletionPatch({ ...base, billable: false }, { clockedHours: 7.5 }, actor);
+  assert.equal(nb.billableStatus, "not_billable");
+  assert.equal(nb.billableHours, undefined);
+});
+
+test("kern-flow e2e: clock → werkbon afronden → factuur met echte uren × standaardtarief", () => {
+  const store = reviewStore([{ id: "t1", name: "T", defaultHourlyRate: 60, billingOps: {} }]);
+  store.data.workorders = [{ id: "w1", tenantId: "t1", title: "Interventie A", status: "Gepland", billable: true, checklist: [] }];
+  store.data.clocks = [
+    { id: "c1", tenantId: "t1", workorderId: "w1", clockOut: "17:00", durationMinutes: 480 },
+    { id: "c2", tenantId: "t1", workorderId: "w1", clockOut: "12:00", durationMinutes: 120 },
+  ];
+  const tenant = store.data.tenants[0];
+  // werkbon afronden → uren afgeleid uit 10u geklokt
+  const { completeWorkorder } = require("../src/modules/mobile");
+  const wo = completeWorkorder(store, tenant, "w1", {}, { email: "mgr@t.be" });
+  assert.equal(wo.billableHours, 10);
+  assert.equal(wo.billableStatus, "ready_for_invoice");
+  // factuur uit werkbonnen → 10u × €60 = €600
+  const { invoice } = createInvoice(store, tenant, { fromWorkorders: true, workorderIds: ["w1"] }, { email: "mgr@t.be" });
+  const line = invoice.lines.find(l => l.workorderId === "w1");
+  assert.equal(line.quantity, 10);
+  assert.equal(line.unitPrice, 60);
+  assert.equal(line.amount, 600);
+});
+
+test("billing: werkbon zonder uren/tarief geeft duidelijke, bruikbare foutmelding", () => {
+  const store = reviewStore([{ id: "t1", name: "T", billingOps: {} }]);
+  store.data.workorders = [{ id: "w1", tenantId: "t1", title: "Geen uren", billableStatus: "ready_for_invoice" }];
+  assert.throws(
+    () => createInvoice(store, store.data.tenants[0], { fromWorkorders: true }, { email: "a@b.be" }),
+    e => e.status === 422 && /geen .*uren/i.test(e.message)
+  );
+});

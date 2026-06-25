@@ -8,6 +8,17 @@ function apiError(message, status = 400) {
   return error;
 }
 
+// Som van de daadwerkelijk geklokte (afgesloten) uren die aan een werkbon hangen.
+// Maakt de keten plan → klok → werkbon → factuur sluitend: het veldwerk dat
+// geregistreerd wordt, wordt het aantal factureerbare uren. Puur + testbaar.
+function clockedHoursForWorkorder(clocks, workorderId) {
+  if (!workorderId) return 0;
+  const minutes = (clocks || [])
+    .filter(c => c.workorderId === workorderId && c.clockOut && Number(c.durationMinutes) > 0)
+    .reduce((sum, c) => sum + Number(c.durationMinutes), 0);
+  return Math.round((minutes / 60) * 100) / 100; // uren, 2 decimalen
+}
+
 function normalizeChecklist(input, fallback = []) {
   const items = Array.isArray(input) ? input : Array.isArray(fallback) ? fallback : [];
   return items.map((item, index) => {
@@ -57,7 +68,7 @@ function buildCompletionPatch(workorder, payload, actor) {
   if (workorder.requiresPhoto && !(workorder.files || []).length) throw apiError("Minstens een foto is verplicht voor deze werkbon", 422);
   if (workorder.requiresSignature && !workorder.signed) throw apiError("Handtekening is verplicht voor deze werkbon", 422);
 
-  return {
+  const patch = {
     status: "Voltooid",
     completedAt: new Date().toISOString(),
     completedBy: actor.email,
@@ -65,6 +76,19 @@ function buildCompletionPatch(workorder, payload, actor) {
     billableStatus: workorder.billable === false ? "not_billable" : "ready_for_invoice",
     mobileNote: payload.note || workorder.mobileNote || ""
   };
+
+  // Factureerbare uren afleiden uit de geklokte tijd op deze werkbon, tenzij er
+  // al een handmatig bedrag/uren/vaste prijs is ingevuld (dat blijft leidend).
+  const clockedHours = Number(payload.clockedHours) || 0;
+  if (clockedHours > 0) patch.clockedHours = clockedHours;
+  if (workorder.billable !== false) {
+    const hasManualPrice = workorder.billableAmount != null || workorder.fixedPrice != null || workorder.amount != null;
+    const hasManualHours = workorder.billableHours != null && Number(workorder.billableHours) > 0;
+    if (!hasManualPrice && !hasManualHours && clockedHours > 0) {
+      patch.billableHours = clockedHours;
+    }
+  }
+  return patch;
 }
 
 function workorderInsights(workorders) {
@@ -99,6 +123,7 @@ function workorderInsights(workorders) {
 
 module.exports = {
   buildCompletionPatch,
+  clockedHoursForWorkorder,
   validatePhotoPayload,
   validateSignaturePayload,
   workorderInsights

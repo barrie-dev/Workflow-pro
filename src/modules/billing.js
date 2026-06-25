@@ -251,13 +251,17 @@ function attachPaymentMethod(store, tenant, paymentMethodRef, actor) {
   return next;
 }
 
-function workorderLine(workorder) {
+function workorderLine(workorder, defaultHourlyRate = 0) {
   const explicit = workorder.billableAmount ?? workorder.amount ?? workorder.fixedPrice;
-  const amount = explicit != null
-    ? Number(explicit)
-    : Number(workorder.billableHours || workorder.hours || 0) * Number(workorder.hourlyRate || 0);
+  const hours = Number(workorder.billableHours || workorder.hours || 0);
+  const rate = Number(workorder.hourlyRate || defaultHourlyRate || 0);
+  const amount = explicit != null ? Number(explicit) : hours * rate;
   if (!Number.isFinite(amount) || amount <= 0) {
-    const error = new Error(`Werkbon ${workorder.id} mist een positief factureerbaar bedrag`);
+    // Duidelijke, bruikbare melding i.p.v. een generieke fout: zeg WAT ontbreekt.
+    const reason = explicit != null ? "het vaste bedrag is 0"
+      : hours <= 0 ? "er zijn geen (geklokte of ingevulde) uren"
+      : "er is geen uurtarief ingesteld (op de werkbon of als standaardtarief)";
+    const error = new Error(`Werkbon "${workorder.title || workorder.id}" kan niet gefactureerd worden: ${reason}.`);
     error.status = 422;
     throw error;
   }
@@ -265,8 +269,8 @@ function workorderLine(workorder) {
     type: "workorder",
     workorderId: workorder.id,
     description: workorder.title || `Werkbon ${workorder.id}`,
-    quantity: Number(workorder.billableHours || workorder.hours || 1),
-    unitPrice: Number(workorder.hourlyRate || amount),
+    quantity: explicit != null ? 1 : hours,
+    unitPrice: explicit != null ? +amount.toFixed(2) : rate,
     amount: +amount.toFixed(2)
   };
 }
@@ -282,7 +286,8 @@ function invoiceLinesFromWorkorders(store, tenant, payload) {
     error.status = 422;
     throw error;
   }
-  return rows.map(workorderLine);
+  const defaultRate = Number(tenant.defaultHourlyRate || (tenant.billingOps && tenant.billingOps.defaultHourlyRate) || 0);
+  return rows.map(w => workorderLine(w, defaultRate));
 }
 
 function createInvoice(store, tenant, payload, actor) {

@@ -78,6 +78,7 @@ function normalizeClockIn(store, tenantId, payload, actor, fallbackTime) {
     clockIn,
     venueId,
     shiftId: payload.shiftId || matchingShift?.id || null,
+    workorderId: payload.workorderId || matchingShift?.workorderId || null,
     note: payload.note || "",
     planningMatch: matchingShift ? "matched" : "unplanned",
     geo: geoCheck.geo,

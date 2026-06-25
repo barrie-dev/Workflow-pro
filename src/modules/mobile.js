@@ -1,7 +1,8 @@
 const {
   buildCompletionPatch,
   validatePhotoPayload,
-  validateSignaturePayload
+  validateSignaturePayload,
+  clockedHoursForWorkorder
 } = require("./workorder-rules");
 const { clockIn, clockOut } = require("./operations");
 
@@ -55,8 +56,10 @@ function getTenantWorkorder(store, tenantId, workorderId) {
 
 function completeWorkorder(store, tenant, workorderId, payload, actor) {
   const workorder = getTenantWorkorder(store, tenant.id, workorderId);
-  const row = store.update("workorders", workorder.id, buildCompletionPatch(workorder, payload, actor));
-  store.audit({ actor: actor.email, tenantId: tenant.id, action: "mobile_workorder_completed", area: "mobile", detail: workorder.id });
+  // Factureerbare uren afleiden uit de geklokte tijd op deze werkbon.
+  const clockedHours = clockedHoursForWorkorder(store.list("clocks", tenant.id), workorder.id);
+  const row = store.update("workorders", workorder.id, buildCompletionPatch(workorder, { ...payload, clockedHours }, actor));
+  store.audit({ actor: actor.email, tenantId: tenant.id, action: "mobile_workorder_completed", area: "mobile", detail: `${workorder.id} (${clockedHours}u geklokt)` });
   return row;
 }
 
