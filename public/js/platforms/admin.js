@@ -282,6 +282,16 @@
         <span data-term="venuePlural">Locaties</span>
       </a>
 
+      <div class="adm-nav-label">Compliance</div>
+      <a class="adm-nav-item" data-view="ciaw" href="#">
+        <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+        <span>Checkin@Work</span>
+      </a>
+      <a class="adm-nav-item" data-view="posted_workers" href="#">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+        <span>A1 / Limosa</span>
+      </a>
+
       <div class="adm-nav-label">Systeem</div>
       <a class="adm-nav-item" data-view="integrations" href="#">
         <svg viewBox="0 0 24 24"><path d="M22 7h-7V2H9v5H2v15h20V7zM11 4h2v3h-2V4zm9 16H4V9h16v11zM9 13h2v2H9v-2zm4 0h2v2h-2v-2z"/></svg>
@@ -407,25 +417,26 @@
 
     // primary action btn
     document.getElementById("admPrimaryAction").addEventListener("click", () => {
-      if (_currentView === "employees") openEmployeeDrawer(null);
-      if (_currentView === "messages") openMessageDrawer();
-      if (_currentView === "customers") openCustomerDrawer(null);
-      if (_currentView === "offertes") openOfferteDrawer(null);
-      if (_currentView === "facturen") openFactuurDrawer(null);
-      if (_currentView === "venues") openVenueDrawer(null);
-      if (_currentView === "vehicles") openVehicleDrawer(null);
-      if (_currentView === "stock") openStockDrawer(null);
+      const d = window.wfpAdmin.drawers;
+      const map = {
+        employees: () => d.employee(null), messages: () => d.message(),
+        customers: () => d.customer(null), offertes: () => d.offerte(null),
+        facturen: () => d.factuur(null), venues: () => d.venue(null),
+        vehicles: () => d.vehicle(null), stock: () => d.stock(null)
+      };
+      if (map[_currentView]) map[_currentView]();
     });
 
     // Lege-staat CTA's (gedelegeerd: overleeft elke re-render)
     document.getElementById("admContent").addEventListener("click", e => {
+      const d = window.wfpAdmin.drawers;
       const ctas = {
-        admEmptyNewCust:  () => openCustomerDrawer(null),
-        admEmptyNewVen:   () => openVenueDrawer(null),
-        admEmptyNewVeh:   () => openVehicleDrawer(null),
-        admEmptyNewStock: () => openStockDrawer(null),
-        admEmptyNewQuote: () => openOfferteDrawer(null),
-        admEmptyNewInv:   () => openFactuurDrawer(null),
+        admEmptyNewCust:  () => d.customer(null),
+        admEmptyNewVen:   () => d.venue(null),
+        admEmptyNewVeh:   () => d.vehicle(null),
+        admEmptyNewStock: () => d.stock(null),
+        admEmptyNewQuote: () => d.offerte(null),
+        admEmptyNewInv:   () => d.factuur(null),
       };
       const fn = ctas[e.target && e.target.id];
       if (fn) fn();
@@ -439,6 +450,7 @@
     workorders: "Werkbonnen", messages: "Berichten", myboard: "Mijn dashboard", reports: "Rapportages",
     customers: "Klanten", offertes: "Offertes", facturen: "Facturen", venues: "Locaties", vehicles: "Voertuigen",
     stock: "Stock", billing: "Facturatie",
+    ciaw: "Checkin@Work (CIAW)", posted_workers: "A1 / Limosa detachering",
     integrations: "Integraties", roadmap: "Roadmap", audit: "Audittrail", settings: "Instellingen"
   };
 
@@ -466,30 +478,10 @@
     const content = document.getElementById("admContent");
     content.innerHTML = `<div class="adm-loading">Laden…</div>`;
 
-    const renders = {
-      dashboard: renderDashboard,
-      employees: renderEmployees,
-      planning: renderPlanning,
-      clocking: renderClocking,
-      leaves: renderLeaves,
-      expenses: renderExpenses,
-      workorders: renderWorkorders,
-      messages: renderMessages,
-      myboard: renderMyDashboard,
-      reports: renderReports,
-      customers: renderCustomers,
-      venues: renderVenues,
-      offertes: renderOffertes,
-      facturen: renderFacturen,
-      vehicles: renderVehicles,
-      stock: renderStock,
-      billing: renderBilling,
-      integrations: renderIntegraties,
-      roadmap: renderRoadmap,
-      audit: renderAudit,
-      settings: renderSettings
-    };
-    if (renders[view]) renders[view]();
+    // View-renderers komen uit de gedeelde registry (window.wfpAdmin.views).
+    // Kern-renderers + uitgesplitste module-renderers registreren zich daar.
+    const reg = window.wfpAdmin.views;
+    if (reg[view]) reg[view]();
   }
 
   // ── Dashboard ──────────────────────────────────────────────
@@ -5201,6 +5193,158 @@ ${enrolled.map(e => `
 
     switchView("dashboard");
   }
+
+  // ── Compliance: Checkin@Work (CIAW) ────────────────────────
+  async function renderCiaw() {
+    const c = document.getElementById("admContent");
+    let data = {};
+    try { data = await api("GET", "/ciaw/declarations"); }
+    catch (e) { c.innerHTML = `<div class="adm-card" style="padding:16px;color:#dc2626">${esc(e.message)}</div>`; return; }
+    const rows = data.declarations || [];
+    const statusBadge = s => {
+      const map = { confirmed: ["#dcfce7", "#15803d", "bevestigd"], sent: ["#dbeafe", "#1d4ed8", "verzonden"], failed: ["#fee2e2", "#b91c1c", "mislukt"], rejected: ["#fee2e2", "#b91c1c", "geweigerd"] };
+      const [bg, fg, label] = map[s] || ["#f1f5f9", "#475569", s || "—"];
+      return `<span style="background:${bg};color:${fg};padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600">${esc(label)}</span>`;
+    };
+    const geoBadge = d => d.geoVerified ? `<span title="binnen geofence" style="color:#15803d">📍 ✓${d.geoDistanceM != null ? ` ${d.geoDistanceM}m` : ""}</span>` : (d.geoDistanceM != null ? `<span title="buiten geofence" style="color:#d97706">📍 ${d.geoDistanceM}m</span>` : `<span style="color:#94a3b8">—</span>`);
+    c.innerHTML = `
+<div class="adm-card" style="padding:14px 16px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+  <div style="font-size:13px;color:#475569">Aanwezigheidsaangiftes (RSZ/ONSS) gebeuren <strong>automatisch</strong> bij in- en uitklokken. Hieronder de recente aangiftes met locatieverificatie.</div>
+  <button class="adm-btn-secondary" id="ciawRefresh" style="white-space:nowrap">↻ Vernieuwen</button>
+</div>
+<div class="adm-card" style="overflow:auto">
+  <table class="adm-table"><thead><tr><th>Datum</th><th>Type</th><th>Locatie (geo)</th><th>Status</th><th>Referentie</th><th>Modus</th></tr></thead><tbody>
+    ${rows.map(d => `<tr>
+      <td>${esc(d.date || (d.at || "").slice(0, 10))}</td>
+      <td>${d.action === "OUT" ? "Uitklokken" : "Inklokken"}</td>
+      <td>${geoBadge(d)}</td>
+      <td>${statusBadge(d.status)}</td>
+      <td style="font-family:monospace;font-size:12px">${esc(d.reference || "—")}${d.error ? `<div style="color:#b91c1c;font-size:11px">${esc(d.error)}</div>` : ""}</td>
+      <td>${d.live ? "live" : "<span style='color:#64748b'>mock</span>"}</td>
+    </tr>`).join("") || `<tr><td colspan="6" style="padding:24px;text-align:center;color:#94a3b8">Nog geen aangiftes. Ze verschijnen zodra medewerkers in-/uitklokken.</td></tr>`}
+  </tbody></table>
+</div>`;
+    document.getElementById("ciawRefresh").addEventListener("click", renderCiaw);
+  }
+
+  // ── Compliance: A1 / Limosa detachering ────────────────────
+  async function renderPostedWorkers() {
+    const c = document.getElementById("admContent");
+    let data = {};
+    try { data = await api("GET", "/posted_workers"); }
+    catch (e) { c.innerHTML = `<div class="adm-card" style="padding:16px;color:#dc2626">${esc(e.message)}</div>`; return; }
+    const rows = data.rows || [];
+    const a1Badge = s => {
+      const map = { valid: ["#dcfce7", "#15803d", "geldig"], expiring: ["#fef9c3", "#a16207", "verloopt < 30d"], expired: ["#fee2e2", "#b91c1c", "verlopen"], missing: ["#f1f5f9", "#475569", "geen A1"], unknown: ["#f1f5f9", "#475569", "onbekend"] };
+      const [bg, fg, label] = map[s] || map.unknown;
+      return `<span style="background:${bg};color:${fg};padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600">${esc(label)}</span>`;
+    };
+    c.innerHTML = `
+<div class="adm-card" style="padding:14px 16px;margin-bottom:14px">
+  <div style="font-size:13px;color:#475569;margin-bottom:6px">Detacheringsdossiers van (onder)aannemers en buitenlandse werknemers. Bewaak de geldigheid van A1-attesten en dien Limosa-meldingen in.</div>
+  <div style="display:flex;gap:14px;font-size:12px;color:#64748b">
+    <span>${data.total || 0} dossiers</span>
+    ${data.expired ? `<span style="color:#b91c1c">⛔ ${data.expired} verlopen</span>` : ""}
+    ${data.expiring ? `<span style="color:#a16207">⚠️ ${data.expiring} verloopt binnenkort</span>` : ""}
+    ${data.missing ? `<span style="color:#64748b">${data.missing} zonder A1</span>` : ""}
+  </div>
+</div>
+<div class="adm-card" style="padding:14px 16px;margin-bottom:14px">
+  <div style="font-weight:700;font-size:13px;margin-bottom:10px">Nieuw detacheringsdossier</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;align-items:end">
+    <label style="font-size:12px;font-weight:600;color:#334155">Werknemer<input id="pwName" class="adm-input" placeholder="Naam"></label>
+    <label style="font-size:12px;font-weight:600;color:#334155">Onderaannemer<input id="pwSub" class="adm-input" placeholder="Bedrijf (optioneel)"></label>
+    <label style="font-size:12px;font-weight:600;color:#334155">Land<input id="pwCountry" class="adm-input" placeholder="bv. PL" maxlength="2" style="text-transform:uppercase"></label>
+    <label style="font-size:12px;font-weight:600;color:#334155">A1-referentie<input id="pwRef" class="adm-input" placeholder="A1-nr"></label>
+    <label style="font-size:12px;font-weight:600;color:#334155">Geldig van<input id="pwFrom" type="date" class="adm-input"></label>
+    <label style="font-size:12px;font-weight:600;color:#334155">Geldig tot<input id="pwTo" type="date" class="adm-input"></label>
+    <button class="adm-btn-primary" id="pwAdd">Toevoegen</button>
+  </div>
+  <div id="pwMsg" style="font-size:12px;margin-top:8px"></div>
+</div>
+<div class="adm-card" style="overflow:auto">
+  <table class="adm-table"><thead><tr><th>Werknemer</th><th>Onderaannemer</th><th>Land</th><th>A1</th><th>Geldigheid</th><th>Limosa</th><th></th></tr></thead><tbody>
+    ${rows.map(r => `<tr data-id="${esc(r.id)}">
+      <td>${esc(r.workerName)}</td>
+      <td>${esc(r.subcontractor || "—")}</td>
+      <td>${esc(r.country || "—")}</td>
+      <td>${a1Badge(r.a1Status)}${r.documentRef ? `<div style="font-size:11px;color:#64748b;font-family:monospace">${esc(r.documentRef)}</div>` : ""}</td>
+      <td style="font-size:12px;color:#475569">${esc(r.validFrom || "?")} → ${esc(r.validTo || "?")}</td>
+      <td>${r.limosa && r.limosa.reference ? `<span style="font-size:12px;color:#15803d">✓ ${esc(r.limosa.reference)}</span>` : `<button class="adm-btn-secondary pw-limosa" data-id="${esc(r.id)}" style="padding:4px 10px;font-size:12px">Indienen</button>`}</td>
+      <td><button class="pw-del" data-id="${esc(r.id)}" title="Verwijderen" style="border:none;background:none;cursor:pointer;color:#b91c1c;font-size:16px">🗑</button></td>
+    </tr>`).join("") || `<tr><td colspan="7" style="padding:24px;text-align:center;color:#94a3b8">Nog geen detacheringsdossiers.</td></tr>`}
+  </tbody></table>
+</div>`;
+    document.getElementById("pwAdd").addEventListener("click", async () => {
+      const payload = {
+        workerName: document.getElementById("pwName").value.trim(),
+        subcontractor: document.getElementById("pwSub").value.trim(),
+        country: document.getElementById("pwCountry").value.trim(),
+        documentRef: document.getElementById("pwRef").value.trim(),
+        validFrom: document.getElementById("pwFrom").value || null,
+        validTo: document.getElementById("pwTo").value || null,
+      };
+      const msg = document.getElementById("pwMsg"); msg.textContent = "";
+      try { await api("POST", "/posted_workers", payload); renderPostedWorkers(); window.showToast && window.showToast("Dossier toegevoegd ✓", "success"); }
+      catch (e) { msg.style.color = "#dc2626"; msg.textContent = e.message; }
+    });
+    c.querySelectorAll(".pw-limosa").forEach(b => b.addEventListener("click", async () => {
+      b.disabled = true; b.textContent = "Bezig…";
+      try { await api("POST", `/posted_workers/${b.dataset.id}/limosa`, {}); renderPostedWorkers(); window.showToast && window.showToast("Limosa-melding ingediend ✓", "success"); }
+      catch (e) { window.showToast && window.showToast(e.message, "error"); b.disabled = false; b.textContent = "Indienen"; }
+    }));
+    c.querySelectorAll(".pw-del").forEach(b => b.addEventListener("click", async () => {
+      if (!confirm("Dit detacheringsdossier verwijderen?")) return;
+      try { await api("DELETE", `/posted_workers/${b.dataset.id}`); renderPostedWorkers(); }
+      catch (e) { window.showToast && window.showToast(e.message, "error"); }
+    }));
+  }
+
+  // ── Gedeelde context voor uitgesplitste view-modules ─────────
+  // De kern (dit bestand) exposeert helpers + state op window.wfpAdmin.
+  // View-modules (admin-operations.js, admin-finance.js, …) lezen hieruit
+  // en registreren hun renderers in A.views / drawers in A.drawers.
+  // _currentView wordt hertoegewezen → via getter; _state is een stabiele
+  // (nooit herbonden) referentie en mag direct gedeeld worden.
+  const A = (window.wfpAdmin = window.wfpAdmin || {});
+  A.api = api;
+  A.esc = esc;
+  A.token = token;
+  A.tenantId = tenantId;
+  A.state = _state;
+  A.openDrawer = openDrawer;
+  A.closeDrawer = closeDrawer;
+  A.subEnabled = subEnabled;
+  A.viewEnabled = viewEnabled;
+  A.switchView = switchView;
+  A.VIEW_LABELS = VIEW_LABELS;
+  A.VIEW_BTN_LABEL = VIEW_BTN_LABEL;
+  A.renderSupportBanner = renderSupportBanner;
+  A.getWeekStart = getWeekStart;
+  A.formatDate = formatDate;
+  A.printInvoicePDF = printInvoicePDF;
+  A.printBeslissersrapport = printBeslissersrapport;
+  A.content = () => document.getElementById("admContent");
+  A.currentView = () => _currentView;
+  A.views = A.views || {};
+  A.drawers = A.drawers || {};
+
+  // Kern-renderers registreren (worden gaandeweg naar modules verplaatst).
+  Object.assign(A.views, {
+    dashboard: renderDashboard, employees: renderEmployees, planning: renderPlanning,
+    clocking: renderClocking, leaves: renderLeaves, expenses: renderExpenses,
+    workorders: renderWorkorders, messages: renderMessages, myboard: renderMyDashboard,
+    reports: renderReports, customers: renderCustomers, venues: renderVenues,
+    offertes: renderOffertes, facturen: renderFacturen, vehicles: renderVehicles,
+    stock: renderStock, billing: renderBilling, integrations: renderIntegraties,
+    ciaw: renderCiaw, posted_workers: renderPostedWorkers,
+    roadmap: renderRoadmap, audit: renderAudit, settings: renderSettings
+  });
+  Object.assign(A.drawers, {
+    employee: openEmployeeDrawer, message: openMessageDrawer, customer: openCustomerDrawer,
+    offerte: openOfferteDrawer, factuur: openFactuurDrawer, venue: openVenueDrawer,
+    vehicle: openVehicleDrawer, stock: openStockDrawer
+  });
 
   window.wfp_adminInit = init;
 }());
