@@ -2133,6 +2133,24 @@ ${emp ? `
   <div class="adm-form-group"><label>Notities</label>
     <textarea name="notes" rows="2" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;">${esc(workorder?.notes || "")}</textarea>
   </div>
+  <div style="background:#f8fafc;border-radius:8px;padding:12px;margin-bottom:8px;">
+    <div style="font-weight:600;font-size:12px;color:#334155;margin-bottom:8px;">Facturatie</div>
+    ${workorder?.clockedHours ? `<div style="font-size:12px;color:#0369a1;margin-bottom:8px;">⏱ ${workorder.clockedHours} u geklokt op deze werkbon${workorder?.billableHours==null?" — wordt overgenomen als factureerbare uren bij afronden":""}.</div>` : ""}
+    <div class="adm-form-row">
+      <div class="adm-form-group"><label>Factureerbare uren</label>
+        <input name="billableHours" type="number" step="0.25" min="0" value="${workorder?.billableHours ?? ""}" placeholder="${workorder?.clockedHours ? workorder.clockedHours+" geklokt" : "bv. 8"}">
+      </div>
+      <div class="adm-form-group"><label>Uurtarief (€)</label>
+        <input name="hourlyRate" type="number" step="1" min="0" value="${workorder?.hourlyRate ?? ""}" placeholder="standaardtarief">
+      </div>
+    </div>
+    <div class="adm-form-group"><label>Vaste prijs (€) — overschrijft uren×tarief</label>
+      <input name="fixedPrice" type="number" step="0.01" min="0" value="${workorder?.fixedPrice ?? ""}" placeholder="leeg = op uren factureren">
+    </div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
+      <input type="checkbox" name="billable" ${workorder?.billable === false ? "" : "checked"} style="width:16px;height:16px;"> Factureerbaar
+    </label>
+  </div>
   ${workorder?.invoiceId ? `<div style="background:#d1fae5;border-radius:8px;padding:8px 12px;font-size:12px;color:#065f46;margin-bottom:8px;">🧾 Factuur aangemaakt</div>` : ""}
   <div id="woFormErr" style="display:none;background:#fef2f2;color:#dc2626;border-radius:8px;padding:8px;font-size:12px;margin-bottom:8px;"></div>
   <div class="adm-form-actions" style="flex-wrap:wrap;gap:8px;">
@@ -2156,10 +2174,15 @@ ${emp ? `
       document.getElementById("woCancel").addEventListener("click", closeDrawer);
       document.getElementById("woMakeInvoice")?.addEventListener("click", () => {
         closeDrawer();
-        // Pre-fill factuur drawer from this workorder
+        // Factuurregel afleiden uit de werkbon: vaste prijs, of geklokte/ingevoerde uren × tarief.
+        const hrs = Number(workorder.billableHours || workorder.clockedHours || 0);
+        const rate = Number(workorder.hourlyRate || 0);
+        const line = workorder.fixedPrice != null
+          ? { description: workorder.title, qty: 1, unitPrice: Number(workorder.fixedPrice), vatRate: 21 }
+          : { description: `${workorder.title}${hrs ? ` (${hrs} u)` : ""}`, qty: hrs || 1, unitPrice: rate, vatRate: 21 };
         openFactuurDrawer(null, {
           prefillCustomerName: workorder.clientName || "",
-          prefillLines: [{ description: workorder.title, qty: 1, unitPrice: 0, vatRate: 21 }],
+          prefillLines: [line],
           prefillNotes: `Werkbon #${workorder.number || workorder.id.slice(-4)}`,
           workorderId: workorder.id
         });
@@ -2178,6 +2201,11 @@ ${emp ? `
         e.preventDefault();
         const errEl = document.getElementById("woFormErr");
         const body = Object.fromEntries(new FormData(e.target).entries());
+        // Facturatie-velden naar de juiste types: checkbox → bool, bedragen → number/null.
+        body.billable = e.target.querySelector('[name="billable"]').checked;
+        ["billableHours", "hourlyRate", "fixedPrice"].forEach(k => {
+          body[k] = body[k] === "" || body[k] == null ? null : Number(body[k]);
+        });
         try {
           if (workorder) await api("PATCH", `/workorders/${workorder.id}`, body);
           else await api("POST", "/workorders", body);
@@ -4610,6 +4638,9 @@ ${providers.map(p => {
           <div class="adm-form-group"><label>Telefoon</label>
             <input name="phone" value="${esc(tenant.phone || "")}" placeholder="+32 ...">
           </div>
+        </div>
+        <div class="adm-form-group"><label>Standaard-uurtarief (€)</label>
+          <input name="defaultHourlyRate" type="number" step="1" min="0" value="${tenant.defaultHourlyRate ?? ""}" placeholder="bv. 55 — gebruikt voor werkbonnen zonder eigen tarief">
         </div>
         <div id="admOrgMsg" style="display:none;padding:8px 12px;border-radius:8px;font-size:13px;margin-bottom:8px;"></div>
         <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#475569;margin:4px 0 8px;cursor:pointer;">

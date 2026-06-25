@@ -58,7 +58,8 @@ function completeWorkorder(store, tenant, workorderId, payload, actor) {
   const workorder = getTenantWorkorder(store, tenant.id, workorderId);
   // Factureerbare uren afleiden uit de geklokte tijd op deze werkbon.
   const clockedHours = clockedHoursForWorkorder(store.list("clocks", tenant.id), workorder.id);
-  const row = store.update("workorders", workorder.id, buildCompletionPatch(workorder, { ...payload, clockedHours }, actor));
+  const defaultHourlyRate = Number(tenant.defaultHourlyRate || (tenant.billingOps && tenant.billingOps.defaultHourlyRate) || 0);
+  const row = store.update("workorders", workorder.id, buildCompletionPatch(workorder, { ...payload, clockedHours, defaultHourlyRate }, actor));
   store.audit({ actor: actor.email, tenantId: tenant.id, action: "mobile_workorder_completed", area: "mobile", detail: `${workorder.id} (${clockedHours}u geklokt)` });
   return row;
 }

@@ -86,6 +86,10 @@ function buildCompletionPatch(workorder, payload, actor) {
     const hasManualHours = workorder.billableHours != null && Number(workorder.billableHours) > 0;
     if (!hasManualPrice && !hasManualHours && clockedHours > 0) {
       patch.billableHours = clockedHours;
+      // Bevries het uurtarief op de werkbon (eigen tarief, anders het standaardtarief
+      // van de organisatie) zodat de factuur overal hetzelfde bedrag toont.
+      const rate = Number(workorder.hourlyRate || payload.defaultHourlyRate || 0);
+      if (rate > 0) patch.hourlyRate = rate;
     }
   }
   return patch;

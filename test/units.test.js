@@ -819,6 +819,7 @@ test("kern-flow e2e: clock → werkbon afronden → factuur met echte uren × st
   const { completeWorkorder } = require("../src/modules/mobile");
   const wo = completeWorkorder(store, tenant, "w1", {}, { email: "mgr@t.be" });
   assert.equal(wo.billableHours, 10);
+  assert.equal(wo.hourlyRate, 60, "standaard-uurtarief bevroren op de werkbon");
   assert.equal(wo.billableStatus, "ready_for_invoice");
   // factuur uit werkbonnen → 10u × €60 = €600
   const { invoice } = createInvoice(store, tenant, { fromWorkorders: true, workorderIds: ["w1"] }, { email: "mgr@t.be" });

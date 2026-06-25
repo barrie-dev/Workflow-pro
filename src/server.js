@@ -3135,6 +3135,7 @@ http.createServer(async (req, res) => {
           start: body.start,
           end: body.end,
           venueId: body.venueId || null,
+          workorderId: body.workorderId || null,   // koppel de shift aan een werkbon → uren stromen door
           note: body.note || "",
           createdBy: user.id,
           createdAt: new Date().toISOString()
@@ -3945,6 +3946,8 @@ http.createServer(async (req, res) => {
         const allowed = ["name", "vatNumber", "address", "contactEmail", "phone", "invoiceProfile"];
         const patch = {};
         allowed.forEach(k => { if (body[k] !== undefined) patch[k] = body[k]; });
+        // Standaard-uurtarief: fallback voor werkbonnen zonder eigen tarief bij facturatie.
+        if (body.defaultHourlyRate !== undefined) patch.defaultHourlyRate = Math.max(0, Number(body.defaultHourlyRate) || 0);
         // E-mailnotificatie-voorkeur (tenant-breed).
         if (body.notificationPrefs && typeof body.notificationPrefs === "object") {
           patch.notificationPrefs = { ...(tenant.notificationPrefs || {}), emailEnabled: body.notificationPrefs.emailEnabled !== false };
