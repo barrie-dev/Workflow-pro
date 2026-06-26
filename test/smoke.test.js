@@ -1184,3 +1184,33 @@ test("koppelingen: superadmin tenant-integrations overzicht + posted_workers lim
   const jan = await login("jan@demobouw.be", "Demo2026!");
   assert.equal((await fetch(`${BASE}/api/admin/tenant-integrations`, { headers: { Authorization: `Bearer ${jan.token}` } })).status, 403);
 });
+
+// ── Documentsjablonen: CRUD + preview + render echt document + gating ────────
+test("templates: superadmin CRUD + live preview + render factuur + 403-gating", async () => {
+  const god = await login("super@workflowpro.be", "Demo2026!");
+  const H = { Authorization: `Bearer ${god.token}`, "Content-Type": "application/json" };
+  // aanmaken (standaard) met merge-veld in voettekst + beperkte kolommen
+  const created = await fetch(`${BASE}/api/tenants/t_demo/templates`, { method: "POST", headers: H, body: JSON.stringify({ type: "invoice", name: "Smoke factuur", columns: ["description", "lineTotal"], footerText: "{{bedrijf.naam}}", isDefault: true }) });
+  assert.equal(created.status, 201);
+  const tplId = (await created.json()).template.id;
+  // lijst bevat het sjabloon + meta (types/fields/columns)
+  const list = await (await fetch(`${BASE}/api/tenants/t_demo/templates`, { headers: H })).json();
+  assert.ok(list.templates.some(t => t.id === tplId));
+  assert.ok(list.types.invoice && list.fields.invoice);
+  // live preview van een concept
+  const prev = await (await fetch(`${BASE}/api/tenants/t_demo/templates/preview`, { method: "POST", headers: H, body: JSON.stringify({ type: "invoice", footerText: "{{bedrijf.naam}}" }) })).json();
+  assert.match(prev.html, /FACTUUR/);
+  assert.ok(!/Eenheidsprijs/.test((await (await fetch(`${BASE}/api/tenants/t_demo/templates/${tplId}/preview`, { headers: H })).json()).html), "uitgeschakelde kolom niet in render");
+  // render een ECHT document met het standaard-sjabloon
+  const fact = await (await fetch(`${BASE}/api/tenants/t_demo/facturen`, { headers: H })).json();
+  const inv = (fact.invoices || fact.rows || [])[0];
+  if (inv) {
+    const r = await (await fetch(`${BASE}/api/tenants/t_demo/documents/invoice/${inv.id}/render`, { headers: H })).json();
+    assert.match(r.html, /FACTUUR/);
+    assert.equal(r.templateName, "Smoke factuur");
+  }
+  // opruimen + gating
+  await fetch(`${BASE}/api/tenants/t_demo/templates/${tplId}`, { method: "DELETE", headers: H });
+  const jan = await login("jan@demobouw.be", "Demo2026!");
+  assert.equal((await fetch(`${BASE}/api/tenants/t_demo/templates`, { headers: { Authorization: `Bearer ${jan.token}` } })).status, 403);
+});

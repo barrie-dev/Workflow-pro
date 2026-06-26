@@ -297,6 +297,10 @@
         <svg viewBox="0 0 24 24"><path d="M22 7h-7V2H9v5H2v15h20V7zM11 4h2v3h-2V4zm9 16H4V9h16v11zM9 13h2v2H9v-2zm4 0h2v2h-2v-2z"/></svg>
         <span>Koppelingen</span>
       </a>
+      <a class="adm-nav-item" data-view="templates" href="#">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+        <span>Documentsjablonen</span>
+      </a>
       <a class="adm-nav-item" data-view="roadmap" href="#">
         <svg viewBox="0 0 24 24"><path d="M21 3L3 10.53v.98l6.84 2.65L12.48 21h.98L21 3z"/></svg>
         <span>Roadmap</span>
@@ -451,7 +455,7 @@
     customers: "Klanten", offertes: "Offertes", facturen: "Facturen", venues: "Locaties", vehicles: "Voertuigen",
     stock: "Stock", billing: "Facturatie",
     ciaw: "Checkin@Work (CIAW)", posted_workers: "A1 / Limosa detachering",
-    integrations: "Koppelingen", roadmap: "Roadmap", audit: "Audittrail", settings: "Instellingen"
+    integrations: "Koppelingen", templates: "Documentsjablonen", roadmap: "Roadmap", audit: "Audittrail", settings: "Instellingen"
   };
 
   const VIEW_BTN_LABEL = {
@@ -4018,9 +4022,15 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
         btn.addEventListener("click", async () => {
           const inv = rows.find(i => i.id === btn.dataset.id);
           if (!inv) return;
-          let tenant = {};
-          try { const t = await api("GET", "/settings"); tenant = t.tenant || {}; } catch(_){}
-          printInvoicePDF(inv, tenant);
+          // Druk af volgens het (standaard) documentsjabloon van de klant.
+          try {
+            const r = await api("GET", `/documents/invoice/${inv.id}/render`);
+            const w = window.open("", "_blank"); w.document.write(r.html); w.document.close();
+          } catch (_) {
+            let tenant = {};
+            try { const t = await api("GET", "/settings"); tenant = t.tenant || {}; } catch (_) {}
+            printInvoicePDF(inv, tenant); // fallback op de ingebouwde opmaak
+          }
         });
       });
       document.querySelectorAll(".inv-peppol").forEach(btn => {
@@ -5262,6 +5272,125 @@ ${enrolled.map(e => `
     switchView("dashboard");
   }
 
+  // ── Documentsjablonen (configureerbaar) ────────────────────
+  let _tplMeta = null;          // {types, fields, columns}
+  let _tplEditing = null;       // huidig concept in de editor (null = lijst)
+  async function renderTemplates() {
+    const c = document.getElementById("admContent");
+    if (_tplEditing) return renderTemplateEditor();
+    let data;
+    try { data = await api("GET", "/templates"); }
+    catch (e) { c.innerHTML = `<div class="adm-card"><div class="adm-card-body" style="color:#dc2626">${esc(e.message)}</div></div>`; return; }
+    _tplMeta = { types: data.types || {}, fields: data.fields || {}, columns: data.columns || {} };
+    const tpls = data.templates || [];
+    const typeKeys = Object.keys(_tplMeta.types);
+    c.innerHTML = `
+<div class="adm-card" style="padding:14px 16px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+  <div style="font-size:13px;color:#475569">Maak je eigen sjablonen voor facturen, offertes en werkbon-rapporten — met je logo, kleuren en de velden die jij wil. Het systeem drukt elk document af volgens het gekozen sjabloon.</div>
+  <select id="tplNew" class="adm-input" style="max-width:230px"><option value="">+ Nieuw sjabloon…</option>${typeKeys.map(t => `<option value="${t}">+ ${esc(_tplMeta.types[t].label)}</option>`).join("")}</select>
+</div>
+${typeKeys.map(tk => {
+  const list = tpls.filter(t => t.type === tk);
+  return `<div class="adm-card" style="margin-bottom:14px"><div class="adm-card-header"><h3 class="adm-card-title">${esc(_tplMeta.types[tk].label)}</h3></div>
+    <div class="adm-card-body" style="padding:0">
+    ${list.length ? `<table class="adm-table"><tbody>${list.map(t => `<tr>
+      <td style="font-weight:600">${esc(t.name)} ${t.isDefault ? '<span class="adm-status adm-status-active" style="margin-left:6px">standaard</span>' : ""}</td>
+      <td style="text-align:right;white-space:nowrap">
+        ${t.isDefault ? "" : `<button class="adm-btn adm-btn-secondary adm-btn-sm tpl-default" data-id="${esc(t.id)}">Maak standaard</button>`}
+        <button class="adm-btn adm-btn-secondary adm-btn-sm tpl-edit" data-id="${esc(t.id)}">Bewerken</button>
+        <button class="adm-btn adm-btn-secondary adm-btn-sm tpl-prev" data-id="${esc(t.id)}">Voorbeeld</button>
+        <button class="adm-btn adm-btn-danger adm-btn-sm tpl-del" data-id="${esc(t.id)}">🗑</button>
+      </td></tr>`).join("")}</tbody></table>`
+    : `<div style="padding:16px;color:#94a3b8;font-size:13px">Nog geen sjabloon — er wordt een nette standaard gebruikt tot je er één maakt.</div>`}
+    </div></div>`;
+}).join("")}`;
+    document.getElementById("tplNew").addEventListener("change", e => { if (e.target.value) { _tplEditing = { type: e.target.value, ...defaultTplDraft(e.target.value) }; renderTemplates(); } });
+    c.querySelectorAll(".tpl-edit").forEach(b => b.addEventListener("click", () => { _tplEditing = tpls.find(t => t.id === b.dataset.id); renderTemplates(); }));
+    c.querySelectorAll(".tpl-del").forEach(b => b.addEventListener("click", async () => { if (!confirm("Sjabloon verwijderen?")) return; try { await api("DELETE", `/templates/${b.dataset.id}`); renderTemplates(); } catch (e) { window.showToast && window.showToast(e.message, "error"); } }));
+    c.querySelectorAll(".tpl-default").forEach(b => b.addEventListener("click", async () => { try { await api("POST", `/templates/${b.dataset.id}/default`, {}); renderTemplates(); } catch (e) { window.showToast && window.showToast(e.message, "error"); } }));
+    c.querySelectorAll(".tpl-prev").forEach(b => b.addEventListener("click", async () => {
+      try { const r = await api("GET", `/templates/${b.dataset.id}/preview`); const w = window.open("", "_blank"); w.document.write(r.html); w.document.close(); }
+      catch (e) { window.showToast && window.showToast(e.message, "error"); }
+    }));
+  }
+
+  function defaultTplDraft(type) {
+    return { name: `Mijn ${(_tplMeta.types[type] || {}).label || type}`, accentColor: "#1e6be6", logo: null, headerText: "", introText: "", footerText: "{{bedrijf.naam}} · {{bedrijf.btw}} · {{bedrijf.email}}", paymentTerms: type === "invoice" ? "Gelieve te betalen voor de vervaldatum op {{bedrijf.iban}}." : "", columns: (_tplMeta.types[type] || {}).defaultColumns || ["description", "qty", "unitPrice", "vatRate", "lineTotal"], showVat: true, language: "nl" };
+  }
+
+  function renderTemplateEditor() {
+    const c = document.getElementById("admContent");
+    const d = _tplEditing;
+    const isFinancial = (_tplMeta.types[d.type] || {}).kind !== "report";
+    const fieldList = _tplMeta.fields[d.type] || [];
+    const colDefs = _tplMeta.columns || {};
+    const fieldPicker = id => `<select class="adm-input tpl-insert" data-target="${id}" style="max-width:170px;margin-top:4px"><option value="">+ veld invoegen…</option>${fieldList.map(f => `<option value="{{${f}}}">${esc(f)}</option>`).join("")}</select>`;
+    c.innerHTML = `
+<div class="adm-card" style="margin-bottom:14px"><div class="adm-card-header">
+  <h3 class="adm-card-title">${d.id ? "Sjabloon bewerken" : "Nieuw sjabloon"} — ${esc((_tplMeta.types[d.type] || {}).label || d.type)}</h3>
+  <button class="adm-btn adm-btn-secondary adm-btn-sm" id="tplBack">← Terug</button>
+</div></div>
+<div class="adm-grid-2" style="align-items:start">
+  <div class="adm-card"><div class="adm-card-body">
+    <div class="adm-form-group"><label>Naam</label><input class="adm-input" id="t_name" value="${esc(d.name || "")}"></div>
+    <div class="adm-form-row">
+      <div class="adm-form-group"><label>Accentkleur</label><input type="color" class="adm-input" id="t_accent" value="${esc(d.accentColor || "#1e6be6")}" style="height:40px;padding:4px"></div>
+      <div class="adm-form-group"><label>Taal</label><select class="adm-input" id="t_lang"><option value="nl" ${d.language === "nl" ? "selected" : ""}>Nederlands</option><option value="fr" ${d.language === "fr" ? "selected" : ""}>Frans</option></select></div>
+    </div>
+    <div class="adm-form-group"><label>Logo (optioneel)</label><input type="file" id="t_logo" accept="image/*" class="adm-input" style="padding:6px">${d.logo ? '<div style="font-size:12px;color:#16a34a;margin-top:4px">✓ logo ingesteld <a href="#" id="t_logo_clear">verwijderen</a></div>' : ""}</div>
+    <div class="adm-form-group"><label>Eigen koptekst (leeg = bedrijfsblok)</label><textarea class="adm-input" id="t_header" rows="2" placeholder="Bv. {{bedrijf.naam}} — uw partner">${esc(d.headerText || "")}</textarea>${fieldPicker("t_header")}</div>
+    <div class="adm-form-group"><label>Inleidingstekst</label><textarea class="adm-input" id="t_intro" rows="2">${esc(d.introText || "")}</textarea>${fieldPicker("t_intro")}</div>
+    ${isFinancial ? `<div class="adm-form-group"><label>Kolommen</label><div style="display:flex;flex-wrap:wrap;gap:10px">${Object.keys(colDefs).map(k => `<label style="font-weight:400;font-size:12.5px;display:inline-flex;gap:5px;align-items:center"><input type="checkbox" class="t_col" value="${k}" ${(d.columns || []).includes(k) ? "checked" : ""}>${esc(colDefs[k])}</label>`).join("")}</div></div>
+    <label style="font-weight:400;font-size:12.5px;display:inline-flex;gap:6px;align-items:center;margin-bottom:12px"><input type="checkbox" id="t_vat" ${d.showVat !== false ? "checked" : ""}> Btw-totaal tonen</label>
+    <div class="adm-form-group"><label>Betaalvoorwaarden</label><textarea class="adm-input" id="t_terms" rows="2">${esc(d.paymentTerms || "")}</textarea>${fieldPicker("t_terms")}</div>` : ""}
+    <div class="adm-form-group"><label>Voettekst</label><textarea class="adm-input" id="t_footer" rows="2">${esc(d.footerText || "")}</textarea>${fieldPicker("t_footer")}</div>
+    <label style="font-weight:400;font-size:12.5px;display:inline-flex;gap:6px;align-items:center;margin-bottom:12px"><input type="checkbox" id="t_default" ${d.isDefault ? "checked" : ""}> Als standaard gebruiken voor dit type</label>
+    <div class="adm-form-actions"><span id="t_msg" style="font-size:12px;color:#dc2626;flex:1;text-align:left"></span><button class="adm-btn adm-btn-primary" id="t_save">Opslaan</button></div>
+  </div></div>
+  <div class="adm-card" style="position:sticky;top:16px"><div class="adm-card-header"><h3 class="adm-card-title">Live voorbeeld</h3></div>
+    <iframe id="t_prev" style="width:100%;height:560px;border:none;border-radius:0 0 16px 16px;background:#fff"></iframe>
+  </div>
+</div>`;
+    document.getElementById("tplBack").addEventListener("click", () => { _tplEditing = null; renderTemplates(); });
+    const draft = () => ({
+      type: d.type, name: val("t_name"), accentColor: val("t_accent"), language: val("t_lang"),
+      logo: d.logo || null,
+      headerText: val("t_header"), introText: val("t_intro"), footerText: val("t_footer"),
+      paymentTerms: isFinancial ? val("t_terms") : "",
+      columns: isFinancial ? [...c.querySelectorAll(".t_col:checked")].map(x => x.value) : [],
+      showVat: isFinancial ? document.getElementById("t_vat").checked : true,
+      isDefault: document.getElementById("t_default").checked,
+    });
+    function val(id) { const el = document.getElementById(id); return el ? el.value : ""; }
+    let _to;
+    const refresh = async () => { try { const r = await api("POST", "/templates/preview", draft()); document.getElementById("t_prev").srcdoc = r.html; } catch (_) {} };
+    const debounced = () => { clearTimeout(_to); _to = setTimeout(refresh, 350); };
+    c.querySelectorAll("input,select,textarea").forEach(el => el.addEventListener("input", debounced));
+    c.querySelectorAll(".tpl-insert").forEach(sel => sel.addEventListener("change", () => {
+      if (!sel.value) return; const ta = document.getElementById(sel.dataset.target);
+      const s = ta.selectionStart || ta.value.length; ta.value = ta.value.slice(0, s) + sel.value + ta.value.slice(ta.selectionEnd || s);
+      sel.value = ""; ta.focus(); debounced();
+    }));
+    const logoInp = document.getElementById("t_logo");
+    if (logoInp) logoInp.addEventListener("change", async () => {
+      const file = logoInp.files && logoInp.files[0]; if (!file) return;
+      if (file.size > 500 * 1024) { document.getElementById("t_msg").textContent = "Logo te groot (max 500KB)"; return; }
+      d.logo = await new Promise(res => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(file); });
+      refresh();
+    });
+    const lc = document.getElementById("t_logo_clear");
+    if (lc) lc.addEventListener("click", e => { e.preventDefault(); d.logo = null; renderTemplateEditor(); });
+    document.getElementById("t_save").addEventListener("click", async () => {
+      const msg = document.getElementById("t_msg"); msg.textContent = "";
+      try {
+        if (d.id) await api("PUT", `/templates/${d.id}`, draft());
+        else await api("POST", "/templates", draft());
+        _tplEditing = null; renderTemplates(); window.showToast && window.showToast("Sjabloon opgeslagen ✓", "success");
+      } catch (e) { msg.textContent = e.message; }
+    });
+    refresh();
+  }
+
   // ── Compliance: Checkin@Work (CIAW) ────────────────────────
   async function renderCiaw() {
     const c = document.getElementById("admContent");
@@ -5479,6 +5608,7 @@ ${enrolled.map(e => `
     reports: renderReports, customers: renderCustomers, venues: renderVenues,
     offertes: renderOffertes, facturen: renderFacturen, vehicles: renderVehicles,
     stock: renderStock, billing: renderBilling, integrations: renderIntegraties,
+    templates: renderTemplates,
     ciaw: renderCiaw, posted_workers: renderPostedWorkers,
     roadmap: renderRoadmap, audit: renderAudit, settings: renderSettings
   });

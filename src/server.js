@@ -3397,6 +3397,15 @@ http.createServer(async (req, res) => {
         sendJson(res, 200, { ok: true, templates: rows, types: tpl.DOCUMENT_TYPES, fields: tpl.FIELD_CATALOG, columns: Object.fromEntries(Object.entries(tpl.LINE_COLUMNS).map(([k, v]) => [k, v.label])) });
         return;
       }
+      // Live preview van een (nog niet opgeslagen) concept-sjabloon.
+      if (action === "templates/preview" && req.method === "POST") {
+        assertCan(user, "settings");
+        const body = await readBody(req);
+        const type = tpl.isType(body.type) ? body.type : "invoice";
+        const draft = tpl.normalizeTemplate(body, { type });
+        sendJson(res, 200, { ok: true, html: tpl.renderDocument(draft, type, tpl.sampleDoc(type), tenant) });
+        return;
+      }
       if (action === "templates" && req.method === "POST") {
         assertCan(user, "settings");
         const body = await readBody(req);
