@@ -169,6 +169,7 @@ const { seedDemoData, clearDemoData } = require("./modules/demo-seed");
 const { buildUbl, validatePeppol, sendPeppolInvoice } = require("./modules/peppol-invoice");
 const { submitCheckin, buildPresenceRegister } = require("./modules/ciaw");
 const { listPostedWorkers, createPostedWorker, updatePostedWorker, deletePostedWorker, submitLimosa } = require("./modules/posted-workers");
+const tpl = require("./modules/templates");
 const {
   leaveSubmittedToAdmin,
   leaveReviewedToEmployee,
@@ -3387,6 +3388,74 @@ http.createServer(async (req, res) => {
           sendJson(res, 200, { ok: true, ...deletePostedWorker(store, tenant, pwId, user) });
           return;
         }
+      }
+
+      // ── Configureerbare documentsjablonen (factuur/offerte/werkbon) ──────────
+      if (action === "templates" && req.method === "GET") {
+        assertCan(user, "settings");
+        const rows = store.list("templates", tenantId);
+        sendJson(res, 200, { ok: true, templates: rows, types: tpl.DOCUMENT_TYPES, fields: tpl.FIELD_CATALOG, columns: Object.fromEntries(Object.entries(tpl.LINE_COLUMNS).map(([k, v]) => [k, v.label])) });
+        return;
+      }
+      if (action === "templates" && req.method === "POST") {
+        assertCan(user, "settings");
+        const body = await readBody(req);
+        if (!tpl.isType(body.type)) return sendJson(res, 400, { ok: false, error: "Ongeldig documenttype" });
+        const data = tpl.normalizeTemplate(body);
+        if (data.isDefault) for (const t of store.list("templates", tenantId)) if (t.type === data.type && t.isDefault) store.update("templates", t.id, { isDefault: false });
+        const row = store.insert("templates", { id: `tpl_${Date.now()}_${Math.random().toString(16).slice(2)}`, tenantId, ...data, createdAt: new Date().toISOString() });
+        store.audit({ actor: user.email, tenantId, action: "template_created", area: "templates", detail: `${data.type}:${data.name}` });
+        sendJson(res, 201, { ok: true, template: row });
+        return;
+      }
+      const tplMatch = action.match(/^templates\/([^/]+)(\/preview|\/default)?$/);
+      if (tplMatch) {
+        const t = store.get("templates", tplMatch[1]);
+        if (!t || t.tenantId !== tenantId) return sendJson(res, 404, { ok: false, error: "Sjabloon niet gevonden" });
+        if (tplMatch[2] === "/preview" && req.method === "GET") {
+          assertCan(user, "settings");
+          sendJson(res, 200, { ok: true, html: tpl.renderDocument(t, t.type, tpl.sampleDoc(t.type), tenant) });
+          return;
+        }
+        if (tplMatch[2] === "/default" && req.method === "POST") {
+          assertCan(user, "settings");
+          for (const o of store.list("templates", tenantId)) if (o.type === t.type && o.isDefault) store.update("templates", o.id, { isDefault: false });
+          const row = store.update("templates", t.id, { isDefault: true });
+          sendJson(res, 200, { ok: true, template: row });
+          return;
+        }
+        if (req.method === "PUT") {
+          assertCan(user, "settings");
+          const data = tpl.normalizeTemplate(await readBody(req), t);
+          if (data.isDefault) for (const o of store.list("templates", tenantId)) if (o.id !== t.id && o.type === data.type && o.isDefault) store.update("templates", o.id, { isDefault: false });
+          const row = store.update("templates", t.id, data);
+          store.audit({ actor: user.email, tenantId, action: "template_updated", area: "templates", detail: t.id });
+          sendJson(res, 200, { ok: true, template: row });
+          return;
+        }
+        if (req.method === "DELETE") {
+          assertCan(user, "settings");
+          store.remove("templates", t.id);
+          store.audit({ actor: user.email, tenantId, action: "template_deleted", area: "templates", detail: t.id });
+          sendJson(res, 200, { ok: true });
+          return;
+        }
+      }
+      // Render een echt document met het standaard-sjabloon (of ?templateId=) → print-HTML.
+      const renderMatch = action.match(/^documents\/(invoice|quote|workorder)\/([^/]+)\/render$/);
+      if (renderMatch && req.method === "GET") {
+        assertInteractiveUser(user);
+        const dType = renderMatch[1], docId = renderMatch[2];
+        let doc = null;
+        if (dType === "invoice") doc = store.get("invoices", docId) || ((tenant.billingOps && tenant.billingOps.invoiceHistory) || []).find(i => i.id === docId || i.number === docId);
+        else if (dType === "quote") doc = store.get("quotes", docId);
+        else if (dType === "workorder") doc = store.get("workorders", docId);
+        if (!doc || (doc.tenantId && doc.tenantId !== tenantId)) return sendJson(res, 404, { ok: false, error: "Document niet gevonden" });
+        const wantId = url.searchParams.get("templateId");
+        const all = store.list("templates", tenantId).filter(t => t.type === dType);
+        const chosen = (wantId && all.find(t => t.id === wantId)) || all.find(t => t.isDefault) || all[0] || tpl.defaultTemplate(dType);
+        sendJson(res, 200, { ok: true, html: tpl.renderDocument(chosen, dType, doc, tenant), templateName: chosen.name });
+        return;
       }
 
       // Peppol e-facturatie verzenden

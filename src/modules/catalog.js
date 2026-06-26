@@ -95,6 +95,9 @@ const MODULE_CATALOG = [
     submodules: [{ key: "datahub-export", label: "Datahub export" }] },
   { key: "integrations", label: "Integraties", group: "Systeem", core: false,
     view: "integrations", actions: ["integrations"], submodules: [] },
+  // Configureerbare documentsjablonen (facturen/offertes/werkbonnen) met merge-velden.
+  { key: "templates", label: "Documentsjablonen", group: "Systeem", core: false,
+    view: "templates", actions: ["templates"], submodules: [] },
   // Add-on: Single Sign-On via SAML 2.0. Geen eigen nav-view — de configuratie
   // leeft in Instellingen. À-la-carte: superadmin zet 'm per tenant aan via
   // moduleOverrides.add (niet standaard in een bundel).

@@ -81,6 +81,7 @@ const REQUIRED_COLLECTIONS = [
   "resellers",
   "bundles",
   "postedWorkers",
+  "templates",
   "migrationHistory"
 ];
 
@@ -132,6 +133,7 @@ function emptySeed() {
     partners: [],
     resellers: [],
     postedWorkers: [],
+    templates: [],
     migrationHistory: []
   };
 }

@@ -925,3 +925,54 @@ test("http-client: postJson geeft JSON bij 2xx en gooit bij 4xx/5xx", async () =
     e => /kapot/.test(e.message)
   );
 });
+
+// ── Configureerbare documentsjablonen (templates.js) ──
+const tplMod = require("../src/modules/templates");
+
+test("templates: mergeFields vervangt + escapet tokens, onbekend → leeg", () => {
+  const f = { "bedrijf.naam": "Bouw & Co", "klant.naam": "<x>" };
+  assert.equal(tplMod.mergeFields("Van {{bedrijf.naam}} aan {{klant.naam}}", f), "Van Bouw &amp; Co aan &lt;x&gt;");
+  assert.equal(tplMod.mergeFields("{{onbekend.veld}}", f), "");
+});
+
+test("templates: buildContext vult type-specifieke velden", () => {
+  const tenant = { name: "T BV", vatNumber: "BE0123", invoiceProfile: { iban: "BE68..." } };
+  const inv = tplMod.buildContext("invoice", { number: "2026-1", invoiceDate: "2026-06-01", dueDate: "2026-07-01", subtotal: 100, vatAmount: 21, total: 121 }, tenant);
+  assert.equal(inv.fields["bedrijf.naam"], "T BV");
+  assert.equal(inv.fields["bedrijf.iban"], "BE68...");
+  assert.ok(inv.fields["document.vervaldatum"].includes("2026"));
+  const wo = tplMod.buildContext("workorder", { number: "WO-1", clockedHours: 8, userName: "Jan" }, tenant);
+  assert.equal(wo.fields["uren.geklokt"], "8");
+  assert.equal(wo.fields["uitvoerder.naam"], "Jan");
+});
+
+test("templates: normalizeTemplate filtert kolommen + valideert kleur", () => {
+  const t = tplMod.normalizeTemplate({ type: "invoice", name: "  Mijn factuur  ", columns: ["description", "BADCOL", "lineTotal"], accentColor: "geen-hex" });
+  assert.equal(t.name, "Mijn factuur");
+  assert.deepEqual(t.columns, ["description", "lineTotal"]);
+  assert.equal(t.accentColor, "#1e6be6");
+});
+
+test("templates: renderDocument factuur toont enkel gekozen kolommen + merge in voettekst", () => {
+  const tenant = { name: "Bouw BV", vatNumber: "BE0123", contactEmail: "info@bouw.be" };
+  const doc = { number: "2026-9", invoiceDate: "2026-06-01", dueDate: "2026-07-01", customerName: "Acme",
+    lines: [{ description: "Werk", qty: 2, unitPrice: 50, vatRate: 21, lineTotal: 121 }], subtotal: 100, vatAmount: 21, total: 121 };
+  const t = tplMod.normalizeTemplate({ type: "invoice", columns: ["description", "lineTotal"], footerText: "{{bedrijf.naam}}" });
+  const html = tplMod.renderDocument(t, "invoice", doc, tenant);
+  assert.match(html, /FACTUUR/);
+  assert.match(html, /Omschrijving/);
+  assert.match(html, /Totaal<\/th>/);
+  assert.ok(!/Eenheidsprijs/.test(html), "uitgeschakelde kolom niet getoond");
+  assert.match(html, /Bouw BV/);            // merge in voettekst
+  assert.match(html, /TOTAAL/);
+});
+
+test("templates: renderDocument werkbon = rapport (checklist + handtekening), geen totalen-tabel", () => {
+  const doc = { number: "WO-3", title: "Onderhoud", completedAt: "2026-06-01", userName: "Jan",
+    checklist: [{ label: "Filter", done: true }], files: [{ name: "f.jpg" }], signed: true, description: "ok" };
+  const html = tplMod.renderDocument(tplMod.defaultTemplate("workorder"), "workorder", doc, { name: "Bouw BV" });
+  assert.match(html, /WERKBON/);
+  assert.match(html, /Checklist/);
+  assert.match(html, /Handtekening klant/);
+  assert.ok(!/TOTAAL/.test(html), "rapport heeft geen totalen-tabel");
+});
