@@ -2160,6 +2160,7 @@ ${emp ? `
   <div class="adm-form-actions" style="flex-wrap:wrap;gap:8px;">
     <button type="button" class="adm-btn adm-btn-secondary" id="woCancel">Annuleren</button>
     ${workorder ? `<button type="button" class="adm-btn adm-btn-danger" id="woDelete">🗑</button>` : ""}
+    ${workorder ? `<button type="button" class="adm-btn adm-btn-secondary" id="woReport" title="Werkbon-rapport afdrukken">📄 Rapport</button>` : ""}
     ${workorder && ["Voltooid","Afgewerkt"].includes(workorder.status) && !workorder.invoiceId
       ? `<button type="button" class="adm-btn adm-btn-secondary" id="woMakeInvoice" style="color:#4f46e5;border-color:#c7d2fe;">🧾 Factuur aanmaken</button>`
       : ""}
@@ -2190,6 +2191,10 @@ ${emp ? `
           prefillNotes: `Werkbon #${workorder.number || workorder.id.slice(-4)}`,
           workorderId: workorder.id
         });
+      });
+      document.getElementById("woReport")?.addEventListener("click", async () => {
+        try { const r = await api("GET", `/documents/workorder/${workorder.id}/render`); const w = window.open("", "_blank"); w.document.write(r.html); w.document.close(); }
+        catch (e) { window.showToast && window.showToast(e.message, "error"); }
       });
       document.getElementById("woDelete")?.addEventListener("click", async () => {
         if (!confirm(`Werkbon "${workorder.title}" verwijderen?`)) return;
@@ -3781,6 +3786,7 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
             <td><span class="adm-status ${st.css}">${st.label}</span>${q.invoiceId?`<div style="font-size:10px;color:#94a3b8">→ gefactureerd</div>`:""}</td>
             <td style="white-space:nowrap;display:flex;gap:5px;flex-wrap:wrap;">
               <button class="adm-btn adm-btn-secondary adm-btn-sm q-edit" data-id="${q.id}" title="Bewerk">✏</button>
+              <button class="adm-btn adm-btn-secondary adm-btn-sm q-pdf" data-id="${q.id}" title="PDF / Afdrukken">📄</button>
               ${["concept","verzonden"].includes(q.status)?`<button class="adm-btn adm-btn-secondary adm-btn-sm q-send" data-id="${q.id}" title="Versturen + link">📤</button>`:""}
               ${canConvert && !q.invoiceId?`<button class="adm-btn adm-btn-success adm-btn-sm q-toinv" data-id="${q.id}" title="Naar factuur">→ Factuur</button>`:""}
               ${canConvert && !q.workorderId?`<button class="adm-btn adm-btn-secondary adm-btn-sm q-towo" data-id="${q.id}" title="Naar werkbon">→ Werkbon</button>`:""}
@@ -3796,6 +3802,10 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
         openOfferteDrawer(rows.find(q => q.id === row.dataset.id));
       }));
       content.querySelectorAll(".q-edit").forEach(b => b.addEventListener("click", () => openOfferteDrawer(rows.find(q => q.id === b.dataset.id))));
+      content.querySelectorAll(".q-pdf").forEach(b => b.addEventListener("click", async () => {
+        try { const r = await api("GET", `/documents/quote/${b.dataset.id}/render`); const w = window.open("", "_blank"); w.document.write(r.html); w.document.close(); }
+        catch (e) { window.showToast && window.showToast(e.message, "error"); }
+      }));
       content.querySelectorAll(".q-send").forEach(b => b.addEventListener("click", async () => {
         try {
           const d = await api("POST", `/offertes/${b.dataset.id}/send`, {});
