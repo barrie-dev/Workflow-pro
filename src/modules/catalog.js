@@ -115,6 +115,9 @@ const MODULE_CATALOG = [
 // Altijd-aan modules: nooit gated, niet in bundels te kiezen.
 const CORE_MODULES = [
   { key: "dashboard", label: "Dashboard", group: "Kern", core: true, view: "dashboard" },
+  // Persoonlijk/configureerbaar dashboard ("Mijn dashboard"): elke gebruiker kiest
+  // eigen widgets; een admin kan een organisatie-dashboard publiceren. Kern-view.
+  { key: "myboard", label: "Mijn dashboard", group: "Kern", core: true, view: "myboard" },
   { key: "employees", label: "Medewerkers", group: "Kern", core: true, view: "employees" },
   { key: "billing", label: "Abonnement & facturatie", group: "Kern", core: true, view: "billing" },
   { key: "settings", label: "Instellingen", group: "Kern", core: true, view: "settings" },
