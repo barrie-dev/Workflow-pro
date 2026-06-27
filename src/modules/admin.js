@@ -7,6 +7,7 @@ const { productionReadiness, productionConfigRisk } = require("./production");
 const { rateLimitSnapshot } = require("../lib/rate-limit");
 const { isExpired } = require("./api-keys");
 const { syncSummary, mappingSummary } = require("./integrations");
+const { resolvePolicy, normalizePolicy, classifyBackups, policySummary } = require("./backup-policy");
 
 const backupDir = path.join(config.root, "data", "backups");
 const dbPath = path.join(config.root, "data", "workflowpro-fullstack.json");
@@ -366,7 +367,53 @@ function createBackup(store, tenant, actor) {
   payload.checksum = backupChecksum(payload);
   fs.writeFileSync(fullPath, JSON.stringify(payload, null, 2));
   store.audit({ actor: actor.email, tenantId: tenant.id, action: "backup_created", area: "admin", detail: id });
+  // Direct na een nieuwe backup het bewaarbeleid afdwingen (GDPR-opslagbeperking).
+  try { pruneTenantBackups(store, tenant, actor); } catch (_) {}
   return { id, name: `${id}.json`, size: fs.statSync(fullPath).size, createdAt: payload.createdAt, checksumPresent: true, checksumValid: true };
+}
+
+// ── Bewaarbeleid (retention) ────────────────────────────────────
+// Het effectieve beleid + een samenvatting (wat zou opgeruimd worden enz.).
+function getBackupPolicy(store, tenant) {
+  return policySummary(tenant, listBackups(tenant.id));
+}
+
+// Beheerder stelt het bewaarbeleid in voor de eigen tenant. Geklemd binnen de
+// platform-grenzen via normalizePolicy. Slaat op in tenant.backupPolicy.
+function setBackupPolicy(store, tenant, patch, actor) {
+  const merged = normalizePolicy({ ...resolvePolicy(tenant), ...(patch || {}) });
+  merged.updatedAt = new Date().toISOString();
+  merged.updatedBy = actor.email;
+  store.updateTenant(tenant.id, { backupPolicy: merged });
+  store.audit({
+    actor: actor.email, tenantId: tenant.id, action: "backup_policy_updated", area: "admin",
+    detail: `retentie ${merged.retentionDays}d · min ${merged.keepMinimum} · ${merged.frequency}${merged.legalHold ? " · legal-hold" : ""}`
+  });
+  const updated = store.data.tenants.find(t => t.id === tenant.id) || tenant;
+  return getBackupPolicy(store, updated);
+}
+
+// Ruim backups op die buiten het bewaarbeleid van de tenant vallen. Behoudt
+// altijd de `keepMinimum` nieuwste; respecteert legalHold. Verwijdert ook de
+// fysieke bestanden. Geeft het aantal opgeruimde backups terug.
+function pruneTenantBackups(store, tenant, actor) {
+  const backups = listBackups(tenant.id);
+  const { prune } = classifyBackups(backups, resolvePolicy(tenant));
+  let removed = 0;
+  for (const b of prune) {
+    const full = backupPath(b.id);
+    if (full.startsWith(backupDir) && fs.existsSync(full)) {
+      try { fs.unlinkSync(full); removed++; } catch (_) {}
+    }
+  }
+  if (removed > 0) {
+    store.audit({
+      actor: (actor && actor.email) || "system", tenantId: tenant.id,
+      action: "backup_pruned", area: "admin",
+      detail: `${removed} backup(s) opgeruimd buiten bewaartermijn (${resolvePolicy(tenant).retentionDays}d)`
+    });
+  }
+  return removed;
 }
 
 function restoreBackup(store, tenant, backupId, actor, confirm) {
@@ -471,4 +518,4 @@ function publicStatus(store) {
   };
 }
 
-module.exports = { tenantStatus, unlockUser, listBackups, createBackup, backupPreview, restoreBackup, backupHealth, mfaRisk, publicStatus };
+module.exports = { tenantStatus, unlockUser, listBackups, createBackup, backupPreview, restoreBackup, backupHealth, mfaRisk, publicStatus, getBackupPolicy, setBackupPolicy, pruneTenantBackups };

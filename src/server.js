@@ -141,7 +141,7 @@ const { leaveConflictOn } = require("./modules/planning-rules");
 const { listIntegrations, connectIntegration, updateMapping, runSync, retrySync, listProviders, runRobawsDocSync } = require("./modules/integrations");
 const { commissionOverview, publicReseller, commissionPctFor } = require("./modules/resellers");
 const saml = require("./modules/saml");
-const { tenantStatus, unlockUser, listBackups, createBackup, backupPreview, restoreBackup, publicStatus, mfaRisk } = require("./modules/admin");
+const { tenantStatus, unlockUser, listBackups, createBackup, backupPreview, restoreBackup, publicStatus, mfaRisk, getBackupPolicy, setBackupPolicy, pruneTenantBackups } = require("./modules/admin");
 const { createNotification, listNotifications, markNotificationRead, generateReminders, notificationSummary } = require("./modules/notifications");
 const { importEmployees } = require("./modules/imports");
 const { runSupportAccessReview } = require("./modules/support-access");
@@ -2125,6 +2125,19 @@ http.createServer(async (req, res) => {
         assertCan(user, "settings");
         assertInteractiveUser(user);
         sendJson(res, 200, { ok: true, rows: listBackups(tenant.id) });
+        return;
+      }
+      if (action === "admin/backup-policy" && req.method === "GET") {
+        assertCan(user, "settings");
+        assertInteractiveUser(user);
+        sendJson(res, 200, { ok: true, ...getBackupPolicy(store, tenant) });
+        return;
+      }
+      if (action === "admin/backup-policy" && req.method === "PUT") {
+        assertCan(user, "settings");
+        assertInteractiveUser(user);
+        const body = await readBody(req);
+        sendJson(res, 200, { ok: true, ...setBackupPolicy(store, tenant, body, user) });
         return;
       }
       if (action === "admin/backups" && req.method === "POST") {
@@ -4167,26 +4180,28 @@ http.createServer(async (req, res) => {
   try { setRuntimeConfig(loadPlatformConfig(store).email); } catch (_) {}
   try { setPlanPriceOverrides(loadPlatformConfig(store).planPrices); } catch (_) {}
 
-  // Auto-backup bij opstarten (max 1 per dag per tenant)
-  setImmediate(() => {
+  // Auto-backup + retentie-opruiming (max 1 backup/dag/tenant). Bij opstart én
+  // dagelijks. createBackup ruimt zelf al op volgens het bewaarbeleid; voor
+  // tenants zonder nieuwe backup vandaag dwingen we het beleid alsnog af.
+  const runBackupCycle = () => {
     try {
       const today = new Date().toISOString().slice(0, 10);
       const tenants = store.data.tenants || [];
-      let backed = 0;
+      let backed = 0, pruned = 0;
       tenants.forEach(t => {
+        const sysActor = { email: "system@workflowpro", id: "system", role: "super_admin", tenantId: t.id };
         try {
           const existing = listBackups(t.id);
           const hasToday = existing.some(b => (b.createdAt||"").startsWith(today));
-          if (!hasToday) {
-            const sysActor = { email: "system@workflowpro", id: "system", role: "super_admin", tenantId: t.id };
-            createBackup(store, t, sysActor);
-            backed++;
-          }
+          if (!hasToday) { createBackup(store, t, sysActor); backed++; }
+          else { pruned += pruneTenantBackups(store, t, sysActor) || 0; }
         } catch(_) {}
       });
-      if (backed > 0) console.log(`  Backup    : ${backed} tenant(s) automatisch gebackupt`);
+      if (backed > 0 || pruned > 0) console.log(`  Backup    : ${backed} gebackupt, ${pruned} opgeruimd (retentie)`);
     } catch(_) {}
-  });
+  };
+  setImmediate(runBackupCycle);
+  setInterval(runBackupCycle, 24 * 60 * 60 * 1000).unref();
 
   // Support-toegang: jaarlijkse mededeling + auto-renew. Bij opstart + dagelijks.
   const reviewSupportAccess = () => { try { runSupportAccessReview(store); } catch (_) {} };
