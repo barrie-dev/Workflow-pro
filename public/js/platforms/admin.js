@@ -5118,7 +5118,8 @@ ${enrolled.map(e => `
     });
   }
 
-  // Backup-bewaarbeleid (retentie) laden en renderen in #admBackupPolicy.
+  // Backup-bewaarbeleid (retentie) — ALLEEN-LEZEN voor de tenant-beheerder.
+  // Configuratie gebeurt centraal door Monargo (superadmin) per tenant.
   async function loadBackupPolicy() {
     const box = document.getElementById("admBackupPolicy");
     if (!box) return;
@@ -5126,41 +5127,23 @@ ${enrolled.map(e => `
     try { d = await api("GET", "/admin/backup-policy"); }
     catch (e) { box.innerHTML = `<div style="color:var(--wf-red);font-size:13px;">Bewaarbeleid laden mislukt: ${esc(e.message)}</div>`; return; }
     const p = d.policy || {};
-    const lim = d.limits || { min: 7, max: 3650 };
-    const presets = d.presets || [30,90,180,365];
     const c = d.counts || { total:0, toKeep:0, toPrune:0 };
     const yrs = days => days < 365 ? `${days} dagen` : (days % 365 === 0 ? `${days/365} jaar` : `${Math.round(days/365*10)/10} jaar`);
-    const opts = presets.map(v => `<option value="${v}" ${p.retentionDays===v?"selected":""}>${yrs(v)}</option>`).join("")
-      + (presets.includes(p.retentionDays) ? "" : `<option value="${esc(p.retentionDays)}" selected>${yrs(p.retentionDays)}</option>`);
+    const item = (label, val) => `<div><div style="font-size:11px;color:var(--muted);margin-bottom:2px;">${label}</div><div style="font-size:14px;font-weight:600;color:var(--ink);">${val}</div></div>`;
     box.innerHTML = `
 <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
   <div style="font-size:14px;font-weight:600;color:var(--ink);">Bewaarbeleid</div>
   <div style="font-size:12px;color:var(--muted);">${c.total} backup(s) · ${c.toKeep} behouden${c.toPrune?` · <span style="color:var(--wf-yellow);">${c.toPrune} buiten termijn</span>`:""}</div>
 </div>
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
-  <div>
-    <label style="display:block;font-size:12px;font-weight:600;color:var(--text);margin-bottom:5px;">Bewaartermijn backups</label>
-    <select id="bpRetention" style="width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:10px;font-size:13px;background:var(--surface);font-family:inherit;">${opts}</select>
-  </div>
-  <div>
-    <label style="display:block;font-size:12px;font-weight:600;color:var(--text);margin-bottom:5px;">Frequentie</label>
-    <select id="bpFreq" style="width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:10px;font-size:13px;background:var(--surface);font-family:inherit;">
-      <option value="daily" ${p.frequency==="daily"?"selected":""}>Dagelijks</option>
-      <option value="weekly" ${p.frequency==="weekly"?"selected":""}>Wekelijks</option>
-    </select>
-  </div>
-  <div>
-    <label style="display:block;font-size:12px;font-weight:600;color:var(--text);margin-bottom:5px;">Minimaal te behouden</label>
-    <input id="bpKeepMin" type="number" min="1" max="${esc(d.limits?.maxKeepMinimum||30)}" value="${esc(p.keepMinimum)}" style="width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:10px;font-size:13px;background:var(--surface);font-family:inherit;">
-  </div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;">
+  ${item("Bewaartermijn", yrs(p.retentionDays))}
+  ${item("Frequentie", p.frequency === "weekly" ? "Wekelijks" : "Dagelijks")}
+  ${item("Minimaal behouden", p.keepMinimum)}
+  ${item("Legal hold", p.legalHold ? '<span style="color:var(--wf-yellow);">Actief</span>' : "Uit")}
 </div>
-<label style="display:flex;align-items:center;gap:9px;margin-top:14px;font-size:13px;color:var(--text);cursor:pointer;">
-  <input id="bpLegalHold" type="checkbox" ${p.legalHold?"checked":""} style="width:16px;height:16px;accent-color:var(--wf-blue);">
-  <span><strong>Legal hold</strong> — opruiming volledig stilleggen (bv. tijdens audit, geschil of GDPR-verzoek)</span>
-</label>
-<div style="margin-top:14px;display:flex;align-items:center;gap:10px;">
-  <button class="adm-btn adm-btn-primary adm-btn-sm" id="bpSave">Bewaarbeleid opslaan</button>
-  ${p.updatedAt?`<span style="font-size:11px;color:var(--gray-400);">Laatst gewijzigd ${new Date(p.updatedAt).toLocaleDateString("nl-BE")}${p.updatedBy?` door ${esc(p.updatedBy)}`:""}</span>`:""}
+<div style="margin-top:12px;font-size:11.5px;color:var(--gray-400);display:flex;align-items:center;gap:6px;">
+  <span style="display:inline-flex;width:15px;height:15px;">🔒</span>
+  Dit beleid wordt centraal beheerd door Monargo. Wil je het aanpassen, neem contact op met support.
 </div>
 <details style="margin-top:14px;">
   <summary style="font-size:12px;color:var(--wf-blue);cursor:pointer;">Wettelijke bewaartermijnen (België) — info</summary>
@@ -5172,23 +5155,6 @@ ${enrolled.map(e => `
     <div style="margin-top:8px;">Conform GDPR art. 5(1)(e) (opslagbeperking) worden backups buiten de termijn automatisch en veilig opgeruimd; de ${esc(p.keepMinimum)} nieuwste blijven altijd bewaard.</div>
   </div>
 </details>`;
-    document.getElementById("bpSave")?.addEventListener("click", async () => {
-      const btn = document.getElementById("bpSave");
-      btn.disabled = true; btn.textContent = "Opslaan…";
-      try {
-        await api("PUT", "/admin/backup-policy", {
-          retentionDays: parseInt(document.getElementById("bpRetention").value, 10),
-          frequency: document.getElementById("bpFreq").value,
-          keepMinimum: parseInt(document.getElementById("bpKeepMin").value, 10),
-          legalHold: document.getElementById("bpLegalHold").checked,
-        });
-        window.showToast && window.showToast("Bewaarbeleid opgeslagen.", "success");
-        loadBackupPolicy();
-      } catch (e) {
-        window.showToast && window.showToast("Opslaan mislukt: " + e.message, "error");
-        btn.disabled = false; btn.textContent = "Bewaarbeleid opslaan";
-      }
-    });
   }
 
   // ── Helpers ────────────────────────────────────────────────

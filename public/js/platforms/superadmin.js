@@ -403,10 +403,11 @@
   </div></div>
 
 <div class="sa-card" style="margin-bottom:16px"><div class="sa-card-head"><div class="sa-card-title">Backups per tenant</div></div>
-  <div class="sa-tbl-wrap"><table class="sa-tbl"><thead><tr><th>Tenant</th><th>Aantal</th><th>Laatste</th><th>Status</th><th></th></tr></thead><tbody>
+  <div class="sa-tbl-wrap"><table class="sa-tbl"><thead><tr><th>Tenant</th><th>Aantal</th><th>Laatste</th><th>Status</th><th>Bewaarbeleid</th><th></th></tr></thead><tbody>
     ${bkRows.map(b => `<tr data-bk="${esc(b.tenantId)}"><td>${esc(b.tenant)}</td><td>${b.count}</td><td>${b.latestAt?fmtDT(b.latestAt):"—"}</td>
       <td>${badge(b.status==="ok"?"vers":b.status==="stale"?`${b.ageDays}d oud`:"ontbreekt", b.status==="ok"?"badge-green":b.status==="stale"?"badge-yellow":"badge-red")}</td>
-      <td><button class="sa-btn btn-secondary sm bk-make" data-id="${esc(b.tenantId)}">Backup maken</button></td></tr>`).join("") || "<tr><td colspan=5 style='color:#64748b'>Geen tenants.</td></tr>"}
+      <td><button class="sa-btn btn-secondary sm bk-policy" data-id="${esc(b.tenantId)}" data-name="${esc(b.tenant)}">⚙ Beleid</button></td>
+      <td><button class="sa-btn btn-secondary sm bk-make" data-id="${esc(b.tenantId)}">Backup maken</button></td></tr>`).join("") || "<tr><td colspan=6 style='color:#64748b'>Geen tenants.</td></tr>"}
   </tbody></table></div></div>
 
 <div class="sa-card" style="margin-bottom:16px"><div class="sa-card-head"><div class="sa-card-title">Webhook-/betaal-events</div></div>
@@ -423,6 +424,58 @@
       try { await api(`/api/admin/backups/${btn.dataset.id}`, { method: "POST" }); window.showToast && window.showToast("Backup gemaakt ✓", "success"); ops(); }
       catch (e) { window.showToast && window.showToast(e.message, "error"); btn.disabled = false; btn.textContent = "Backup maken"; }
     }));
+    c.querySelectorAll(".bk-policy").forEach(btn => btn.addEventListener("click", () => openBackupPolicy(btn.dataset.id, btn.dataset.name)));
+  }
+
+  // Superadmin: backup-bewaarbeleid PER TENANT instellen (frequentie, retentie…).
+  async function openBackupPolicy(tenantId, tenantName) {
+    let d;
+    try { d = await api(`/api/admin/backups/${tenantId}/policy`); }
+    catch (e) { window.showToast && window.showToast(e.message, "error"); return; }
+    const p = d.policy || {};
+    const presets = d.presets || [30, 90, 180, 365, 730, 2555];
+    const yrs = days => days < 365 ? `${days} dagen` : (days % 365 === 0 ? `${days / 365} jaar` : `${Math.round(days / 365 * 10) / 10} jaar`);
+    const opts = presets.map(v => `<option value="${v}" ${p.retentionDays === v ? "selected" : ""}>${yrs(v)}</option>`).join("")
+      + (presets.includes(p.retentionDays) ? "" : `<option value="${esc(p.retentionDays)}" selected>${yrs(p.retentionDays)}</option>`);
+    const c = d.counts || { total: 0, toKeep: 0, toPrune: 0 };
+    openDrawer(`Bewaarbeleid — ${esc(tenantName || tenantId)}`, `
+  <div style="font-size:12px;color:#64748b;margin-bottom:4px">${c.total} backup(s) · ${c.toKeep} behouden${c.toPrune ? ` · <span style="color:#d97706">${c.toPrune} buiten termijn</span>` : ""}</div>
+  <div class="sa-field"><label>Bewaartermijn backups</label>
+    <select id="bpRetention">${opts}</select></div>
+  <div class="sa-field"><label>Frequentie</label>
+    <select id="bpFreq">
+      <option value="daily" ${p.frequency === "daily" ? "selected" : ""}>Dagelijks</option>
+      <option value="weekly" ${p.frequency === "weekly" ? "selected" : ""}>Wekelijks</option>
+    </select></div>
+  <div class="sa-field"><label>Minimaal te behouden (nieuwste backups blijven altijd)</label>
+    <input id="bpKeepMin" type="number" min="1" max="${esc(d.limits?.maxKeepMinimum || 30)}" value="${esc(p.keepMinimum)}"></div>
+  <label style="display:flex;align-items:center;gap:9px;font-size:13px;color:#374151;cursor:pointer">
+    <input id="bpLegalHold" type="checkbox" ${p.legalHold ? "checked" : ""} style="width:16px;height:16px">
+    <span><strong>Legal hold</strong> — opruiming volledig stilleggen (audit/geschil/GDPR-verzoek)</span></label>
+  <div style="font-size:11.5px;color:#94a3b8;line-height:1.5;border-top:1px solid #f1f5f9;padding-top:10px">
+    GDPR art. 5(1)(e): backups buiten de termijn worden automatisch opgeruimd. DR-backups ≠ wettelijk archief (facturen 7j, sociale/arbeidstijd 5j rusten op de live-data).
+    ${p.updatedAt ? `<div style="margin-top:6px">Laatst gewijzigd ${fmtDT(p.updatedAt)}${p.updatedBy ? ` door ${esc(p.updatedBy)}` : ""}</div>` : ""}
+  </div>`,
+      `<button class="sa-btn btn-primary" id="bpSave">Opslaan</button>
+       <button class="sa-btn btn-secondary" id="closeDrawer">Annuleren</button>`);
+    document.getElementById("closeDrawer")?.addEventListener("click", closeDrawer);
+    document.getElementById("bpSave")?.addEventListener("click", async () => {
+      const btn = document.getElementById("bpSave");
+      btn.disabled = true; btn.textContent = "Opslaan…";
+      try {
+        await api(`/api/admin/backups/${tenantId}/policy`, { method: "PUT", body: JSON.stringify({
+          retentionDays: parseInt(document.getElementById("bpRetention").value, 10),
+          frequency: document.getElementById("bpFreq").value,
+          keepMinimum: parseInt(document.getElementById("bpKeepMin").value, 10),
+          legalHold: document.getElementById("bpLegalHold").checked,
+        })});
+        window.showToast && window.showToast("Bewaarbeleid opgeslagen ✓", "success");
+        closeDrawer(); ops();
+      } catch (e) {
+        window.showToast && window.showToast(e.message, "error");
+        btn.disabled = false; btn.textContent = "Opslaan";
+      }
+    });
   }
 
   // ── Beveiliging & governance: MFA, vergrendelde accounts, GDPR/DPA, API-keys ─

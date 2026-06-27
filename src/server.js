@@ -1720,6 +1720,22 @@ http.createServer(async (req, res) => {
       sendJson(res, 200, { ok: true, ...backupSummary(store, listBackups) });
       return;
     }
+    // Superadmin beheert het backup-bewaarbeleid PER TENANT.
+    const backupPolicyMatch = url.pathname.match(/^\/api\/admin\/backups\/([^/]+)\/policy$/);
+    if (backupPolicyMatch && (req.method === "GET" || req.method === "PUT")) {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "system");
+      const tenant = store.data.tenants.find(t => t.id === backupPolicyMatch[1]);
+      if (!tenant) return sendJson(res, 404, { ok: false, error: "Tenant niet gevonden" });
+      if (req.method === "GET") {
+        sendJson(res, 200, { ok: true, ...getBackupPolicy(store, tenant) });
+      } else {
+        const body = await readBody(req).catch(() => ({}));
+        sendJson(res, 200, { ok: true, ...setBackupPolicy(store, tenant, body, user) });
+      }
+      return;
+    }
     const adminBackupMatch = url.pathname.match(/^\/api\/admin\/backups\/([^/]+)(?:\/([^/]+)\/restore)?$/);
     if (adminBackupMatch && req.method === "POST") {
       const user = actor(req);
@@ -2128,16 +2144,11 @@ http.createServer(async (req, res) => {
         return;
       }
       if (action === "admin/backup-policy" && req.method === "GET") {
+        // Alleen-lezen voor de tenant-beheerder; configuratie gebeurt door de
+        // superadmin via /api/admin/backups/:tenantId/policy.
         assertCan(user, "settings");
         assertInteractiveUser(user);
         sendJson(res, 200, { ok: true, ...getBackupPolicy(store, tenant) });
-        return;
-      }
-      if (action === "admin/backup-policy" && req.method === "PUT") {
-        assertCan(user, "settings");
-        assertInteractiveUser(user);
-        const body = await readBody(req);
-        sendJson(res, 200, { ok: true, ...setBackupPolicy(store, tenant, body, user) });
         return;
       }
       if (action === "admin/backups" && req.method === "POST") {
