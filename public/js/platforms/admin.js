@@ -24,6 +24,22 @@
   const tenantId = () => window.wfpCore.tenantId();
   const esc = v => window.wfpCore.esc(v);
 
+  // ── Medewerker-naam resolver ───────────────────────────────
+  // De beheerder zit in hetzelfde bedrijf: toon ALTIJD een echte naam, nooit
+  // een rauwe userId/UUID (dat las als "anoniem"). Lost op via de geladen
+  // medewerkerslijst; valt terug op e-mail, daarna een net label.
+  function empNameById(id) {
+    if (!id) return "";
+    const u = (_state.employees || []).find(e => e.id === id);
+    return u ? (u.name || u.email || "") : "";
+  }
+  // Geef de tonen-naam voor een record met userId/userName (clocking, verlof,
+  // onkost, werkbon, planning…). Toont nooit de rauwe id.
+  function uName(rec) {
+    if (!rec) return "Onbekende medewerker";
+    return rec.userName || empNameById(rec.userId) || rec.userEmail || rec.email || "Onbekende medewerker";
+  }
+
   function api(method, path, body) {
     // Voeg automatisch /tenants/:id toe voor alle tenant-scoped routes
     const tid = tenantId();
@@ -637,7 +653,7 @@
         <tbody>
           ${((pending.leaves||pending)||[]).slice(0,5).map(l => `
           <tr>
-            <td>${esc(l.userName||l.userId)}</td>
+            <td>${esc(uName(l))}</td>
             <td>${esc(l.type||"—")}</td>
             <td style="white-space:nowrap">${esc(l.startDate)} – ${esc(l.endDate)}</td>
             <td style="white-space:nowrap">
@@ -658,7 +674,7 @@ ${(() => {
   const expensesPending = (expData.expenses || []).filter(e => e.status === "pending" || !e.status);
   const items = [
     ...overdueInv.map(i => ({ icon:"🔴", text:`Factuur ${i.number} vervallen — ${new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR"}).format(i.total)}`, view:"facturen", urgent:true })),
-    ...expensesPending.slice(0,3).map(e => ({ icon:"🟡", text:`Onkostennota €${e.amount||0} van ${esc(e.userName||e.userId||"medewerker")} wacht op goedkeuring`, view:"expenses", urgent:false })),
+    ...expensesPending.slice(0,3).map(e => ({ icon:"🟡", text:`Onkostennota €${e.amount||0} van ${esc(uName(e)||"medewerker")} wacht op goedkeuring`, view:"expenses", urgent:false })),
     ...openInv.slice(0,2).map(i => ({ icon:"🔵", text:`Factuur ${i.number} openstaand — ${new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR"}).format(i.total)}`, view:"facturen", urgent:false }))
   ];
   if (!items.length) return "";
@@ -1158,7 +1174,7 @@ ${emp ? `
     const today = new Date().toISOString().slice(0,10);
     const byUser = {};
     shifts.forEach(s => {
-      if (!byUser[s.userId]) byUser[s.userId] = { name: s.userName || s.userId, days: {} };
+      if (!byUser[s.userId]) byUser[s.userId] = { name: uName(s), days: {} };
       if (!byUser[s.userId].days[s.date]) byUser[s.userId].days[s.date] = [];
       byUser[s.userId].days[s.date].push(s);
     });
@@ -1279,7 +1295,7 @@ ${emp ? `
 
       if (isEdit) {
         document.getElementById("admShiftDelete").addEventListener("click", async () => {
-          if (!confirm(`Shift verwijderen voor ${shift.userName||shift.userId} op ${shift.date}?`)) return;
+          if (!confirm(`Shift verwijderen voor ${uName(shift)} op ${shift.date}?`)) return;
           try {
             await api("DELETE", `/planning/${shift.id}`);
             closeDrawer(); renderPlanning();
@@ -1404,7 +1420,7 @@ ${emp ? `
       const hours = c.clockedOut ? ((new Date(c.clockedOut) - new Date(c.clockedIn)) / 3600000).toFixed(1) : "—";
       const noOut = !c.clockedOut;
       return `<tr class="${noOut ? "" : "adm-row-link clk-row"}" data-id="${esc(c.id)}" ${noOut ? "" : 'title="Open correctie"'}>
-        <td style="font-weight:500">${esc(c.userName || c.userId)}</td>
+        <td style="font-weight:500">${esc(uName(c))}</td>
         <td>${c.clockedIn ? new Date(c.clockedIn).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}) : "—"}</td>
         <td>${c.clockedOut ? new Date(c.clockedOut).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}) : '<span style="color:#f59e0b">Niet uitgeklokt</span>'}</td>
         <td>${hours}</td>
@@ -1508,11 +1524,11 @@ ${emp ? `
     if (!clk) return;
     const inTime = clk.clockedIn ? new Date(clk.clockedIn).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit",hour12:false}) : "";
     const outTime = clk.clockedOut ? new Date(clk.clockedOut).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit",hour12:false}) : "";
-    document.getElementById("admDrawerTitle").textContent = `Klok corrigeren — ${esc(clk.userName||clk.userId)}`;
+    document.getElementById("admDrawerTitle").textContent = `Klok corrigeren — ${esc(uName(clk))}`;
     document.getElementById("admDrawerBody").innerHTML = `
 <form id="clkEditForm">
   <div class="adm-form-group"><label>Medewerker</label>
-    <input value="${esc(clk.userName||clk.userId)}" disabled style="background:#f8fafc">
+    <input value="${esc(uName(clk))}" disabled style="background:#f8fafc">
   </div>
   <div class="adm-form-row">
     <div class="adm-form-group"><label>Inkloktijd *</label>
@@ -1758,7 +1774,7 @@ ${emp ? `
       const isToday = dateStr === new Date().toISOString().slice(0,10);
       cells += `<div style="min-height:52px;border-radius:8px;padding:4px 6px;background:${isToday?"#eff6ff":isWeekend?"#f8fafc":"#fff"};border:1px solid ${isToday?"#bfdbfe":"#e2e8f0"};">
         <div style="font-size:11px;font-weight:${isToday?"700":"500"};color:${isWeekend?"#94a3b8":isToday?"#2563eb":"#374151"};margin-bottom:2px;">${d}</div>
-        ${userIds.slice(0,3).map(uid => `<div style="font-size:10px;background:#dbeafe;color:#1e40af;border-radius:4px;padding:1px 4px;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(empMap[uid]||uid)}">${esc((empMap[uid]||uid).split(" ")[0])}</div>`).join("")}
+        ${userIds.slice(0,3).map(uid => { const nm = empMap[uid] || empNameById(uid) || "Onbekend"; return `<div style="font-size:10px;background:#dbeafe;color:#1e40af;border-radius:4px;padding:1px 4px;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(nm)}">${esc(nm.split(" ")[0])}</div>`; }).join("")}
         ${userIds.length > 3 ? `<div style="font-size:10px;color:#64748b;">+${userIds.length-3}</div>` : ""}
       </div>`;
     }
@@ -1780,7 +1796,7 @@ ${emp ? `
     <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Verloven deze maand</div>
     <div style="display:flex;flex-wrap:wrap;gap:6px;">
     ${leaves.map(l=>`<div style="font-size:12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:4px 8px;color:#166534;">
-      <strong>${esc(empMap[l.userId]||l.userId)}</strong> · ${esc(l.type)} · ${l.startDate}→${l.endDate} (${l.days}d)
+      <strong>${esc(empMap[l.userId]||uName(l))}</strong> · ${esc(l.type)} · ${l.startDate}→${l.endDate} (${l.days}d)
     </div>`).join("")}
     </div>
   </div>` : ""}
@@ -1844,7 +1860,7 @@ ${emp ? `
       <thead><tr><th>Medewerker</th><th>Type</th><th>Van</th><th>Tot</th><th>Reden</th><th>Status</th><th>Opmerking</th><th>Acties</th></tr></thead>
       <tbody>${leaves.map(l => `
         <tr>
-          <td>${esc(l.userName || l.userId)}</td>
+          <td>${esc(uName(l))}</td>
           <td>${esc(l.type||"—")}</td>
           <td>${esc(l.startDate||"")}</td>
           <td>${esc(l.endDate||"")}</td>
@@ -1962,7 +1978,7 @@ ${emp ? `
       return `<table class="adm-table">
         <thead><tr><th>Medewerker</th><th>Datum</th><th>Categorie</th><th>Bedrag</th><th>Omschrijving</th><th>Status</th><th>Acties</th></tr></thead>
         <tbody>${rows.map(e => `<tr>
-          <td>${esc(e.userName || e.userId)}</td>
+          <td>${esc(uName(e))}</td>
           <td>${esc(e.date)}</td>
           <td>${esc(e.category||"—")}</td>
           <td style="font-weight:600;">€ ${Number(e.amount||0).toFixed(2)}</td>
@@ -1972,8 +1988,8 @@ ${emp ? `
             ${e.reviewNote ? `<div style="font-size:11px;color:#64748b;margin-top:2px;" title="${esc(e.reviewNote)}">💬 ${esc(e.reviewNote.slice(0,30))}${e.reviewNote.length>30?"…":""}</div>` : ""}
           </td>
           <td style="white-space:nowrap;">${["pending","ingediend"].includes(e.status) ? `
-            <button class="adm-btn adm-btn-success adm-btn-sm adm-exp-review" data-id="${e.id}" data-dec="goedgekeurd" data-name="${esc(e.userName||e.userId)}" data-amount="${e.amount}" data-cat="${esc(e.category||"")}">✓ Goed</button>
-            <button class="adm-btn adm-btn-danger  adm-btn-sm adm-exp-review" data-id="${e.id}" data-dec="geweigerd"  data-name="${esc(e.userName||e.userId)}" data-amount="${e.amount}" data-cat="${esc(e.category||"")}">✗ Weiger</button>
+            <button class="adm-btn adm-btn-success adm-btn-sm adm-exp-review" data-id="${e.id}" data-dec="goedgekeurd" data-name="${esc(uName(e))}" data-amount="${e.amount}" data-cat="${esc(e.category||"")}">✓ Goed</button>
+            <button class="adm-btn adm-btn-danger  adm-btn-sm adm-exp-review" data-id="${e.id}" data-dec="geweigerd"  data-name="${esc(uName(e))}" data-amount="${e.amount}" data-cat="${esc(e.category||"")}">✗ Weiger</button>
           ` : "—"}</td>
         </tr>`).join("")}</tbody>
       </table>`;
@@ -2115,7 +2131,7 @@ ${emp ? `
         <tr class="adm-row-link adm-wo-row" data-id="${w.id}" title="Open werkbon">
           <td style="font-family:monospace;font-size:12px;">${w.number || w.id.slice(-4)}</td>
           <td>${esc(w.title || "—")}</td>
-          <td>${esc(w.userName || w.userId || "—")}</td>
+          <td>${esc(uName(w) || "—")}</td>
           <td>${esc(w.clientName || "—")}</td>
           <td><span class="adm-status adm-status-${(w.status||"").toLowerCase().replace(/\s/g,"-")}">${esc(w.status||"—")}</span></td>
           <td><span style="font-size:12px;">${w.priority==="hoog"?"🔴":w.priority==="laag"?"🟢":"🟡"} ${esc(w.priority||"normaal")}</span></td>
@@ -2582,12 +2598,14 @@ ${emp ? `
       if (!from || !to) return;
 
       try {
-        const [clocksRes, expensesRes, leavesRes, woRes] = await Promise.all([
+        const [clocksRes, expensesRes, leavesRes, woRes, empRes] = await Promise.all([
           api("GET", `/clocks?from=${from}&to=${to}`),
           api("GET", `/expenses`),
           api("GET", `/leaves?from=${from}&to=${to}`),
-          api("GET", `/workorders`)
+          api("GET", `/workorders`),
+          (_state.employees && _state.employees.length) ? Promise.resolve(null) : api("GET", "/employees").catch(() => null)
         ]);
+        if (empRes && (empRes.employees || Array.isArray(empRes))) _state.employees = empRes.employees || empRes;
 
         const clocks    = clocksRes.clocks || [];
         const expenses  = (expensesRes.expenses || []).filter(e => e.date >= from && e.date <= to);
@@ -2621,7 +2639,7 @@ ${emp ? `
         // ── Uren per medewerker ───────────────────────────────
         const hoursByUser = {};
         clocks.forEach(c => {
-          if (!hoursByUser[c.userId]) hoursByUser[c.userId] = { name: c.userName || c.userId, hours: 0, days: new Set() };
+          if (!hoursByUser[c.userId]) hoursByUser[c.userId] = { name: uName(c), hours: 0, days: new Set() };
           if (c.clockedOut) {
             hoursByUser[c.userId].hours += (new Date(c.clockedOut) - new Date(c.clockedIn)) / 3600000;
             hoursByUser[c.userId].days.add(c.clockedIn?.slice(0,10));
@@ -2647,14 +2665,14 @@ ${emp ? `
         // ── Onkosten ──────────────────────────────────────────
         document.getElementById("repExpensesTable").innerHTML = expenses.length
           ? `<table class="adm-table"><thead><tr><th>Medewerker</th><th>Datum</th><th>Categorie</th><th>Bedrag</th><th>Status</th></tr></thead><tbody>
-             ${expenses.map(e => `<tr><td>${esc(e.userName||e.userId)}</td><td>${esc(e.date)}</td><td>${esc(e.category||"—")}</td><td>€${Number(e.amount||0).toFixed(2)}</td><td><span class="adm-status adm-status-${esc(e.status)}">${esc(e.status)}</span></td></tr>`).join("")}
+             ${expenses.map(e => `<tr><td>${esc(uName(e))}</td><td>${esc(e.date)}</td><td>${esc(e.category||"—")}</td><td>€${Number(e.amount||0).toFixed(2)}</td><td><span class="adm-status adm-status-${esc(e.status)}">${esc(e.status)}</span></td></tr>`).join("")}
              </tbody></table>`
           : '<div class="adm-empty">Geen onkosten in deze periode</div>';
 
         // ── Verlof ────────────────────────────────────────────
         document.getElementById("repLeavesTable").innerHTML = leaves.length
           ? `<table class="adm-table"><thead><tr><th>Medewerker</th><th>Type</th><th>Van</th><th>Tot</th><th>Status</th></tr></thead><tbody>
-             ${leaves.map(l => `<tr><td>${esc(l.userName||l.userId)}</td><td>${esc(l.type||"—")}</td><td>${esc(l.startDate)}</td><td>${esc(l.endDate)}</td><td><span class="adm-status adm-status-${esc(l.status)}">${esc(l.status)}</span></td></tr>`).join("")}
+             ${leaves.map(l => `<tr><td>${esc(uName(l))}</td><td>${esc(l.type||"—")}</td><td>${esc(l.startDate)}</td><td>${esc(l.endDate)}</td><td><span class="adm-status adm-status-${esc(l.status)}">${esc(l.status)}</span></td></tr>`).join("")}
              </tbody></table>`
           : '<div class="adm-empty">Geen verlof in deze periode</div>';
 
@@ -2682,18 +2700,18 @@ ${emp ? `
         // ── Loonlijst ─────────────────────────────────────────
         const payrollByUser = {};
         clocks.forEach(c => {
-          if (!payrollByUser[c.userId]) payrollByUser[c.userId] = { name: c.userName||c.userId, email: c.userEmail||"", hours: 0, days: new Set(), expAmt: 0, leaveDays: 0 };
+          if (!payrollByUser[c.userId]) payrollByUser[c.userId] = { name: uName(c), email: c.userEmail||"", hours: 0, days: new Set(), expAmt: 0, leaveDays: 0 };
           if (c.clockedOut) {
             payrollByUser[c.userId].hours += (new Date(c.clockedOut)-new Date(c.clockedIn))/3600000;
             payrollByUser[c.userId].days.add(c.clockedIn?.slice(0,10));
           }
         });
         expenses.filter(e => ["goedgekeurd","approved"].includes(e.status)).forEach(e => {
-          if (!payrollByUser[e.userId]) payrollByUser[e.userId] = { name: e.userName||e.userId, email: "", hours: 0, days: new Set(), expAmt: 0, leaveDays: 0 };
+          if (!payrollByUser[e.userId]) payrollByUser[e.userId] = { name: uName(e), email: "", hours: 0, days: new Set(), expAmt: 0, leaveDays: 0 };
           payrollByUser[e.userId].expAmt += Number(e.amount||0);
         });
         leaves.filter(l => l.status === "goedgekeurd").forEach(l => {
-          if (!payrollByUser[l.userId]) payrollByUser[l.userId] = { name: l.userName||l.userId, email: "", hours: 0, days: new Set(), expAmt: 0, leaveDays: 0 };
+          if (!payrollByUser[l.userId]) payrollByUser[l.userId] = { name: uName(l), email: "", hours: 0, days: new Set(), expAmt: 0, leaveDays: 0 };
           const ld = l.startDate && l.endDate ? Math.round((new Date(l.endDate)-new Date(l.startDate))/86400000)+1 : Number(l.days||0);
           payrollByUser[l.userId].leaveDays += ld;
         });
@@ -2761,20 +2779,20 @@ ${emp ? `
     document.getElementById("repExportClocks").addEventListener("click", () => {
       const rows = (_repData.clocks||[]).map(c => {
         const h = c.clockedOut ? ((new Date(c.clockedOut)-new Date(c.clockedIn))/3600000).toFixed(2) : "";
-        return [c.userName||c.userId, c.clockedIn?.slice(0,10), c.clockedIn?.slice(11,16)||"", c.clockedOut?.slice(11,16)||"", h];
+        return [uName(c), c.clockedIn?.slice(0,10), c.clockedIn?.slice(11,16)||"", c.clockedOut?.slice(11,16)||"", h];
       });
       csvDownload("uren-export.csv", rows, ["Medewerker","Datum","Inkloktijd","Uitkloktijd","Uren"]);
     });
     document.getElementById("repExportExpenses").addEventListener("click", () => {
-      const rows = (_repData.expenses||[]).map(e => [e.userName||e.userId, e.date, e.category||"", e.description||"", e.amount||0, e.status]);
+      const rows = (_repData.expenses||[]).map(e => [uName(e), e.date, e.category||"", e.description||"", e.amount||0, e.status]);
       csvDownload("onkosten-export.csv", rows, ["Medewerker","Datum","Categorie","Omschrijving","Bedrag","Status"]);
     });
     document.getElementById("repExportLeaves").addEventListener("click", () => {
-      const rows = (_repData.leaves||[]).map(l => [l.userName||l.userId, l.type||"", l.startDate, l.endDate, l.reason||"", l.status]);
+      const rows = (_repData.leaves||[]).map(l => [uName(l), l.type||"", l.startDate, l.endDate, l.reason||"", l.status]);
       csvDownload("verlof-export.csv", rows, ["Medewerker","Type","Van","Tot","Reden","Status"]);
     });
     document.getElementById("repExportWO").addEventListener("click", () => {
-      const rows = (_repData.workorders||[]).map(w => [w.number||w.id.slice(-4), w.title||"", w.userName||w.userId||"", w.status||"", w.scheduledDate||w.createdAt?.slice(0,10)||""]);
+      const rows = (_repData.workorders||[]).map(w => [w.number||w.id.slice(-4), w.title||"", uName(w)||"", w.status||"", w.scheduledDate||w.createdAt?.slice(0,10)||""]);
       csvDownload("werkbonnen-export.csv", rows, ["#","Titel","Medewerker","Status","Datum"]);
     });
     document.getElementById("repExportPayroll").addEventListener("click", () => {
@@ -3053,7 +3071,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
             <tbody>${custWOs.map(w => `<tr>
               <td style="font-family:monospace">${w.number||w.id.slice(-4)}</td>
               <td>${esc(w.title||"—")}</td>
-              <td>${esc(w.userName||w.userId||"—")}</td>
+              <td>${esc(uName(w)||"—")}</td>
               <td><span class="adm-status adm-status-${(w.status||"").toLowerCase().replace(/\s/g,"-")}">${esc(w.status||"—")}</span></td>
               <td>${w.scheduledDate||w.createdAt?.slice(0,10)||"—"}</td>
               <td><button class="adm-btn adm-btn-secondary adm-btn-sm wo-from-cust" data-id="${w.id}">✏ Bewerk</button></td>
