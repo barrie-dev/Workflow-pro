@@ -66,7 +66,7 @@
 <div class="mgr-layout">
   <aside class="mgr-sidebar" id="mgrSidebar">
     <div class="mgr-logo">
-      <span class="mgr-logo-mark">WP</span>
+      <span class="mgr-logo-mark">M</span>
       <span class="mgr-logo-text">Monargo One</span>
     </div>
     <nav class="mgr-nav">
@@ -156,51 +156,53 @@
 </div>
 
 <style>
-#platform-manager { font-family:'Inter',system-ui,sans-serif; height:100vh; overflow:hidden; }
+#platform-manager { font-family:var(--font-sans); height:100vh; overflow:hidden; }
 .mgr-layout { display:flex; height:100vh; background:var(--bg); }
-.mgr-sidebar { width:220px; background:var(--wf-navy); color:#e2e8f0; display:flex; flex-direction:column; flex-shrink:0; }
-.mgr-logo { display:flex; align-items:center; gap:10px; padding:20px 16px; border-bottom:1px solid #1e293b; }
-.mgr-logo-mark { background:var(--wf-blue); color:#fff; width:32px; height:32px; border-radius:8px; display:grid; place-items:center; font-weight:700; font-size:13px; flex-shrink:0; }
-.mgr-logo-text { font-weight:600; font-size:15px; }
+.mgr-sidebar { width:220px; background:var(--surface); color:var(--ink); border-right:1px solid var(--line); display:flex; flex-direction:column; flex-shrink:0; }
+.mgr-logo { display:flex; align-items:center; gap:10px; padding:20px 16px; border-bottom:1px solid var(--line); }
+.mgr-logo-mark { background:var(--wf-blue); color:#fff; width:32px; height:32px; border-radius:9px; display:grid; place-items:center; font-weight:600; font-size:13px; flex-shrink:0; }
+.mgr-logo-text { font-weight:600; font-size:15px; letter-spacing:-.2px; }
 .mgr-nav { padding:12px 8px; flex:1; }
-.mgr-nav-item { display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:8px; color:#94a3b8; text-decoration:none; font-size:13.5px; transition:background .15s,color .15s; }
-.mgr-nav-item svg { width:18px; height:18px; fill:currentColor; flex-shrink:0; }
-.mgr-nav-item:hover { background:#1e293b; color:#e2e8f0; }
-.mgr-nav-item.active { background:var(--wf-blue); color:#fff; font-weight:600; box-shadow:0 4px 14px rgba(30,107,230,.4); }
-.mgr-badge { margin-left:auto; background:#ef4444; color:#fff; border-radius:999px; font-size:11px; padding:1px 6px; font-weight:600; }
-.mgr-sidebar-footer { padding:12px; border-top:1px solid #1e293b; display:flex; align-items:center; gap:8px; }
+.mgr-nav-item { display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:9px; color:var(--gray-600); text-decoration:none; font-size:13.5px; transition:background .15s,color .15s; }
+.mgr-nav-item svg { width:18px; height:18px; fill:currentColor; flex-shrink:0; opacity:.7; }
+.mgr-nav-item:hover { background:rgba(0,0,0,.045); color:var(--ink); }
+.mgr-nav-item:hover svg { opacity:1; }
+.mgr-nav-item.active { background:var(--wf-blue-l); color:var(--wf-blue); font-weight:600; }
+.mgr-nav-item.active svg { opacity:1; }
+.mgr-badge { margin-left:auto; background:var(--wf-red); color:#fff; border-radius:999px; font-size:11px; padding:1px 6px; font-weight:600; }
+.mgr-sidebar-footer { padding:12px; border-top:1px solid var(--line); display:flex; align-items:center; gap:8px; }
 .mgr-user-chip { display:flex; align-items:center; gap:8px; flex:1; min-width:0; }
 .mgr-user-avatar { width:32px; height:32px; border-radius:50%; background:var(--wf-blue); color:#fff; display:grid; place-items:center; font-weight:600; font-size:13px; flex-shrink:0; }
 .mgr-user-info { min-width:0; }
-.mgr-user-name { font-size:13px; font-weight:500; color:#e2e8f0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.mgr-user-role { font-size:11px; color:#64748b; }
-.mgr-logout-btn { background:none; border:none; color:#64748b; cursor:pointer; padding:4px; border-radius:6px; }
-.mgr-logout-btn:hover { color:#ef4444; }
+.mgr-user-name { font-size:13px; font-weight:500; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.mgr-user-role { font-size:11px; color:var(--muted); }
+.mgr-logout-btn { background:none; border:none; color:var(--gray-400); cursor:pointer; padding:4px; border-radius:6px; }
+.mgr-logout-btn:hover { color:var(--wf-red); }
 .mgr-logout-btn svg { width:18px; height:18px; fill:currentColor; display:block; }
 .mgr-main { flex:1; display:flex; flex-direction:column; overflow:hidden; }
-.mgr-topbar { display:flex; align-items:center; gap:12px; padding:0 20px; height:56px; background:#fff; border-bottom:1px solid #e2e8f0; flex-shrink:0; }
+.mgr-topbar { display:flex; align-items:center; gap:12px; padding:0 20px; height:56px; background:rgba(255,255,255,.8); backdrop-filter:saturate(180%) blur(20px); border-bottom:1px solid var(--line); flex-shrink:0; }
 .mgr-menu-toggle { background:none; border:none; cursor:pointer; padding:4px; color:#64748b; display:none; }
 .mgr-menu-toggle svg { width:20px; height:20px; fill:currentColor; display:block; }
-.mgr-page-title { font-size:16px; font-weight:600; flex:1; color:#0f172a; margin:0; }
-.mgr-content { flex:1; overflow-y:auto; padding:20px; }
-.mgr-btn { padding:9px 16px; border-radius:10px; font-size:13px; font-weight:600; cursor:pointer; border:none; transition:background .14s, transform .08s; }
+.mgr-page-title { font-size:21px; font-weight:600; flex:1; color:var(--ink); margin:0; letter-spacing:-.4px; }
+.mgr-content { flex:1; overflow-y:auto; padding:22px 24px; }
+.mgr-btn { padding:9px 18px; border-radius:980px; font-size:13px; font-weight:600; cursor:pointer; border:none; transition:background .14s, transform .08s; }
 .mgr-btn:active { transform:translateY(1px); }
 .mgr-btn-primary { background:var(--wf-blue); color:#fff; }
 .mgr-btn-primary:hover { background:var(--wf-blue-d); }
-.mgr-btn-success { background:#10b981; color:#fff; }
-.mgr-btn-danger { background:#ef4444; color:#fff; }
-.mgr-btn-secondary { background:#f1f5f9; color:#475569; border:1px solid #e2e8f0; }
-.mgr-btn-sm { padding:4px 10px; font-size:12px; }
+.mgr-btn-success { background:var(--wf-green); color:#fff; }
+.mgr-btn-danger { background:var(--wf-red); color:#fff; }
+.mgr-btn-secondary { background:var(--surface); color:var(--text); border:1px solid var(--line); }
+.mgr-btn-sm { padding:6px 14px; font-size:12px; }
 .mgr-kpis { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:14px; margin-bottom:20px; }
-.mgr-kpi { background:#fff; border-radius:16px; padding:18px; border:1px solid var(--line); box-shadow:var(--shadow-xs); }
-.mgr-kpi-link { cursor:pointer; transition:transform .12s, box-shadow .12s; }
-.mgr-kpi-link:hover { transform:translateY(-2px); box-shadow:0 6px 18px rgba(15,23,42,.10); }
-.mgr-kpi-label { font-size:11px; color:#64748b; text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px; }
-.mgr-kpi-value { font-size:28px; font-weight:700; color:#0f172a; }
-.mgr-kpi-sub { font-size:11px; color:#94a3b8; margin-top:2px; }
-.mgr-card { background:#fff; border-radius:16px; border:1px solid var(--line); margin-bottom:18px; box-shadow:var(--shadow-xs); overflow:hidden; }
-.mgr-card-header { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid #f1f5f9; }
-.mgr-card-title { font-size:14px; font-weight:600; color:#0f172a; margin:0; }
+.mgr-kpi { background:var(--surface); border-radius:16px; padding:18px; border:1px solid var(--line); }
+.mgr-kpi-link { cursor:pointer; transition:border-color .12s, transform .12s; }
+.mgr-kpi-link:hover { transform:translateY(-2px); border-color:var(--gray-300); }
+.mgr-kpi-label { font-size:12px; color:var(--muted); margin-bottom:6px; }
+.mgr-kpi-value { font-size:28px; font-weight:600; color:var(--ink); letter-spacing:-.5px; }
+.mgr-kpi-sub { font-size:11.5px; color:var(--gray-400); margin-top:2px; }
+.mgr-card { background:var(--surface); border-radius:16px; border:1px solid var(--line); margin-bottom:18px; overflow:hidden; }
+.mgr-card-header { display:flex; align-items:center; justify-content:space-between; padding:15px 18px; border-bottom:1px solid var(--line); }
+.mgr-card-title { font-size:15px; font-weight:600; color:var(--ink); margin:0; letter-spacing:-.2px; }
 .mgr-card-body { padding:16px; }
 .mgr-table-wrap { overflow-x:auto; }
 table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }

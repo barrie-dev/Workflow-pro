@@ -135,7 +135,7 @@
   <!-- Top header -->
   <header class="emp-header">
     <div class="emp-header-left">
-      <div class="emp-logo-mark">WP</div>
+      <div class="emp-logo-mark">M</div>
       <div>
         <div class="emp-header-greeting" id="empGreeting">Goedemorgen</div>
         <div class="emp-header-name" id="empHeaderName">Medewerker</div>
@@ -278,9 +278,11 @@
 
 /* ── Header ─────────────────────────────────── */
 .emp-header {
-  background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
-  color: #fff;
-  padding: 16px 16px 20px;
+  background: rgba(255,255,255,.85);
+  backdrop-filter: saturate(180%) blur(20px);
+  color: var(--ink);
+  border-bottom: 1px solid var(--line);
+  padding: 16px 16px 18px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -288,21 +290,22 @@
 }
 .emp-header-left { display: flex; align-items: center; gap: 12px; }
 .emp-logo-mark {
-  background: #38bdf8;
-  color: #0f172a;
+  background: var(--wf-blue);
+  color: #fff;
   width: 36px; height: 36px;
-  border-radius: 10px;
+  border-radius: 11px;
   display: grid; place-items: center;
-  font-weight: 800; font-size: 13px;
+  font-weight: 600; font-size: 13px;
   flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0,113,227,.30);
 }
-.emp-header-greeting { font-size: 11px; color: #94a3b8; }
-.emp-header-name { font-size: 16px; font-weight: 600; }
+.emp-header-greeting { font-size: 11px; color: var(--muted); }
+.emp-header-name { font-size: 17px; font-weight: 600; color: var(--ink); letter-spacing: -.3px; }
 .emp-header-right { display: flex; gap: 6px; }
 .emp-icon-btn {
-  background: rgba(255,255,255,.1);
+  background: var(--gray-100);
   border: none;
-  color: #fff;
+  color: var(--gray-600);
   width: 36px; height: 36px;
   border-radius: 10px;
   display: grid; place-items: center;
@@ -310,14 +313,14 @@
   position: relative;
 }
 .emp-icon-btn svg { width: 18px; height: 18px; fill: currentColor; }
-.emp-icon-btn:hover { background: rgba(255,255,255,.2); }
+.emp-icon-btn:hover { background: var(--gray-200); }
 .emp-notif-dot {
   position: absolute;
   top: 6px; right: 6px;
   width: 8px; height: 8px;
-  background: #ef4444;
+  background: var(--wf-red);
   border-radius: 50%;
-  border: 2px solid #0f172a;
+  border: 2px solid var(--surface);
 }
 
 /* ── Main ───────────────────────────────────── */
@@ -365,19 +368,16 @@
 
 /* ── Cards ──────────────────────────────────── */
 .emp-card {
-  background: #fff;
+  background: var(--surface);
   border-radius: 16px;
   padding: 16px;
   margin-bottom: 14px;
   border: 1px solid var(--line);
-  box-shadow: var(--shadow-xs);
 }
 .emp-card-title {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: .5px;
-  color: #94a3b8;
+  color: var(--muted);
   margin: 0 0 10px;
 }
 

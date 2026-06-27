@@ -22,13 +22,13 @@
     const el = document.getElementById("platform-reseller");
     if (!el) return;
     el.innerHTML = `
-<div style="min-height:100vh;background:#f1f5f9;font-family:Inter,system-ui,sans-serif">
-  <header style="background:linear-gradient(135deg,#0f172a,#1e3a5f);color:#fff;padding:16px 24px;display:flex;align-items:center;justify-content:space-between">
+<div style="min-height:100vh;background:var(--bg);font-family:var(--font-sans)">
+  <header style="background:rgba(255,255,255,.85);backdrop-filter:saturate(180%) blur(20px);color:var(--ink);border-bottom:1px solid var(--line);padding:16px 24px;display:flex;align-items:center;justify-content:space-between">
     <div style="display:flex;align-items:center;gap:12px">
-      <span style="background:#38bdf8;color:#0f172a;width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-weight:800">WP</span>
-      <div><div style="font-weight:700">Monargo One · Reseller</div><div id="rspName" style="font-size:12px;color:#94a3b8">Partnerportaal</div></div>
+      <span style="background:var(--wf-blue);color:#fff;width:36px;height:36px;border-radius:11px;display:grid;place-items:center;font-weight:600;box-shadow:0 4px 12px rgba(0,113,227,.30)">M</span>
+      <div><div style="font-weight:600;letter-spacing:-.2px">Monargo One · Reseller</div><div id="rspName" style="font-size:12px;color:var(--muted)">Partnerportaal</div></div>
     </div>
-    <button id="rspLogout" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer">Uitloggen</button>
+    <button id="rspLogout" style="background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:980px;padding:8px 16px;font-size:13px;cursor:pointer">Uitloggen</button>
   </header>
   <main style="max-width:1040px;margin:0 auto;padding:24px 20px" id="rspMain"><div style="color:#94a3b8;padding:40px;text-align:center">Laden…</div></main>
 </div>`;
@@ -45,7 +45,7 @@
     try { d = await api("GET", "/api/reseller/clients"); }
     catch (e) { main.innerHTML = `<div style="background:#fff;border-radius:12px;padding:20px;color:#dc2626">${esc(e.message)}</div>`; return; }
     const nm = document.getElementById("rspName"); if (nm && d.reseller) nm.textContent = `${d.reseller.name} · standaard ${d.reseller.defaultCommissionPct || 0}% commissie`;
-    const card = (label, value, sub) => `<div style="background:#fff;border-radius:14px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.06)"><div style="font-size:12px;color:#64748b">${label}</div><div style="font-size:24px;font-weight:800;color:#0f172a">${value}</div><div style="font-size:11px;color:#94a3b8">${sub || ""}</div></div>`;
+    const card = (label, value, sub) => `<div style="background:var(--surface);border-radius:14px;padding:16px;border:1px solid var(--line)"><div style="font-size:12px;color:var(--muted)">${label}</div><div style="font-size:24px;font-weight:600;color:var(--ink);letter-spacing:-.5px">${value}</div><div style="font-size:11px;color:var(--gray-400)">${sub || ""}</div></div>`;
     main.innerHTML = `
 <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px">
   ${card("Mijn klanten", d.clientCount || 0, "actieve + trial")}

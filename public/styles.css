@@ -12,8 +12,8 @@
   --wf-sidebar-dim: #8fa3bf;
   --wf-orange:      #f47c1b;
   --wf-orange-l:    #fef3e8;
-  --wf-blue:        #1e6be6;
-  --wf-blue-l:      #e8f0fd;
+  --wf-blue:        #0071e3;   /* Apple system blue */
+  --wf-blue-l:      #e9f1fd;
   --wf-green:       #16a34a;
   --wf-green-l:     #dcfce7;
   --wf-red:         #dc2626;
@@ -35,19 +35,19 @@
   --gray-900: #0f172a;
 
   --surface:  #ffffff;
-  --bg:       #f8fafc;
-  --ink:      #0f172a;
-  --text:     #334155;
-  --muted:    #64748b;
-  --line:     #e2e8f0;
-  --wf-blue-d:      #1551b5;
-  --radius-sm: 0.5rem;
-  --radius:   0.75rem;
-  --radius-lg: 1rem;
-  --shadow-xs: 0 1px 2px rgba(15,23,42,.05);
-  --shadow:   0 1px 3px rgba(15,23,42,.06), 0 6px 16px rgba(15,23,42,.05);
-  --shadow-m: 0 8px 28px rgba(15,23,42,.10);
-  --ring:     0 0 0 3px rgba(30,107,230,.15);
+  --bg:       #f5f5f7;   /* Apple warm-neutral app background */
+  --ink:      #1d1d1f;   /* Apple near-black */
+  --text:     #3a3a3c;
+  --muted:    #6e6e73;
+  --line:     #e5e5ea;   /* iOS separator */
+  --wf-blue-d:      #0058b9;
+  --radius-sm: 0.625rem; /* 10px */
+  --radius:   0.875rem;  /* 14px */
+  --radius-lg: 1.25rem;  /* 20px */
+  --shadow-xs: 0 1px 2px rgba(0,0,0,.04);
+  --shadow:   0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.05);
+  --shadow-m: 0 12px 40px rgba(0,0,0,.10);
+  --ring:     0 0 0 4px rgba(0,113,227,.18);
 
   /* Legacy aliases kept for main.js compat */
   --navy:      var(--wf-navy);
@@ -62,13 +62,15 @@
   --danger:    var(--wf-red);
   --soft:      var(--bg);
   --subtle:    var(--gray-400);
-  --line:      var(--gray-200);
+
+  /* Apple/Facebook-achtige systeem-fontstack (SF Pro op Apple, Segoe op Windows) */
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
 html { height: 100%; }
 
 body {
-  font-family: Inter, "Segoe UI", -apple-system, sans-serif;
+  font-family: var(--font-sans);
   font-size: 13px;
   line-height: 1.5;
   background: var(--bg);
