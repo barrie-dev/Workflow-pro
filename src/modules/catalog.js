@@ -95,9 +95,6 @@ const MODULE_CATALOG = [
     submodules: [{ key: "datahub-export", label: "Datahub export" }] },
   { key: "integrations", label: "Integraties", group: "Systeem", core: false,
     view: "integrations", actions: ["integrations"], submodules: [] },
-  // Configureerbare documentsjablonen (facturen/offertes/werkbonnen) met merge-velden.
-  { key: "templates", label: "Documentsjablonen", group: "Systeem", core: false,
-    view: "templates", actions: ["templates"], submodules: [] },
   // Add-on: Single Sign-On via SAML 2.0. Geen eigen nav-view — de configuratie
   // leeft in Instellingen. À-la-carte: superadmin zet 'm per tenant aan via
   // moduleOverrides.add (niet standaard in een bundel).
@@ -122,6 +119,10 @@ const CORE_MODULES = [
   { key: "settings", label: "Instellingen", group: "Kern", core: true, view: "settings" },
   { key: "audit", label: "Audittrail", group: "Kern", core: true, view: "audit" },
   { key: "roadmap", label: "Roadmap", group: "Kern", core: true, view: "roadmap" },
+  // Configureerbare documentsjablonen (facturen/offertes/werkbonnen) met merge-velden.
+  // Basis-capaciteit voor elke tenant (eigen factuur-/offerte-/werkbonlayout) →
+  // altijd-aan, niet als losse module te verkopen. Server gate = assertCan("settings").
+  { key: "templates", label: "Documentsjablonen", group: "Systeem", core: true, view: "templates" },
 ];
 
 const GATEABLE = MODULE_CATALOG.filter(m => !m.core);
