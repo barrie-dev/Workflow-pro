@@ -705,6 +705,7 @@
       }
 
       async function loadNotifs() {
+        if (document.getElementById("platform-employee")?.classList.contains("hidden")) return;
         try {
           const d = await api("GET", "/me/notifications");
           _notifs = d.rows || [];

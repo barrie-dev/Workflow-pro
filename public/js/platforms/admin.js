@@ -5243,6 +5243,8 @@ ${enrolled.map(e => `
     }
 
     async function loadNotifications() {
+      // Sla over wanneer deze shell niet actief is (geen stale polls na rol-wissel).
+      if (document.getElementById("platform-admin")?.classList.contains("hidden")) return;
       try {
         const d = await api("GET", "/notifications");
         _notifCache = d.rows || [];

@@ -1829,6 +1829,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     }
 
     async function loadMgrNotifications() {
+      if (document.getElementById("platform-manager")?.classList.contains("hidden")) return;
       try {
         const d = await api("GET", "/notifications");
         _mgrNotifs = d.rows || [];
