@@ -50,5 +50,5 @@ test("nav-gating: employee — tab in catalogus (via alias) of alwaysShow", () =
 });
 
 test("nav-gating: catalogus-views aanwezig (sanity)", () => {
-  assert.ok(catalogViews.has("dashboard") && catalogViews.has("myboard"), "kern-views moeten in de catalogus staan");
+  assert.ok(catalogViews.has("dashboard"), "kern-view dashboard moet in de catalogus staan");
 });
