@@ -1,0 +1,39 @@
+# WorkFlow Pro — lokale/zelf-host stack die identiek draait op elke Docker-host.
+# Doel: portabiliteit. Eén commando, geen externe diensten nodig.
+#
+#   docker compose up --build         → app op http://localhost:4280
+#   docker compose down               → stoppen (data blijft in het volume)
+#
+# Voor productie elders (Fly.io, Cloud Run, AWS, VPS, Kubernetes): bouw dezelfde
+# image en geef de env-vars uit .env.example mee. Zie PORTABILITY.md.
+
+services:
+  app:
+    build: .
+    image: workflowpro:latest
+    restart: unless-stopped
+    ports:
+      - "${PORT:-4280}:4280"
+    environment:
+      NODE_ENV: production
+      PORT: "4280"
+      # Zelf-host zonder externe DB: JSON-adapter met een persistent volume.
+      # Voor een managed Postgres → STORAGE_ADAPTER=postgres + SUPABASE_*/DATABASE_URL.
+      STORAGE_ADAPTER: "${STORAGE_ADAPTER:-json}"
+      WORKFLOWPRO_DATA_FILE: /app/data/workflowpro.json
+      APP_URL: "${APP_URL:-http://localhost:4280}"
+      # Secrets: gezet via .env (env_file hieronder). Genereer sterke waarden!
+      REQUIRE_ADMIN_MFA: "${REQUIRE_ADMIN_MFA:-false}"
+    env_file:
+      - .env
+    volumes:
+      - wfp-data:/app/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:4280/api/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  wfp-data:
