@@ -78,6 +78,27 @@
 .adm-menu-toggle { background:none; border:none; cursor:pointer; padding:5px; color:var(--muted); display:none; flex-shrink:0; }
 .adm-menu-toggle svg { width:20px; height:20px; fill:currentColor; display:block; }
 
+/* Persoonlijke prikklok in de topbar */
+.adm-clockbtn {
+  display:inline-flex; align-items:center; gap:7px; height:36px; padding:0 15px;
+  border-radius:980px; border:1px solid var(--line); background:var(--surface);
+  color:var(--text); font-size:13px; font-weight:600; font-family:inherit; cursor:pointer;
+  white-space:nowrap; flex-shrink:0; transition:background .14s, border-color .14s, color .14s;
+}
+.adm-clockbtn:hover { background:var(--gray-50); border-color:var(--gray-300); }
+.adm-clockbtn .adm-clockbtn-ico { width:16px; height:16px; fill:currentColor; opacity:.8; }
+.adm-clockbtn .adm-clockbtn-dot { display:none; }
+.adm-clockbtn.on {
+  background:var(--wf-green-l); color:#0a7a3f; border-color:transparent;
+}
+.adm-clockbtn.on .adm-clockbtn-ico { display:none; }
+.adm-clockbtn.on .adm-clockbtn-dot {
+  display:inline-block; width:8px; height:8px; border-radius:50%; background:currentColor;
+  animation:admClockPulse 1.6s ease-in-out infinite;
+}
+@keyframes admClockPulse { 0%,100% { opacity:1; } 50% { opacity:.3; } }
+@media (max-width:640px){ .adm-clockbtn span:last-child { display:none; } .adm-clockbtn { padding:0 11px; } }
+
 /* Search box */
 .adm-search-box { flex:1; max-width:520px; position:relative; display:flex; align-items:center; }
 .adm-search-icon { position:absolute; left:13px; width:16px; height:16px; fill:var(--gray-400); flex-shrink:0; pointer-events:none; }

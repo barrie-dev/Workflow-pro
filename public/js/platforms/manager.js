@@ -135,7 +135,12 @@
         <svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
       </button>
       <h1 class="mgr-page-title" id="mgrPageTitle">Dashboard</h1>
-      <div style="position:relative;margin-left:auto">
+      <button class="mgr-clockbtn" id="mgrClockBtn" title="Klok jezelf in of uit" style="margin-left:auto">
+        <span class="mgr-clockbtn-dot"></span>
+        <svg class="mgr-clockbtn-ico" viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
+        <span id="mgrClockLbl">Inklokken</span>
+      </button>
+      <div style="position:relative">
         <button id="mgrBellBtn" title="Notificaties" style="background:none;border:none;cursor:pointer;padding:6px;border-radius:8px;color:#64748b;display:flex;align-items:center;justify-content:center;transition:background .1s">
           <svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:currentColor"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
           <span id="mgrBellDot" style="position:absolute;top:4px;right:4px;width:8px;height:8px;background:#ef4444;border-radius:50%;border:2px solid #fff;display:none"></span>
@@ -181,6 +186,15 @@
 .mgr-logout-btn svg { width:18px; height:18px; fill:currentColor; display:block; }
 .mgr-main { flex:1; display:flex; flex-direction:column; overflow:hidden; }
 .mgr-topbar { display:flex; align-items:center; gap:12px; padding:0 20px; height:56px; background:rgba(255,255,255,.8); backdrop-filter:saturate(180%) blur(20px); border-bottom:1px solid var(--line); flex-shrink:0; }
+.mgr-clockbtn { display:inline-flex; align-items:center; gap:7px; height:34px; padding:0 14px; border-radius:980px; border:1px solid var(--line); background:var(--surface); color:var(--text); font-size:13px; font-weight:600; font-family:inherit; cursor:pointer; white-space:nowrap; transition:background .14s, border-color .14s, color .14s; }
+.mgr-clockbtn:hover { background:var(--gray-50); border-color:var(--gray-300); }
+.mgr-clockbtn .mgr-clockbtn-ico { width:16px; height:16px; fill:currentColor; opacity:.8; }
+.mgr-clockbtn .mgr-clockbtn-dot { display:none; }
+.mgr-clockbtn.on { background:var(--wf-green-l); color:#0a7a3f; border-color:transparent; }
+.mgr-clockbtn.on .mgr-clockbtn-ico { display:none; }
+.mgr-clockbtn.on .mgr-clockbtn-dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:currentColor; animation:mgrClockPulse 1.6s ease-in-out infinite; }
+@keyframes mgrClockPulse { 0%,100% { opacity:1; } 50% { opacity:.3; } }
+@media (max-width:640px){ .mgr-clockbtn span:last-child { display:none; } .mgr-clockbtn { padding:0 10px; } }
 .mgr-menu-toggle { background:none; border:none; cursor:pointer; padding:4px; color:#64748b; display:none; }
 .mgr-menu-toggle svg { width:20px; height:20px; fill:currentColor; display:block; }
 .mgr-page-title { font-size:21px; font-weight:600; flex:1; color:var(--ink); margin:0; letter-spacing:-.4px; }
@@ -241,6 +255,40 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
       localStorage.removeItem("wfp_token");
       location.reload();
     });
+    wireMgrClock();
+  }
+
+  // ── Persoonlijke prikklok (topbar) — manager kan zichzelf in-/uitklokken ──
+  function wireMgrClock() {
+    const btn = document.getElementById("mgrClockBtn");
+    if (!btn) return;
+    const lbl = document.getElementById("mgrClockLbl");
+    let active = null, timer = null;
+    const paint = () => {
+      if (active) {
+        const h = (Date.now() - new Date(active.clockedIn).getTime()) / 3600000;
+        btn.classList.add("on"); lbl.textContent = `Uitklokken · ${h.toFixed(1)} u`;
+      } else { btn.classList.remove("on"); lbl.textContent = "Inklokken"; }
+    };
+    const refresh = async () => {
+      try { const d = await api("GET", "/me/clock"); active = d.active || null; } catch (_) { active = null; }
+      paint();
+      if (timer) clearInterval(timer);
+      if (active) timer = setInterval(() => {
+        if (document.getElementById("platform-manager")?.classList.contains("hidden")) { clearInterval(timer); return; }
+        paint();
+      }, 30000);
+    };
+    btn.addEventListener("click", async () => {
+      btn.disabled = true;
+      try {
+        await api("POST", active ? "/me/clock/out" : "/me/clock/in", {});
+        window.showToast && window.showToast(active ? "Uitgeklokt ✓" : "Ingeklokt ✓", "success");
+        await refresh();
+      } catch (e) { window.showToast && window.showToast(e.message, "error"); }
+      finally { btn.disabled = false; }
+    });
+    refresh();
   }
 
   // ── Nav ────────────────────────────────────────────────────

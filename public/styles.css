@@ -1284,7 +1284,11 @@ table.wfp-table tbody tr:hover td { background: var(--gray-50); }
 /* ═══════════════════════════════════════════════════
    BUTTONS
 ═══════════════════════════════════════════════════ */
-button:not(.wfp-nav-btn):not(.wfp-tab):not(.view-switch button):not(.login-btn):not(.login-role-btn):not(.lpv-lang-btn):not(.wfp-primary-btn):not(.wfp-icon-btn):not(.sa-btn):not(.sa-nav-item):not(.sa-btn-logout):not(.sa-menu-toggle):not(.sa-drawer-close):not(.emp-clock-btn) {
+/* Reset enkel voor losse/legacy knoppen — NIET voor de platform-shells
+   (admin/manager/employee/superadmin), die hun eigen knopstijl meebrengen.
+   Anders overschreef deze high-specificity reset elke gekleurde shell-knop
+   (bv. primaire knoppen werden wit). */
+button:not(.wfp-nav-btn):not(.wfp-tab):not(.view-switch button):not(.login-btn):not(.login-role-btn):not(.lpv-lang-btn):not(.wfp-primary-btn):not(.wfp-icon-btn):not([class*="adm-"]):not([class*="mgr-"]):not([class*="emp-"]):not([class*="sa-"]) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1302,7 +1306,7 @@ button:not(.wfp-nav-btn):not(.wfp-tab):not(.view-switch button):not(.login-btn):
   white-space: nowrap;
 }
 
-button:not(.wfp-nav-btn):not(.wfp-tab):not(.view-switch button):not(.login-btn):not(.login-role-btn):not(.lpv-lang-btn):not(.wfp-primary-btn):not(.wfp-icon-btn):not(.sa-btn):not(.sa-nav-item):not(.sa-btn-logout):not(.sa-menu-toggle):not(.sa-drawer-close):not(.emp-clock-btn):hover {
+button:not(.wfp-nav-btn):not(.wfp-tab):not(.view-switch button):not(.login-btn):not(.login-role-btn):not(.lpv-lang-btn):not(.wfp-primary-btn):not(.wfp-icon-btn):not([class*="adm-"]):not([class*="mgr-"]):not([class*="emp-"]):not([class*="sa-"]):hover {
   background: var(--gray-50);
 }
 

@@ -41,18 +41,28 @@ function getMyPlanning(store, tenantId, userId, options = {}) {
 // ── Employee: eigen prikklok ───────────────────────────────────────────────────
 
 function getMyClock(store, tenantId, userId) {
+  // De opgeslagen prikklok-rij gebruikt date + clockIn/clockOut (HH:MM) en
+  // status "active". We verrijken met volledige ISO-timestamps (clockedIn/
+  // clockedOut) zodat de client live duur kan tonen; legacy-rijen met een ISO
+  // veld blijven werken via de fallback.
+  const toISO = (date, hhmm, fallback) =>
+    (date && hhmm) ? new Date(`${date}T${hhmm}:00`).toISOString() : (fallback || null);
+
   const clocks = store.list("clocks", tenantId)
     .filter(c => c.userId === userId)
-    .sort((a, b) => b.clockedIn.localeCompare(a.clockedIn))
+    .map(c => ({
+      ...c,
+      clockedIn: toISO(c.date, c.clockIn, c.clockedIn),
+      clockedOut: toISO(c.date, c.clockOut, c.clockedOut),
+    }))
+    .sort((a, b) => String(b.clockedIn || "").localeCompare(String(a.clockedIn || "")))
     .slice(0, 30);
 
-  const active = clocks.find(c => c.status === "in");
+  const active = clocks.find(c => c.status === "active" || c.status === "in" || !c.clockedOut) || null;
   const today = new Date().toISOString().slice(0, 10);
-  const todayClocks = clocks.filter(c => c.clockedIn?.startsWith(today));
-  const todayHours = todayClocks.reduce((sum, c) => {
-    if (!c.clockedOut) return sum;
-    return sum + (new Date(c.clockedOut) - new Date(c.clockedIn)) / 3600000;
-  }, 0);
+  const todayHours = clocks
+    .filter(c => (c.date || c.clockedIn || "").startsWith(today) && c.clockedIn && c.clockedOut)
+    .reduce((sum, c) => sum + Math.max(0, (new Date(c.clockedOut) - new Date(c.clockedIn)) / 3600000), 0);
 
   return { clocks, active, todayHours: Math.round(todayHours * 10) / 10 };
 }

@@ -359,6 +359,12 @@
       </div>
       <!-- Right actions -->
       <div class="adm-topbar-right">
+        <!-- Persoonlijke prikklok (iedereen, ook beheerder, kan in-/uitklokken) -->
+        <button class="adm-clockbtn" id="admClockBtn" title="Klok jezelf in of uit">
+          <span class="adm-clockbtn-dot" id="admClockDot"></span>
+          <svg class="adm-clockbtn-ico" viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
+          <span id="admClockLbl">Inklokken</span>
+        </button>
         <button class="adm-btn adm-btn-primary" id="admPrimaryAction" style="display:none">
           <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:#fff;margin-right:4px;vertical-align:middle;"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
           Toevoegen
@@ -5207,6 +5213,45 @@ ${enrolled.map(e => `
       const cn = document.getElementById("admCompanyName");
       if (cn) cn.textContent = "Monargo One";
     });
+
+    // ── Persoonlijke prikklok (topbar) — iedereen kan in-/uitklokken ──
+    (function wireClock(){
+      const btn = document.getElementById("admClockBtn");
+      if (!btn) return;
+      const lbl = document.getElementById("admClockLbl");
+      let active = null, timer = null;
+      function paint(){
+        if (active){
+          const h = (Date.now() - new Date(active.clockedIn).getTime()) / 3600000;
+          btn.classList.add("on");
+          lbl.textContent = `Uitklokken · ${h.toFixed(1)} u`;
+        } else {
+          btn.classList.remove("on");
+          lbl.textContent = "Inklokken";
+        }
+      }
+      async function refresh(){
+        try { const d = await api("GET", "/me/clock"); active = d.active || null; }
+        catch(_) { active = null; }
+        paint();
+        if (timer) clearInterval(timer);
+        if (active) timer = setInterval(() => {
+          if (document.getElementById("platform-admin")?.classList.contains("hidden")) { clearInterval(timer); return; }
+          paint();
+        }, 30000);
+      }
+      btn.addEventListener("click", async () => {
+        btn.disabled = true;
+        try {
+          await api("POST", active ? "/me/clock/out" : "/me/clock/in", {});
+          window.showToast && window.showToast(active ? "Uitgeklokt ✓" : "Ingeklokt ✓", "success");
+          await refresh();
+          if (_currentView === "clocking") renderClocking();
+        } catch(e){ window.showToast && window.showToast(e.message, "error"); }
+        finally { btn.disabled = false; }
+      });
+      refresh();
+    })();
 
     // ── Globale zoek ─────────────────────────────────────────
     (function wireSearch(){
