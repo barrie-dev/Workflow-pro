@@ -77,7 +77,7 @@ function salesMarkdown(report) {
 
 function goLiveMarkdown(report) {
   return [
-    `# WorkFlow Pro Go-Live Report - ${report.tenant.name}`,
+    `# Monargo One Go-Live Report - ${report.tenant.name}`,
     "",
     `Generated: ${report.generatedAt}`,
     `Overall: ${report.ok ? "OK" : "OPEN"}`,
@@ -110,7 +110,7 @@ function goLiveMarkdown(report) {
 
 function roadmapMarkdown(report) {
   return [
-    "# WorkFlow Pro Roadmap Checklist",
+    "# Monargo One Roadmap Checklist",
     "",
     `Generated: ${new Date().toISOString()}`,
     `Tenant: ${report.tenant.name} (${report.tenant.id})`,
@@ -149,7 +149,7 @@ function reportIndex(reportsDir) {
       const stat = fs.statSync(path.join(reportsDir, name));
       return `| ${reportKind(name)} | ${name} | ${path.extname(name).slice(1)} | ${stat.mtime.toISOString()} | ${stat.size} |`;
     }) : [];
-  return ["# WorkFlow Pro Report Index", "", `Generated: ${new Date().toISOString()}`, "", "| Type | File | Format | Updated | Size |", "| --- | --- | --- | --- | --- |", ...rows, ""].join("\n");
+  return ["# Monargo One Report Index", "", `Generated: ${new Date().toISOString()}`, "", "| Type | File | Format | Updated | Size |", "| --- | --- | --- | --- | --- |", ...rows, ""].join("\n");
 }
 
 function listReports(tenantId, options = {}) {

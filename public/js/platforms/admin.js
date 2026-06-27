@@ -1,5 +1,5 @@
 /* ============================================================
-   WorkFlow Pro – Tenant Admin Platform
+   Monargo One – Tenant Admin Platform
    public/js/platforms/admin.js
    ============================================================ */
 (function () {
@@ -80,7 +80,7 @@
     ov.innerHTML = `
       <div style="background:#fff;border-radius:16px;max-width:560px;width:100%;max-height:92vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
         <div style="padding:20px 22px;border-bottom:1px solid #f1f5f9">
-          <h2 style="margin:0;font-size:18px;color:#0f172a">Welkom bij WorkFlow Pro 👋</h2>
+          <h2 style="margin:0;font-size:18px;color:#0f172a">Welkom bij Monargo One 👋</h2>
           <p style="margin:6px 0 0;font-size:13px;color:#64748b">Vul je bedrijfsgegevens aan zodat we ${esc(t.name || "je organisatie")} correct kunnen instellen. Duurt een minuutje.</p>
         </div>
         <form id="admObForm" style="padding:20px 22px;display:flex;flex-direction:column;gap:14px">
@@ -193,7 +193,7 @@
         <svg viewBox="0 0 24 24" fill="none"><path d="M13 3L4 14h7l-1 7 9-11h-7l1-7z" fill="currentColor"/></svg>
       </div>
       <div class="adm-brand-text">
-        <div class="adm-brand-name">WorkFlow Pro</div>
+        <div class="adm-brand-name">Monargo One</div>
         <div class="adm-brand-tenant" id="admCompanyName">Laden…</div>
       </div>
     </div>
@@ -328,6 +328,7 @@
         <svg viewBox="0 0 24 24"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
       </button>
     </div>
+    <div style="padding:8px 16px 12px;font-size:10.5px;color:rgba(255,255,255,.4);text-align:center">Powered by <strong style="color:rgba(255,255,255,.65)">Monargo</strong></div>
   </aside>
 
   <!-- Main -->
@@ -2835,7 +2836,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
 @media print{body{padding:0}@page{margin:15mm}}
 </style></head><body><div class="page">
 <div class="header">
-  <div><div class="title">Beslissersrapport</div><div class="subtitle">${esc(tenant.name||"WorkFlow Pro")} · ${esc(tenant.vatNumber||"")}</div></div>
+  <div><div class="title">Beslissersrapport</div><div class="subtitle">${esc(tenant.name||"Monargo One")} · ${esc(tenant.vatNumber||"")}</div></div>
   <div class="period">Periode: ${from} t/m ${to}<br>Gegenereerd: ${new Date().toLocaleDateString("nl-BE")}</div>
 </div>
 <div class="kpis">
@@ -2863,7 +2864,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
     De goedgekeurde onkosten bedragen ${fE(totalExp)}.
   </p>
 </div>
-<div class="footer">${esc(tenant.name||"")} · Gegenereerd met WorkFlow Pro · ${new Date().toLocaleString("nl-BE")}</div>
+<div class="footer">${esc(tenant.name||"")} · Gegenereerd met Monargo One · ${new Date().toLocaleString("nl-BE")}</div>
 </div><script>window.onload=()=>{window.print()}</script></body></html>`);
     win.document.close();
   }
@@ -3660,7 +3661,7 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
 <div class="page">
   <div class="header">
     <div>
-      <div class="brand">${esc(tenant.name||"WorkFlow Pro")}</div>
+      <div class="brand">${esc(tenant.name||"Monargo One")}</div>
       <div class="brand-sub">${esc(tenant.vatNumber||"")}</div>
       <div class="brand-sub">${esc(tenant.address||"")}</div>
       ${tenant.contactEmail?`<div class="brand-sub">${esc(tenant.contactEmail)}</div>`:""}
@@ -4473,7 +4474,7 @@ ${billing.status === "trial" ? `<div style="background:#fffbeb;border:1px solid 
           <td style="font-family:monospace;font-weight:600">${esc(i.number||i.id.slice(-6))}</td>
           <td>${i.date ? new Date(i.date).toLocaleDateString("nl-BE") : "—"}</td>
           <td>${i.dueDate ? new Date(i.dueDate).toLocaleDateString("nl-BE") : "—"}</td>
-          <td>${esc(i.description||i.title||"Abonnement WorkFlow Pro")}</td>
+          <td>${esc(i.description||i.title||"Abonnement Monargo One")}</td>
           <td style="font-weight:600">${fmtEur(i.amount)}</td>
           <td><span class="adm-status ${statusCss[i.status]||"adm-status-pending"}">${esc(i.status||"—")}</span></td>
         </tr>`).join("")}</tbody>
@@ -5144,10 +5145,10 @@ ${enrolled.map(e => `
     api("GET", "/settings").then(res => {
       const t = res.tenant || {};
       const cn = document.getElementById("admCompanyName");
-      if (cn) cn.textContent = t.name || "WorkFlow Pro";
+      if (cn) cn.textContent = t.name || "Monargo One";
     }).catch(() => {
       const cn = document.getElementById("admCompanyName");
-      if (cn) cn.textContent = "WorkFlow Pro";
+      if (cn) cn.textContent = "Monargo One";
     });
 
     // ── Globale zoek ─────────────────────────────────────────

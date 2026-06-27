@@ -31,7 +31,7 @@
       deps.setText("startTenantName", "Werkruimte");
       deps.setText("startIntro", "Log in om planning, werkbonnen, tijd en onkosten in een rustig overzicht te zien.");
       deps.setText("startActivationScore", "0%");
-      deps.setText("startNextTitle", "Welkom bij WorkFlow Pro");
+      deps.setText("startNextTitle", "Welkom bij Monargo One");
       deps.setText("startNextDetail", "Start met inloggen en ga daarna rechtstreeks naar de belangrijkste klantactie.");
       deps.el("startNextAction").textContent = "Inloggen";
       deps.el("startCards").innerHTML = "";

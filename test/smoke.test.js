@@ -57,7 +57,7 @@ test("health endpoint geeft ok", async () => {
 
 test("login pagina serveert HTML", async () => {
   const html = await (await fetch(`${BASE}/`)).text();
-  assert.ok(html.includes("WorkFlow Pro"), "bevat app-naam");
+  assert.ok(html.includes("Monargo One"), "bevat app-naam");
   assert.ok(html.includes("loginForm"), "bevat loginformulier");
 });
 

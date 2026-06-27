@@ -1,5 +1,5 @@
 /* ============================================================
-   WorkFlow Pro – Super Admin Platform  (volledig)
+   Monargo One – Super Admin Platform  (volledig)
    Views: Dashboard · Tenants · Gebruikers · Facturatie ·
           Systeem · Audit · Instellingen
    ============================================================ */
@@ -217,7 +217,7 @@
     <div class="sa-brand">
       <div class="sa-brand-mark">SA</div>
       <div>
-        <div class="sa-brand-name">WorkFlow Pro</div>
+        <div class="sa-brand-name">Monargo One</div>
         <div class="sa-brand-sub">Super Admin</div>
       </div>
     </div>
@@ -292,6 +292,7 @@
         Uitloggen
       </button>
     </div>
+    <div style="padding:8px 12px 12px;font-size:10.5px;color:rgba(255,255,255,.4);text-align:center">Powered by <strong style="color:rgba(255,255,255,.65)">Monargo</strong></div>
   </aside>
 
   <main class="sa-main">
@@ -1737,7 +1738,7 @@ ${canManage ? `
         </select>
       </label>
       <label class="sa-fld"><span>API-sleutel</span><input name="email.apiKey" value="${esc(cfg.email?.apiKey||"")}" placeholder="re_... (Resend) / SG... (SendGrid)"></label>
-      <label class="sa-fld"><span>Afzender</span><input name="email.from" value="${esc(cfg.email?.from||"")}" placeholder="WorkFlow Pro &lt;noreply@bedrijf.be&gt;"></label>
+      <label class="sa-fld"><span>Afzender</span><input name="email.from" value="${esc(cfg.email?.from||"")}" placeholder="Monargo One &lt;noreply@bedrijf.be&gt;"></label>
     </div>
   </div>
 
@@ -1826,7 +1827,7 @@ ${canManage ? `
     <div class="sa-card-head"><div class="sa-card-title">Systeem info</div></div>
     <div style="padding:16px">
       <div class="sa-detail">
-        <div class="sa-detail-row"><span class="sa-detail-label">Applicatie</span><span class="sa-detail-value">${esc(hd.app||"WorkFlow Pro")}</span></div>
+        <div class="sa-detail-row"><span class="sa-detail-label">Applicatie</span><span class="sa-detail-value">${esc(hd.app||"Monargo One")}</span></div>
         <div class="sa-detail-row"><span class="sa-detail-label">Versie</span><span class="sa-detail-value">${esc(hd.version||"—")}</span></div>
         <div class="sa-detail-row"><span class="sa-detail-label">Release channel</span><span class="sa-detail-value">${badge(hd.releaseChannel||"dev", hd.releaseChannel==="production"?"badge-green":"badge-orange")}</span></div>
         <div class="sa-detail-row"><span class="sa-detail-label">Commit SHA</span><span class="sa-detail-value mono">${esc((hd.commitSha||"local").slice(0,12))}</span></div>

@@ -1,5 +1,5 @@
 /* ============================================================
-   WorkFlow Pro – Employee Platform  (mobiel-first)
+   Monargo One – Employee Platform  (mobiel-first)
    public/js/platforms/employee.js
    ============================================================ */
 (function () {
@@ -1756,7 +1756,8 @@ ${data.absentNow ? `<div style="background:#fef3c7;border-radius:10px;padding:12
     <div id="empPwMsg" style="display:none;padding:8px 10px;border-radius:8px;font-size:12px;"></div>
     <button type="submit" style="padding:10px;background:#0f172a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Wijzigen</button>
   </form>
-</div>`;
+</div>
+<div style="text-align:center;font-size:11px;color:#94a3b8;padding:18px 0 8px;">Powered by <strong style="color:#64748b">Monargo</strong></div>`;
 
     document.getElementById("empMoreWO")?.addEventListener("click", () => switchView("workorders"));
     document.getElementById("empMoreExp")?.addEventListener("click", () => switchView("expenses"));

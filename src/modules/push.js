@@ -53,7 +53,7 @@ function removeSubscription(store, user, endpoint) {
 async function sendPushToUsers(store, users, notification) {
   if (!ensureVapid()) return { sent: 0, configured: false };
   const payload = JSON.stringify({
-    title: notification.title || "WorkFlow Pro",
+    title: notification.title || "Monargo One",
     body: notification.body || "",
     url: (config.appUrl || "").replace(/\/+$/, "") || "/",
     tag: notification.sourceRef || notification.id || undefined,

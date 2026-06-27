@@ -291,7 +291,7 @@ function openApiSpec() {
   return {
     openapi: "3.0.3",
     info: {
-      title: "WorkFlow Pro API",
+      title: "Monargo One API",
       version: config.appVersion,
       description: "Tenant-scoped SaaS API voor planning, werkbonnen, tijdregistratie, billing, integraties en pilot/commercial launch flows."
     },

@@ -1,5 +1,5 @@
 /**
- * WorkFlow Pro – e-mail transport
+ * Monargo One – e-mail transport
  *
  * Strategie:
  *  - Dev  (EMAIL_PROVIDER=log of niet gezet): print e-mail naar console, geen echte verzending.
@@ -20,7 +20,7 @@ const net = require("net");
 const tls = require("tls");
 
 const EMAIL_PROVIDER = (process.env.EMAIL_PROVIDER || "log").toLowerCase();
-const EMAIL_FROM     = process.env.EMAIL_FROM || "WorkFlow Pro <noreply@workflowpro.app>";
+const EMAIL_FROM     = process.env.EMAIL_FROM || "Monargo One <noreply@workflowpro.app>";
 
 // Runtime-config (gezet door de server vanuit de platform-config in de DB).
 // Heeft voorrang op env-vars zodat de super-admin sleutels live kan wijzigen.
@@ -116,7 +116,7 @@ async function sendViaSendGrid(mail) {
   const to = Array.isArray(mail.to) ? mail.to : [mail.to];
   return jsonPost("api.sendgrid.com", "/v3/mail/send", { Authorization: `Bearer ${key}` }, {
     personalizations: [{ to: to.map(e => ({ email: e })) }],
-    from: { email: EMAIL_FROM.replace(/.*<(.+?)>/, "$1"), name: "WorkFlow Pro" },
+    from: { email: EMAIL_FROM.replace(/.*<(.+?)>/, "$1"), name: "Monargo One" },
     subject: mail.subject,
     content: [
       ...(mail.html ? [{ type: "text/html", value: mail.html }] : []),
@@ -283,13 +283,13 @@ function wrapHtml(title, bodyHtml) {
 <div class="wrap">
   <div class="header">
     <div class="header-logo">WP</div>
-    <h1 class="header-title">WorkFlow Pro</h1>
+    <h1 class="header-title">Monargo One</h1>
   </div>
   <div class="body">
     ${bodyHtml}
   </div>
   <div class="footer">
-    WorkFlow Pro · ${new Date().getFullYear()} ·
+    Monargo One · ${new Date().getFullYear()} ·
     Dit bericht is automatisch gegenereerd, antwoord niet op dit e-mailadres.
   </div>
 </div>

@@ -1,6 +1,6 @@
 "use strict";
 /**
- * Lichte i18n-laag (zero-dep) voor WorkFlow Pro. NL is de basistaal, FR de
+ * Lichte i18n-laag (zero-dep) voor Monargo One. NL is de basistaal, FR de
  * tweede landstaal (België). Vertaalt elk element met data-i18n (textContent),
  * data-i18n-ph (placeholder) en data-i18n-title (title), zet <html lang> en
  * onthoudt de keuze in localStorage. wfpI18n.t(key) is ook in JS bruikbaar zodat
@@ -24,7 +24,7 @@
       "hero.trustBE": "Vertrouwd in België",
       "hero.trustGDPR": "AVG / GDPR compliant",
       "login.welcome": "Welkom terug!",
-      "login.subtitle": "Log in bij WorkFlow Pro",
+      "login.subtitle": "Log in bij Monargo One",
       "login.email": "E-mail",
       "login.password": "Wachtwoord",
       "login.forgot": "Vergeten?",
@@ -38,7 +38,7 @@
       "login.privacy": "Privacybeleid",
       "login.terms": "Algemene voorwaarden",
       "reg.title": "Account aanmaken",
-      "reg.subtitle": "Start je eigen WorkFlow Pro — kies je pakket",
+      "reg.subtitle": "Start je eigen Monargo One — kies je pakket",
       "reg.vat": "BTW-/ondernemingsnummer",
       "reg.vatFetch": "Ophalen",
       "reg.company": "Bedrijfsnaam",
@@ -54,7 +54,7 @@
       "reseller.subtitle": "Vraag een partneraccount aan — wij keuren het goed",
       "reseller.submit": "Aanvraag indienen",
       "activate.title": "Stel je wachtwoord in",
-      "activate.subtitle": "Activeer je WorkFlow Pro-account",
+      "activate.subtitle": "Activeer je Monargo One-account",
       "activate.newPw": "Nieuw wachtwoord",
       "activate.repeatPw": "Herhaal wachtwoord",
       "activate.submit": "Wachtwoord instellen & inloggen",
@@ -76,7 +76,7 @@
       "hero.trustBE": "De confiance en Belgique",
       "hero.trustGDPR": "Conforme RGPD",
       "login.welcome": "Bon retour !",
-      "login.subtitle": "Connectez-vous à WorkFlow Pro",
+      "login.subtitle": "Connectez-vous à Monargo One",
       "login.email": "E-mail",
       "login.password": "Mot de passe",
       "login.forgot": "Oublié ?",
@@ -90,7 +90,7 @@
       "login.privacy": "Politique de confidentialité",
       "login.terms": "Conditions générales",
       "reg.title": "Créer un compte",
-      "reg.subtitle": "Lancez votre propre WorkFlow Pro — choisissez votre formule",
+      "reg.subtitle": "Lancez votre propre Monargo One — choisissez votre formule",
       "reg.vat": "Numéro de TVA / d'entreprise",
       "reg.vatFetch": "Récupérer",
       "reg.company": "Nom de l'entreprise",
@@ -106,7 +106,7 @@
       "reseller.subtitle": "Demandez un compte partenaire — nous l'approuvons",
       "reseller.submit": "Soumettre la demande",
       "activate.title": "Définissez votre mot de passe",
-      "activate.subtitle": "Activez votre compte WorkFlow Pro",
+      "activate.subtitle": "Activez votre compte Monargo One",
       "activate.newPw": "Nouveau mot de passe",
       "activate.repeatPw": "Répétez le mot de passe",
       "activate.submit": "Définir le mot de passe et se connecter",

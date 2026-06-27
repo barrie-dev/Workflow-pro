@@ -19,7 +19,7 @@ const DEFAULT_MAPPINGS = {
 
 const ALLOWED_DIRECTIONS = ["push", "pull", "both"];
 
-// Provider-registry: welke koppelingen WorkFlow Pro aanbiedt, met de velden die
+// Provider-registry: welke koppelingen Monargo One aanbiedt, met de velden die
 // een tenant nodig heeft om te verbinden. Echte API-calls draaien achter de
 // (encrypted) credentials; zonder geldige sleutel valt sync terug op mock.
 const PROVIDERS = {

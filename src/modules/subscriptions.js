@@ -75,7 +75,7 @@ async function createSubscriptionCheckout(store, tenant, planKey, actor) {
           currency: "eur",
           unit_amount: Math.round(monthly * 100),
           recurring: { interval: "month" },
-          product_data: { name: `WorkFlow Pro — ${bundle.label} (incl. ${activeSeats(store, tenant)} gebruikers)` },
+          product_data: { name: `Monargo One — ${bundle.label} (incl. ${activeSeats(store, tenant)} gebruikers)` },
         },
       }],
       subscription_data: { metadata: { wfp_tenant_id: tenant.id, wfp_plan: planKey } },

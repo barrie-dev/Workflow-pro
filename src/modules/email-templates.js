@@ -1,5 +1,5 @@
 /**
- * WorkFlow Pro – e-mailtemplates
+ * Monargo One – e-mailtemplates
  *
  * Elke functie geeft { subject, html, text } terug.
  * Gebruik samen met src/lib/mailer.js → sendMail({ to, ...template }).
@@ -58,7 +58,7 @@ function leaveSubmittedToAdmin({ employee, leave, appUrl }) {
     </div>
     ${appUrl ? `<a class="cta" href="${appUrl}">Aanvraag beoordelen →</a>` : ""}
   `);
-  const text = `Nieuwe verlofaanvraag van ${fmt(employee?.name)}\n\nType: ${fmt(leave?.type)}\nVan: ${fmtDate(leave?.startDate || leave?.from)}\nTot: ${fmtDate(leave?.endDate || leave?.to)}\nReden: ${fmt(leave?.reason)}\n\nMeld aan bij WorkFlow Pro om de aanvraag te beoordelen.`;
+  const text = `Nieuwe verlofaanvraag van ${fmt(employee?.name)}\n\nType: ${fmt(leave?.type)}\nVan: ${fmtDate(leave?.startDate || leave?.from)}\nTot: ${fmtDate(leave?.endDate || leave?.to)}\nReden: ${fmt(leave?.reason)}\n\nMeld aan bij Monargo One om de aanvraag te beoordelen.`;
   return { subject, html, text };
 }
 
@@ -83,7 +83,7 @@ function leaveReviewedToEmployee({ employee, leave, reviewer, appUrl }) {
       ${detailRow("Status", statusPill(leave?.status))}
       ${leave?.reviewNote ? detailRow("Opmerking", fmt(leave.reviewNote)) : ""}
     </div>
-    ${appUrl ? `<a class="cta" href="${appUrl}">Bekijk in WorkFlow Pro →</a>` : ""}
+    ${appUrl ? `<a class="cta" href="${appUrl}">Bekijk in Monargo One →</a>` : ""}
   `);
   const text = `${subject}\n\nType: ${fmt(leave?.type)}\nVan: ${fmtDate(leave?.startDate || leave?.from)}\nTot: ${fmtDate(leave?.endDate || leave?.to)}\nStatus: ${approved ? "Goedgekeurd" : "Afgewezen"}${leave?.reviewNote ? `\nOpmerking: ${leave.reviewNote}` : ""}`;
   return { subject, html, text };
@@ -109,7 +109,7 @@ function expenseSubmittedToAdmin({ employee, expense, appUrl }) {
     </div>
     ${appUrl ? `<a class="cta" href="${appUrl}">Onkostennota beoordelen →</a>` : ""}
   `);
-  const text = `Nieuwe onkostennota van ${fmt(employee?.name)}\n\nCategorie: ${fmt(expense?.category)}\nBedrag: ${fmtMoney(expense?.amount, expense?.currency)}\nDatum: ${fmtDate(expense?.date)}\nBeschrijving: ${fmt(expense?.description)}\n\nMeld aan bij WorkFlow Pro om de nota te beoordelen.`;
+  const text = `Nieuwe onkostennota van ${fmt(employee?.name)}\n\nCategorie: ${fmt(expense?.category)}\nBedrag: ${fmtMoney(expense?.amount, expense?.currency)}\nDatum: ${fmtDate(expense?.date)}\nBeschrijving: ${fmt(expense?.description)}\n\nMeld aan bij Monargo One om de nota te beoordelen.`;
   return { subject, html, text };
 }
 
@@ -134,7 +134,7 @@ function expenseReviewedToEmployee({ employee, expense, reviewer, appUrl }) {
       ${detailRow("Status", statusPill(expense?.status))}
       ${expense?.reviewNote ? detailRow("Opmerking", fmt(expense.reviewNote)) : ""}
     </div>
-    ${appUrl ? `<a class="cta" href="${appUrl}">Bekijk in WorkFlow Pro →</a>` : ""}
+    ${appUrl ? `<a class="cta" href="${appUrl}">Bekijk in Monargo One →</a>` : ""}
   `);
   const text = `${subject}\n\nCategorie: ${fmt(expense?.category)}\nBedrag: ${fmtMoney(expense?.amount, expense?.currency)}\nStatus: ${approved ? "Goedgekeurd" : "Afgewezen"}${expense?.reviewNote ? `\nOpmerking: ${expense.reviewNote}` : ""}`;
   return { subject, html, text };
@@ -143,9 +143,9 @@ function expenseReviewedToEmployee({ employee, expense, reviewer, appUrl }) {
 // ── Welkom nieuwe medewerker ───────────────────────────────────────────────────
 
 function welcomeEmployee({ employee, tempPassword, appUrl }) {
-  const subject = `Welkom bij WorkFlow Pro – je account is klaar`;
+  const subject = `Welkom bij Monargo One – je account is klaar`;
   const html = wrapHtml(subject, `
-    <h2>Welkom bij WorkFlow Pro! 👋</h2>
+    <h2>Welkom bij Monargo One! 👋</h2>
     <p>
       Hallo <strong>${fmt(employee?.name, employee?.email)}</strong>,<br>
       je account is aangemaakt. Je kunt direct inloggen met onderstaande gegevens.
@@ -159,7 +159,7 @@ function welcomeEmployee({ employee, tempPassword, appUrl }) {
     </p>
     ${appUrl ? `<a class="cta" href="${appUrl}">Inloggen →</a>` : ""}
   `);
-  const text = `Welkom bij WorkFlow Pro!\n\nE-mail: ${fmt(employee?.email)}\n${tempPassword ? `Tijdelijk wachtwoord: ${tempPassword}\n\nWijzig je wachtwoord na de eerste aanmelding.\n` : ""}${appUrl ? `\nInloggen: ${appUrl}` : ""}`;
+  const text = `Welkom bij Monargo One!\n\nE-mail: ${fmt(employee?.email)}\n${tempPassword ? `Tijdelijk wachtwoord: ${tempPassword}\n\nWijzig je wachtwoord na de eerste aanmelding.\n` : ""}${appUrl ? `\nInloggen: ${appUrl}` : ""}`;
   return { subject, html, text };
 }
 

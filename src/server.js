@@ -79,20 +79,20 @@ function sanitizeEmployeePermissions(store, tenant, role, requested) {
 // Verstuur (of log) een activatiemail met de wachtwoord-instellink.
 function sendActivationMail(user, link) {
   const html = `<p>Hallo ${user.name || ""},</p>
-    <p>Er is een WorkFlow Pro-account voor je aangemaakt. Stel binnen 7 dagen je wachtwoord in via de knop hieronder:</p>
+    <p>Er is een Monargo One-account voor je aangemaakt. Stel binnen 7 dagen je wachtwoord in via de knop hieronder:</p>
     <p><a href="${link}" style="display:inline-block;background:#0ea5e9;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:600">Wachtwoord instellen</a></p>
     <p style="font-size:12px;color:#64748b">Werkt de knop niet? Open deze link: ${link}</p>`;
   // Niet awaiten: mailer logt bij fout en valt terug op console.
-  Promise.resolve(sendMail({ to: user.email, subject: "Activeer je WorkFlow Pro-account", html, text: `Stel je wachtwoord in (7 dagen geldig): ${link}` })).catch(() => {});
+  Promise.resolve(sendMail({ to: user.email, subject: "Activeer je Monargo One-account", html, text: `Stel je wachtwoord in (7 dagen geldig): ${link}` })).catch(() => {});
 }
 
 // Verstuur (of log) een wachtwoord-reset-mail met de reset-link (1 uur geldig).
 function sendPasswordResetMail(user, link) {
   const html = `<p>Hallo ${user.name || ""},</p>
-    <p>Er is een wachtwoord-reset aangevraagd voor je WorkFlow Pro-account. Stel binnen 1 uur een nieuw wachtwoord in:</p>
+    <p>Er is een wachtwoord-reset aangevraagd voor je Monargo One-account. Stel binnen 1 uur een nieuw wachtwoord in:</p>
     <p><a href="${link}" style="display:inline-block;background:#0ea5e9;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:600">Nieuw wachtwoord instellen</a></p>
     <p style="font-size:12px;color:#64748b">Heb je dit niet aangevraagd? Negeer deze mail — je wachtwoord blijft ongewijzigd.<br>Werkt de knop niet? Open deze link: ${link}</p>`;
-  Promise.resolve(sendMail({ to: user.email, subject: "Reset je WorkFlow Pro-wachtwoord", html, text: `Stel een nieuw wachtwoord in (1 uur geldig): ${link}` })).catch(() => {});
+  Promise.resolve(sendMail({ to: user.email, subject: "Reset je Monargo One-wachtwoord", html, text: `Stel een nieuw wachtwoord in (1 uur geldig): ${link}` })).catch(() => {});
 }
 
 // Maak een account zónder wachtwoord: pending tot de persoon zelf activeert via
@@ -281,7 +281,7 @@ function publicQuotePage() {
   // met /api/public/quote/:token. Geen login, geen externe assets.
   return `<!DOCTYPE html><html lang="nl"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Offerte — WorkFlow Pro</title>
+<title>Offerte — Monargo One</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Inter,system-ui,Arial,sans-serif;background:#F0F4F8;color:#0F172A;padding:24px;line-height:1.5}
@@ -306,7 +306,7 @@ button{flex:1;padding:13px;border:none;border-radius:10px;font-size:14px;font-we
 <div class="wrap"><div class="card">
   <div class="hd"><h1 id="coName">Offerte</h1><div class="sub" id="coNr"></div></div>
   <div class="body" id="body"><div class="muted">Laden…</div></div>
-</div><div class="foot">Aangeboden via WorkFlow Pro</div></div>
+</div><div class="foot">Aangeboden via Monargo One</div></div>
 <script>
 const token = location.pathname.split("/").filter(Boolean).pop();
 const eur = n => new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR"}).format(Number(n||0));
@@ -345,7 +345,7 @@ load();
 function publicPayPage() {
   // Mock-betaalpagina (geen echte Stripe). Toont factuur + "Betaal nu (demo)".
   return `<!DOCTYPE html><html lang="nl"><head><meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1"><title>Betaling — WorkFlow Pro</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>Betaling — Monargo One</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}body{font-family:Inter,system-ui,Arial,sans-serif;background:#F0F4F8;color:#0F172A;padding:24px;line-height:1.5}
 .wrap{max-width:480px;margin:0 auto}.card{background:#fff;border:1px solid #E2E8F0;border-radius:14px;box-shadow:0 4px 16px rgba(0,0,0,.05);overflow:hidden}
@@ -359,7 +359,7 @@ button{width:100%;padding:14px;border:none;border-radius:10px;font-size:15px;fon
 <div class="wrap"><div class="card">
   <div class="hd"><h1 id="coName">Betaling</h1><div class="sub" id="coNr"></div></div>
   <div class="body" id="body"><div class="muted">Laden…</div></div>
-</div><div class="foot">Beveiligde betaling via WorkFlow Pro</div></div>
+</div><div class="foot">Beveiligde betaling via Monargo One</div></div>
 <script>
 const token = location.pathname.split("/").filter(Boolean).pop();
 const eur = n => new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR"}).format(Number(n||0));
@@ -484,7 +484,7 @@ http.createServer(async (req, res) => {
       const storeStatus = store.storageStatus ? store.storageStatus() : { ok: true };
       sendJson(res, 200, {
         ok: true,
-        app: "WorkFlow Pro Fullstack",
+        app: "Monargo One Fullstack",
         version: config.appVersion,
         releaseChannel: config.releaseChannel,
         commitSha: config.commitSha,
@@ -588,7 +588,7 @@ http.createServer(async (req, res) => {
         quoteDate: found.quoteDate, validUntil: found.validUntil,
         lines: found.lines, subtotal: found.subtotal, vatAmount: found.vatAmount, total: found.total,
         notes: found.notes, status
-      }, company: { name: foundTenant.name || "WorkFlow Pro", vat: foundTenant.invoiceProfile?.vat || "" } });
+      }, company: { name: foundTenant.name || "Monargo One", vat: foundTenant.invoiceProfile?.vat || "" } });
       return;
     }
     if (pubQuoteMatch && req.method === "POST") {
@@ -620,7 +620,7 @@ http.createServer(async (req, res) => {
       }
       if (!inv) return sendJson(res, 404, { ok: false, error: "Factuur niet gevonden" });
       if (req.method === "GET") {
-        return sendJson(res, 200, { ok: true, invoice: { number: inv.number, customerName: inv.customerName, total: inv.total, status: inv.status, invoiceDate: inv.invoiceDate, dueDate: inv.dueDate, lines: inv.lines }, company: { name: invTenant.name || "WorkFlow Pro" } });
+        return sendJson(res, 200, { ok: true, invoice: { number: inv.number, customerName: inv.customerName, total: inv.total, status: inv.status, invoiceDate: inv.invoiceDate, dueDate: inv.dueDate, lines: inv.lines }, company: { name: invTenant.name || "Monargo One" } });
       }
       if (inv.status === "paid") return sendJson(res, 409, { ok: false, error: "Factuur is al betaald" });
       const paid = markInvoicePaidById(store, inv.id, "mock");
@@ -3600,7 +3600,7 @@ http.createServer(async (req, res) => {
         try {
           const cust = q.customerId ? store.get("customers", q.customerId) : null;
           const to = cust?.email;
-          if (to) sendMail({ to, subject: `Offerte ${q.number} van ${tenant.name || "WorkFlow Pro"}`, text: `Bekijk en aanvaard je offerte: ${acceptUrl}`, html: `<p>Beste,</p><p>Uw offerte <strong>${q.number}</strong> (totaal €${q.total.toFixed(2)}) staat klaar.</p><p><a href="${acceptUrl}">Bekijk en aanvaard de offerte</a></p>` });
+          if (to) sendMail({ to, subject: `Offerte ${q.number} van ${tenant.name || "Monargo One"}`, text: `Bekijk en aanvaard je offerte: ${acceptUrl}`, html: `<p>Beste,</p><p>Uw offerte <strong>${q.number}</strong> (totaal €${q.total.toFixed(2)}) staat klaar.</p><p><a href="${acceptUrl}">Bekijk en aanvaard de offerte</a></p>` });
         } catch (_) {}
         store.audit({ actor: user.email, tenantId, action: "quote_sent", area: "offertes", detail: q.number });
         sendJson(res, 200, { ok: true, quote: updated, acceptUrl });
@@ -4157,7 +4157,7 @@ http.createServer(async (req, res) => {
     handleError(req, res, error, errorTenantId);
   }
 }).listen(config.port, () => {
-  console.log(`WorkFlow Pro Fullstack draait op http://localhost:${config.port}`);
+  console.log(`Monargo One Fullstack draait op http://localhost:${config.port}`);
   console.log(`  Omgeving  : ${config.isProduction ? "production" : "development"}`);
   console.log(`  Opslag    : ${config.storageAdapter}`);
   console.log(`  Versie    : ${config.appVersion} (${config.commitSha})`);

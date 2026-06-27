@@ -418,7 +418,7 @@ function publicStatus(store) {
   const configRisk = productionConfigRisk();
   return {
     ok: true,
-    app: "WorkFlow Pro",
+    app: "Monargo One",
     status: "operational",
     generatedAt: new Date().toISOString(),
     tenants: store.data.tenants.length,

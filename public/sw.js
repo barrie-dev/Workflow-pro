@@ -1,5 +1,5 @@
 /**
- * WorkFlow Pro – Service Worker (PWA)
+ * Monargo One – Service Worker (PWA)
  *
  * Strategie:
  *  - Code (HTML/CSS/JS):    NETWORK-FIRST — elke deploy is direct zichtbaar;
@@ -98,7 +98,7 @@ async function networkFirstShell(request) {
       const fallback = await caches.match("/index.html");
       if (fallback) return fallback;
     }
-    return new Response("WorkFlow Pro is offline. Controleer je internetverbinding.", {
+    return new Response("Monargo One is offline. Controleer je internetverbinding.", {
       status: 503,
       headers: { "Content-Type": "text/plain; charset=utf-8" }
     });
@@ -157,9 +157,9 @@ function refreshInBackground(cacheName, request) {
 self.addEventListener("push", event => {
   if (!event.data) return;
   let data;
-  try { data = event.data.json(); } catch { data = { title: "WorkFlow Pro", body: event.data.text() }; }
+  try { data = event.data.json(); } catch { data = { title: "Monargo One", body: event.data.text() }; }
   event.waitUntil(
-    self.registration.showNotification(data.title || "WorkFlow Pro", {
+    self.registration.showNotification(data.title || "Monargo One", {
       body: data.body || "",
       icon: "/icon.svg",
       badge: "/icon.svg",

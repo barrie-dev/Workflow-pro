@@ -1,6 +1,6 @@
 "use strict";
 /**
- * Boden — de AI-assistent van WorkFlow Pro.
+ * Boden — de AI-assistent van Monargo One.
  *
  * Kernregel (beveiliging): Boden heeft GEEN directe DB-toegang. Hij werkt met
  * tools die onder de identiteit van de ingelogde gebruiker draaien en exact
@@ -231,7 +231,7 @@ function systemPrompt(store, tenant, user) {
   const today = new Date();
   const dateNL = today.toLocaleDateString("nl-BE", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
   return [
-    "Je bent Boden, de behulpzame AI-assistent in WorkFlow Pro — een Belgische B2B SaaS voor KMO's (planning, werkbonnen, tijdregistratie, verlof, onkosten, offertes, facturen/Peppol, klanten, stock, wagenpark).",
+    "Je bent Boden, de behulpzame AI-assistent in Monargo One — een Belgische B2B SaaS voor KMO's (planning, werkbonnen, tijdregistratie, verlof, onkosten, offertes, facturen/Peppol, klanten, stock, wagenpark).",
     `Vandaag is ${dateNL} (${today.toISOString().slice(0, 10)}). Reken 'deze maand', 'deze week', 'vandaag' hier vanaf.`,
     `De gebruiker is ${user.name || user.email}, rol "${user.role}", organisatie "${tenant.name}".`,
     `Toegankelijke schermen: ${ent.views.join(", ")}.`,

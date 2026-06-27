@@ -178,7 +178,7 @@ function renderDocument(template, type, doc = {}, tenant = {}) {
   const headerHtml = tpl.headerText
     ? `<div class="custom-header">${mergeFields(tpl.headerText, f).replace(/\n/g, "<br>")}</div>`
     : `<div class="brand-block">
-        ${tpl.logo ? `<img class="logo" src="${esc(tpl.logo)}" alt="logo">` : `<div class="brand">${esc(f["bedrijf.naam"] || "WorkFlow Pro")}</div>`}
+        ${tpl.logo ? `<img class="logo" src="${esc(tpl.logo)}" alt="logo">` : `<div class="brand">${esc(f["bedrijf.naam"] || "Monargo One")}</div>`}
         <div class="brand-sub">${esc(f["bedrijf.btw"])}</div>
         <div class="brand-sub">${esc(f["bedrijf.adres"])}</div>
         ${f["bedrijf.email"] ? `<div class="brand-sub">${esc(f["bedrijf.email"])}</div>` : ""}
@@ -246,7 +246,7 @@ function renderDocument(template, type, doc = {}, tenant = {}) {
   ${tpl.introText ? `<div class="intro">${mergeFields(tpl.introText, f).replace(/\n/g, "<br>")}</div>` : ""}
   ${body}
   ${tpl.paymentTerms ? `<div class="terms">${mergeFields(tpl.paymentTerms, f).replace(/\n/g, "<br>")}</div>` : ""}
-  <div class="footer">${mergeFields(tpl.footerText, f) || esc(f["bedrijf.naam"])}</div>
+  <div class="footer">${mergeFields(tpl.footerText, f) || esc(f["bedrijf.naam"])}<div style="margin-top:6px;font-size:10px;color:#9aa6b2">Powered by Monargo</div></div>
 </div>
 <script>window.onload=function(){window.print()}</script>
 </body></html>`;

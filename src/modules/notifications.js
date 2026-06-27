@@ -56,9 +56,9 @@ function deliverNotificationEmail(store, tenantId, notification) {
   const appUrl = (config.appUrl || "").replace(/\/+$/, "");
   const html = wrapHtml(`<h2 style="margin:0 0 10px">${notification.title || "Melding"}</h2>
     <p>${(notification.body || "").replace(/</g, "&lt;")}</p>
-    ${appUrl ? `<p><a href="${appUrl}" style="display:inline-block;background:#0ea5e9;color:#fff;text-decoration:none;padding:9px 16px;border-radius:8px;font-weight:600">Open WorkFlow Pro</a></p>` : ""}`, notification.title);
+    ${appUrl ? `<p><a href="${appUrl}" style="display:inline-block;background:#0ea5e9;color:#fff;text-decoration:none;padding:9px 16px;border-radius:8px;font-weight:600">Open Monargo One</a></p>` : ""}`, notification.title);
   for (const u of recipients) {
-    Promise.resolve(sendMail({ to: u.email, subject: notification.title || "WorkFlow Pro melding", html, text: `${notification.title || ""}\n\n${notification.body || ""}` })).catch(() => {});
+    Promise.resolve(sendMail({ to: u.email, subject: notification.title || "Monargo One melding", html, text: `${notification.title || ""}\n\n${notification.body || ""}` })).catch(() => {});
   }
   return recipients.length;
 }

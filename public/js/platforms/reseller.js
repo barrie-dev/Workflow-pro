@@ -26,7 +26,7 @@
   <header style="background:linear-gradient(135deg,#0f172a,#1e3a5f);color:#fff;padding:16px 24px;display:flex;align-items:center;justify-content:space-between">
     <div style="display:flex;align-items:center;gap:12px">
       <span style="background:#38bdf8;color:#0f172a;width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-weight:800">WP</span>
-      <div><div style="font-weight:700">WorkFlow Pro · Reseller</div><div id="rspName" style="font-size:12px;color:#94a3b8">Partnerportaal</div></div>
+      <div><div style="font-weight:700">Monargo One · Reseller</div><div id="rspName" style="font-size:12px;color:#94a3b8">Partnerportaal</div></div>
     </div>
     <button id="rspLogout" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer">Uitloggen</button>
   </header>

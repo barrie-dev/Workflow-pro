@@ -1,5 +1,5 @@
 /* ============================================================
-   WorkFlow Pro – Manager Platform
+   Monargo One – Manager Platform
    public/js/platforms/manager.js
    ============================================================ */
 (function () {
@@ -67,7 +67,7 @@
   <aside class="mgr-sidebar" id="mgrSidebar">
     <div class="mgr-logo">
       <span class="mgr-logo-mark">WP</span>
-      <span class="mgr-logo-text">WorkFlow Pro</span>
+      <span class="mgr-logo-text">Monargo One</span>
     </div>
     <nav class="mgr-nav">
       <a class="mgr-nav-item active" data-view="dashboard" href="#" tabindex="0">
@@ -126,6 +126,7 @@
         <svg viewBox="0 0 24 24"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
       </button>
     </div>
+    <div style="padding:8px 12px 12px;font-size:10.5px;color:#64748b;text-align:center">Powered by <strong style="color:#94a3b8">Monargo</strong></div>
   </aside>
 
   <main class="mgr-main">

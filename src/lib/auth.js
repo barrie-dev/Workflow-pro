@@ -326,7 +326,7 @@ function consumeRecoveryCode(store, user, code) {
 // otpauth + recovery codes zodat de beheerder ze meteen kan opslaan/scannen.
 function enforceMfa(store, user) {
   const secret = base32Encode(crypto.randomBytes(20));
-  const issuer = "WorkFlow Pro";
+  const issuer = "Monargo One";
   const label = `${issuer}:${user.email}`;
   const otpauth = `otpauth://totp/${encodeURIComponent(label)}?secret=${secret}&issuer=${encodeURIComponent(issuer)}&digits=6&period=30`;
   const recoveryCodes = createRecoveryCodes();
@@ -344,7 +344,7 @@ function enforceMfa(store, user) {
 
 function createMfaSetup(store, user) {
   const secret = base32Encode(crypto.randomBytes(20));
-  const issuer = "WorkFlow Pro";
+  const issuer = "Monargo One";
   const label = `${issuer}:${user.email}`;
   const otpauth = `otpauth://totp/${encodeURIComponent(label)}?secret=${secret}&issuer=${encodeURIComponent(issuer)}&digits=6&period=30`;
   const row = store.update("users", user.id, {

@@ -100,7 +100,7 @@ function createDemoGoldenPath(store, tenant, actor) {
     clockIn: "08:00",
     clockOut: "16:30"
   });
-  const { invoice } = createInvoice(store, tenant, { line: "Eerste jaarlicentie WorkFlow Pro", amount: 12 * Math.max(tenant.mrr || 1, 1) }, actor);
+  const { invoice } = createInvoice(store, tenant, { line: "Eerste jaarlicentie Monargo One", amount: 12 * Math.max(tenant.mrr || 1, 1) }, actor);
   store.audit({ actor: actor.email, tenantId: tenant.id, action: "golden_path_demo_created", area: "golden_path" });
   return { venue, employee, invoice, readiness: readiness(store, tenant.id) };
 }

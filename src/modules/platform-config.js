@@ -25,7 +25,7 @@ const DUMMY = {
   email: {
     provider: "log",                  // log | resend | sendgrid | smtp
     apiKey: "re_DUMMY_00000000000000",
-    from: "WorkFlow Pro <noreply@workflowpro.app>",
+    from: "Monargo One <noreply@workflowpro.app>",
   },
   kbo: {
     provider: "mock",                 // mock | cbe-open-data

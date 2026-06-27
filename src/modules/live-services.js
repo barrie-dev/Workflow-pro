@@ -114,7 +114,7 @@ function emailReadinessItems(platformConfig = {}) {
       "Afzender",
       validEmailFrom(email.from),
       email.from || "missing",
-      "Zet EMAIL_FROM naar een gevalideerd afzenderadres, bijvoorbeeld WorkFlow Pro <noreply@workflowpro.be>.",
+      "Zet EMAIL_FROM naar een gevalideerd afzenderadres, bijvoorbeeld Monargo One <noreply@workflowpro.be>.",
       "P1"
     )
   ];
