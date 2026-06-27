@@ -9,7 +9,7 @@
  *  - Navigatieverzoeken:    index.html als offline-fallback.
  */
 
-const CACHE_VERSION = "wfp-v14";
+const CACHE_VERSION = "wfp-v15";
 const SHELL_CACHE   = `${CACHE_VERSION}-shell`;
 const API_CACHE     = `${CACHE_VERSION}-api`;
 
@@ -20,6 +20,7 @@ const SHELL_ASSETS = [
   "/styles.css",
   "/css/admin.css",
   "/js/core.js",
+  "/js/ui/monargo-datetime.js",
   "/js/i18n.js",
   "/js/terms.js",
   "/js/offline-queue.js",
