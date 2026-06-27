@@ -382,44 +382,42 @@
 }
 
 /* ── Clock widget ───────────────────────────── */
-.emp-clock-widget {
-  text-align: center;
-  padding: 24px 16px;
-}
+.emp-clock-widget { text-align: center; padding: 28px 20px 22px; }
+.emp-clock-ring { position: relative; width: 232px; height: 232px; margin: 0 auto 22px; }
+.emp-clock-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.emp-clock-ring .track { fill: none; stroke: var(--gray-100); stroke-width: 9; }
+.emp-clock-ring .prog { fill: none; stroke: var(--wf-blue); stroke-width: 9; stroke-linecap: round;
+  transition: stroke-dashoffset .7s ease, stroke .3s; }
+.emp-clock-ring.on .prog { stroke: var(--wf-green); }
+.emp-clock-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .emp-clock-time {
-  font-size: 48px;
-  font-weight: 700;
-  color: #0f172a;
-  letter-spacing: -2px;
-  font-variant-numeric: tabular-nums;
+  font-size: 42px; font-weight: 600; color: var(--ink);
+  letter-spacing: -1.5px; font-variant-numeric: tabular-nums; line-height: 1;
 }
-.emp-clock-date { font-size: 13px; color: #94a3b8; margin-bottom: 20px; }
+.emp-clock-date { font-size: 12.5px; color: var(--muted); margin-top: 8px; text-transform: capitalize; }
+.emp-clock-chip {
+  display: inline-flex; align-items: center; gap: 6px; margin-top: 11px;
+  font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 980px;
+}
+.emp-clock-chip.on { background: var(--wf-green-l); color: #0a7a3f; }
+.emp-clock-chip.off { background: var(--gray-100); color: var(--muted); }
+.emp-clock-chip .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.emp-clock-chip.on .dot { animation: empPulse 1.6s ease-in-out infinite; }
+@keyframes empPulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
 .emp-clock-btn {
-  width: 80px; height: 80px;
-  border-radius: 50%;
-  border: none;
-  font-size: 15px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: transform .1s;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
-  margin: 0 auto;
+  width: 100%; max-width: 300px; height: 56px; border-radius: 980px; border: none;
+  font-size: 16px; font-weight: 600; cursor: pointer; margin: 0 auto;
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  transition: transform .1s, box-shadow .2s, background .2s;
 }
-.emp-clock-btn svg { width: 24px; height: 24px; fill: currentColor; }
-.emp-clock-btn:active { transform: scale(.95); }
-.emp-clock-btn-in { background: var(--wf-blue); color: #fff; }
-.emp-clock-btn-out { background: #ef4444; color: #fff; }
-.emp-clock-status {
-  margin-top: 12px;
-  font-size: 13px;
-  color: #64748b;
-}
-.emp-clock-hours {
-  font-size: 22px;
-  font-weight: 600;
-  color: #10b981;
-  margin-top: 4px;
-}
+.emp-clock-btn svg { width: 22px; height: 22px; fill: currentColor; }
+.emp-clock-btn:active { transform: scale(.97); }
+.emp-clock-btn-in  { background: var(--wf-blue); color: #fff; box-shadow: 0 8px 24px rgba(0,113,227,.32); }
+.emp-clock-btn-out { background: var(--wf-red);  color: #fff; box-shadow: 0 8px 24px rgba(220,38,38,.28); }
+.emp-clock-stats { display: flex; gap: 10px; margin-top: 22px; }
+.emp-clock-stat { flex: 1; background: var(--gray-50); border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
+.emp-clock-stat-val { font-size: 20px; font-weight: 600; color: var(--ink); letter-spacing: -.5px; font-variant-numeric: tabular-nums; }
+.emp-clock-stat-lbl { font-size: 11px; color: var(--muted); margin-top: 2px; }
 
 /* ── Shift item ─────────────────────────────── */
 .emp-shift-item {
@@ -990,20 +988,35 @@ ${(() => {
       elapsed = (Date.now() - new Date(data.active.clockedIn).getTime()) / 3600000;
     }
 
+    const R = 108, CIRC = 2 * Math.PI * R;                 // ring-omtrek
+    const WORKDAY = 8;                                       // referentie voor de voortgangsring
+    const startLabel = data.active ? new Date(data.active.clockedIn).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}) : "";
+
     const main = document.getElementById("empMain");
     main.innerHTML = `
 <div class="emp-card emp-clock-widget">
-  <div class="emp-clock-time" id="empLiveClock">--:--:--</div>
-  <div class="emp-clock-date">${new Date().toLocaleDateString("nl-BE",{weekday:"long",day:"numeric",month:"long"})}</div>
+  <div class="emp-clock-ring ${data.active ? "on" : ""}" id="empRingWrap">
+    <svg viewBox="0 0 240 240">
+      <circle class="track" cx="120" cy="120" r="${R}"></circle>
+      <circle class="prog" id="empRing" cx="120" cy="120" r="${R}"
+        stroke-dasharray="${CIRC.toFixed(1)}" stroke-dashoffset="${CIRC.toFixed(1)}"></circle>
+    </svg>
+    <div class="emp-clock-center">
+      <div class="emp-clock-time" id="empLiveClock">--:--</div>
+      <div class="emp-clock-date">${new Date().toLocaleDateString("nl-BE",{weekday:"long",day:"numeric",month:"long"})}</div>
+      <div class="emp-clock-chip ${data.active ? "on" : "off"}"><span class="dot"></span>${data.active ? `Actief sinds ${startLabel}` : "Niet ingeklokt"}</div>
+    </div>
+  </div>
 
   <button class="emp-clock-btn ${data.active ? "emp-clock-btn-out" : "emp-clock-btn-in"}" id="empClockToggle">
-    <svg viewBox="0 0 24 24"><path d="${data.active ? "M6 6h12v12H6z" : "M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"}"/></svg>
+    <svg viewBox="0 0 24 24"><path d="${data.active ? "M6 6h12v12H6z" : "M8 5v14l11-7z"}"/></svg>
     ${data.active ? "Uitkloppen" : "Inkloppen"}
   </button>
 
-  <div class="emp-clock-status">${data.active ? "Actieve sessie" : "Niet ingeklokt"}</div>
-  ${data.active ? `<div class="emp-clock-hours" id="empElapsed">${elapsed.toFixed(1)} u</div>` : ""}
-  <div style="font-size:12px;color:#94a3b8;margin-top:4px;">Vandaag: ${data.todayHours} u gewerkt</div>
+  <div class="emp-clock-stats">
+    <div class="emp-clock-stat"><div class="emp-clock-stat-val" id="empSession">${elapsed.toFixed(1)} u</div><div class="emp-clock-stat-lbl">Huidige sessie</div></div>
+    <div class="emp-clock-stat"><div class="emp-clock-stat-val">${data.todayHours} u</div><div class="emp-clock-stat-lbl">Vandaag totaal</div></div>
+  </div>
 </div>
 
 <div class="emp-card">
@@ -1019,17 +1032,16 @@ ${(() => {
   </div>`).join("") || '<div class="emp-empty"><div class="emp-empty-icon">🕐</div><div class="emp-empty-text">Geen registraties</div></div>'}
 </div>`;
 
-    // live clock tick
+    // live clock tick — tijd, sessieduur en voortgangsring
     const tick = () => {
       const el = document.getElementById("empLiveClock");
-      if (el) {
-        const now = new Date();
-        el.textContent = now.toLocaleTimeString("nl-BE");
-      }
-      const eEl = document.getElementById("empElapsed");
-      if (eEl && data.active) {
+      if (el) el.textContent = new Date().toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+      if (data.active) {
         const h = (Date.now() - new Date(data.active.clockedIn).getTime()) / 3600000;
-        eEl.textContent = h.toFixed(1) + " u";
+        const sEl = document.getElementById("empSession");
+        if (sEl) sEl.textContent = h.toFixed(1) + " u";
+        const ring = document.getElementById("empRing");
+        if (ring) ring.setAttribute("stroke-dashoffset", (CIRC * (1 - Math.min(h / WORKDAY, 1))).toFixed(1));
       }
     };
     tick();
