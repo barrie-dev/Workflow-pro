@@ -4447,22 +4447,29 @@ ${billing.status === "trial" ? `<div style="background:#fffbeb;border:1px solid 
 <div class="adm-card">
   <div class="adm-card-header"><h3 class="adm-card-title">Kies je bundel</h3></div>
   <div class="adm-card-body">
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;align-items:stretch;">
       ${plans.map(p => {
         const isCurrent = p.key === currentPlan;
-        return `<div style="border:2px solid ${isCurrent?"#2563EB":"#E2E8F0"};border-radius:12px;padding:16px;position:relative;display:flex;flex-direction:column;gap:8px;">
-          ${isCurrent?`<span style="position:absolute;top:-10px;left:14px;background:#2563EB;color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;">HUIDIG</span>`:""}
-          <div style="font-size:16px;font-weight:700;color:#0F172A;">${esc(p.label)}</div>
-          <div style="font-size:22px;font-weight:800;color:#0F172A;">${p.custom?"Op maat":fmtEur(p.baseMonthly)+"<span style='font-size:12px;font-weight:500;color:#94A3B8'>/mnd</span>"}</div>
-          <div style="font-size:11.5px;color:#94A3B8;">${p.custom?"Jaarcontract & SLA":`incl. ${p.includedSeats} gebruikers · +${fmtEur(Math.round(p.seatAnnual/12))}/extra`}</div>
-          <ul style="list-style:none;padding:0;margin:6px 0;display:flex;flex-direction:column;gap:4px;flex:1;">
-            ${(p.features||[]).map(f=>`<li style="font-size:12px;color:#374151;">✓ ${esc(f)}</li>`).join("")}
+        const accent = isCurrent ? "var(--wf-blue)" : (p.popular ? "var(--wf-blue)" : "var(--line)");
+        const ring = (isCurrent || p.popular) ? "2px" : "1px";
+        return `<div style="border:${ring} solid ${accent};border-radius:16px;padding:20px 18px;position:relative;display:flex;flex-direction:column;gap:10px;background:var(--surface);">
+          ${isCurrent
+            ? `<span style="position:absolute;top:-10px;right:16px;background:var(--wf-blue);color:#fff;font-size:10px;font-weight:600;padding:3px 10px;border-radius:999px;">Huidig plan</span>`
+            : p.popular ? `<span style="position:absolute;top:-10px;right:16px;background:var(--wf-blue);color:#fff;font-size:10px;font-weight:600;padding:3px 10px;border-radius:999px;">Meest gekozen</span>` : ""}
+          <div style="font-size:15px;font-weight:600;color:var(--ink);letter-spacing:-.2px;">${esc(p.label)}</div>
+          <div style="display:flex;align-items:baseline;gap:4px;">
+            <span style="font-size:26px;font-weight:600;color:var(--ink);letter-spacing:-1px;">${p.custom?"Op maat":fmtEur(p.baseMonthly)}</span>
+            ${p.custom?"":`<span style="font-size:12px;color:var(--muted);">/maand</span>`}
+          </div>
+          <div style="font-size:11.5px;color:var(--muted);min-height:16px;">${p.custom?"Jaarcontract &amp; SLA":`incl. ${p.includedSeats} gebruikers · +${fmtEur(Math.round((p.seatAnnual||0)/12))}/extra`}</div>
+          <ul style="list-style:none;padding:0;margin:6px 0 2px;display:flex;flex-direction:column;gap:6px;flex:1;">
+            ${(p.features||[]).slice(0,8).map(f=>`<li style="font-size:12.5px;color:var(--text);display:flex;gap:7px;align-items:flex-start;"><span style="color:var(--wf-blue);font-weight:700;line-height:1.2;">✓</span> ${esc(f)}</li>`).join("")}
           </ul>
           ${isCurrent
-            ? `<button class="adm-btn adm-btn-secondary adm-btn-sm" disabled style="opacity:.6;cursor:default;">Huidig plan</button>`
+            ? `<button class="adm-btn adm-btn-secondary adm-btn-sm" disabled style="opacity:.55;cursor:default;">Je huidige plan</button>`
             : p.custom
               ? `<button class="adm-btn adm-btn-secondary adm-btn-sm bill-contact">Contacteer ons</button>`
-              : `<button class="adm-btn adm-btn-primary adm-btn-sm bill-select" data-plan="${p.key}">Kies ${esc(p.label)}</button>`}
+              : `<button class="adm-btn ${p.popular?"adm-btn-primary":"adm-btn-secondary"} adm-btn-sm bill-select" data-plan="${p.key}">Kies ${esc(p.label)}</button>`}
         </div>`;
       }).join("")}
     </div>

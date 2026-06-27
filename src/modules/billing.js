@@ -95,10 +95,10 @@ function pricingFor(key) {
 function planCatalog(store) {
   const bundles = store ? listBundles(store).filter(b => b.active !== false) : [];
   if (!bundles.length) {
-    return Object.entries(PLAN_PACKAGES).map(([key, p]) => {
+    return Object.entries(PLAN_PACKAGES).map(([key, p], i) => {
       const priced = p.baseAnnual > 0;
       return {
-        key, label: p.label,
+        key, label: p.label, order: i + 1, popular: key === "business",
         baseAnnual: priced ? p.baseAnnual : null,
         baseMonthly: priced ? Math.round(p.baseAnnual / 12) : null,
         seatAnnual: priced ? p.seatAnnual : null,
@@ -114,6 +114,8 @@ function planCatalog(store) {
       key: b.key,
       label: b.label,
       description: b.description || "",
+      order: b.order ?? 99,
+      popular: !!b.popular,
       baseAnnual: priced ? price.baseAnnual : null,
       baseMonthly: priced ? Math.round(price.baseAnnual / 12) : null,
       seatAnnual: priced ? price.seatAnnual : null,
@@ -122,7 +124,7 @@ function planCatalog(store) {
       modules: b.modules,
       custom: !!b.custom || !priced, // geen prijs → op aanvraag
     };
-  });
+  }).sort((a, b) => (a.order - b.order));
 }
 
 // Klant kiest zelf een bundel. Custom/enterprise of prijsloze bundel = op aanvraag.

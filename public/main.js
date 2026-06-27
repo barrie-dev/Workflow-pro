@@ -2634,7 +2634,7 @@ async function loadRegisterPlans() {
     const r = await api("/api/plans");
     const sel = document.getElementById("registerPlan");
     const plans = (r.plans || []).filter(p => !p.custom);
-    sel.innerHTML = plans.map(p => `<option value="${p.key}">${p.label}${p.baseMonthly != null ? ` — €${p.baseMonthly}/gebruiker/mnd` : ""}</option>`).join("")
+    sel.innerHTML = plans.map(p => `<option value="${p.key}"${p.popular ? " selected" : ""}>${p.label}${p.baseMonthly != null ? ` — €${p.baseMonthly}/maand` : ""}${p.popular ? " · meest gekozen" : ""}</option>`).join("")
       || `<option value="">Geen pakketten beschikbaar</option>`;
     // Optionele betaalde add-ons tonen (activeren via de beheerder na go-live).
     const addonBox = document.getElementById("registerAddons");

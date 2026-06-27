@@ -20,7 +20,7 @@ const DEFAULT_BUNDLES = [
     modules: ["planning", "clockings", "messages", "customers", "venues"],
   },
   {
-    key: "business", label: "Business", order: 2, active: true, custom: false,
+    key: "business", label: "Business", order: 2, active: true, custom: false, popular: true,
     description: "Het volledige operationele pakket inclusief werkbonnen en facturatie.",
     modules: ["planning", "clockings", "messages", "customers", "venues",
       "workorders", "leaves", "expenses", "offertes", "invoices", "stock", "vehicles", "reports"],
@@ -64,6 +64,7 @@ function normalizeBundle(raw) {
     order: Number(raw.order || 99),
     active: raw.active !== false,
     custom: !!raw.custom,
+    popular: !!raw.popular,
     modules,
     submodules,
     updatedAt: new Date().toISOString(),
@@ -73,9 +74,18 @@ function normalizeBundle(raw) {
 /** Seed de standaardbundels één keer als de collectie leeg is. */
 function seedDefaults(store) {
   ensureArray(store);
-  if (store.data[COLLECTION].length) return;
+  if (!store.data[COLLECTION].length) {
+    for (const def of DEFAULT_BUNDLES) {
+      store.insert(COLLECTION, normalizeBundle({ ...def, submodules: withAllSubmodules(def.modules) }));
+    }
+    return;
+  }
+  // Backfill: standaardbundels die vóór de 'popular'-introductie geseed werden
+  // hebben nog geen vlag. Vul de default éénmalig in (alleen als nog niet gezet),
+  // zodat 'meest gekozen' out-of-the-box klopt zonder superadmin-keuzes te overschrijven.
   for (const def of DEFAULT_BUNDLES) {
-    store.insert(COLLECTION, normalizeBundle({ ...def, submodules: withAllSubmodules(def.modules) }));
+    const existing = store.data[COLLECTION].find(b => b.key === def.key);
+    if (existing && existing.popular === undefined) existing.popular = !!def.popular;
   }
 }
 

@@ -648,13 +648,16 @@ http.createServer(async (req, res) => {
 
     // ── Publieke plannen (voor de zelf-registratiepagina) ─────────────────────
     if (url.pathname === "/api/plans" && req.method === "GET") {
-      const plans = listBundles(store)
-        .filter(b => b.active !== false)
-        .map(b => ({
-          key: b.key, label: b.label, description: b.description || "",
-          baseMonthly: b.baseMonthly ?? null, custom: !!b.custom,
-          modules: Array.isArray(b.modules) ? b.modules.length : 0
-        }));
+      // Eén bron van waarheid: dezelfde catalogus als in-app (prijzen, features,
+      // 'meest gekozen'), zodat publiek/registratie en het abonnementsscherm
+      // exact overeenkomen. Geen tenant-PII.
+      const plans = planCatalog(store).map(p => ({
+        key: p.key, label: p.label, description: p.description || "",
+        baseMonthly: p.baseMonthly ?? null, baseAnnual: p.baseAnnual ?? null,
+        seatAnnual: p.seatAnnual ?? null, includedSeats: p.includedSeats ?? null,
+        features: p.features || [], custom: !!p.custom, popular: !!p.popular,
+        modules: Array.isArray(p.modules) ? p.modules.length : 0,
+      }));
       sendJson(res, 200, { ok: true, plans, addons: listAddons(loadPlatformConfig(store).addons) });
       return;
     }

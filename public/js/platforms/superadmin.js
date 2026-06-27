@@ -1635,7 +1635,8 @@ ${canManage ? `
   <div class="sa-field"><label>Naam</label><input id="bLabel" value="${esc(b.label)}" placeholder="bv. Pro"></div>
 </div>
 <div class="sa-field" style="margin-bottom:14px"><label>Omschrijving</label><input id="bDesc" value="${esc(b.description || "")}" placeholder="Korte omschrijving"></div>
-<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:#475569;margin-bottom:14px"><input type="checkbox" id="bCustom" ${b.custom ? "checked" : ""}> Op aanvraag (custom — klant kan niet zelf kiezen)</label>
+<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:#475569;margin-bottom:10px"><input type="checkbox" id="bCustom" ${b.custom ? "checked" : ""}> Op aanvraag (custom — klant kan niet zelf kiezen)</label>
+<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:#475569;margin-bottom:14px"><input type="checkbox" id="bPopular" ${b.popular ? "checked" : ""}> Meest gekozen (uitgelicht in prijzen &amp; abonnementsscherm)</label>
 <div style="font-size:12px;font-weight:700;color:#0f172a;margin-bottom:6px">Inbegrepen modules &amp; submodules</div>
 <div id="bGrid">${grid("b", b.modules, b.submodules || {})}</div>
 <div style="display:flex;gap:8px;margin-top:14px">
@@ -1651,6 +1652,7 @@ ${canManage ? `
             label: document.getElementById("bLabel").value.trim() || document.getElementById("bKey").value,
             description: document.getElementById("bDesc").value.trim(),
             custom: document.getElementById("bCustom").checked,
+            popular: document.getElementById("bPopular").checked,
             active: true, order: b.order,
             modules: mods,
             submodules: readSubs(ed, "b", mods),
