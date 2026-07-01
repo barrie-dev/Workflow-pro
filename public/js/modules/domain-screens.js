@@ -38,26 +38,26 @@
     return `<div class="metric" style="display:flex;align-items:flex-start;gap:0.75rem">
       <div style="min-width:0;flex:1">
         <div style="font-size:1.5rem;font-weight:700;color:${colorVar}">${escHtml(value)}</div>
-        <div style="font-size:0.75rem;font-weight:600;color:#334155">${escHtml(label)}</div>
-        <div style="font-size:0.6875rem;color:#94a3b8">${escHtml(sub)}</div>
+        <div style="font-size:0.75rem;font-weight:600;color:var(--gray-700)">${escHtml(label)}</div>
+        <div style="font-size:0.6875rem;color:var(--gray-400)">${escHtml(sub)}</div>
       </div>
     </div>`;
   }
 
   function rowItem(cols) {
-    return `<div style="display:grid;grid-template-columns:${cols.map(c => c.w || '1fr').join(' ')};align-items:center;gap:0.75rem;padding:0.625rem 1.25rem;border-bottom:1px solid #f1f5f9;font-size:0.8125rem;cursor:pointer">
+    return `<div style="display:grid;grid-template-columns:${cols.map(c => c.w || '1fr').join(' ')};align-items:center;gap:0.75rem;padding:0.625rem 1.25rem;border-bottom:1px solid var(--gray-100);font-size:0.8125rem;cursor:pointer">
       ${cols.map(c => `<div style="${c.style||''}">${c.html || escHtml(c.text || '')}</div>`).join('')}
     </div>`;
   }
 
   function tableHeader(cols) {
-    return `<div style="display:grid;grid-template-columns:${cols.map(c => c.w || '1fr').join(' ')};gap:0.75rem;padding:0.5rem 1.25rem;background:#f8fafc;border-bottom:1px solid #e2e8f0">
-      ${cols.map(c => `<div style="font-size:0.6875rem;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.05em">${escHtml(c.label)}</div>`).join('')}
+    return `<div style="display:grid;grid-template-columns:${cols.map(c => c.w || '1fr').join(' ')};gap:0.75rem;padding:0.5rem 1.25rem;background:var(--gray-50);border-bottom:1px solid var(--gray-200)">
+      ${cols.map(c => `<div style="font-size:0.6875rem;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:0.05em">${escHtml(c.label)}</div>`).join('')}
     </div>`;
   }
 
   function noData(msg) {
-    return `<div style="padding:2rem;text-align:center;color:#94a3b8;font-size:0.8125rem">${escHtml(msg || 'Geen data beschikbaar.')}</div>`;
+    return `<div style="padding:2rem;text-align:center;color:var(--gray-400);font-size:0.8125rem">${escHtml(msg || 'Geen data beschikbaar.')}</div>`;
   }
 
   function shortDate(v) {
@@ -93,7 +93,7 @@
     const rowsEl = el('customerRows');
     const countEl = el('customerCount');
 
-    if (kpiEl) kpiEl.innerHTML = '<div class="metric"><div style="color:#94a3b8;font-size:0.8125rem">Laden...</div></div>';
+    if (kpiEl) kpiEl.innerHTML = '<div class="metric"><div style="color:var(--gray-400);font-size:0.8125rem">Laden...</div></div>';
     if (rowsEl) rowsEl.innerHTML = noData('Laden...');
 
     let rows = [];
@@ -396,8 +396,8 @@
 
     if (pendingEl) {
       pendingEl.innerHTML = pending.length
-        ? pending.map(r => `<div style="display:flex;justify-content:space-between;align-items:center;padding:0.5rem 0.75rem;border-bottom:1px solid #f1f5f9;font-size:0.8125rem">
-            <div><strong>${escHtml(r.title||'—')}</strong><br><small style="color:#94a3b8">${escHtml(r.userId||'—')} · ${escHtml(euro(r.amount))}</small></div>
+        ? pending.map(r => `<div style="display:flex;justify-content:space-between;align-items:center;padding:0.5rem 0.75rem;border-bottom:1px solid var(--gray-100);font-size:0.8125rem">
+            <div><strong>${escHtml(r.title||'—')}</strong><br><small style="color:var(--gray-400)">${escHtml(r.userId||'—')} · ${escHtml(euro(r.amount))}</small></div>
             <div style="display:flex;gap:0.5rem">
               <button onclick="WorkFlowProDomainScreens.approveExpense('${r.id}')" style="background:var(--wf-green);color:white;border-color:var(--wf-green);font-size:0.7rem;padding:0.25rem 0.625rem">✓</button>
               <button onclick="WorkFlowProDomainScreens.rejectExpense('${r.id}')" style="background:var(--wf-red);color:white;border-color:var(--wf-red);font-size:0.7rem;padding:0.25rem 0.625rem">✗</button>

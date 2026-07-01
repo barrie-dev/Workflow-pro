@@ -44,13 +44,13 @@
     const b = document.createElement("div");
     b.id = "wfpSupportBanner";
     b.setAttribute("role", "status");
-    b.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:9999;background:#b91c1c;color:#fff;font:600 13px/1.4 system-ui,sans-serif;padding:6px 16px;display:flex;align-items:center;justify-content:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,.2)";
+    b.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:9999;background:var(--wf-red);color:#fff;font:600 13px/1.4 system-ui,sans-serif;padding:6px 16px;display:flex;align-items:center;justify-content:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,.2)";
     const span = document.createElement("span");
     span.textContent = `🛟 Support-sessie actief — ${s.agent || "supportmedewerker"} (${scope}). Deze sessie wordt geaudit.`;
     b.appendChild(span);
     const exit = document.createElement("button");
     exit.textContent = "Sessie verlaten";
-    exit.style.cssText = "background:#fff;color:#b91c1c;border:none;border-radius:6px;font:600 12px system-ui,sans-serif;padding:5px 12px;cursor:pointer;flex-shrink:0";
+    exit.style.cssText = "background:#fff;color:var(--wf-red);border:none;border-radius:6px;font:600 12px system-ui,sans-serif;padding:5px 12px;cursor:pointer;flex-shrink:0";
     exit.onclick = () => window.WorkFlowProPlatformRouter && window.WorkFlowProPlatformRouter.exitSupportSession();
     b.appendChild(exit);
     document.body.appendChild(b);
@@ -126,7 +126,7 @@
         <svg viewBox="0 0 24 24"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
       </button>
     </div>
-    <div style="padding:8px 12px 12px;font-size:10.5px;color:#64748b;text-align:center">Powered by <strong style="color:#94a3b8">Monargo</strong></div>
+    <div style="padding:8px 12px 12px;font-size:10.5px;color:var(--gray-500);text-align:center">Powered by <strong style="color:var(--gray-400)">Monargo</strong></div>
   </aside>
 
   <main class="mgr-main">
@@ -141,16 +141,16 @@
         <span id="mgrClockLbl">Inklokken</span>
       </button>
       <div style="position:relative">
-        <button id="mgrBellBtn" title="Notificaties" style="background:none;border:none;cursor:pointer;padding:6px;border-radius:8px;color:#64748b;display:flex;align-items:center;justify-content:center;transition:background .1s">
+        <button id="mgrBellBtn" title="Notificaties" style="background:none;border:none;cursor:pointer;padding:6px;border-radius:8px;color:var(--gray-500);display:flex;align-items:center;justify-content:center;transition:background .1s">
           <svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:currentColor"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
-          <span id="mgrBellDot" style="position:absolute;top:4px;right:4px;width:8px;height:8px;background:#ef4444;border-radius:50%;border:2px solid #fff;display:none"></span>
+          <span id="mgrBellDot" style="position:absolute;top:4px;right:4px;width:8px;height:8px;background:var(--wf-red);border-radius:50%;border:2px solid #fff;display:none"></span>
         </button>
-        <div id="mgrNotifPanel" style="position:absolute;right:0;top:calc(100% + 8px);width:320px;background:#fff;border-radius:12px;border:1px solid #e2e8f0;box-shadow:0 8px 32px rgba(0,0,0,.12);z-index:400;display:none">
-          <div style="padding:12px 16px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px">
-            <span style="font-size:13px;font-weight:700;color:#0f172a;flex:1">Notificaties</span>
+        <div id="mgrNotifPanel" style="position:absolute;right:0;top:calc(100% + 8px);width:320px;background:#fff;border-radius:12px;border:1px solid var(--gray-200);box-shadow:0 8px 32px rgba(0,0,0,.12);z-index:400;display:none">
+          <div style="padding:12px 16px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;gap:8px">
+            <span style="font-size:13px;font-weight:700;color:var(--gray-900);flex:1">Notificaties</span>
             <button id="mgrNotifMarkAll" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--wf-blue);font-weight:600;padding:3px 6px;border-radius:6px">Alles gelezen</button>
           </div>
-          <div id="mgrNotifList" style="max-height:320px;overflow-y:auto"><div style="padding:28px;text-align:center;font-size:13px;color:#94a3b8">Laden…</div></div>
+          <div id="mgrNotifList" style="max-height:320px;overflow-y:auto"><div style="padding:28px;text-align:center;font-size:13px;color:var(--gray-400)">Laden…</div></div>
         </div>
       </div>
     </header>
@@ -190,12 +190,12 @@
 .mgr-clockbtn:hover { background:var(--gray-50); border-color:var(--gray-300); }
 .mgr-clockbtn .mgr-clockbtn-ico { width:16px; height:16px; fill:currentColor; opacity:.8; }
 .mgr-clockbtn .mgr-clockbtn-dot { display:none; }
-.mgr-clockbtn.on { background:var(--wf-green-l); color:#0a7a3f; border-color:transparent; }
+.mgr-clockbtn.on { background:var(--wf-green-l); color:var(--wf-green); border-color:transparent; }
 .mgr-clockbtn.on .mgr-clockbtn-ico { display:none; }
 .mgr-clockbtn.on .mgr-clockbtn-dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:currentColor; animation:mgrClockPulse 1.6s ease-in-out infinite; }
 @keyframes mgrClockPulse { 0%,100% { opacity:1; } 50% { opacity:.3; } }
 @media (max-width:640px){ .mgr-clockbtn span:last-child { display:none; } .mgr-clockbtn { padding:0 10px; } }
-.mgr-menu-toggle { background:none; border:none; cursor:pointer; padding:4px; color:#64748b; display:none; }
+.mgr-menu-toggle { background:none; border:none; cursor:pointer; padding:4px; color:var(--gray-500); display:none; }
 .mgr-menu-toggle svg { width:20px; height:20px; fill:currentColor; display:block; }
 .mgr-page-title { font-size:21px; font-weight:600; flex:1; color:var(--ink); margin:0; letter-spacing:-.4px; }
 .mgr-content { flex:1; overflow-y:auto; padding:22px 24px; }
@@ -220,24 +220,24 @@
 .mgr-card-body { padding:16px; }
 .mgr-table-wrap { overflow-x:auto; }
 table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
-.mgr-table th { text-align:left; padding:8px 12px; color:#64748b; font-weight:500; border-bottom:2px solid #f1f5f9; }
-.mgr-table td { padding:10px 12px; border-bottom:1px solid var(--bg); color:#374151; vertical-align:middle; }
+.mgr-table th { text-align:left; padding:8px 12px; color:var(--gray-500); font-weight:500; border-bottom:2px solid var(--gray-100); }
+.mgr-table td { padding:10px 12px; border-bottom:1px solid var(--bg); color:var(--gray-700); vertical-align:middle; }
 .mgr-table tr:last-child td { border-bottom:none; }
 .mgr-table tr:hover td { background:var(--bg); }
 .mgr-status { display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:999px; font-size:11px; font-weight:500; }
 .mgr-status::before { content:''; width:6px; height:6px; border-radius:50%; background:currentColor; }
-.mgr-status-active,.mgr-status-goedgekeurd { background:#d1fae5; color:#059669; }
-.mgr-status-pending,.mgr-status-aangevraagd,.mgr-status-ingediend { background:#fef3c7; color:#d97706; }
-.mgr-status-inactive,.mgr-status-geweigerd { background:#fee2e2; color:#dc2626; }
-.mgr-status-open { background:#dbeafe; color:var(--wf-blue); }
-.mgr-avatar { width:28px; height:28px; border-radius:50%; background:#e0f2fe; color:var(--wf-blue-d); display:inline-grid; place-items:center; font-size:11px; font-weight:600; }
+.mgr-status-active,.mgr-status-goedgekeurd { background:var(--wf-green-l); color:var(--wf-green); }
+.mgr-status-pending,.mgr-status-aangevraagd,.mgr-status-ingediend { background:var(--wf-yellow-l); color:var(--wf-yellow); }
+.mgr-status-inactive,.mgr-status-geweigerd { background:var(--wf-red-l); color:var(--wf-red); }
+.mgr-status-open { background:var(--wf-blue-l); color:var(--wf-blue); }
+.mgr-avatar { width:28px; height:28px; border-radius:50%; background:var(--wf-blue-l); color:var(--wf-blue-d); display:inline-grid; place-items:center; font-size:11px; font-weight:600; }
 .mgr-team-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; }
-.mgr-team-card { background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:14px; }
-.mgr-team-card-name { font-size:13px; font-weight:600; color:#0f172a; margin:8px 0 4px; }
-.mgr-team-card-role { font-size:11px; color:#94a3b8; }
+.mgr-team-card { background:#fff; border:1px solid var(--gray-200); border-radius:10px; padding:14px; }
+.mgr-team-card-name { font-size:13px; font-weight:600; color:var(--gray-900); margin:8px 0 4px; }
+.mgr-team-card-role { font-size:11px; color:var(--gray-400); }
 .mgr-team-card-badges { display:flex; gap:4px; flex-wrap:wrap; margin-top:8px; }
-.mgr-loading { text-align:center; color:#94a3b8; padding:40px; }
-.mgr-empty { text-align:center; padding:40px; color:#94a3b8; }
+.mgr-loading { text-align:center; color:var(--gray-400); padding:40px; }
+.mgr-empty { text-align:center; padding:40px; color:var(--gray-400); }
 @media (max-width:768px) {
   .mgr-sidebar { position:fixed; left:0; top:0; z-index:100; transform:translateX(-100%); transition:transform .25s; }
   .mgr-sidebar.open { transform:translateX(0); }
@@ -337,27 +337,27 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
   </div>
   <div class="mgr-kpi mgr-kpi-link" data-goto="clocking" title="Naar prikklok">
     <div class="mgr-kpi-label">Ingeklokt</div>
-    <div class="mgr-kpi-value" style="color:#10b981">${dash.clockedIn ?? "—"}</div>
+    <div class="mgr-kpi-value" style="color:var(--wf-green)">${dash.clockedIn ?? "—"}</div>
     <div class="mgr-kpi-sub">Nu actief</div>
   </div>
   <div class="mgr-kpi mgr-kpi-link" data-goto="leaves" title="Naar verlof">
     <div class="mgr-kpi-label">Afwezig</div>
-    <div class="mgr-kpi-value" style="color:#f59e0b">${dash.absentToday ?? "—"}</div>
+    <div class="mgr-kpi-value" style="color:var(--wf-yellow)">${dash.absentToday ?? "—"}</div>
     <div class="mgr-kpi-sub">Vandaag</div>
   </div>
   <div class="mgr-kpi mgr-kpi-link" data-goto="leaves" title="Naar verlof">
     <div class="mgr-kpi-label">Verlof</div>
-    <div class="mgr-kpi-value" style="color:#f59e0b">${dash.pendingLeaves ?? "—"}</div>
+    <div class="mgr-kpi-value" style="color:var(--wf-yellow)">${dash.pendingLeaves ?? "—"}</div>
     <div class="mgr-kpi-sub">Te verwerken</div>
   </div>
   <div class="mgr-kpi mgr-kpi-link" data-goto="expenses" title="Naar onkosten">
     <div class="mgr-kpi-label">Onkosten</div>
-    <div class="mgr-kpi-value" style="color:#ef4444">${dash.pendingExpenses ?? "—"}</div>
+    <div class="mgr-kpi-value" style="color:var(--wf-red)">${dash.pendingExpenses ?? "—"}</div>
     <div class="mgr-kpi-sub">Te verwerken</div>
   </div>
   <div class="mgr-kpi mgr-kpi-link" data-goto="workorders" title="Naar werkbonnen">
     <div class="mgr-kpi-label">Werkbonnen</div>
-    <div class="mgr-kpi-value" style="color:#8b5cf6">${dash.openWorkorders ?? "—"}</div>
+    <div class="mgr-kpi-value" style="color:var(--wf-purple)">${dash.openWorkorders ?? "—"}</div>
     <div class="mgr-kpi-sub">Open</div>
   </div>
 </div>
@@ -378,10 +378,10 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
         <div class="mgr-team-card-name">${esc(u.name||u.email)}</div>
         <div class="mgr-team-card-role">${u.function||u.jobTitle||u.role||"—"}</div>
         <div class="mgr-team-card-badges">
-          ${u.absent ? '<span style="background:#fee2e2;color:#dc2626;border-radius:4px;padding:2px 6px;font-size:10px;">Afwezig</span>' : ""}
-          ${u.planned ? '<span style="background:#dbeafe;color:var(--wf-blue);border-radius:4px;padding:2px 6px;font-size:10px;">Ingepland</span>' : ""}
+          ${u.absent ? '<span style="background:var(--wf-red-l);color:var(--wf-red);border-radius:4px;padding:2px 6px;font-size:10px;">Afwezig</span>' : ""}
+          ${u.planned ? '<span style="background:var(--wf-blue-l);color:var(--wf-blue);border-radius:4px;padding:2px 6px;font-size:10px;">Ingepland</span>' : ""}
         </div>
-      </div>`).join("") || '<p style="color:#94a3b8;font-size:13px;">Geen teamleden</p>'}
+      </div>`).join("") || '<p style="color:var(--gray-400);font-size:13px;">Geen teamleden</p>'}
     </div>
   </div>
 </div>`;
@@ -446,7 +446,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
       days.push(d.toISOString().slice(0,10));
     }
 
-    const MGR_COLORS = [["#dbeafe","#1d4ed8"],["#dcfce7","#15803d"],["#fef3c7","#92400e"],["#fce7f3","#9d174d"],["#f3e8ff","#6b21a8"],["#cffafe","#0e7490"],["#fee2e2","#991b1b"],["#e0f2fe","#0369a1"]];
+    const MGR_COLORS = [["var(--wf-blue-l)","var(--wf-blue)"],["var(--wf-green-l)","var(--wf-green)"],["var(--wf-yellow-l)","var(--wf-yellow)"],["var(--wf-purple-l)","var(--wf-purple)"],["var(--wf-purple-l)","var(--wf-purple)"],["var(--wf-blue-l)","#0e7490"],["var(--wf-red-l)","var(--wf-red)"],["var(--wf-blue-l)","var(--wf-blue)"]];
     const mgrColorMap = {}; let mgrColorIdx = 0;
     const getMgrColor = uid => { if (!mgrColorMap[uid]) { mgrColorMap[uid]=MGR_COLORS[mgrColorIdx%MGR_COLORS.length]; mgrColorIdx++; } return mgrColorMap[uid]; };
 
@@ -477,7 +477,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
       <thead>
         <tr>
           <th>Medewerker</th>
-          ${days.map(d => { const dd = new Date(d); return `<th style="${d===todayStr?"color:var(--wf-blue);font-weight:700;background:#f0f9ff":""}">${dd.toLocaleDateString("nl-BE",{weekday:"short",day:"numeric",month:"numeric"})}</th>`; }).join("")}
+          ${days.map(d => { const dd = new Date(d); return `<th style="${d===todayStr?"color:var(--wf-blue);font-weight:700;background:var(--wf-blue-l)":""}">${dd.toLocaleDateString("nl-BE",{weekday:"short",day:"numeric",month:"numeric"})}</th>`; }).join("")}
         </tr>
       </thead>
       <tbody>
@@ -487,16 +487,16 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
           return `<tr>
           <td style="font-weight:500;white-space:nowrap;">
             <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${fg};margin-right:5px;vertical-align:middle;"></span>
-            ${esc(u.name)} <span style="font-size:10px;color:#94a3b8;">${totalShifts}×</span>
+            ${esc(u.name)} <span style="font-size:10px;color:var(--gray-400);">${totalShifts}×</span>
           </td>
           ${days.map(d => {
             const ds = u.days[d]||[];
             const isToday = d === todayStr;
-            return `<td style="${isToday?"background:#f0f9ff;":""}">
+            return `<td style="${isToday?"background:var(--wf-blue-l);":""}">
               ${ds.map(s=>`<div class="mgr-shift-pill" data-id="${s.id}"
                 style="background:${bg};color:${fg};border:1px solid ${fg}30;border-radius:5px;padding:2px 7px;font-size:11px;font-weight:600;margin-bottom:2px;cursor:pointer;white-space:nowrap;">
                 ${esc(s.start||"")}${s.end?`–${esc(s.end)}`:""}
-              </div>`).join("")||`<span style="color:#e2e8f0;font-size:11px;">—</span>`}
+              </div>`).join("")||`<span style="color:var(--gray-200);font-size:11px;">—</span>`}
             </td>`;
           }).join("")}
         </tr>`;}).join("") || `<tr><td colspan="${days.length+1}" class="mgr-empty">Geen shifts</td></tr>`}
@@ -532,46 +532,46 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
       modal.innerHTML = `
 <div style="background:#fff;border-radius:14px;width:480px;max-width:100%;max-height:90vh;overflow-y:auto;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.2)">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
-    <h2 style="font-size:17px;font-weight:700;margin:0;color:#0f172a">${isEdit ? "Shift bewerken" : "Shift toevoegen"}</h2>
-    <button id="shiftClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:#94a3b8">×</button>
+    <h2 style="font-size:17px;font-weight:700;margin:0;color:var(--gray-900)">${isEdit ? "Shift bewerken" : "Shift toevoegen"}</h2>
+    <button id="shiftClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--gray-400)">×</button>
   </div>
   <form id="shiftForm" style="display:flex;flex-direction:column;gap:14px">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div>
-        <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:4px">Medewerker *</label>
-        <select name="userId" required style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
+        <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Medewerker *</label>
+        <select name="userId" required style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
           <option value="">— Kies medewerker —</option>
           ${team.map(u => `<option value="${esc(u.id||u.userId||"")}" ${shift?.userId===(u.id||u.userId)?"selected":""}>${esc(u.name||u.email)}</option>`).join("")}
         </select>
       </div>
       <div>
-        <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:4px">Datum *</label>
-        <input name="date" type="date" value="${shift?.date || weekFrom}" required style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
+        <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Datum *</label>
+        <input name="date" type="date" value="${shift?.date || weekFrom}" required style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div>
-        <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:4px">Starttijd *</label>
-        <input name="start" type="time" value="${shift?.start || "07:00"}" required style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
+        <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Starttijd *</label>
+        <input name="start" type="time" value="${shift?.start || "07:00"}" required style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
       </div>
       <div>
-        <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:4px">Eindtijd *</label>
-        <input name="end" type="time" value="${shift?.end || "17:00"}" required style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
+        <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Eindtijd *</label>
+        <input name="end" type="time" value="${shift?.end || "17:00"}" required style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
       </div>
     </div>
     <div>
-      <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:4px">Locatie / Werf</label>
-      <input name="venueId" placeholder="Locatie (optioneel)" value="${esc(shift?.venueId||shift?.location||"")}" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Locatie / Werf</label>
+      <input name="venueId" placeholder="Locatie (optioneel)" value="${esc(shift?.venueId||shift?.location||"")}" style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
     </div>
     <div>
-      <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:4px">Notitie</label>
-      <input name="note" placeholder="Optionele notitie" value="${esc(shift?.note||"")}" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Notitie</label>
+      <input name="note" placeholder="Optionele notitie" value="${esc(shift?.note||"")}" style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
     </div>
-    <div id="shiftErr" style="display:none;background:#fef2f2;color:#dc2626;border-radius:8px;padding:10px;font-size:13px"></div>
+    <div id="shiftErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:10px;font-size:13px"></div>
     <div style="display:flex;gap:10px;${isEdit?"justify-content:space-between":"justify-content:flex-end"};padding-top:4px">
-      ${isEdit ? `<button type="button" id="shiftDelete" style="padding:8px 14px;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:8px;font-size:13px;cursor:pointer;">🗑 Verwijderen</button>` : ""}
+      ${isEdit ? `<button type="button" id="shiftDelete" style="padding:8px 14px;background:var(--wf-red-l);color:var(--wf-red);border:1px solid var(--wf-red-l);border-radius:8px;font-size:13px;cursor:pointer;">🗑 Verwijderen</button>` : ""}
       <div style="display:flex;gap:8px;">
-        <button type="button" id="shiftCancel" style="padding:8px 16px;border:1px solid #e2e8f0;background:#fff;border-radius:8px;font-size:13px;cursor:pointer">Annuleren</button>
+        <button type="button" id="shiftCancel" style="padding:8px 16px;border:1px solid var(--gray-200);background:#fff;border-radius:8px;font-size:13px;cursor:pointer">Annuleren</button>
         <button type="submit" style="padding:8px 20px;background:var(--wf-blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">${isEdit ? "Opslaan" : "Aanmaken"}</button>
       </div>
     </div>
@@ -623,11 +623,11 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
 
   async function renderClocking() {
     const content = document.getElementById("mgrContent");
-    content.innerHTML = `<div class="mgr-card"><div class="mgr-card-body" style="padding:24px;text-align:center;color:#94a3b8;">Laden…</div></div>`;
+    content.innerHTML = `<div class="mgr-card"><div class="mgr-card-body" style="padding:24px;text-align:center;color:var(--gray-400);">Laden…</div></div>`;
 
     let clocks;
     try { clocks = await loadMgrClockData(); }
-    catch(e) { content.innerHTML = `<div class="mgr-card"><div class="mgr-card-body" style="color:#ef4444;padding:24px;">${e.message}</div></div>`; return; }
+    catch(e) { content.innerHTML = `<div class="mgr-card"><div class="mgr-card-body" style="color:var(--wf-red);padding:24px;">${e.message}</div></div>`; return; }
 
     const todayStr = new Date().toISOString().slice(0,10);
     const isToday  = _mgrClockDate === todayStr;
@@ -650,12 +650,12 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
       <button class="mgr-btn mgr-btn-secondary mgr-btn-sm" id="mgrClkPrev">‹ Vorige</button>
       ${!isToday ? `<button class="mgr-btn mgr-btn-secondary mgr-btn-sm" id="mgrClkToday">Vandaag</button>` : ""}
       <button class="mgr-btn mgr-btn-secondary mgr-btn-sm" id="mgrClkNext" ${isToday?"disabled":""}>Volgende ›</button>
-      <input type="date" id="mgrClkPicker" value="${_mgrClockDate}" style="border:1px solid #e2e8f0;border-radius:8px;padding:5px 8px;font-size:13px;cursor:pointer;" max="${todayStr}">
+      <input type="date" id="mgrClkPicker" value="${_mgrClockDate}" style="border:1px solid var(--gray-200);border-radius:8px;padding:5px 8px;font-size:13px;cursor:pointer;" max="${todayStr}">
     </div>
   </div>
   <div class="mgr-card-body" style="display:flex;gap:16px;flex-wrap:wrap;padding-bottom:0;">
     <div class="mgr-kpi"><div class="mgr-kpi-val">${totalAll}</div><div class="mgr-kpi-lbl">Registraties</div></div>
-    <div class="mgr-kpi"><div class="mgr-kpi-val" style="color:#16a34a;">${totalIn}</div><div class="mgr-kpi-lbl">Nog ingeklokt</div></div>
+    <div class="mgr-kpi"><div class="mgr-kpi-val" style="color:var(--wf-green);">${totalIn}</div><div class="mgr-kpi-lbl">Nog ingeklokt</div></div>
     <div class="mgr-kpi"><div class="mgr-kpi-val">${totalHours}</div><div class="mgr-kpi-lbl">Totaal uren</div></div>
   </div>
 </div>
@@ -741,29 +741,29 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     modal.innerHTML = `
 <div style="background:#fff;border-radius:14px;width:420px;max-width:100%;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.2)">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
-    <h2 style="font-size:16px;font-weight:700;margin:0;color:#0f172a">Kloktijd corrigeren</h2>
-    <button id="clkCorrClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:#94a3b8">×</button>
+    <h2 style="font-size:16px;font-weight:700;margin:0;color:var(--gray-900)">Kloktijd corrigeren</h2>
+    <button id="clkCorrClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--gray-400)">×</button>
   </div>
-  <div style="font-size:13px;color:#64748b;margin-bottom:16px;">Medewerker: <strong>${esc(name)}</strong></div>
+  <div style="font-size:13px;color:var(--gray-500);margin-bottom:16px;">Medewerker: <strong>${esc(name)}</strong></div>
   <form id="clkCorrForm" style="display:flex;flex-direction:column;gap:14px">
     <div>
-      <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:4px">Inkloktijd *</label>
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Inkloktijd *</label>
       <input name="clockedIn" type="datetime-local" value="${toLocal(inDt)}" required
-        style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;">
+        style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;">
     </div>
     <div>
-      <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:4px">Uitkloktijd</label>
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Uitkloktijd</label>
       <input name="clockedOut" type="datetime-local" value="${toLocal(outDt)}"
-        style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;">
+        style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;">
     </div>
     <div>
-      <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:4px">Notitie bij correctie</label>
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Notitie bij correctie</label>
       <input name="note" placeholder="Reden voor correctie (optioneel)"
-        style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;">
+        style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;">
     </div>
-    <div id="clkCorrErr" style="display:none;background:#fef2f2;color:#dc2626;border-radius:8px;padding:10px;font-size:13px"></div>
+    <div id="clkCorrErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:10px;font-size:13px"></div>
     <div style="display:flex;gap:10px;justify-content:flex-end">
-      <button type="button" id="clkCorrCancel" style="padding:8px 16px;border:1px solid #e2e8f0;background:#fff;border-radius:8px;font-size:13px;cursor:pointer">Annuleren</button>
+      <button type="button" id="clkCorrCancel" style="padding:8px 16px;border:1px solid var(--gray-200);background:#fff;border-radius:8px;font-size:13px;cursor:pointer">Annuleren</button>
       <button type="submit" style="padding:8px 20px;background:var(--wf-blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Opslaan</button>
     </div>
   </form>
@@ -829,7 +829,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
 
     const body = document.getElementById("mgrLeaveBody");
     if (!body) return;
-    body.innerHTML = `<div style="padding:24px;text-align:center;color:#94a3b8;font-size:13px;">Laden…</div>`;
+    body.innerHTML = `<div style="padding:24px;text-align:center;color:var(--gray-400);font-size:13px;">Laden…</div>`;
 
     if (_mgrLeaveTab === "aanvragen") {
       const data = await api("GET", "/leaves");
@@ -850,12 +850,12 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
               <td>${esc(l.type||"—")}</td>
               <td>${esc(l.startDate)}</td>
               <td>${esc(l.endDate)}</td>
-              <td style="font-size:12px;color:#64748b;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(l.reason||"")}">${esc(l.reason||"—")}</td>
+              <td style="font-size:12px;color:var(--gray-500);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(l.reason||"")}">${esc(l.reason||"—")}</td>
               <td><span class="mgr-status mgr-status-${l.status}">${esc(l.status)}</span></td>
               <td>${l.status==="aangevraagd" ? `
                 <button class="mgr-btn mgr-btn-success mgr-btn-sm mgr-leave-approve" data-id="${esc(l.id)}" data-dec="goedgekeurd">✓ Goed</button>
                 <button class="mgr-btn mgr-btn-danger mgr-btn-sm mgr-leave-approve" data-id="${esc(l.id)}" data-dec="geweigerd">✗ Weiger</button>
-              ` : `<span style="font-size:11px;color:#94a3b8;">${l.reviewNote ? `💬 ${esc(l.reviewNote)}` : "—"}</span>`}</td>
+              ` : `<span style="font-size:11px;color:var(--gray-400);">${l.reviewNote ? `💬 ${esc(l.reviewNote)}` : "—"}</span>`}</td>
             </tr>`).join("") || '<tr><td colspan="7" class="mgr-empty">Geen aanvragen</td></tr>'}
           </tbody>
         </table>
@@ -883,7 +883,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
         api("GET", "/dashboard").catch(() => ({}))
       ]);
     } catch(e) {
-      container.innerHTML = `<div style="padding:24px;color:#ef4444;">${esc(e.message)}</div>`;
+      container.innerHTML = `<div style="padding:24px;color:var(--wf-red);">${esc(e.message)}</div>`;
       return;
     }
     const { days = {}, leaves = [] } = calData;
@@ -904,10 +904,10 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
       const dow = new Date(_mgrCalYear, _mgrCalMonth - 1, d).getDay();
       const isWeekend = dow === 0 || dow === 6;
       const isToday = dateStr === new Date().toISOString().slice(0,10);
-      cells += `<div style="min-height:52px;border-radius:8px;padding:4px 6px;background:${isToday?"#eff6ff":isWeekend?"#f8fafc":"#fff"};border:1px solid ${isToday?"#bfdbfe":"#e2e8f0"};">
-        <div style="font-size:11px;font-weight:${isToday?"700":"500"};color:${isWeekend?"#94a3b8":isToday?"var(--wf-blue)":"#374151"};margin-bottom:2px;">${d}</div>
-        ${userIds.slice(0,3).map(uid=>`<div style="font-size:10px;background:#dbeafe;color:#1e40af;border-radius:4px;padding:1px 4px;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(empMap[uid]||uid)}">${esc((empMap[uid]||uid).split(" ")[0])}</div>`).join("")}
-        ${userIds.length>3?`<div style="font-size:10px;color:#64748b;">+${userIds.length-3}</div>`:""}
+      cells += `<div style="min-height:52px;border-radius:8px;padding:4px 6px;background:${isToday?"var(--wf-blue-l)":isWeekend?"var(--gray-50)":"#fff"};border:1px solid ${isToday?"var(--wf-blue-l)":"var(--gray-200)"};">
+        <div style="font-size:11px;font-weight:${isToday?"700":"500"};color:${isWeekend?"var(--gray-400)":isToday?"var(--wf-blue)":"var(--gray-700)"};margin-bottom:2px;">${d}</div>
+        ${userIds.slice(0,3).map(uid=>`<div style="font-size:10px;background:var(--wf-blue-l);color:var(--wf-blue);border-radius:4px;padding:1px 4px;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(empMap[uid]||uid)}">${esc((empMap[uid]||uid).split(" ")[0])}</div>`).join("")}
+        ${userIds.length>3?`<div style="font-size:10px;color:var(--gray-500);">+${userIds.length-3}</div>`:""}
       </div>`;
     }
 
@@ -917,10 +917,10 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     <button class="mgr-btn mgr-btn-secondary mgr-btn-sm" id="mgrCalPrev">‹</button>
     <span style="font-size:15px;font-weight:600;min-width:160px;text-align:center;">${MONTHS_NL[_mgrCalMonth]} ${_mgrCalYear}</span>
     <button class="mgr-btn mgr-btn-secondary mgr-btn-sm" id="mgrCalNext">›</button>
-    <span style="font-size:12px;color:#64748b;margin-left:8px;">${leaves.length} verloven</span>
+    <span style="font-size:12px;color:var(--gray-500);margin-left:8px;">${leaves.length} verloven</span>
   </div>
   <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:6px;">
-    ${["Ma","Di","Wo","Do","Vr","Za","Zo"].map(d=>`<div style="text-align:center;font-size:11px;font-weight:600;color:#64748b;padding:4px 0;">${d}</div>`).join("")}
+    ${["Ma","Di","Wo","Do","Vr","Za","Zo"].map(d=>`<div style="text-align:center;font-size:11px;font-weight:600;color:var(--gray-500);padding:4px 0;">${d}</div>`).join("")}
   </div>
   <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;">${cells}</div>
 </div>`;
@@ -941,31 +941,31 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     try {
       balData = await api("GET", `/leaves/balance?year=${year}`);
     } catch(e) {
-      container.innerHTML = `<div style="padding:24px;color:#ef4444;">${esc(e.message)}</div>`;
+      container.innerHTML = `<div style="padding:24px;color:var(--wf-red);">${esc(e.message)}</div>`;
       return;
     }
     const balance = balData.balance || [];
     if (!balance.length) {
-      container.innerHTML = `<div style="padding:24px;text-align:center;color:#94a3b8;">Geen medewerkers gevonden.</div>`;
+      container.innerHTML = `<div style="padding:24px;text-align:center;color:var(--gray-400);">Geen medewerkers gevonden.</div>`;
       return;
     }
     container.innerHTML = `
 <div style="padding:16px;">
-  <div style="font-size:13px;color:#64748b;margin-bottom:12px;">Vakantiesaldo ${year}</div>
+  <div style="font-size:13px;color:var(--gray-500);margin-bottom:12px;">Vakantiesaldo ${year}</div>
   <table class="mgr-table">
     <thead><tr><th>Medewerker</th><th>Quota</th><th>Gebruikt</th><th>Resterend</th><th>Voortgang</th></tr></thead>
     <tbody>${balance.map(b => {
       const pct = b.quota ? Math.min(100, Math.round((b.used/b.quota)*100)) : 0;
-      const color = pct>=90?"#ef4444":pct>=70?"#f59e0b":"#10b981";
+      const color = pct>=90?"var(--wf-red)":pct>=70?"var(--wf-yellow)":"var(--wf-green)";
       return `<tr>
-        <td><div style="font-weight:500;">${esc(b.name)}</div><div style="font-size:11px;color:#94a3b8;">${esc(b.email)}</div></td>
+        <td><div style="font-weight:500;">${esc(b.name)}</div><div style="font-size:11px;color:var(--gray-400);">${esc(b.email)}</div></td>
         <td>${b.quota}d</td><td>${b.used}d</td>
-        <td style="font-weight:600;color:${b.remaining<=2?"#ef4444":b.remaining<=5?"#f59e0b":"#10b981"};">${b.remaining}d</td>
+        <td style="font-weight:600;color:${b.remaining<=2?"var(--wf-red)":b.remaining<=5?"var(--wf-yellow)":"var(--wf-green)"};">${b.remaining}d</td>
         <td style="min-width:100px;">
-          <div style="background:#f1f5f9;border-radius:20px;height:8px;overflow:hidden;">
+          <div style="background:var(--gray-100);border-radius:20px;height:8px;overflow:hidden;">
             <div style="height:100%;width:${pct}%;background:${color};border-radius:20px;"></div>
           </div>
-          <div style="font-size:10px;color:#94a3b8;margin-top:2px;">${pct}%</div>
+          <div style="font-size:10px;color:var(--gray-400);margin-top:2px;">${pct}%</div>
         </td>
       </tr>`;
     }).join("")}</tbody>
@@ -988,15 +988,15 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     overlay.innerHTML = `
 <div style="background:#fff;border-radius:16px;width:100%;max-width:400px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.2);">
   <div style="font-size:15px;font-weight:700;margin-bottom:4px;">${label}</div>
-  <div style="font-size:13px;color:#64748b;margin-bottom:16px;">
+  <div style="font-size:13px;color:var(--gray-500);margin-bottom:16px;">
     ${esc(leave.userName||leave.userId)} · ${esc(leave.type||"verlof")} · ${leave.startDate} t/m ${leave.endDate}
   </div>
   <div style="margin-bottom:16px;">
-    <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Opmerking ${isApprove?"(optioneel)":"(optioneel — geeft feedback aan medewerker)"}</label>
+    <label style="font-size:12px;font-weight:600;color:var(--gray-700);display:block;margin-bottom:4px;">Opmerking ${isApprove?"(optioneel)":"(optioneel — geeft feedback aan medewerker)"}</label>
     <textarea id="mgrLeaveNote" rows="3" placeholder="Voeg een opmerking toe…"
-      style="width:100%;border:1px solid #e2e8f0;border-radius:8px;padding:8px;font-size:13px;resize:vertical;box-sizing:border-box;"></textarea>
+      style="width:100%;border:1px solid var(--gray-200);border-radius:8px;padding:8px;font-size:13px;resize:vertical;box-sizing:border-box;"></textarea>
   </div>
-  <div id="mgrLeaveModalErr" style="display:none;color:#ef4444;font-size:12px;margin-bottom:8px;"></div>
+  <div id="mgrLeaveModalErr" style="display:none;color:var(--wf-red);font-size:12px;margin-bottom:8px;"></div>
   <div style="display:flex;gap:8px;justify-content:flex-end;">
     <button id="mgrLeaveModalCancel" class="mgr-btn mgr-btn-secondary mgr-btn-sm">Annuleren</button>
     <button id="mgrLeaveModalConfirm" class="mgr-btn ${btnClass} mgr-btn-sm">${label}</button>
@@ -1038,14 +1038,14 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
 
     content.innerHTML = `
 <div class="mgr-kpis" style="margin-bottom:12px;">
-  <div class="mgr-kpi"><div class="mgr-kpi-label">In behandeling</div><div class="mgr-kpi-value" style="color:#f59e0b">${pending.length}</div><div class="mgr-kpi-sub">${fmtE(pending.reduce((s,e)=>s+Number(e.amount||0),0))}</div></div>
-  <div class="mgr-kpi"><div class="mgr-kpi-label">Goedgekeurd</div><div class="mgr-kpi-value" style="color:#10b981">${approved.length}</div><div class="mgr-kpi-sub">${fmtE(approved.reduce((s,e)=>s+Number(e.amount||0),0))}</div></div>
+  <div class="mgr-kpi"><div class="mgr-kpi-label">In behandeling</div><div class="mgr-kpi-value" style="color:var(--wf-yellow)">${pending.length}</div><div class="mgr-kpi-sub">${fmtE(pending.reduce((s,e)=>s+Number(e.amount||0),0))}</div></div>
+  <div class="mgr-kpi"><div class="mgr-kpi-label">Goedgekeurd</div><div class="mgr-kpi-value" style="color:var(--wf-green)">${approved.length}</div><div class="mgr-kpi-sub">${fmtE(approved.reduce((s,e)=>s+Number(e.amount||0),0))}</div></div>
   <div class="mgr-kpi"><div class="mgr-kpi-label">Totaal ingediend</div><div class="mgr-kpi-value">${expenses.length}</div></div>
 </div>
 <div class="mgr-card">
   <div class="mgr-card-header">
     <h3 class="mgr-card-title">Onkostennota's</h3>
-    <select id="mgrExpFilter" style="padding:5px 9px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;">
+    <select id="mgrExpFilter" style="padding:5px 9px;border:1px solid var(--gray-200);border-radius:8px;font-size:12px;">
       <option value="">Alle</option>
       <option value="ingediend">In behandeling</option>
       <option value="goedgekeurd">Goedgekeurd</option>
@@ -1066,7 +1066,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
         <td>${esc(e.date)}</td>
         <td>${esc(e.category||"—")}</td>
         <td style="font-weight:600;">€ ${Number(e.amount||0).toFixed(2)}</td>
-        <td><span class="mgr-status mgr-status-${e.status}">${esc(e.status)}</span>${e.reviewNote?`<div style="font-size:11px;color:#64748b;margin-top:2px;">💬 ${esc(e.reviewNote.slice(0,30))}${e.reviewNote.length>30?"…":""}</div>`:""}</td>
+        <td><span class="mgr-status mgr-status-${e.status}">${esc(e.status)}</span>${e.reviewNote?`<div style="font-size:11px;color:var(--gray-500);margin-top:2px;">💬 ${esc(e.reviewNote.slice(0,30))}${e.reviewNote.length>30?"…":""}</div>`:""}</td>
         <td style="white-space:nowrap;">${["pending","ingediend"].includes(e.status)?`
           <button class="mgr-btn mgr-btn-success mgr-btn-sm mgr-exp-review" data-id="${e.id}" data-dec="goedgekeurd" data-name="${esc(e.userName||e.userId)}" data-amount="${e.amount}" data-cat="${esc(e.category||"")}">✓ Goed</button>
           <button class="mgr-btn mgr-btn-danger  mgr-btn-sm mgr-exp-review" data-id="${e.id}" data-dec="geweigerd"  data-name="${esc(e.userName||e.userId)}" data-amount="${e.amount}" data-cat="${esc(e.category||"")}">✗ Weiger</button>
@@ -1097,13 +1097,13 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     overlay.innerHTML = `
 <div style="background:#fff;border-radius:16px;width:100%;max-width:400px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.2);">
   <div style="font-size:15px;font-weight:700;margin-bottom:4px;">${isApprove ? "Onkost goedkeuren" : "Onkost weigeren"}</div>
-  <div style="font-size:13px;color:#64748b;margin-bottom:16px;">${esc(name)} · ${esc(cat)} · <strong>€ ${Number(amount||0).toFixed(2)}</strong></div>
+  <div style="font-size:13px;color:var(--gray-500);margin-bottom:16px;">${esc(name)} · ${esc(cat)} · <strong>€ ${Number(amount||0).toFixed(2)}</strong></div>
   <div style="margin-bottom:16px;">
-    <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Opmerking ${isApprove?"(optioneel)":"(verplicht bij weigering)"}</label>
+    <label style="font-size:12px;font-weight:600;color:var(--gray-700);display:block;margin-bottom:4px;">Opmerking ${isApprove?"(optioneel)":"(verplicht bij weigering)"}</label>
     <textarea id="expReviewNote" rows="3" placeholder="${isApprove?"Goedgekeurd voor uitbetaling…":"Geef een reden op…"}"
-      style="width:100%;border:1px solid #e2e8f0;border-radius:8px;padding:8px;font-size:13px;resize:vertical;box-sizing:border-box;"></textarea>
+      style="width:100%;border:1px solid var(--gray-200);border-radius:8px;padding:8px;font-size:13px;resize:vertical;box-sizing:border-box;"></textarea>
   </div>
-  <div id="expReviewErr" style="display:none;color:#ef4444;font-size:12px;margin-bottom:8px;"></div>
+  <div id="expReviewErr" style="display:none;color:var(--wf-red);font-size:12px;margin-bottom:8px;"></div>
   <div style="display:flex;gap:8px;justify-content:flex-end;">
     <button id="expReviewCancel" class="mgr-btn mgr-btn-secondary mgr-btn-sm">Annuleren</button>
     <button id="expReviewConfirm" class="mgr-btn ${isApprove?"mgr-btn-success":"mgr-btn-danger"} mgr-btn-sm">${isApprove?"✓ Goedkeuren":"✗ Weigeren"}</button>
@@ -1137,15 +1137,15 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     const workorders = data.workorders || data || [];
     const content = document.getElementById("mgrContent");
     const statusClass = { open:"mgr-status-open", "in_progress":"mgr-status-pending", done:"mgr-status-active", voltooid:"mgr-status-active", geannuleerd:"mgr-status-inactive" };
-    const prioColor = { hoog:"#ef4444", normaal:"#94a3b8", laag:"#64748b" };
+    const prioColor = { hoog:"var(--wf-red)", normaal:"var(--gray-400)", laag:"var(--gray-500)" };
 
     content.innerHTML = `
 <div class="mgr-card">
   <div class="mgr-card-header">
-    <h3 class="mgr-card-title">Werkbonnen <span style="background:#e0f2fe;color:var(--wf-blue-d);border-radius:999px;padding:2px 9px;font-size:11px;font-weight:600">${workorders.length}</span></h3>
+    <h3 class="mgr-card-title">Werkbonnen <span style="background:var(--wf-blue-l);color:var(--wf-blue-d);border-radius:999px;padding:2px 9px;font-size:11px;font-weight:600">${workorders.length}</span></h3>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <input id="woSearch" placeholder="Zoek titel, klant…" style="padding:5px 9px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;min-width:160px;">
-      <select id="woFilter" style="padding:5px 9px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px">
+      <input id="woSearch" placeholder="Zoek titel, klant…" style="padding:5px 9px;border:1px solid var(--gray-200);border-radius:8px;font-size:12px;min-width:160px;">
+      <select id="woFilter" style="padding:5px 9px;border:1px solid var(--gray-200);border-radius:8px;font-size:12px">
         <option value="">Alle statussen</option>
         <option value="open">Open</option>
         <option value="in_progress">In uitvoering</option>
@@ -1188,10 +1188,10 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     if (!rows.length) return '<tr><td colspan="7" class="mgr-empty">Geen werkbonnen</td></tr>';
     return rows.map(w => `<tr class="mgr-wo-row" data-id="${esc(w.id)}" style="cursor:pointer;">
       <td style="font-family:monospace;font-weight:600">${w.number||w.id.slice(-4)}</td>
-      <td><strong>${esc(w.title||"—")}</strong>${w.clientName ? `<br><span style="font-size:11px;color:#64748b">${esc(w.clientName)}</span>` : ""}</td>
+      <td><strong>${esc(w.title||"—")}</strong>${w.clientName ? `<br><span style="font-size:11px;color:var(--gray-500)">${esc(w.clientName)}</span>` : ""}</td>
       <td>${esc(w.userName||w.userId||"—")}</td>
       <td><span class="mgr-status ${statusClass[w.status]||"mgr-status-pending"}">${esc(w.status||"—")}</span></td>
-      <td><span style="font-size:11px;font-weight:600;color:${prioColor[w.priority]||"#94a3b8"}">${esc(w.priority||"—")}</span></td>
+      <td><span style="font-size:11px;font-weight:600;color:${prioColor[w.priority]||"var(--gray-400)"}">${esc(w.priority||"—")}</span></td>
       <td>${w.scheduledDate||w.createdAt?.slice(0,10)||"—"}</td>
       <td style="white-space:nowrap">
         <button class="mgr-btn mgr-btn-secondary mgr-btn-sm wo-detail" data-id="${esc(w.id)}">👁 Detail</button>
@@ -1225,7 +1225,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
 
   function openWoDetailModal(wo, allWorkorders) {
     const statusClass = { open:"mgr-status-open", "in_progress":"mgr-status-pending", done:"mgr-status-active", voltooid:"mgr-status-active", geannuleerd:"mgr-status-inactive" };
-    const prioColor   = { hoog:"#ef4444", normaal:"#94a3b8", laag:"#64748b" };
+    const prioColor   = { hoog:"var(--wf-red)", normaal:"var(--gray-400)", laag:"var(--gray-500)" };
     let overlay = document.getElementById("mgrWoDetail");
     if (!overlay) { overlay = document.createElement("div"); overlay.id = "mgrWoDetail"; document.body.appendChild(overlay); }
     overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;display:flex;align-items:center;justify-content:center;padding:16px";
@@ -1235,51 +1235,51 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
 
     overlay.innerHTML = `
 <div style="background:#fff;border-radius:14px;width:540px;max-width:100%;max-height:90vh;overflow-y:auto;padding:0;box-shadow:0 20px 60px rgba(0,0,0,.2)">
-  <div style="padding:20px 24px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between">
+  <div style="padding:20px 24px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;justify-content:space-between">
     <div>
-      <div style="font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Werkbon #${esc(wo.number||wo.id.slice(-6))}</div>
-      <h2 style="font-size:17px;font-weight:700;margin:4px 0 0;color:#0f172a">${esc(wo.title||"—")}</h2>
+      <div style="font-size:11px;color:var(--gray-400);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Werkbon #${esc(wo.number||wo.id.slice(-6))}</div>
+      <h2 style="font-size:17px;font-weight:700;margin:4px 0 0;color:var(--gray-900)">${esc(wo.title||"—")}</h2>
     </div>
-    <button id="woDetailClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:#94a3b8;padding:4px 8px">×</button>
+    <button id="woDetailClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--gray-400);padding:4px 8px">×</button>
   </div>
   <div style="padding:20px 24px;display:grid;grid-template-columns:1fr 1fr;gap:16px">
     <div>
-      <div style="font-size:11px;color:#94a3b8;font-weight:600;margin-bottom:4px">STATUS</div>
+      <div style="font-size:11px;color:var(--gray-400);font-weight:600;margin-bottom:4px">STATUS</div>
       <span class="mgr-status ${statusClass[wo.status]||"mgr-status-pending"}">${esc(wo.status||"—")}</span>
     </div>
     <div>
-      <div style="font-size:11px;color:#94a3b8;font-weight:600;margin-bottom:4px">PRIORITEIT</div>
-      <span style="font-size:13px;font-weight:600;color:${prioColor[wo.priority]||"#94a3b8"}">${esc(wo.priority||"—")}</span>
+      <div style="font-size:11px;color:var(--gray-400);font-weight:600;margin-bottom:4px">PRIORITEIT</div>
+      <span style="font-size:13px;font-weight:600;color:${prioColor[wo.priority]||"var(--gray-400)"}">${esc(wo.priority||"—")}</span>
     </div>
     <div>
-      <div style="font-size:11px;color:#94a3b8;font-weight:600;margin-bottom:4px">MEDEWERKER</div>
+      <div style="font-size:11px;color:var(--gray-400);font-weight:600;margin-bottom:4px">MEDEWERKER</div>
       <span style="font-size:13px">${esc(wo.userName||wo.userId||"—")}</span>
     </div>
     <div>
-      <div style="font-size:11px;color:#94a3b8;font-weight:600;margin-bottom:4px">KLANT</div>
+      <div style="font-size:11px;color:var(--gray-400);font-weight:600;margin-bottom:4px">KLANT</div>
       <span style="font-size:13px">${esc(wo.clientName||"—")}</span>
     </div>
     <div>
-      <div style="font-size:11px;color:#94a3b8;font-weight:600;margin-bottom:4px">GEPLAND OP</div>
+      <div style="font-size:11px;color:var(--gray-400);font-weight:600;margin-bottom:4px">GEPLAND OP</div>
       <span style="font-size:13px">${esc(wo.scheduledDate||"—")}</span>
     </div>
     <div>
-      <div style="font-size:11px;color:#94a3b8;font-weight:600;margin-bottom:4px">AANGEMAAKT</div>
+      <div style="font-size:11px;color:var(--gray-400);font-weight:600;margin-bottom:4px">AANGEMAAKT</div>
       <span style="font-size:13px">${wo.createdAt ? new Date(wo.createdAt).toLocaleDateString("nl-BE") : "—"}</span>
     </div>
-    ${wo.location ? `<div style="grid-column:1/-1"><div style="font-size:11px;color:#94a3b8;font-weight:600;margin-bottom:4px">LOCATIE</div><span style="font-size:13px">${esc(wo.location)}</span></div>` : ""}
-    ${wo.description ? `<div style="grid-column:1/-1"><div style="font-size:11px;color:#94a3b8;font-weight:600;margin-bottom:4px">BESCHRIJVING</div><p style="font-size:13px;color:#374151;margin:0;white-space:pre-wrap;background:#f8fafc;border-radius:8px;padding:10px">${esc(wo.description)}</p></div>` : ""}
-    ${wo.notes ? `<div style="grid-column:1/-1"><div style="font-size:11px;color:#94a3b8;font-weight:600;margin-bottom:4px">NOTITIES</div><p style="font-size:13px;color:#374151;margin:0;white-space:pre-wrap;background:#fffbeb;border-radius:8px;padding:10px">${esc(wo.notes)}</p></div>` : ""}
+    ${wo.location ? `<div style="grid-column:1/-1"><div style="font-size:11px;color:var(--gray-400);font-weight:600;margin-bottom:4px">LOCATIE</div><span style="font-size:13px">${esc(wo.location)}</span></div>` : ""}
+    ${wo.description ? `<div style="grid-column:1/-1"><div style="font-size:11px;color:var(--gray-400);font-weight:600;margin-bottom:4px">BESCHRIJVING</div><p style="font-size:13px;color:var(--gray-700);margin:0;white-space:pre-wrap;background:var(--gray-50);border-radius:8px;padding:10px">${esc(wo.description)}</p></div>` : ""}
+    ${wo.notes ? `<div style="grid-column:1/-1"><div style="font-size:11px;color:var(--gray-400);font-weight:600;margin-bottom:4px">NOTITIES</div><p style="font-size:13px;color:var(--gray-700);margin:0;white-space:pre-wrap;background:var(--wf-yellow-l);border-radius:8px;padding:10px">${esc(wo.notes)}</p></div>` : ""}
   </div>
   ${wo.status !== "done" && wo.status !== "geannuleerd" ? `
-  <div style="padding:16px 24px;border-top:1px solid #f1f5f9;background:#f8fafc;border-radius:0 0 14px 14px">
-    <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:8px">Status wijzigen</div>
+  <div style="padding:16px 24px;border-top:1px solid var(--gray-100);background:var(--gray-50);border-radius:0 0 14px 14px">
+    <div style="font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:8px">Status wijzigen</div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <select id="woDetailStatus" style="padding:7px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">${statusOpts}</select>
-      <textarea id="woDetailNote" placeholder="Opmerking (optioneel)" rows="2" style="flex:1;padding:7px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;resize:vertical;min-width:150px"></textarea>
+      <select id="woDetailStatus" style="padding:7px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">${statusOpts}</select>
+      <textarea id="woDetailNote" placeholder="Opmerking (optioneel)" rows="2" style="flex:1;padding:7px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;resize:vertical;min-width:150px"></textarea>
       <button id="woDetailSave" class="mgr-btn mgr-btn-primary mgr-btn-sm">Opslaan</button>
     </div>
-    <div id="woDetailErr" style="display:none;margin-top:8px;background:#fef2f2;color:#dc2626;border-radius:8px;padding:8px;font-size:12px"></div>
+    <div id="woDetailErr" style="display:none;margin-top:8px;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:8px;font-size:12px"></div>
   </div>` : ""}
 </div>`;
 
@@ -1317,44 +1317,44 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
       modal.innerHTML = `
 <div style="background:#fff;border-radius:14px;width:480px;max-width:100%;max-height:90vh;overflow-y:auto;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.2)">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
-    <h2 style="font-size:17px;font-weight:700;margin:0;color:#0f172a">Nieuwe werkbon</h2>
-    <button id="woClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:#94a3b8">×</button>
+    <h2 style="font-size:17px;font-weight:700;margin:0;color:var(--gray-900)">Nieuwe werkbon</h2>
+    <button id="woClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--gray-400)">×</button>
   </div>
   <form id="woForm" style="display:flex;flex-direction:column;gap:14px">
     <div>
-      <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:4px">Titel *</label>
-      <input name="title" required placeholder="Omschrijving van de opdracht" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Titel *</label>
+      <input name="title" required placeholder="Omschrijving van de opdracht" style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div>
-        <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:4px">Medewerker</label>
-        <select name="userId" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
+        <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Medewerker</label>
+        <select name="userId" style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
           <option value="">— Niet toegewezen —</option>
           ${team.map(u => `<option value="${esc(u.id)}">${esc(u.name||u.email)}</option>`).join("")}
         </select>
       </div>
       <div>
-        <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:4px">Klant</label>
-        <input name="clientName" placeholder="Naam klant" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
+        <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Klant</label>
+        <input name="clientName" placeholder="Naam klant" style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div>
-        <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:4px">Gepland op</label>
-        <input name="scheduledDate" type="date" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
+        <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Gepland op</label>
+        <input name="scheduledDate" type="date" style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
       </div>
       <div>
-        <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:4px">Prioriteit</label>
-        <select name="priority" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
+        <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Prioriteit</label>
+        <select name="priority" style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
           <option value="normaal" selected>Normaal</option>
           <option value="hoog">Hoog</option>
           <option value="laag">Laag</option>
         </select>
       </div>
     </div>
-    <div id="woErr" style="display:none;background:#fef2f2;color:#dc2626;border-radius:8px;padding:10px;font-size:13px"></div>
+    <div id="woErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:10px;font-size:13px"></div>
     <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:4px">
-      <button type="button" id="woCancel" style="padding:8px 16px;border:1px solid #e2e8f0;background:#fff;border-radius:8px;font-size:13px;cursor:pointer">Annuleren</button>
+      <button type="button" id="woCancel" style="padding:8px 16px;border:1px solid var(--gray-200);background:#fff;border-radius:8px;font-size:13px;cursor:pointer">Annuleren</button>
       <button type="submit" style="padding:8px 20px;background:var(--wf-blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Aanmaken</button>
     </div>
   </form>
@@ -1399,16 +1399,16 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
   <div class="mgr-card-body">
     ${messages.length === 0 ? `<div class="mgr-empty">Geen berichten</div>` :
     messages.map(m => `
-    <div style="display:flex;gap:12px;padding:12px 0;border-bottom:1px solid #f1f5f9;align-items:flex-start">
-      <div style="width:34px;height:34px;border-radius:50%;background:#e0f2fe;color:var(--wf-blue-d);display:grid;place-items:center;font-size:12px;font-weight:700;flex-shrink:0">${(m.fromName||"?")[0].toUpperCase()}</div>
+    <div style="display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--gray-100);align-items:flex-start">
+      <div style="width:34px;height:34px;border-radius:50%;background:var(--wf-blue-l);color:var(--wf-blue-d);display:grid;place-items:center;font-size:12px;font-weight:700;flex-shrink:0">${(m.fromName||"?")[0].toUpperCase()}</div>
       <div style="flex:1">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
-          <span style="font-size:13px;font-weight:600;color:#0f172a">${esc(m.fromName||m.fromId||"System")}</span>
-          <span style="font-size:11px;color:#94a3b8">${m.createdAt ? new Date(m.createdAt).toLocaleString("nl-BE",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}) : ""}</span>
-          ${!m.read ? `<span style="background:#3b82f6;color:#fff;border-radius:4px;padding:1px 6px;font-size:10px">NIEUW</span>` : ""}
+          <span style="font-size:13px;font-weight:600;color:var(--gray-900)">${esc(m.fromName||m.fromId||"System")}</span>
+          <span style="font-size:11px;color:var(--gray-400)">${m.createdAt ? new Date(m.createdAt).toLocaleString("nl-BE",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}) : ""}</span>
+          ${!m.read ? `<span style="background:var(--wf-blue);color:#fff;border-radius:4px;padding:1px 6px;font-size:10px">NIEUW</span>` : ""}
         </div>
-        <div style="font-size:13px;color:#374151">${esc(m.body||m.content||m.message||"")}</div>
-        ${m.toName||m.toId ? `<div style="font-size:11px;color:#94a3b8;margin-top:2px">Aan: ${esc(m.toName||m.toId)}</div>` : ""}
+        <div style="font-size:13px;color:var(--gray-700)">${esc(m.body||m.content||m.message||"")}</div>
+        ${m.toName||m.toId ? `<div style="font-size:11px;color:var(--gray-400);margin-top:2px">Aan: ${esc(m.toName||m.toId)}</div>` : ""}
       </div>
     </div>`).join("")}
   </div>
@@ -1428,29 +1428,29 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     modal.innerHTML = `
 <div style="background:#fff;border-radius:14px;width:440px;max-width:100%;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.2)">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
-    <h2 style="font-size:16px;font-weight:700;margin:0;color:#0f172a">Nieuw bericht</h2>
-    <button id="msgClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:#94a3b8">×</button>
+    <h2 style="font-size:16px;font-weight:700;margin:0;color:var(--gray-900)">Nieuw bericht</h2>
+    <button id="msgClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--gray-400)">×</button>
   </div>
   <form id="msgForm" style="display:flex;flex-direction:column;gap:14px">
     <div>
-      <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:4px">Onderwerp *</label>
-      <input name="subject" required placeholder="Onderwerp van het bericht" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Onderwerp *</label>
+      <input name="subject" required placeholder="Onderwerp van het bericht" style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
     </div>
     <div>
-      <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:4px">Bericht *</label>
-      <textarea name="body" required rows="4" placeholder="Schrijf hier je bericht…" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;resize:vertical"></textarea>
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Bericht *</label>
+      <textarea name="body" required rows="4" placeholder="Schrijf hier je bericht…" style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;resize:vertical"></textarea>
     </div>
     <div>
-      <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:4px">Aan (rol / iedereen)</label>
-      <select name="toRole" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Aan (rol / iedereen)</label>
+      <select name="toRole" style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
         <option value="all">Alle medewerkers</option>
         <option value="employee">Medewerkers</option>
         <option value="manager">Managers</option>
       </select>
     </div>
-    <div id="msgErr" style="display:none;background:#fef2f2;color:#dc2626;border-radius:8px;padding:10px;font-size:13px"></div>
+    <div id="msgErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:10px;font-size:13px"></div>
     <div style="display:flex;gap:10px;justify-content:flex-end">
-      <button type="button" id="msgCancel" style="padding:8px 16px;border:1px solid #e2e8f0;background:#fff;border-radius:8px;font-size:13px;cursor:pointer">Annuleren</button>
+      <button type="button" id="msgCancel" style="padding:8px 16px;border:1px solid var(--gray-200);background:#fff;border-radius:8px;font-size:13px;cursor:pointer">Annuleren</button>
       <button type="submit" style="padding:8px 20px;background:var(--wf-blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Versturen</button>
     </div>
   </form>
@@ -1485,7 +1485,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     content.innerHTML = `
 <div class="mgr-card">
   <div class="mgr-card-header">
-    <h3 class="mgr-card-title">Voertuigen <span style="background:#e0f2fe;color:var(--wf-blue-d);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${vehicles.length}</span></h3>
+    <h3 class="mgr-card-title">Voertuigen <span style="background:var(--wf-blue-l);color:var(--wf-blue-d);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${vehicles.length}</span></h3>
     <button class="mgr-btn mgr-btn-primary mgr-btn-sm" id="mgrNewVehicle">+ Voertuig</button>
   </div>
   ${vehicles.length === 0 ? `<div class="mgr-card-body"><div class="mgr-empty">Nog geen voertuigen — klik "+ Voertuig" om te starten</div></div>` : `
@@ -1494,7 +1494,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
       <thead><tr><th>Naam / Kenteken</th><th>Merk / Model</th><th>KM-stand</th><th>Status</th><th>Volgende service</th><th>Acties</th></tr></thead>
       <tbody>
         ${vehicles.map(v => `<tr>
-          <td><strong>${esc(v.name||v.plate||"—")}</strong><br><span style="font-size:11px;color:#94a3b8;font-family:monospace">${esc(v.plate||"")}</span></td>
+          <td><strong>${esc(v.name||v.plate||"—")}</strong><br><span style="font-size:11px;color:var(--gray-400);font-family:monospace">${esc(v.plate||"")}</span></td>
           <td>${esc(v.brand||"")} ${esc(v.model||"")}</td>
           <td>${v.mileage ? Number(v.mileage).toLocaleString("nl-BE") + " km" : "—"}</td>
           <td><span class="mgr-status ${statusCss[v.status]||"mgr-status-pending"}">${esc(v.status||"—")}</span></td>
@@ -1527,39 +1527,39 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
 <div style="background:#fff;border-radius:14px;width:100%;max-width:460px;max-height:90vh;overflow-y:auto;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.2);">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
     <h3 style="margin:0;font-size:16px;font-weight:700;">${isEdit ? "Voertuig bewerken" : "Nieuw voertuig"}</h3>
-    <button id="vehClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:#94a3b8;">×</button>
+    <button id="vehClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--gray-400);">×</button>
   </div>
   <form id="vehForm" style="display:flex;flex-direction:column;gap:12px;">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
       <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Naam *</label>
-        <input name="name" value="${esc(vehicle?.name||"")}" required placeholder="Bestelwagen 1" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box;"></div>
+        <input name="name" value="${esc(vehicle?.name||"")}" required placeholder="Bestelwagen 1" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;box-sizing:border-box;"></div>
       <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Kenteken</label>
-        <input name="plate" value="${esc(vehicle?.plate||"")}" placeholder="1-ABC-234" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box;font-family:monospace;"></div>
+        <input name="plate" value="${esc(vehicle?.plate||"")}" placeholder="1-ABC-234" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;box-sizing:border-box;font-family:monospace;"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
       <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Merk</label>
-        <input name="brand" value="${esc(vehicle?.brand||"")}" placeholder="Ford" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box;"></div>
+        <input name="brand" value="${esc(vehicle?.brand||"")}" placeholder="Ford" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;box-sizing:border-box;"></div>
       <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Model</label>
-        <input name="model" value="${esc(vehicle?.model||"")}" placeholder="Transit" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box;"></div>
+        <input name="model" value="${esc(vehicle?.model||"")}" placeholder="Transit" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;box-sizing:border-box;"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
       <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Huidige KM-stand</label>
-        <input name="mileage" type="number" value="${vehicle?.mileage||""}" placeholder="0" min="0" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box;"></div>
+        <input name="mileage" type="number" value="${vehicle?.mileage||""}" placeholder="0" min="0" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;box-sizing:border-box;"></div>
       <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Volgende service</label>
-        <input name="nextService" type="date" value="${vehicle?.nextService||""}" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box;"></div>
+        <input name="nextService" type="date" value="${vehicle?.nextService||""}" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;box-sizing:border-box;"></div>
     </div>
     <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Status</label>
-      <select name="status" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;">
+      <select name="status" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;">
         <option value="active" ${!vehicle||vehicle.status==="active"?"selected":""}>Actief</option>
         <option value="maintenance" ${vehicle?.status==="maintenance"?"selected":""}>In onderhoud</option>
         <option value="inactive" ${vehicle?.status==="inactive"?"selected":""}>Inactief</option>
       </select>
     </div>
-    <div id="vehErr" style="display:none;color:#ef4444;font-size:12px;"></div>
+    <div id="vehErr" style="display:none;color:var(--wf-red);font-size:12px;"></div>
     <div style="display:flex;justify-content:${isEdit?"space-between":"flex-end"};gap:8px;padding-top:4px;">
-      ${isEdit ? `<button type="button" id="vehDelete" style="padding:8px 12px;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:8px;font-size:12px;cursor:pointer;">🗑 Verwijderen</button>` : ""}
+      ${isEdit ? `<button type="button" id="vehDelete" style="padding:8px 12px;background:var(--wf-red-l);color:var(--wf-red);border:1px solid var(--wf-red-l);border-radius:8px;font-size:12px;cursor:pointer;">🗑 Verwijderen</button>` : ""}
       <div style="display:flex;gap:8px;">
-        <button type="button" id="vehCancel" style="padding:8px 16px;border:1px solid #e2e8f0;background:#fff;border-radius:8px;font-size:13px;cursor:pointer;">Annuleren</button>
+        <button type="button" id="vehCancel" style="padding:8px 16px;border:1px solid var(--gray-200);background:#fff;border-radius:8px;font-size:13px;cursor:pointer;">Annuleren</button>
         <button type="submit" style="padding:8px 20px;background:var(--wf-blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">${isEdit?"Opslaan":"Aanmaken"}</button>
       </div>
     </div>
@@ -1607,20 +1607,20 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     overlay.innerHTML = `
 <div style="background:#fff;border-radius:14px;width:100%;max-width:360px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.2);">
   <h3 style="margin:0 0 4px;font-size:15px;font-weight:700;">KM-stand loggen</h3>
-  <p style="font-size:13px;color:#64748b;margin:0 0 16px;">${esc(vehicleName)} · Huidige stand: <strong>${Number(currentMileage).toLocaleString("nl-BE")} km</strong></p>
+  <p style="font-size:13px;color:var(--gray-500);margin:0 0 16px;">${esc(vehicleName)} · Huidige stand: <strong>${Number(currentMileage).toLocaleString("nl-BE")} km</strong></p>
   <form id="mileageForm" style="display:flex;flex-direction:column;gap:12px;">
     <div>
       <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Nieuwe KM-stand *</label>
       <input name="mileage" type="number" min="${currentMileage+1}" required placeholder="${currentMileage + 100}"
-        style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+        style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:14px;box-sizing:border-box;">
     </div>
     <div>
       <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Opmerking</label>
-      <input name="note" placeholder="Bijv. levering Brussel" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box;">
+      <input name="note" placeholder="Bijv. levering Brussel" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;box-sizing:border-box;">
     </div>
-    <div id="mileageErr" style="display:none;color:#ef4444;font-size:12px;"></div>
+    <div id="mileageErr" style="display:none;color:var(--wf-red);font-size:12px;"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;">
-      <button type="button" id="mileageCancel" style="padding:8px 16px;border:1px solid #e2e8f0;background:#fff;border-radius:8px;font-size:13px;cursor:pointer;">Annuleren</button>
+      <button type="button" id="mileageCancel" style="padding:8px 16px;border:1px solid var(--gray-200);background:#fff;border-radius:8px;font-size:13px;cursor:pointer;">Annuleren</button>
       <button type="submit" style="padding:8px 20px;background:var(--wf-blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Opslaan</button>
     </div>
   </form>
@@ -1669,7 +1669,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
       const team       = dash.teamList     || dash.team  || [];
       _renderReportStats(content, workorders, leaves, expenses, team);
     } catch(e) {
-      content.innerHTML = `<div style="padding:20px;color:#dc2626">Fout: ${esc(e.message)}</div>`;
+      content.innerHTML = `<div style="padding:20px;color:var(--wf-red)">Fout: ${esc(e.message)}</div>`;
     }
   }
 
@@ -1713,10 +1713,10 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
 
     content.innerHTML = `
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
-  <h2 style="font-size:17px;font-weight:700;color:#0f172a;margin:0">Rapporten</h2>
+  <h2 style="font-size:17px;font-weight:700;color:var(--gray-900);margin:0">Rapporten</h2>
   <div style="display:flex;align-items:center;gap:8px">
-    <label style="font-size:12px;color:#64748b;font-weight:600">Periode:</label>
-    <select id="rptPeriod" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
+    <label style="font-size:12px;color:var(--gray-500);font-weight:600">Periode:</label>
+    <select id="rptPeriod" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
       ${monthOpts.join("")}
     </select>
   </div>
@@ -1724,7 +1724,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
 
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:18px">
   <div class="mgr-kpi"><div class="mgr-kpi-label">Werkbonnen open</div><div class="mgr-kpi-value">${woOpen}</div><div class="mgr-kpi-sub">${woUrgent} urgent</div></div>
-  <div class="mgr-kpi"><div class="mgr-kpi-label">Voltooid (periode)</div><div class="mgr-kpi-value" style="color:#10b981">${woDone}</div><div class="mgr-kpi-sub">van ${woThisPeriod.length} aangemaakt</div></div>
+  <div class="mgr-kpi"><div class="mgr-kpi-label">Voltooid (periode)</div><div class="mgr-kpi-value" style="color:var(--wf-green)">${woDone}</div><div class="mgr-kpi-sub">van ${woThisPeriod.length} aangemaakt</div></div>
   <div class="mgr-kpi"><div class="mgr-kpi-label">Verlof (periode)</div><div class="mgr-kpi-value">${lvApproved}</div><div class="mgr-kpi-sub">${lvPending} te beoordelen</div></div>
   <div class="mgr-kpi"><div class="mgr-kpi-label">Onkosten (periode)</div><div class="mgr-kpi-value">${fmtEur(expAmt)}</div><div class="mgr-kpi-sub">${fmtEur(expApproved)} goedgekeurd · ${expPending} open</div></div>
 </div>
@@ -1732,7 +1732,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
 <div class="mgr-card">
   <div class="mgr-card-header">
     <h3 class="mgr-card-title">Team overzicht</h3>
-    <span style="font-size:11px;color:#94a3b8">${period}</span>
+    <span style="font-size:11px;color:var(--gray-400)">${period}</span>
   </div>
   <div class="mgr-card-body mgr-table-wrap">
     <table class="mgr-table">
@@ -1751,13 +1751,13 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
         ${perPerson.length ? perPerson.map(u => `
         <tr>
           <td>
-            <div style="font-weight:600;color:#0f172a">${esc(u.name||u.email)}</div>
-            <div style="font-size:11px;color:#94a3b8">${esc(u.function||u.role||"")}</div>
+            <div style="font-weight:600;color:var(--gray-900)">${esc(u.name||u.email)}</div>
+            <div style="font-size:11px;color:var(--gray-400)">${esc(u.function||u.role||"")}</div>
           </td>
-          <td>${u.open > 0 ? `<span style="font-weight:600;color:#f59e0b">${u.open}</span>` : `<span style="color:#94a3b8">0</span>`}</td>
-          <td>${u.done > 0 ? `<span style="font-weight:600;color:#10b981">${u.done}</span>` : `<span style="color:#94a3b8">0</span>`}</td>
-          <td>${u.uLv > 0 ? `<span style="font-weight:600;color:#6366f1">${u.uLv}</span>` : `<span style="color:#94a3b8">0</span>`}</td>
-          <td>${u.uExp > 0 ? `<span style="font-weight:600;color:#f59e0b">${u.uExp}</span>` : `<span style="color:#94a3b8">0</span>`}</td>
+          <td>${u.open > 0 ? `<span style="font-weight:600;color:var(--wf-yellow)">${u.open}</span>` : `<span style="color:var(--gray-400)">0</span>`}</td>
+          <td>${u.done > 0 ? `<span style="font-weight:600;color:var(--wf-green)">${u.done}</span>` : `<span style="color:var(--gray-400)">0</span>`}</td>
+          <td>${u.uLv > 0 ? `<span style="font-weight:600;color:var(--wf-purple)">${u.uLv}</span>` : `<span style="color:var(--gray-400)">0</span>`}</td>
+          <td>${u.uExp > 0 ? `<span style="font-weight:600;color:var(--wf-yellow)">${u.uExp}</span>` : `<span style="color:var(--gray-400)">0</span>`}</td>
           <td style="font-size:12px">${fmtEur(u.uExpAmt)}</td>
           <td><span class="mgr-status ${u.active!==false?"mgr-status-active":"mgr-status-inactive"}">${u.active!==false?"Actief":"Inactief"}</span></td>
         </tr>`).join("") : '<tr><td colspan="7" class="mgr-empty">Geen teamleden</td></tr>'}
@@ -1773,27 +1773,27 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
       ${workorders.filter(w => !["done","Voltooid","Afgewerkt","geannuleerd"].includes(w.status))
         .sort((a,b) => (b.priority==="hoog"?1:0)-(a.priority==="hoog"?1:0))
         .slice(0,5).map(w => `
-      <div style="padding:7px 0;border-bottom:1px solid #f8fafc;display:flex;align-items:center;gap:8px">
-        <span style="font-size:10px;font-weight:700;color:${w.priority==="hoog"?"#ef4444":"#94a3b8"};background:${w.priority==="hoog"?"#fef2f2":"#f8fafc"};padding:2px 6px;border-radius:4px">${esc(w.priority||"normaal")}</span>
+      <div style="padding:7px 0;border-bottom:1px solid var(--gray-50);display:flex;align-items:center;gap:8px">
+        <span style="font-size:10px;font-weight:700;color:${w.priority==="hoog"?"var(--wf-red)":"var(--gray-400)"};background:${w.priority==="hoog"?"var(--wf-red-l)":"var(--gray-50)"};padding:2px 6px;border-radius:4px">${esc(w.priority||"normaal")}</span>
         <div style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px">${esc(w.title||"—")}</div>
-        <span style="font-size:11px;color:#94a3b8;flex-shrink:0">${esc(w.userName||w.userId||"—")}</span>
-      </div>`).join("") || '<div style="padding:12px 0;font-size:12px;color:#94a3b8">Geen open werkbonnen</div>'}
+        <span style="font-size:11px;color:var(--gray-400);flex-shrink:0">${esc(w.userName||w.userId||"—")}</span>
+      </div>`).join("") || '<div style="padding:12px 0;font-size:12px;color:var(--gray-400)">Geen open werkbonnen</div>'}
     </div>
   </div>
   <div class="mgr-card">
     <div class="mgr-card-header"><h3 class="mgr-card-title">Verlofaanvragen te beoordelen</h3></div>
     <div class="mgr-card-body">
       ${leaves.filter(l => l.status === "aangevraagd").slice(0,5).map(l => `
-      <div style="padding:7px 0;border-bottom:1px solid #f8fafc;display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <div style="padding:7px 0;border-bottom:1px solid var(--gray-50);display:flex;align-items:center;justify-content:space-between;gap:8px">
         <div style="flex:1;min-width:0">
-          <div style="font-size:12.5px;font-weight:600;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.userName||l.userId||"—")}</div>
-          <div style="font-size:11px;color:#94a3b8">${esc(l.type||"Verlof")} · ${l.startDate||""}${l.endDate&&l.endDate!==l.startDate?" → "+l.endDate:""}</div>
+          <div style="font-size:12.5px;font-weight:600;color:var(--gray-900);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.userName||l.userId||"—")}</div>
+          <div style="font-size:11px;color:var(--gray-400)">${esc(l.type||"Verlof")} · ${l.startDate||""}${l.endDate&&l.endDate!==l.startDate?" → "+l.endDate:""}</div>
         </div>
         <div style="display:flex;gap:5px">
           <button class="mgr-btn mgr-btn-success mgr-btn-sm rpt-lv-ok" data-id="${esc(l.id)}" data-name="${esc(l.userName||l.userId||"")}" data-type="${esc(l.type||"Verlof")}">✓</button>
           <button class="mgr-btn mgr-btn-danger mgr-btn-sm rpt-lv-rej" data-id="${esc(l.id)}" data-name="${esc(l.userName||l.userId||"")}" data-type="${esc(l.type||"Verlof")}">✗</button>
         </div>
-      </div>`).join("") || '<div style="padding:12px 0;font-size:12px;color:#94a3b8">Geen aanvragen</div>'}
+      </div>`).join("") || '<div style="padding:12px 0;font-size:12px;color:var(--gray-400)">Geen aanvragen</div>'}
     </div>
   </div>
 </div>`;
@@ -1845,17 +1845,17 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
 
     function renderMgrNotifList() {
       if (!_mgrNotifs.length) {
-        mgrList.innerHTML = `<div style="padding:28px;text-align:center;font-size:13px;color:#94a3b8">🔔 Geen notificaties</div>`;
+        mgrList.innerHTML = `<div style="padding:28px;text-align:center;font-size:13px;color:var(--gray-400)">🔔 Geen notificaties</div>`;
         return;
       }
       mgrList.innerHTML = _mgrNotifs.slice(0, 15).map(n => {
         const isRead = n.status === "read";
-        return `<div class="mgr-notif-item" data-nid="${esc(n.id)}" style="padding:10px 16px;border-bottom:1px solid #f8fafc;cursor:pointer;display:flex;gap:10px;background:${isRead?"#fff":"#eff6ff"}">
-          <div style="width:7px;height:7px;border-radius:50%;background:${isRead?"#cbd5e1":"var(--wf-blue)"};margin-top:5px;flex-shrink:0"></div>
+        return `<div class="mgr-notif-item" data-nid="${esc(n.id)}" style="padding:10px 16px;border-bottom:1px solid var(--gray-50);cursor:pointer;display:flex;gap:10px;background:${isRead?"#fff":"var(--wf-blue-l)"}">
+          <div style="width:7px;height:7px;border-radius:50%;background:${isRead?"var(--gray-300)":"var(--wf-blue)"};margin-top:5px;flex-shrink:0"></div>
           <div style="flex:1">
-            <div style="font-size:12.5px;color:#374151;font-weight:${isRead?400:600}">${esc(n.title||n.message||"Notificatie")}</div>
-            ${n.body ? `<div style="font-size:11.5px;color:#64748b;margin-top:2px">${esc(n.body)}</div>` : ""}
-            <div style="font-size:10.5px;color:#94a3b8;margin-top:2px">${fmtMgrNotifTime(n.createdAt)}</div>
+            <div style="font-size:12.5px;color:var(--gray-700);font-weight:${isRead?400:600}">${esc(n.title||n.message||"Notificatie")}</div>
+            ${n.body ? `<div style="font-size:11.5px;color:var(--gray-500);margin-top:2px">${esc(n.body)}</div>` : ""}
+            <div style="font-size:10.5px;color:var(--gray-400);margin-top:2px">${fmtMgrNotifTime(n.createdAt)}</div>
           </div>
         </div>`;
       }).join("");
@@ -1867,7 +1867,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
           if (!n || n.status === "read") return;
           n.status = "read";
           item.style.background = "#fff";
-          item.querySelector("div").style.background = "#cbd5e1";
+          item.querySelector("div").style.background = "var(--gray-300)";
           try { await api("POST", `/notifications/${nid}/read`, {}); } catch(_){}
           updateMgrDot();
         });
@@ -1894,14 +1894,14 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
       const isOpen = mgrPanel.style.display === "block";
       mgrPanel.style.display = isOpen ? "none" : "block";
       if (!isOpen) {
-        mgrList.innerHTML = `<div style="padding:28px;text-align:center;font-size:13px;color:#94a3b8">Laden…</div>`;
+        mgrList.innerHTML = `<div style="padding:28px;text-align:center;font-size:13px;color:var(--gray-400)">Laden…</div>`;
         await loadMgrNotifications();
         renderMgrNotifList();
       }
     });
 
     mgrBell?.addEventListener("mouseover", () => {
-      if (mgrBell) mgrBell.style.background = "#f1f5f9";
+      if (mgrBell) mgrBell.style.background = "var(--gray-100)";
     });
     mgrBell?.addEventListener("mouseleave", () => {
       if (mgrBell) mgrBell.style.background = "";

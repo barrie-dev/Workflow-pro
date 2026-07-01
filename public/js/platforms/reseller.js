@@ -30,7 +30,7 @@
     </div>
     <button id="rspLogout" style="background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:980px;padding:8px 16px;font-size:13px;cursor:pointer">Uitloggen</button>
   </header>
-  <main style="max-width:1040px;margin:0 auto;padding:24px 20px" id="rspMain"><div style="color:#94a3b8;padding:40px;text-align:center">Laden…</div></main>
+  <main style="max-width:1040px;margin:0 auto;padding:24px 20px" id="rspMain"><div style="color:var(--gray-400);padding:40px;text-align:center">Laden…</div></main>
 </div>`;
     document.getElementById("rspLogout").addEventListener("click", () => {
       localStorage.removeItem("wfp_token");
@@ -43,7 +43,7 @@
     const main = document.getElementById("rspMain");
     let d;
     try { d = await api("GET", "/api/reseller/clients"); }
-    catch (e) { main.innerHTML = `<div style="background:#fff;border-radius:12px;padding:20px;color:#dc2626">${esc(e.message)}</div>`; return; }
+    catch (e) { main.innerHTML = `<div style="background:#fff;border-radius:12px;padding:20px;color:var(--wf-red)">${esc(e.message)}</div>`; return; }
     const nm = document.getElementById("rspName"); if (nm && d.reseller) nm.textContent = `${d.reseller.name} · standaard ${d.reseller.defaultCommissionPct || 0}% commissie`;
     const card = (label, value, sub) => `<div style="background:var(--surface);border-radius:14px;padding:16px;border:1px solid var(--line)"><div style="font-size:12px;color:var(--muted)">${label}</div><div style="font-size:24px;font-weight:600;color:var(--ink);letter-spacing:-.5px">${value}</div><div style="font-size:11px;color:var(--gray-400)">${sub || ""}</div></div>`;
     main.innerHTML = `
@@ -56,30 +56,30 @@
 <div style="background:#fff;border-radius:14px;padding:18px 20px;margin-bottom:18px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
   <div style="font-weight:700;margin-bottom:12px">Nieuwe klant aanmaken</div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:680px">
-    <input id="ncName" placeholder="Bedrijfsnaam klant" style="padding:9px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
-    <select id="ncPlan" style="padding:9px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px"><option value="starter">Starter</option><option value="business" selected>Business</option><option value="enterprise">Enterprise</option></select>
-    <input id="ncEmail" type="email" placeholder="Login-e-mail beheerder klant" style="padding:9px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
-    <input id="ncAdminName" placeholder="Naam beheerder" style="padding:9px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
-    <div style="grid-column:1/3;font-size:12px;color:#64748b">De beheerder van de klant ontvangt een activatiemail om zelf een wachtwoord in te stellen.</div>
+    <input id="ncName" placeholder="Bedrijfsnaam klant" style="padding:9px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
+    <select id="ncPlan" style="padding:9px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px"><option value="starter">Starter</option><option value="business" selected>Business</option><option value="enterprise">Enterprise</option></select>
+    <input id="ncEmail" type="email" placeholder="Login-e-mail beheerder klant" style="padding:9px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
+    <input id="ncAdminName" placeholder="Naam beheerder" style="padding:9px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
+    <div style="grid-column:1/3;font-size:12px;color:var(--gray-500)">De beheerder van de klant ontvangt een activatiemail om zelf een wachtwoord in te stellen.</div>
     <div style="grid-column:1/3;display:flex;gap:8px;align-items:center">
-      <button id="ncCreate" style="background:#0ea5e9;color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer">Klant aanmaken</button>
-      <span id="ncMsg" style="font-size:12.5px;color:#dc2626"></span>
+      <button id="ncCreate" style="background:var(--wf-blue);color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer">Klant aanmaken</button>
+      <span id="ncMsg" style="font-size:12.5px;color:var(--wf-red)"></span>
     </div>
   </div>
 </div>
 
 <div style="background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.06)">
-  <div style="padding:14px 20px;font-weight:700;border-bottom:1px solid #f1f5f9">Mijn klanten &amp; commissie</div>
+  <div style="padding:14px 20px;font-weight:700;border-bottom:1px solid var(--gray-100)">Mijn klanten &amp; commissie</div>
   <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">
-    <thead><tr style="text-align:left;color:#64748b;font-size:12px"><th style="padding:10px 20px">Klant</th><th style="padding:10px">Plan</th><th style="padding:10px">Status</th><th style="padding:10px">MRR</th><th style="padding:10px">Commissie %</th><th style="padding:10px 20px">Commissie/mnd</th></tr></thead>
-    <tbody>${(d.rows || []).map(r => `<tr style="border-top:1px solid #f8fafc">
-      <td style="padding:10px 20px;font-weight:600;color:#0f172a">${esc(r.name)}</td>
+    <thead><tr style="text-align:left;color:var(--gray-500);font-size:12px"><th style="padding:10px 20px">Klant</th><th style="padding:10px">Plan</th><th style="padding:10px">Status</th><th style="padding:10px">MRR</th><th style="padding:10px">Commissie %</th><th style="padding:10px 20px">Commissie/mnd</th></tr></thead>
+    <tbody>${(d.rows || []).map(r => `<tr style="border-top:1px solid var(--gray-50)">
+      <td style="padding:10px 20px;font-weight:600;color:var(--gray-900)">${esc(r.name)}</td>
       <td style="padding:10px;text-transform:capitalize">${esc(r.plan)}</td>
       <td style="padding:10px">${r.status === "active" ? "🟢 actief" : "🟡 " + esc(r.status)}</td>
       <td style="padding:10px">${eur(r.mrr)}</td>
       <td style="padding:10px">${r.commissionPct}%</td>
-      <td style="padding:10px 20px;font-weight:700;color:#15803d">${eur(r.commission)}</td>
-    </tr>`).join("") || `<tr><td colspan="6" style="padding:30px;text-align:center;color:#94a3b8">Nog geen klanten — maak je eerste klant aan hierboven.</td></tr>`}</tbody>
+      <td style="padding:10px 20px;font-weight:700;color:var(--wf-green)">${eur(r.commission)}</td>
+    </tr>`).join("") || `<tr><td colspan="6" style="padding:30px;text-align:center;color:var(--gray-400)">Nog geen klanten — maak je eerste klant aan hierboven.</td></tr>`}</tbody>
   </table></div>
 </div>`;
 

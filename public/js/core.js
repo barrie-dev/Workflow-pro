@@ -62,7 +62,7 @@
       const a = d && d.announcement;
       const el = document.getElementById("wfp-announcement");
       if (!a || !a.active || !a.message) { if (el) el.remove(); return; }
-      const colors = { info: "#2563eb", warning: "#d97706", maintenance: "#dc2626" };
+      const colors = { info: "var(--wf-blue)", warning: "var(--wf-yellow)", maintenance: "var(--wf-red)" };
       const bar = el || document.createElement("div");
       bar.id = "wfp-announcement";
       bar.setAttribute("role", "status");

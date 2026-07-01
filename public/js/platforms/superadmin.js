@@ -86,20 +86,20 @@
 .sa-kpi::after{content:none}
 .sa-kpi-label{font-size:11.5px;color:var(--muted);font-weight:500;margin-bottom:5px}
 .sa-kpi-value{font-size:27px;font-weight:600;color:var(--ink);line-height:1.1;letter-spacing:-.5px}
-.sa-kpi-sub{font-size:11px;color:#94a3b8;margin-top:3px}
+.sa-kpi-sub{font-size:11px;color:var(--gray-400);margin-top:3px}
 .kpi-indigo{--kpi-color:var(--wf-blue)}
-.kpi-blue{--kpi-color:#3b82f6}
-.kpi-green{--kpi-color:#10b981}
-.kpi-purple{--kpi-color:#7c3aed}
-.kpi-orange{--kpi-color:#f59e0b}
-.kpi-red{--kpi-color:#ef4444}
+.kpi-blue{--kpi-color:var(--wf-blue)}
+.kpi-green{--kpi-color:var(--wf-green)}
+.kpi-purple{--kpi-color:var(--wf-purple)}
+.kpi-orange{--kpi-color:var(--wf-yellow)}
+.kpi-red{--kpi-color:var(--wf-red)}
 .kpi-teal{--kpi-color:#14b8a6}
 
 /* Cards */
 .sa-card{background:#fff;border-radius:16px;border:1px solid var(--line);overflow:hidden;margin-bottom:18px;box-shadow:var(--shadow-xs)}
-.sa-card-head{padding:13px 18px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px}
-.sa-card-title{font-size:13.5px;font-weight:600;color:#0f172a;flex:1}
-.sa-card-sub{font-size:11px;color:#94a3b8}
+.sa-card-head{padding:13px 18px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;gap:8px}
+.sa-card-title{font-size:13.5px;font-weight:600;color:var(--gray-900);flex:1}
+.sa-card-sub{font-size:11px;color:var(--gray-400)}
 
 /* Grid */
 .sa-grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
@@ -108,95 +108,95 @@
 /* Tables */
 .sa-tbl-wrap{overflow-x:auto}
 .sa-tbl{width:100%;border-collapse:collapse;font-size:13px}
-.sa-tbl th{padding:9px 14px;text-align:left;font-size:10.5px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;background:#f8fafc;border-bottom:1px solid #e2e8f0;white-space:nowrap}
-.sa-tbl td{padding:11px 14px;border-bottom:1px solid #f8fafc;color:#334155;vertical-align:middle}
+.sa-tbl th{padding:9px 14px;text-align:left;font-size:10.5px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px;background:var(--gray-50);border-bottom:1px solid var(--gray-200);white-space:nowrap}
+.sa-tbl td{padding:11px 14px;border-bottom:1px solid var(--gray-50);color:var(--gray-700);vertical-align:middle}
 .sa-tbl tr:last-child td{border-bottom:none}
-.sa-tbl tr:hover td{background:#fafafa}
-.sa-tbl .main{font-weight:600;color:#0f172a}
-.sa-tbl .sub{font-size:11px;color:#94a3b8;margin-top:2px}
+.sa-tbl tr:hover td{background:var(--gray-50)}
+.sa-tbl .main{font-weight:600;color:var(--gray-900)}
+.sa-tbl .sub{font-size:11px;color:var(--gray-400);margin-top:2px}
 .sa-tbl .mono{font-family:monospace;font-size:11px}
 
 /* Badges */
 .sa-badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;white-space:nowrap}
-.badge-green{background:#dcfce7;color:#15803d}
-.badge-blue{background:#dbeafe;color:#1d4ed8}
-.badge-purple{background:#ede9fe;color:#6d28d9}
-.badge-teal{background:#ccfbf1;color:#0f766e}
-.badge-yellow{background:#fef9c3;color:#a16207}
-.badge-orange{background:#ffedd5;color:#c2410c}
-.badge-red{background:#fee2e2;color:#b91c1c}
-.badge-gray{background:#f1f5f9;color:#475569}
-.badge-dark{background:#1e293b;color:#e2e8f0}
+.badge-green{background:var(--wf-green-l);color:var(--wf-green)}
+.badge-blue{background:var(--wf-blue-l);color:var(--wf-blue)}
+.badge-purple{background:var(--wf-purple-l);color:#6d28d9}
+.badge-teal{background:var(--wf-green-l);color:#0f766e}
+.badge-yellow{background:var(--wf-yellow-l);color:var(--wf-yellow)}
+.badge-orange{background:var(--wf-orange-l);color:#c2410c}
+.badge-red{background:var(--wf-red-l);color:var(--wf-red)}
+.badge-gray{background:var(--gray-100);color:var(--gray-600)}
+.badge-dark{background:var(--gray-800);color:var(--gray-200)}
 
 /* Buttons */
 .sa-btn{padding:8px 15px;border-radius:10px;font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid transparent;display:inline-flex;align-items:center;gap:6px;transition:all .14s;white-space:nowrap}
 .sa-btn svg{width:14px;height:14px;fill:currentColor}
 .btn-primary{background:var(--wf-blue);color:#fff;border-color:var(--wf-blue)}
-.btn-primary:hover{background:#1D4ED8;border-color:#1D4ED8}
-.btn-secondary{background:#fff;color:#374151;border-color:#e2e8f0}
-.btn-secondary:hover{background:#f8fafc;border-color:#cbd5e1}
-.btn-danger{background:#fff;color:#dc2626;border-color:#fecaca}
-.btn-danger:hover{background:#fef2f2}
-.btn-success{background:#fff;color:#16a34a;border-color:#bbf7d0}
-.btn-success:hover{background:#f0fdf4}
-.btn-ghost{background:transparent;color:#64748b;border-color:transparent}
-.btn-ghost:hover{background:#f1f5f9;color:#374151}
+.btn-primary:hover{background:var(--wf-blue);border-color:var(--wf-blue)}
+.btn-secondary{background:#fff;color:var(--gray-700);border-color:var(--gray-200)}
+.btn-secondary:hover{background:var(--gray-50);border-color:var(--gray-300)}
+.btn-danger{background:#fff;color:var(--wf-red);border-color:var(--wf-red-l)}
+.btn-danger:hover{background:var(--wf-red-l)}
+.btn-success{background:#fff;color:var(--wf-green);border-color:var(--wf-green-l)}
+.btn-success:hover{background:var(--wf-green-l)}
+.btn-ghost{background:transparent;color:var(--gray-500);border-color:transparent}
+.btn-ghost:hover{background:var(--gray-100);color:var(--gray-700)}
 .sa-btn.sm{padding:4px 9px;font-size:11.5px;border-radius:6px}
 .sa-actions{display:flex;gap:5px;flex-wrap:wrap}
 
 /* Filters */
 .sa-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
-.sa-filters input,.sa-filters select{padding:6.5px 11px;border:1px solid #e2e8f0;border-radius:8px;font-size:12.5px;color:#374151;background:#fff}
+.sa-filters input,.sa-filters select{padding:6.5px 11px;border:1px solid var(--gray-200);border-radius:8px;font-size:12.5px;color:var(--gray-700);background:#fff}
 .sa-filters input:focus,.sa-filters select:focus{outline:none;border-color:var(--wf-blue);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
 
 /* Empty / loader / error */
-.sa-empty{padding:36px;text-align:center;color:#94a3b8;font-size:13px}
+.sa-empty{padding:36px;text-align:center;color:var(--gray-400);font-size:13px}
 .sa-empty-icon{font-size:30px;margin-bottom:8px}
-.sa-loader{padding:36px;text-align:center;color:#94a3b8;font-size:13px}
-.sa-error{margin:16px 0;padding:14px 16px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;color:#dc2626;font-size:13px}
+.sa-loader{padding:36px;text-align:center;color:var(--gray-400);font-size:13px}
+.sa-error{margin:16px 0;padding:14px 16px;background:var(--wf-red-l);border:1px solid var(--wf-red-l);border-radius:8px;color:var(--wf-red);font-size:13px}
 
 /* Drawer / modal */
 .sa-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:flex;align-items:stretch;justify-content:flex-end}
 .sa-drawer{width:480px;max-width:100%;background:#fff;overflow-y:auto;padding:0;box-shadow:-4px 0 32px rgba(0,0,0,.15);display:flex;flex-direction:column}
-.sa-drawer-hd{padding:20px 24px 16px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:10px}
-.sa-drawer-hd h2{font-size:16px;font-weight:700;color:#0f172a;flex:1}
-.sa-drawer-close{background:none;border:none;cursor:pointer;color:#94a3b8;padding:4px;border-radius:6px;font-size:18px}
-.sa-drawer-close:hover{color:#374151;background:#f1f5f9}
+.sa-drawer-hd{padding:20px 24px 16px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;gap:10px}
+.sa-drawer-hd h2{font-size:16px;font-weight:700;color:var(--gray-900);flex:1}
+.sa-drawer-close{background:none;border:none;cursor:pointer;color:var(--gray-400);padding:4px;border-radius:6px;font-size:18px}
+.sa-drawer-close:hover{color:var(--gray-700);background:var(--gray-100)}
 .sa-drawer-body{padding:20px 24px;flex:1;display:flex;flex-direction:column;gap:16px}
-.sa-drawer-ft{padding:14px 24px;border-top:1px solid #f1f5f9;display:flex;gap:8px}
+.sa-drawer-ft{padding:14px 24px;border-top:1px solid var(--gray-100);display:flex;gap:8px}
 
 /* Form fields */
 .sa-field{display:flex;flex-direction:column;gap:5px}
-.sa-field label{font-size:11.5px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.4px}
-.sa-field input,.sa-field select,.sa-field textarea{padding:8px 11px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;color:#0f172a;background:#fff;width:100%}
+.sa-field label{font-size:11.5px;font-weight:700;color:var(--gray-700);text-transform:uppercase;letter-spacing:.4px}
+.sa-field input,.sa-field select,.sa-field textarea{padding:8px 11px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;color:var(--gray-900);background:#fff;width:100%}
 .sa-field input:focus,.sa-field select:focus,.sa-field textarea:focus{outline:none;border-color:var(--wf-blue);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
-.sa-field .hint{font-size:11px;color:#94a3b8}
+.sa-field .hint{font-size:11px;color:var(--gray-400)}
 .sa-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 
 /* Detail rows */
-.sa-detail{background:#f8fafc;border-radius:9px;padding:13px 15px;display:flex;flex-direction:column;gap:9px}
+.sa-detail{background:var(--gray-50);border-radius:9px;padding:13px 15px;display:flex;flex-direction:column;gap:9px}
 .sa-detail-row{display:flex;justify-content:space-between;align-items:center;font-size:12.5px}
-.sa-detail-label{color:#64748b}
-.sa-detail-value{font-weight:600;color:#0f172a;text-align:right;max-width:60%}
+.sa-detail-label{color:var(--gray-500)}
+.sa-detail-value{font-weight:600;color:var(--gray-900);text-align:right;max-width:60%}
 
 /* Stat cards in drawer */
 .sa-stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.sa-stat-card{background:#f8fafc;border-radius:8px;padding:10px;text-align:center}
-.sa-stat-card .sv{font-size:20px;font-weight:800;color:#0f172a}
-.sa-stat-card .sl{font-size:11px;color:#64748b;margin-top:2px}
+.sa-stat-card{background:var(--gray-50);border-radius:8px;padding:10px;text-align:center}
+.sa-stat-card .sv{font-size:20px;font-weight:800;color:var(--gray-900)}
+.sa-stat-card .sl{font-size:11px;color:var(--gray-500);margin-top:2px}
 
 /* Divider */
-.sa-divider{height:1px;background:#f1f5f9}
+.sa-divider{height:1px;background:var(--gray-100)}
 
 /* Inline alert */
 .sa-alert{padding:10px 14px;border-radius:8px;font-size:12.5px;display:flex;align-items:flex-start;gap:8px}
-.alert-info{background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe}
-.alert-warn{background:#fffbeb;color:#92400e;border:1px solid #fde68a}
-.alert-success{background:#f0fdf4;color:#14532d;border:1px solid #bbf7d0}
-.alert-error{background:#fef2f2;color:#7f1d1d;border:1px solid #fecaca}
+.alert-info{background:var(--wf-blue-l);color:var(--wf-blue);border:1px solid var(--wf-blue-l)}
+.alert-warn{background:var(--wf-yellow-l);color:var(--wf-yellow);border:1px solid var(--wf-yellow-l)}
+.alert-success{background:var(--wf-green-l);color:var(--wf-green);border:1px solid var(--wf-green-l)}
+.alert-error{background:var(--wf-red-l);color:var(--wf-red);border:1px solid var(--wf-red-l)}
 
 /* Mobile */
-.sa-menu-toggle{display:none;background:none;border:none;cursor:pointer;padding:4px;color:#64748b}
+.sa-menu-toggle{display:none;background:none;border:none;cursor:pointer;padding:4px;color:var(--gray-500)}
 .sa-menu-toggle svg{width:20px;height:20px;fill:currentColor}
 @media(max-width:820px){
   .sa-menu-toggle{display:flex}
@@ -388,10 +388,10 @@
     const evStatus = s => s === "failed" || s === "payment_failed" ? "badge-red" : (s === "processed" || s === "invoice_paid" || s === "active" ? "badge-green" : "badge-gray");
     c.innerHTML = `
 <div class="sa-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px">
-  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:#64748b">Productie-readiness</div><div style="font-size:26px;font-weight:800;color:${r.score>=90?"#16a34a":r.score>=60?"#d97706":"#dc2626"}">${r.score}%</div><div style="font-size:12px;color:#64748b">${r.blockers} P0-blockers</div></div></div>
-  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:#64748b">Betaal-events (fout)</div><div style="font-size:26px;font-weight:800;color:${(ev.failed||0)?"#dc2626":"#16a34a"}">${ev.failed||0}</div><div style="font-size:12px;color:#64748b">${ev.total||0} totaal</div></div></div>
-  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:#64748b">Backups ontbreken/oud</div><div style="font-size:26px;font-weight:800;color:${(bk.missing||0)+(bk.stale||0)?"#d97706":"#16a34a"}">${(bk.missing||0)+(bk.stale||0)}</div><div style="font-size:12px;color:#64748b">van ${bk.tenants||0} tenants</div></div></div>
-  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:#64748b">E-mail live</div><div style="font-size:26px;font-weight:800;color:${ml.live?"#16a34a":"#d97706"}">${ml.live?"Ja":"Log"}</div><div style="font-size:12px;color:#64748b">${mail.filter(m=>!m.ok).length} recente fouten</div></div></div>
+  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">Productie-readiness</div><div style="font-size:26px;font-weight:800;color:${r.score>=90?"var(--wf-green)":r.score>=60?"var(--wf-yellow)":"var(--wf-red)"}">${r.score}%</div><div style="font-size:12px;color:var(--gray-500)">${r.blockers} P0-blockers</div></div></div>
+  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">Betaal-events (fout)</div><div style="font-size:26px;font-weight:800;color:${(ev.failed||0)?"var(--wf-red)":"var(--wf-green)"}">${ev.failed||0}</div><div style="font-size:12px;color:var(--gray-500)">${ev.total||0} totaal</div></div></div>
+  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">Backups ontbreken/oud</div><div style="font-size:26px;font-weight:800;color:${(bk.missing||0)+(bk.stale||0)?"var(--wf-yellow)":"var(--wf-green)"}">${(bk.missing||0)+(bk.stale||0)}</div><div style="font-size:12px;color:var(--gray-500)">van ${bk.tenants||0} tenants</div></div></div>
+  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">E-mail live</div><div style="font-size:26px;font-weight:800;color:${ml.live?"var(--wf-green)":"var(--wf-yellow)"}">${ml.live?"Ja":"Log"}</div><div style="font-size:12px;color:var(--gray-500)">${mail.filter(m=>!m.ok).length} recente fouten</div></div></div>
 </div>
 
 <div class="sa-card" style="margin-bottom:16px"><div class="sa-card-head"><div class="sa-card-title">Productie-readiness</div></div>
@@ -399,7 +399,7 @@
     ${(r.checks||[]).map(ch => `<div style="display:flex;gap:8px;align-items:center;font-size:13px">
       <span>${ch.ok?"✅":(ch.priority==="P0"?"⛔":"⚠️")}</span>
       <strong style="min-width:200px">${esc(ch.label)}</strong>
-      <span style="color:#64748b">${esc(ch.detail||"")}</span></div>`).join("") || "<div style='color:#64748b'>Geen checks.</div>"}
+      <span style="color:var(--gray-500)">${esc(ch.detail||"")}</span></div>`).join("") || "<div style='color:var(--gray-500)'>Geen checks.</div>"}
   </div></div>
 
 <div class="sa-card" style="margin-bottom:16px"><div class="sa-card-head"><div class="sa-card-title">Backups per tenant</div></div>
@@ -407,17 +407,17 @@
     ${bkRows.map(b => `<tr data-bk="${esc(b.tenantId)}"><td>${esc(b.tenant)}</td><td>${b.count}</td><td>${b.latestAt?fmtDT(b.latestAt):"—"}</td>
       <td>${badge(b.status==="ok"?"vers":b.status==="stale"?`${b.ageDays}d oud`:"ontbreekt", b.status==="ok"?"badge-green":b.status==="stale"?"badge-yellow":"badge-red")}</td>
       <td><button class="sa-btn btn-secondary sm bk-policy" data-id="${esc(b.tenantId)}" data-name="${esc(b.tenant)}">⚙ Beleid</button></td>
-      <td><button class="sa-btn btn-secondary sm bk-make" data-id="${esc(b.tenantId)}">Backup maken</button></td></tr>`).join("") || "<tr><td colspan=6 style='color:#64748b'>Geen tenants.</td></tr>"}
+      <td><button class="sa-btn btn-secondary sm bk-make" data-id="${esc(b.tenantId)}">Backup maken</button></td></tr>`).join("") || "<tr><td colspan=6 style='color:var(--gray-500)'>Geen tenants.</td></tr>"}
   </tbody></table></div></div>
 
 <div class="sa-card" style="margin-bottom:16px"><div class="sa-card-head"><div class="sa-card-title">Webhook-/betaal-events</div></div>
   <div class="sa-tbl-wrap"><table class="sa-tbl"><thead><tr><th>Tijd</th><th>Tenant</th><th>Type</th><th>Actie</th><th>Status</th></tr></thead><tbody>
-    ${evRows.map(e => `<tr><td>${fmtDT(e.at)}</td><td>${esc(e.tenant)}</td><td style="font-family:monospace;font-size:12px">${esc(e.type)}</td><td>${esc(e.action||"—")}</td><td>${badge(e.status||"—", evStatus(e.status||e.action))}</td></tr>`).join("") || "<tr><td colspan=5 style='color:#64748b'>Nog geen events.</td></tr>"}
+    ${evRows.map(e => `<tr><td>${fmtDT(e.at)}</td><td>${esc(e.tenant)}</td><td style="font-family:monospace;font-size:12px">${esc(e.type)}</td><td>${esc(e.action||"—")}</td><td>${badge(e.status||"—", evStatus(e.status||e.action))}</td></tr>`).join("") || "<tr><td colspan=5 style='color:var(--gray-500)'>Nog geen events.</td></tr>"}
   </tbody></table></div></div>
 
 <div class="sa-card"><div class="sa-card-head"><div class="sa-card-title">E-mail-log (recent)</div></div>
   <div class="sa-tbl-wrap"><table class="sa-tbl"><thead><tr><th>Tijd</th><th>Aan</th><th>Onderwerp</th><th>Provider</th><th>Status</th></tr></thead><tbody>
-    ${mail.map(m => `<tr><td>${fmtDT(m.at)}</td><td>${esc(m.to)}</td><td>${esc(m.subject)}</td><td>${esc(m.provider)}</td><td>${badge(m.ok?"ok":"fout", m.ok?"badge-green":"badge-red")}</td></tr>`).join("") || "<tr><td colspan=5 style='color:#64748b'>Nog geen verzendingen op deze server-instance.</td></tr>"}
+    ${mail.map(m => `<tr><td>${fmtDT(m.at)}</td><td>${esc(m.to)}</td><td>${esc(m.subject)}</td><td>${esc(m.provider)}</td><td>${badge(m.ok?"ok":"fout", m.ok?"badge-green":"badge-red")}</td></tr>`).join("") || "<tr><td colspan=5 style='color:var(--gray-500)'>Nog geen verzendingen op deze server-instance.</td></tr>"}
   </tbody></table></div></div>`;
     c.querySelectorAll(".bk-make").forEach(btn => btn.addEventListener("click", async () => {
       btn.disabled = true; btn.textContent = "Bezig…";
@@ -439,7 +439,7 @@
       + (presets.includes(p.retentionDays) ? "" : `<option value="${esc(p.retentionDays)}" selected>${yrs(p.retentionDays)}</option>`);
     const c = d.counts || { total: 0, toKeep: 0, toPrune: 0 };
     openDrawer(`Bewaarbeleid — ${esc(tenantName || tenantId)}`, `
-  <div style="font-size:12px;color:#64748b;margin-bottom:4px">${c.total} backup(s) · ${c.toKeep} behouden${c.toPrune ? ` · <span style="color:#d97706">${c.toPrune} buiten termijn</span>` : ""}</div>
+  <div style="font-size:12px;color:var(--gray-500);margin-bottom:4px">${c.total} backup(s) · ${c.toKeep} behouden${c.toPrune ? ` · <span style="color:var(--wf-yellow)">${c.toPrune} buiten termijn</span>` : ""}</div>
   <div class="sa-field"><label>Bewaartermijn backups</label>
     <select id="bpRetention">${opts}</select></div>
   <div class="sa-field"><label>Frequentie</label>
@@ -449,10 +449,10 @@
     </select></div>
   <div class="sa-field"><label>Minimaal te behouden (nieuwste backups blijven altijd)</label>
     <input id="bpKeepMin" type="number" min="1" max="${esc(d.limits?.maxKeepMinimum || 30)}" value="${esc(p.keepMinimum)}"></div>
-  <label style="display:flex;align-items:center;gap:9px;font-size:13px;color:#374151;cursor:pointer">
+  <label style="display:flex;align-items:center;gap:9px;font-size:13px;color:var(--gray-700);cursor:pointer">
     <input id="bpLegalHold" type="checkbox" ${p.legalHold ? "checked" : ""} style="width:16px;height:16px">
     <span><strong>Legal hold</strong> — opruiming volledig stilleggen (audit/geschil/GDPR-verzoek)</span></label>
-  <div style="font-size:11.5px;color:#94a3b8;line-height:1.5;border-top:1px solid #f1f5f9;padding-top:10px">
+  <div style="font-size:11.5px;color:var(--gray-400);line-height:1.5;border-top:1px solid var(--gray-100);padding-top:10px">
     GDPR art. 5(1)(e): backups buiten de termijn worden automatisch opgeruimd. DR-backups ≠ wettelijk archief (facturen 7j, sociale/arbeidstijd 5j rusten op de live-data).
     ${p.updatedAt ? `<div style="margin-top:6px">Laatst gewijzigd ${fmtDT(p.updatedAt)}${p.updatedBy ? ` door ${esc(p.updatedBy)}` : ""}</div>` : ""}
   </div>`,
@@ -495,16 +495,16 @@
     const gov = kg.governance || { rows: [], blockers: 0, warnings: 0, checked: 0 };
     c.innerHTML = `
 <div class="sa-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px">
-  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:#64748b">Admins met MFA klaar</div><div style="font-size:26px;font-weight:800;color:${mfa.readyAdmins===mfa.totalAdmins?"#16a34a":"#d97706"}">${mfa.readyAdmins||0}/${mfa.totalAdmins||0}</div><div style="font-size:12px;color:#64748b">${mfa.missingMfa||0} zonder MFA</div></div></div>
-  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:#64748b">Vergrendelde accounts</div><div style="font-size:26px;font-weight:800;color:${(s.locked||[]).length?"#dc2626":"#16a34a"}">${(s.locked||[]).length}</div><div style="font-size:12px;color:#64748b">na mislukte logins</div></div></div>
-  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:#64748b">DPA ontbreekt</div><div style="font-size:26px;font-weight:800;color:${(gd.dpaMissing||0)?"#d97706":"#16a34a"}">${gd.dpaMissing||0}</div><div style="font-size:12px;color:#64748b">van ${gd.tenants||0} tenants</div></div></div>
-  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:#64748b">Open GDPR-verzoeken</div><div style="font-size:26px;font-weight:800;color:${(gd.openRequests||0)?"#d97706":"#16a34a"}">${gd.openRequests||0}</div><div style="font-size:12px;color:#64748b">export/verwijdering</div></div></div>
-  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:#64748b">API-key-issues</div><div style="font-size:26px;font-weight:800;color:${gov.blockers?"#dc2626":gov.warnings?"#d97706":"#16a34a"}">${gov.blockers||0}/${gov.warnings||0}</div><div style="font-size:12px;color:#64748b">P0/P1 · ${gov.checked||0} keys</div></div></div>
+  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">Admins met MFA klaar</div><div style="font-size:26px;font-weight:800;color:${mfa.readyAdmins===mfa.totalAdmins?"var(--wf-green)":"var(--wf-yellow)"}">${mfa.readyAdmins||0}/${mfa.totalAdmins||0}</div><div style="font-size:12px;color:var(--gray-500)">${mfa.missingMfa||0} zonder MFA</div></div></div>
+  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">Vergrendelde accounts</div><div style="font-size:26px;font-weight:800;color:${(s.locked||[]).length?"var(--wf-red)":"var(--wf-green)"}">${(s.locked||[]).length}</div><div style="font-size:12px;color:var(--gray-500)">na mislukte logins</div></div></div>
+  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">DPA ontbreekt</div><div style="font-size:26px;font-weight:800;color:${(gd.dpaMissing||0)?"var(--wf-yellow)":"var(--wf-green)"}">${gd.dpaMissing||0}</div><div style="font-size:12px;color:var(--gray-500)">van ${gd.tenants||0} tenants</div></div></div>
+  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">Open GDPR-verzoeken</div><div style="font-size:26px;font-weight:800;color:${(gd.openRequests||0)?"var(--wf-yellow)":"var(--wf-green)"}">${gd.openRequests||0}</div><div style="font-size:12px;color:var(--gray-500)">export/verwijdering</div></div></div>
+  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">API-key-issues</div><div style="font-size:26px;font-weight:800;color:${gov.blockers?"var(--wf-red)":gov.warnings?"var(--wf-yellow)":"var(--wf-green)"}">${gov.blockers||0}/${gov.warnings||0}</div><div style="font-size:12px;color:var(--gray-500)">P0/P1 · ${gov.checked||0} keys</div></div></div>
 </div>
 
 <div class="sa-card" style="margin-bottom:16px"><div class="sa-card-head"><div class="sa-card-title">MFA-status admins</div></div>
   <div class="sa-tbl-wrap"><table class="sa-tbl"><thead><tr><th>Naam</th><th>E-mail</th><th>Rol</th><th>Status</th></tr></thead><tbody>
-    ${(mfa.rows||[]).map(u => `<tr><td>${esc(u.name||"—")}</td><td>${esc(u.email)}</td><td>${esc(u.role)}</td><td>${u.ready?badge("klaar","badge-green"):badge(u.mfaEnabled?"niet afgedwongen":"geen MFA","badge-red")}</td></tr>`).join("") || "<tr><td colspan=4 style='color:#64748b'>Geen admins gevonden.</td></tr>"}
+    ${(mfa.rows||[]).map(u => `<tr><td>${esc(u.name||"—")}</td><td>${esc(u.email)}</td><td>${esc(u.role)}</td><td>${u.ready?badge("klaar","badge-green"):badge(u.mfaEnabled?"niet afgedwongen":"geen MFA","badge-red")}</td></tr>`).join("") || "<tr><td colspan=4 style='color:var(--gray-500)'>Geen admins gevonden.</td></tr>"}
   </tbody></table></div></div>
 
 ${(s.locked||[]).length ? `<div class="sa-card" style="margin-bottom:16px"><div class="sa-card-head"><div class="sa-card-title">Vergrendelde accounts</div></div>
@@ -514,12 +514,12 @@ ${(s.locked||[]).length ? `<div class="sa-card" style="margin-bottom:16px"><div 
 
 <div class="sa-card" style="margin-bottom:16px"><div class="sa-card-head"><div class="sa-card-title">GDPR / DPA per tenant</div></div>
   <div class="sa-tbl-wrap"><table class="sa-tbl"><thead><tr><th>Tenant</th><th>DPA</th><th>Open verzoeken</th><th>Totaal</th><th>Support-toegang</th></tr></thead><tbody>
-    ${gdprRows.map(r => `<tr><td>${esc(r.tenant)}</td><td>${r.dpaAccepted?badge("aanvaard","badge-green"):badge("ontbreekt","badge-red")}</td><td>${r.openRequests||0}</td><td>${r.totalRequests||0}</td><td>${r.supportAccess?badge("aan","badge-yellow"):"—"}</td></tr>`).join("") || "<tr><td colspan=5 style='color:#64748b'>Geen tenants.</td></tr>"}
+    ${gdprRows.map(r => `<tr><td>${esc(r.tenant)}</td><td>${r.dpaAccepted?badge("aanvaard","badge-green"):badge("ontbreekt","badge-red")}</td><td>${r.openRequests||0}</td><td>${r.totalRequests||0}</td><td>${r.supportAccess?badge("aan","badge-yellow"):"—"}</td></tr>`).join("") || "<tr><td colspan=5 style='color:var(--gray-500)'>Geen tenants.</td></tr>"}
   </tbody></table></div></div>
 
 <div class="sa-card"><div class="sa-card-head"><div class="sa-card-title">API-key-governance</div></div>
   <div class="sa-card-body" style="padding:12px 16px">
-    ${(gov.openP0||[]).concat(gov.openP1||[]).length ? (gov.openP0||[]).concat(gov.openP1||[]).map(i => `<div style="display:flex;gap:8px;align-items:center;font-size:13px;margin-bottom:4px"><span>${i.priority==="P0"?"⛔":"⚠️"}</span><strong>${esc((i.key&&i.key.label)||(i.key&&i.key.id)||"key")}</strong><span style="color:#64748b">${esc(i.detail||i.code||"")}</span></div>`).join("") : "<div style='color:#16a34a;font-size:13px'>✅ Geen openstaande API-key-issues.</div>"}
+    ${(gov.openP0||[]).concat(gov.openP1||[]).length ? (gov.openP0||[]).concat(gov.openP1||[]).map(i => `<div style="display:flex;gap:8px;align-items:center;font-size:13px;margin-bottom:4px"><span>${i.priority==="P0"?"⛔":"⚠️"}</span><strong>${esc((i.key&&i.key.label)||(i.key&&i.key.id)||"key")}</strong><span style="color:var(--gray-500)">${esc(i.detail||i.code||"")}</span></div>`).join("") : "<div style='color:var(--wf-green);font-size:13px'>✅ Geen openstaande API-key-issues.</div>"}
   </div></div>`;
   }
 
@@ -540,28 +540,28 @@ ${(s.locked||[]).length ? `<div class="sa-card" style="margin-bottom:16px"><div 
     c.innerHTML = `
 <div class="sa-card" style="margin-bottom:16px"><div class="sa-card-head"><div class="sa-card-title">Platform-aankondiging / onderhoudsbanner</div></div>
   <div class="sa-card-body" style="padding:16px;max-width:640px">
-    <div style="font-size:12.5px;color:#64748b;margin-bottom:12px">Wordt bovenaan elke gebruiker-shell getoond zolang ze actief staat. Gebruik 'onderhoud' om een geplande downtime aan te kondigen.</div>
+    <div style="font-size:12.5px;color:var(--gray-500);margin-bottom:12px">Wordt bovenaan elke gebruiker-shell getoond zolang ze actief staat. Gebruik 'onderhoud' om een geplande downtime aan te kondigen.</div>
     <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:14px;font-weight:600">
       <input type="checkbox" id="annActive" ${ann.active ? "checked" : ""}> Banner actief
     </label>
     <label style="display:block;font-size:12.5px;font-weight:600;margin-bottom:4px">Niveau</label>
-    <select id="annLevel" style="padding:8px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:12px;width:200px">
+    <select id="annLevel" style="padding:8px;border:1px solid var(--gray-200);border-radius:8px;margin-bottom:12px;width:200px">
       ${lvl("info", "Info (blauw)")}${lvl("warning", "Waarschuwing (oranje)")}${lvl("maintenance", "Onderhoud (rood)")}
     </select>
     <label style="display:block;font-size:12.5px;font-weight:600;margin-bottom:4px">Bericht</label>
-    <textarea id="annMessage" rows="3" maxlength="500" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:12px" placeholder="Bv. Gepland onderhoud zondag 02:00–04:00. Excuses voor het ongemak.">${esc(ann.message || "")}</textarea>
+    <textarea id="annMessage" rows="3" maxlength="500" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;margin-bottom:12px" placeholder="Bv. Gepland onderhoud zondag 02:00–04:00. Excuses voor het ongemak.">${esc(ann.message || "")}</textarea>
     <div style="display:flex;gap:8px;align-items:center">
       <button class="sa-btn btn-primary sm" id="annSave">Opslaan</button>
-      <span id="annMsg" style="font-size:12.5px;color:#16a34a"></span>
+      <span id="annMsg" style="font-size:12.5px;color:var(--wf-green)"></span>
     </div>
   </div></div>
 
 <div class="sa-card"><div class="sa-card-head"><div class="sa-card-title">Releases &amp; roadmap</div>${rel.version ? badge("v" + esc(rel.version), "badge-blue") : ""}</div>
   <div class="sa-card-body" style="padding:16px">
     ${notes.length ? notes.map(n => `<div style="margin-bottom:12px">
-        <div style="font-weight:700;font-size:13.5px">${esc(n.version || n.title || "")} ${n.date ? `<span style="font-weight:400;color:#64748b;font-size:12px">— ${esc(n.date)}</span>` : ""}</div>
-        ${Array.isArray(n.items || n.changes) ? `<ul style="margin:4px 0 0 18px;font-size:13px;color:#475569">${(n.items || n.changes).map(i => `<li>${esc(i)}</li>`).join("")}</ul>` : (n.summary ? `<div style="font-size:13px;color:#475569">${esc(n.summary)}</div>` : "")}
-      </div>`).join("") : "<div style='font-size:13px;color:#64748b'>Geen release-notes beschikbaar.</div>"}
+        <div style="font-weight:700;font-size:13.5px">${esc(n.version || n.title || "")} ${n.date ? `<span style="font-weight:400;color:var(--gray-500);font-size:12px">— ${esc(n.date)}</span>` : ""}</div>
+        ${Array.isArray(n.items || n.changes) ? `<ul style="margin:4px 0 0 18px;font-size:13px;color:var(--gray-600)">${(n.items || n.changes).map(i => `<li>${esc(i)}</li>`).join("")}</ul>` : (n.summary ? `<div style="font-size:13px;color:var(--gray-600)">${esc(n.summary)}</div>` : "")}
+      </div>`).join("") : "<div style='font-size:13px;color:var(--gray-500)'>Geen release-notes beschikbaar.</div>"}
   </div></div>`;
     document.getElementById("annSave").addEventListener("click", async () => {
       const payload = { announcement: {
@@ -571,7 +571,7 @@ ${(s.locked||[]).length ? `<div class="sa-card" style="margin-bottom:16px"><div 
       } };
       const msg = document.getElementById("annMsg"); msg.textContent = "";
       try { await api("/api/admin/announcement", { method: "PUT", body: JSON.stringify(payload) }); msg.textContent = "Opgeslagen ✓ — banner wordt direct toegepast."; }
-      catch (e) { msg.style.color = "#dc2626"; msg.textContent = e.message; }
+      catch (e) { msg.style.color = "var(--wf-red)"; msg.textContent = e.message; }
     });
   }
 
@@ -643,10 +643,10 @@ ${(s.locked||[]).length ? `<div class="sa-card" style="margin-bottom:16px"><div 
       <button class="sa-btn btn-ghost sm" data-nav="support">Alle →</button>
     </div>
     ${activeSessions.length ? activeSessions.slice(0,5).map(r=>`
-    <div style="padding:10px 16px;border-bottom:1px solid #f8fafc;display:flex;align-items:center;gap:10px">
+    <div style="padding:10px 16px;border-bottom:1px solid var(--gray-50);display:flex;align-items:center;gap:10px">
       <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:600;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.tenantName||r.tenantId||"—")}</div>
-        <div style="font-size:11px;color:#94a3b8">${esc(r.session.agent||"agent")} · verloopt ${fmtD(r.session.expiresAt)}</div>
+        <div style="font-size:13px;font-weight:600;color:var(--gray-900);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.tenantName||r.tenantId||"—")}</div>
+        <div style="font-size:11px;color:var(--gray-400)">${esc(r.session.agent||"agent")} · verloopt ${fmtD(r.session.expiresAt)}</div>
       </div>
       ${badge(r.session.scope==="read"?"alleen-lezen":"lezen+schrijven", r.session.scope==="read"?"badge-gray":"badge-red")}
     </div>`).join("") : `<div class="sa-empty"><div class="sa-empty-icon">🔒</div>Geen actieve support-sessies</div>`}
@@ -779,13 +779,13 @@ ${(s.locked||[]).length ? `<div class="sa-card" style="margin-bottom:16px"><div 
 </div>
 
 <div class="sa-divider"></div>
-<div style="font-size:13px;font-weight:600;color:#374151;margin-bottom:8px">Plan wijzigen</div>
+<div style="font-size:13px;font-weight:600;color:var(--gray-700);margin-bottom:8px">Plan wijzigen</div>
 <div style="display:flex;gap:8px;flex-wrap:wrap">
   ${["starter","business","enterprise"].map(p=>`<button class="sa-btn ${t.plan===p?"btn-primary":"btn-secondary"} sm" data-plan="${p}" id="planBtn_${p}">${p}</button>`).join("")}
 </div>
 
 <div class="sa-divider"></div>
-<div style="font-size:13px;font-weight:600;color:#374151;margin-bottom:8px">Acties</div>
+<div style="font-size:13px;font-weight:600;color:var(--gray-700);margin-bottom:8px">Acties</div>
 <div style="display:flex;gap:8px;flex-wrap:wrap">
   ${t.status!=="suspended"
     ? `<button class="sa-btn btn-danger sm" id="drawerSuspend" data-id="${esc(t.id)}">⏸ Pauzeer tenant</button>`
@@ -829,11 +829,11 @@ ${(s.locked||[]).length ? `<div class="sa-card" style="margin-bottom:16px"><div 
     </div>
   </div>
   <div class="sa-divider"></div>
-  <div style="font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px">Admin-gebruiker (optioneel)</div>
+  <div style="font-size:12px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px">Admin-gebruiker (optioneel)</div>
   <div class="sa-form-grid">
     <div class="sa-field"><label>Admin naam</label><input name="adminName" placeholder="Jan Janssen"></div>
     <div class="sa-field"><label>Admin e-mail</label><input name="adminEmail" type="email" placeholder="jan@janssen.be"></div>
-    <div class="sa-field" style="grid-column:1/-1;font-size:12px;color:#64748b">De admin ontvangt een activatiemail om zelf een wachtwoord in te stellen — je kiest er hier geen.</div>
+    <div class="sa-field" style="grid-column:1/-1;font-size:12px;color:var(--gray-500)">De admin ontvangt een activatiemail om zelf een wachtwoord in te stellen — je kiest er hier geen.</div>
   </div>
 </form>`,
     `<button class="sa-btn btn-primary" id="submitNewTenant">Tenant aanmaken</button>
@@ -892,16 +892,16 @@ ${(s.locked||[]).length ? `<div class="sa-card" style="margin-bottom:16px"><div 
 ${life ? `<div class="sa-card" style="margin-bottom:16px"><div class="sa-card-head"><div class="sa-card-title">Lifecycle &amp; conversie</div></div>
   <div class="sa-card-body" style="padding:14px 16px">
     <div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:10px">
-      <div><div style="font-size:11px;color:#64748b">Trials</div><div style="font-size:20px;font-weight:800;color:#d97706">${life.counts.trial}</div></div>
-      <div><div style="font-size:11px;color:#64748b">Actief (betalend)</div><div style="font-size:20px;font-weight:800;color:#16a34a">${life.counts.active}</div></div>
-      <div><div style="font-size:11px;color:#64748b">Opgezegd</div><div style="font-size:20px;font-weight:800;color:#dc2626">${life.counts.canceled}</div></div>
-      <div><div style="font-size:11px;color:#64748b">Conversie</div><div style="font-size:20px;font-weight:800">${life.conversionPct}%</div></div>
-      <div><div style="font-size:11px;color:#64748b">Nieuw (30d)</div><div style="font-size:20px;font-weight:800">${life.recentSignups}</div></div>
+      <div><div style="font-size:11px;color:var(--gray-500)">Trials</div><div style="font-size:20px;font-weight:800;color:var(--wf-yellow)">${life.counts.trial}</div></div>
+      <div><div style="font-size:11px;color:var(--gray-500)">Actief (betalend)</div><div style="font-size:20px;font-weight:800;color:var(--wf-green)">${life.counts.active}</div></div>
+      <div><div style="font-size:11px;color:var(--gray-500)">Opgezegd</div><div style="font-size:20px;font-weight:800;color:var(--wf-red)">${life.counts.canceled}</div></div>
+      <div><div style="font-size:11px;color:var(--gray-500)">Conversie</div><div style="font-size:20px;font-weight:800">${life.conversionPct}%</div></div>
+      <div><div style="font-size:11px;color:var(--gray-500)">Nieuw (30d)</div><div style="font-size:20px;font-weight:800">${life.recentSignups}</div></div>
     </div>
-    ${life.trials.length ? `<div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:4px">Trials (oudste eerst — opvolgen)</div>
+    ${life.trials.length ? `<div style="font-size:12px;font-weight:700;color:var(--gray-500);margin-bottom:4px">Trials (oudste eerst — opvolgen)</div>
     <div class="sa-tbl-wrap"><table class="sa-tbl"><thead><tr><th>Tenant</th><th>Plan</th><th>Trial-leeftijd</th><th>Laatste activiteit</th></tr></thead><tbody>
       ${life.trials.slice(0,15).map(t => `<tr><td>${esc(t.tenant)}</td><td>${esc(t.plan||"—")}</td><td>${t.ageDays!=null?t.ageDays+" d":"—"}</td><td>${t.lastActivityAt?fmtDT(t.lastActivityAt):"nooit"}</td></tr>`).join("")}
-    </tbody></table></div>` : "<div style='font-size:12.5px;color:#64748b'>Geen openstaande trials.</div>"}
+    </tbody></table></div>` : "<div style='font-size:12.5px;color:var(--gray-500)'>Geen openstaande trials.</div>"}
   </div></div>` : ""}
 <div class="sa-card">
   <div class="sa-card-head"><div class="sa-card-title">MRR per tenant</div></div>
@@ -915,15 +915,15 @@ ${life ? `<div class="sa-card" style="margin-bottom:16px"><div class="sa-card-he
           <td>${badge(r.status, statusColor[r.status])}</td>
           <td>${r.users}</td>
           <td>${fmtEur(r.mrrUnit)}</td>
-          <td style="font-weight:700;color:${r.mrr>0?"#15803d":"#94a3b8"}">${r.mrr>0?fmtEur(r.mrr):"—"}</td>
-          <td style="color:#94a3b8">${r.arr>0?fmtEur(r.arr):"—"}</td>
+          <td style="font-weight:700;color:${r.mrr>0?"var(--wf-green)":"var(--gray-400)"}">${r.mrr>0?fmtEur(r.mrr):"—"}</td>
+          <td style="color:var(--gray-400)">${r.arr>0?fmtEur(r.arr):"—"}</td>
         </tr>`).join("")}
       </tbody>
       <tfoot>
-        <tr style="background:#f8fafc;font-weight:700">
-          <td colspan="5" style="padding:10px 14px;font-size:12px;color:#64748b">TOTAAL</td>
-          <td style="padding:10px 14px;font-size:14px;color:#15803d">${fmtEur(bd.totalMrr)}</td>
-          <td style="padding:10px 14px;font-size:14px;color:#374151">${fmtEur(bd.totalArr)}</td>
+        <tr style="background:var(--gray-50);font-weight:700">
+          <td colspan="5" style="padding:10px 14px;font-size:12px;color:var(--gray-500)">TOTAAL</td>
+          <td style="padding:10px 14px;font-size:14px;color:var(--wf-green)">${fmtEur(bd.totalMrr)}</td>
+          <td style="padding:10px 14px;font-size:14px;color:var(--gray-700)">${fmtEur(bd.totalArr)}</td>
         </tr>
       </tfoot>
     </table>
@@ -944,7 +944,7 @@ ${life ? `<div class="sa-card" style="margin-bottom:16px"><div class="sa-card-he
         api("/api/admin/errors?limit=50")
       ]);
       const errors = ed.errors||[];
-      const badge_e = n => `<span class="nav-badge" style="display:inline-block;margin-left:0;background:${n>0?"#ef4444":"#10b981"}">${n}</span>`;
+      const badge_e = n => `<span class="nav-badge" style="display:inline-block;margin-left:0;background:${n>0?"var(--wf-red)":"var(--wf-green)"}">${n}</span>`;
       c.innerHTML = `
 <div class="sa-kpis">
   <div class="sa-kpi kpi-teal">
@@ -1009,11 +1009,11 @@ ${life ? `<div class="sa-card" style="margin-bottom:16px"><div class="sa-card-he
 ${payouts.length ? `<div class="sa-card" style="margin-bottom:16px"><div class="sa-card-head"><div class="sa-card-title">Uit te betalen commissie (per maand)</div>
   <button class="sa-btn btn-secondary sm" id="poCsv">⬇ CSV</button></div>
   <div class="sa-card-body" style="padding:0 0 6px">
-    <div style="padding:12px 16px;font-size:13px;color:#475569">Totaal verschuldigd: <strong>${fmtEur(po.totalMonthly||0)}/maand</strong></div>
+    <div style="padding:12px 16px;font-size:13px;color:var(--gray-600)">Totaal verschuldigd: <strong>${fmtEur(po.totalMonthly||0)}/maand</strong></div>
     <div class="sa-tbl-wrap"><table class="sa-tbl"><thead><tr><th>Reseller</th><th>Klanten</th><th>MRR</th><th>Commissie/maand</th></tr></thead><tbody>
-      ${payouts.map(r => `<tr><td>${esc(r.reseller)}</td><td>${r.clients}</td><td>${fmtEur(r.mrr)}</td><td style="font-weight:700;color:#15803d">${fmtEur(r.commissionMonthly)}</td></tr>`).join("")}
+      ${payouts.map(r => `<tr><td>${esc(r.reseller)}</td><td>${r.clients}</td><td>${fmtEur(r.mrr)}</td><td style="font-weight:700;color:var(--wf-green)">${fmtEur(r.commissionMonthly)}</td></tr>`).join("")}
     </tbody></table></div></div></div>` : ""}
-<div class="sa-card" style="margin-bottom:16px"><div style="padding:14px 16px;font-size:13px;color:#475569;line-height:1.5">
+<div class="sa-card" style="margin-bottom:16px"><div style="padding:14px 16px;font-size:13px;color:var(--gray-600);line-height:1.5">
   Resellers brengen klanten aan en verdienen een terugkerende commissie (% van het abonnement). Ze beheren hun eigen klanten via het reseller-portaal en zien enkel commerciële gegevens — geen operationele klantdata.
   ${canManage ? "" : "<br><strong>Alleen de hoofd-superadmin kan resellers aanmaken of wijzigen.</strong>"}
 </div></div>
@@ -1021,12 +1021,12 @@ ${canManage ? `
 <div class="sa-card" style="margin-bottom:16px">
   <div class="sa-card-head"><div class="sa-card-title">Nieuwe reseller</div></div>
   <div style="padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:680px">
-    <input id="rsName" placeholder="Naam (partner/bedrijf)" style="padding:9px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
-    <input id="rsContact" placeholder="Contact-e-mail (optioneel)" style="padding:9px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
-    <input id="rsLogin" type="email" placeholder="Login-e-mail" style="padding:9px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
-    <div><label style="font-size:12px;color:#64748b">Commissie %</label><input id="rsPct" type="number" min="0" max="100" value="10" style="width:100%;padding:9px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px"></div>
-    <div style="grid-column:1/3;font-size:12px;color:#64748b">De reseller ontvangt een activatiemail om zelf een wachtwoord in te stellen.</div>
-    <div style="grid-column:1/3;display:flex;gap:8px;align-items:center"><button class="sa-btn btn-primary sm" id="rsCreate">Reseller toevoegen</button><span id="rsMsg" style="font-size:12.5px;color:#dc2626"></span></div>
+    <input id="rsName" placeholder="Naam (partner/bedrijf)" style="padding:9px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
+    <input id="rsContact" placeholder="Contact-e-mail (optioneel)" style="padding:9px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
+    <input id="rsLogin" type="email" placeholder="Login-e-mail" style="padding:9px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
+    <div><label style="font-size:12px;color:var(--gray-500)">Commissie %</label><input id="rsPct" type="number" min="0" max="100" value="10" style="width:100%;padding:9px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px"></div>
+    <div style="grid-column:1/3;font-size:12px;color:var(--gray-500)">De reseller ontvangt een activatiemail om zelf een wachtwoord in te stellen.</div>
+    <div style="grid-column:1/3;display:flex;gap:8px;align-items:center"><button class="sa-btn btn-primary sm" id="rsCreate">Reseller toevoegen</button><span id="rsMsg" style="font-size:12.5px;color:var(--wf-red)"></span></div>
   </div>
 </div>` : ""}
 <div class="sa-card"><div class="sa-tbl-wrap"><table class="sa-tbl">
@@ -1065,7 +1065,7 @@ ${canManage ? `
             <td>${r.defaultCommissionPct || 0}%</td>
             <td>${r.clientCount || 0}</td>
             <td>${fmtEur(r.totalMrr || 0)}</td>
-            <td style="font-weight:700;color:#15803d">${fmtEur(r.totalCommission || 0)}</td>
+            <td style="font-weight:700;color:var(--wf-green)">${fmtEur(r.totalCommission || 0)}</td>
             <td style="text-align:right">${action}</td>
           </tr>`;
         }).join("") || `<tr><td colspan="7"><div class="sa-empty"><div class="sa-empty-icon">🤝</div>Nog geen resellers</div></td></tr>`;
@@ -1116,7 +1116,7 @@ ${canManage ? `
       c.innerHTML = `
 <div class="sa-page-head"><h1>Platformteam<span class="cnt">${rows.length}</span></h1></div>
 <div class="sa-card" style="margin-bottom:16px">
-  <div style="padding:14px 16px;font-size:13px;color:#475569;line-height:1.5">
+  <div style="padding:14px 16px;font-size:13px;color:var(--gray-600);line-height:1.5">
     Platform-medewerkers krijgen toegang tot de platform-secties die je per persoon aanvinkt
     (bv. enkel Support, of ook Facturatie/Modules). Uitzonderingen: enkel de hoofd-superadmin
     beheert het team, en de hoofd-superadmin zelf kan nooit gedeactiveerd of gewijzigd worden.
@@ -1127,16 +1127,16 @@ ${canManage ? `
 <div class="sa-card" style="margin-bottom:16px">
   <div class="sa-card-head"><div class="sa-card-title">Nieuw teamlid</div></div>
   <div style="padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:640px">
-    <input id="stfName" placeholder="Naam" style="padding:9px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
-    <input id="stfEmail" type="email" placeholder="E-mail" style="padding:9px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
-    <div style="grid-column:1/3;font-size:12px;color:#64748b">Het teamlid ontvangt een activatiemail om zelf een wachtwoord in te stellen.</div>
+    <input id="stfName" placeholder="Naam" style="padding:9px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
+    <input id="stfEmail" type="email" placeholder="E-mail" style="padding:9px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
+    <div style="grid-column:1/3;font-size:12px;color:var(--gray-500)">Het teamlid ontvangt een activatiemail om zelf een wachtwoord in te stellen.</div>
     <div style="grid-column:1/3">
-      <div style="font-size:12px;color:#64748b;margin-bottom:6px">Toegang tot platform-secties:</div>
+      <div style="font-size:12px;color:var(--gray-500);margin-bottom:6px">Toegang tot platform-secties:</div>
       <div id="stfScopes">${scopeChecks(allScopes, "ns")}</div>
     </div>
     <div style="grid-column:1/3;display:flex;gap:8px;align-items:center">
       <button class="sa-btn btn-primary sm" id="stfCreate">Teamlid toevoegen</button>
-      <span id="stfMsg" style="font-size:12.5px;color:#dc2626"></span>
+      <span id="stfMsg" style="font-size:12.5px;color:var(--wf-red)"></span>
     </div>
   </div>
 </div>` : ""}
@@ -1190,10 +1190,10 @@ ${canManage ? `
         ov.style.cssText = "position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:1200;display:flex;align-items:center;justify-content:center;padding:16px;";
         ov.innerHTML = `
 <div style="background:#fff;border-radius:16px;width:100%;max-width:440px;padding:22px 24px;box-shadow:0 20px 60px rgba(0,0,0,.25)">
-  <h3 style="margin:0 0 4px;font-size:17px;color:#0f172a">Rechten van ${esc(u.name||u.email)}</h3>
-  <div style="font-size:13px;color:#64748b;margin-bottom:14px">Vink aan tot welke platform-secties deze persoon toegang heeft.</div>
+  <h3 style="margin:0 0 4px;font-size:17px;color:var(--gray-900)">Rechten van ${esc(u.name||u.email)}</h3>
+  <div style="font-size:13px;color:var(--gray-500);margin-bottom:14px">Vink aan tot welke platform-secties deze persoon toegang heeft.</div>
   <div id="esScopes">${scopeChecks(u.scopes||[], "es")}</div>
-  <div id="esMsg" style="display:none;color:#dc2626;font-size:12.5px;margin-top:8px"></div>
+  <div id="esMsg" style="display:none;color:var(--wf-red);font-size:12.5px;margin-top:8px"></div>
   <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
     <button class="sa-btn btn-secondary sm" id="esCancel">Annuleren</button>
     <button class="sa-btn btn-primary sm" id="esSave">Opslaan</button>
@@ -1250,7 +1250,7 @@ ${canManage ? `
       c.innerHTML = `
 <div class="sa-page-head"><h1>Support-toegang<span class="cnt">${active.length}</span></h1></div>
 <div class="sa-card" style="margin-bottom:16px">
-  <div style="padding:14px 16px;font-size:13px;color:#475569;line-height:1.5">
+  <div style="padding:14px 16px;font-size:13px;color:var(--gray-600);line-height:1.5">
     <strong>GDPR-conforme support.</strong> Een support-sessie kan alleen starten als de klant toestemming gaf.
     De sessie neemt de exacte gebruikerssessie over (impersonatie), is tijdgebonden met automatische
     verlenging bij activiteit tot een harde limiet, en wordt volledig geaudit.
@@ -1305,20 +1305,20 @@ ${canManage ? `
         ov.style.cssText = "position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:1200;display:flex;align-items:center;justify-content:center;padding:16px;";
         ov.innerHTML = `
 <div style="background:#fff;border-radius:16px;width:100%;max-width:440px;padding:22px 24px;box-shadow:0 20px 60px rgba(0,0,0,.25)">
-  <h3 style="margin:0 0 4px;font-size:17px;color:#0f172a">Support-sessie starten</h3>
-  <div style="font-size:13px;color:#64748b;margin-bottom:16px">${esc(row.tenantName||tenantId)}</div>
-  <label style="display:block;font-size:13px;font-weight:600;color:#334155;margin-bottom:6px">Wie neem je over?</label>
-  <select id="supUser" style="width:100%;padding:9px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;margin-bottom:14px">
+  <h3 style="margin:0 0 4px;font-size:17px;color:var(--gray-900)">Support-sessie starten</h3>
+  <div style="font-size:13px;color:var(--gray-500);margin-bottom:16px">${esc(row.tenantName||tenantId)}</div>
+  <label style="display:block;font-size:13px;font-weight:600;color:var(--gray-700);margin-bottom:6px">Wie neem je over?</label>
+  <select id="supUser" style="width:100%;padding:9px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;margin-bottom:14px">
     ${users.length ? users.map(u=>`<option value="${u.id}">${esc(u.name||u.email)} — ${roleLabel[u.role]||u.role}${u.email?` (${esc(u.email)})`:""}</option>`).join("") : `<option value="">Geen gebruikers gevonden</option>`}
   </select>
-  <label style="display:block;font-size:13px;font-weight:600;color:#334155;margin-bottom:6px">Rechten</label>
-  <select id="supScope" style="width:100%;padding:9px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;margin-bottom:14px">
+  <label style="display:block;font-size:13px;font-weight:600;color:var(--gray-700);margin-bottom:6px">Rechten</label>
+  <select id="supScope" style="width:100%;padding:9px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;margin-bottom:14px">
     <option value="read">Alleen-lezen (aanbevolen)</option>
     <option value="write">Lezen + schrijven</option>
   </select>
-  <label style="display:block;font-size:13px;font-weight:600;color:#334155;margin-bottom:6px">Reden (verplicht, wordt geaudit)</label>
-  <input id="supReason" placeholder="bv. factuur kan niet verstuurd worden" style="width:100%;padding:9px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;margin-bottom:8px">
-  <div id="supErr" style="display:none;color:#dc2626;font-size:12.5px;margin-bottom:8px"></div>
+  <label style="display:block;font-size:13px;font-weight:600;color:var(--gray-700);margin-bottom:6px">Reden (verplicht, wordt geaudit)</label>
+  <input id="supReason" placeholder="bv. factuur kan niet verstuurd worden" style="width:100%;padding:9px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;margin-bottom:8px">
+  <div id="supErr" style="display:none;color:var(--wf-red);font-size:12.5px;margin-bottom:8px"></div>
   <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
     <button class="sa-btn btn-secondary sm" id="supCancel">Annuleren</button>
     <button class="sa-btn btn-primary sm" id="supGo">Sessie overnemen</button>
@@ -1449,20 +1449,20 @@ ${canManage ? `
         const showSubs = !opts || opts.subs !== false;
         return groups.map(g => `
           <div style="margin-bottom:12px">
-            <div style="font-size:10.5px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin:8px 0 5px">${esc(g)}</div>
+            <div style="font-size:10.5px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px;margin:8px 0 5px">${esc(g)}</div>
             ${catalog.filter(m => m.group === g).map(m => {
               const on = selMods.includes(m.key);
               const subs = m.submodules || [];
               return `
-              <div style="border:1px solid #e2e8f0;border-radius:9px;padding:9px 11px;margin-bottom:7px;background:${on ? "#f8fbff" : "#fff"}">
-                <label style="display:flex;align-items:center;gap:9px;font-size:13px;font-weight:600;color:#0f172a;cursor:pointer">
+              <div style="border:1px solid var(--gray-200);border-radius:9px;padding:9px 11px;margin-bottom:7px;background:${on ? "var(--wf-blue-l)" : "#fff"}">
+                <label style="display:flex;align-items:center;gap:9px;font-size:13px;font-weight:600;color:var(--gray-900);cursor:pointer">
                   <input type="checkbox" class="${prefix}-mod" data-key="${m.key}" ${on ? "checked" : ""} style="width:16px;height:16px">
                   ${esc(m.label)}
                 </label>
                 ${showSubs && subs.length ? `<div class="${prefix}-subwrap" data-mod="${m.key}" style="margin:7px 0 0 25px;display:${on ? "flex" : "none"};flex-wrap:wrap;gap:4px 16px">
                   ${subs.map(s => {
                     const son = (selSubs[m.key] || []).includes(s.key);
-                    return `<label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#475569;cursor:pointer">
+                    return `<label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--gray-600);cursor:pointer">
                       <input type="checkbox" class="${prefix}-sub" data-mod="${m.key}" data-sub="${s.key}" ${son ? "checked" : ""}> ${esc(s.label)}</label>`;
                   }).join("")}
                 </div>` : ""}
@@ -1520,19 +1520,19 @@ ${canManage ? `
 <div class="sa-card">
   <div class="sa-card-head"><div class="sa-card-title">Add-ons (naam, prijs &amp; omschrijving)</div></div>
   <div class="sa-card-body" style="padding:16px;display:flex;flex-direction:column;gap:14px">
-    <div style="font-size:12.5px;color:#64748b">Pas de commerciële naam, maandprijs en omschrijving van elke add-on aan. Dit verschijnt bij de klant (prijzen/aanbod). À-la-carte toekennen per tenant gebeurt via "Vrijgave per tenant".</div>
+    <div style="font-size:12.5px;color:var(--gray-500)">Pas de commerciële naam, maandprijs en omschrijving van elke add-on aan. Dit verschijnt bij de klant (prijzen/aanbod). À-la-carte toekennen per tenant gebeurt via "Vrijgave per tenant".</div>
     ${addons.map(a => `
-      <div class="sa-addon-row" data-key="${esc(a.key)}" style="border:1px solid #e2e8f0;border-radius:10px;padding:12px;display:grid;grid-template-columns:1fr 130px;gap:10px">
+      <div class="sa-addon-row" data-key="${esc(a.key)}" style="border:1px solid var(--gray-200);border-radius:10px;padding:12px;display:grid;grid-template-columns:1fr 130px;gap:10px">
         <div>
-          <div style="font-size:11px;color:#94a3b8;font-family:monospace;margin-bottom:4px">${esc(a.key)}</div>
-          <input class="ao-label" value="${esc(a.label)}" placeholder="Naam" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:7px;font-size:13px;font-weight:600;margin-bottom:6px">
-          <textarea class="ao-desc" rows="2" placeholder="Omschrijving" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:7px;font-size:12.5px;resize:vertical">${esc(a.description)}</textarea>
+          <div style="font-size:11px;color:var(--gray-400);font-family:monospace;margin-bottom:4px">${esc(a.key)}</div>
+          <input class="ao-label" value="${esc(a.label)}" placeholder="Naam" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:7px;font-size:13px;font-weight:600;margin-bottom:6px">
+          <textarea class="ao-desc" rows="2" placeholder="Omschrijving" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:7px;font-size:12.5px;resize:vertical">${esc(a.description)}</textarea>
         </div>
         <div style="display:flex;flex-direction:column;gap:8px">
-          <label style="font-size:11px;color:#64748b">€/maand
-            <input class="ao-monthly" type="number" min="0" step="1" value="${a.monthly ?? ""}" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:7px;font-size:13px">
+          <label style="font-size:11px;color:var(--gray-500)">€/maand
+            <input class="ao-monthly" type="number" min="0" step="1" value="${a.monthly ?? ""}" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:7px;font-size:13px">
           </label>
-          <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:#475569;cursor:pointer">
+          <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--gray-600);cursor:pointer">
             <input class="ao-active" type="checkbox" ${a.active ? "checked" : ""}> Actief
           </label>
           <button class="sa-btn btn-secondary sm ao-reset" type="button" data-label="${esc(a.defaults.label)}" data-monthly="${a.defaults.monthly ?? ""}" data-desc="${esc(a.defaults.description)}">Standaard</button>
@@ -1540,7 +1540,7 @@ ${canManage ? `
       </div>`).join("")}
     <div style="display:flex;gap:8px;align-items:center">
       <button class="sa-btn btn-primary sm" id="aoSave">Add-ons opslaan</button>
-      <span id="aoMsg" style="font-size:12.5px;color:#16a34a"></span>
+      <span id="aoMsg" style="font-size:12.5px;color:var(--wf-green)"></span>
     </div>
   </div>
 </div>
@@ -1564,7 +1564,7 @@ ${canManage ? `
           });
           const msg = document.getElementById("aoMsg"); msg.textContent = "";
           try { await api("/api/admin/addons", { method: "PUT", body: JSON.stringify(payload) }); msg.textContent = "Opgeslagen ✓"; }
-          catch (e) { msg.style.color = "#dc2626"; msg.textContent = e.message; }
+          catch (e) { msg.style.color = "var(--wf-red)"; msg.textContent = e.message; }
         });
       }
 
@@ -1577,18 +1577,18 @@ ${canManage ? `
         card.innerHTML = `
 <div class="sa-card"><div class="sa-card-head"><div class="sa-card-title">Bundel-prijzen</div></div>
   <div class="sa-card-body" style="padding:16px">
-    <div style="font-size:12.5px;color:#64748b;margin-bottom:10px">Basisprijs per jaar + prijs per extra gebruiker/jaar + inbegrepen gebruikers, per bundel. €0 basis = 'op aanvraag' (bv. enterprise).</div>
+    <div style="font-size:12.5px;color:var(--gray-500);margin-bottom:10px">Basisprijs per jaar + prijs per extra gebruiker/jaar + inbegrepen gebruikers, per bundel. €0 basis = 'op aanvraag' (bv. enterprise).</div>
     <div class="sa-tbl-wrap"><table class="sa-tbl"><thead><tr><th>Bundel</th><th>Basis €/jaar</th><th>Per seat €/jaar</th><th>Inbegrepen seats</th></tr></thead><tbody>
       ${plans.map(p => `<tr class="pp-row" data-key="${esc(p.key)}">
         <td><strong>${esc(p.label)}</strong></td>
-        <td><input class="pp-base" type="number" min="0" value="${p.baseAnnual}" style="width:100px;padding:6px;border:1px solid #e2e8f0;border-radius:6px"></td>
-        <td><input class="pp-seat" type="number" min="0" value="${p.seatAnnual}" style="width:100px;padding:6px;border:1px solid #e2e8f0;border-radius:6px"></td>
-        <td><input class="pp-inc" type="number" min="0" value="${p.includedSeats}" style="width:80px;padding:6px;border:1px solid #e2e8f0;border-radius:6px"></td>
+        <td><input class="pp-base" type="number" min="0" value="${p.baseAnnual}" style="width:100px;padding:6px;border:1px solid var(--gray-200);border-radius:6px"></td>
+        <td><input class="pp-seat" type="number" min="0" value="${p.seatAnnual}" style="width:100px;padding:6px;border:1px solid var(--gray-200);border-radius:6px"></td>
+        <td><input class="pp-inc" type="number" min="0" value="${p.includedSeats}" style="width:80px;padding:6px;border:1px solid var(--gray-200);border-radius:6px"></td>
       </tr>`).join("")}
     </tbody></table></div>
     <div style="display:flex;gap:8px;align-items:center;margin-top:10px">
       <button class="sa-btn btn-primary sm" id="ppSave">Prijzen opslaan</button>
-      <span id="ppMsg" style="font-size:12.5px;color:#16a34a"></span>
+      <span id="ppMsg" style="font-size:12.5px;color:var(--wf-green)"></span>
     </div>
   </div></div>`;
         document.getElementById("ppSave").addEventListener("click", async () => {
@@ -1602,7 +1602,7 @@ ${canManage ? `
           });
           const msg = document.getElementById("ppMsg"); msg.textContent = "";
           try { await api("/api/admin/plan-prices", { method: "PUT", body: JSON.stringify({ planPrices }) }); msg.textContent = "Opgeslagen ✓"; }
-          catch (e) { msg.style.color = "#dc2626"; msg.textContent = e.message; }
+          catch (e) { msg.style.color = "var(--wf-red)"; msg.textContent = e.message; }
         });
       }
 
@@ -1635,14 +1635,14 @@ ${canManage ? `
   <div class="sa-field"><label>Naam</label><input id="bLabel" value="${esc(b.label)}" placeholder="bv. Pro"></div>
 </div>
 <div class="sa-field" style="margin-bottom:14px"><label>Omschrijving</label><input id="bDesc" value="${esc(b.description || "")}" placeholder="Korte omschrijving"></div>
-<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:#475569;margin-bottom:10px"><input type="checkbox" id="bCustom" ${b.custom ? "checked" : ""}> Op aanvraag (custom — klant kan niet zelf kiezen)</label>
-<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:#475569;margin-bottom:14px"><input type="checkbox" id="bPopular" ${b.popular ? "checked" : ""}> Meest gekozen (uitgelicht in prijzen &amp; abonnementsscherm)</label>
-<div style="font-size:12px;font-weight:700;color:#0f172a;margin-bottom:6px">Inbegrepen modules &amp; submodules</div>
+<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--gray-600);margin-bottom:10px"><input type="checkbox" id="bCustom" ${b.custom ? "checked" : ""}> Op aanvraag (custom — klant kan niet zelf kiezen)</label>
+<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--gray-600);margin-bottom:14px"><input type="checkbox" id="bPopular" ${b.popular ? "checked" : ""}> Meest gekozen (uitgelicht in prijzen &amp; abonnementsscherm)</label>
+<div style="font-size:12px;font-weight:700;color:var(--gray-900);margin-bottom:6px">Inbegrepen modules &amp; submodules</div>
 <div id="bGrid">${grid("b", b.modules, b.submodules || {})}</div>
 <div style="display:flex;gap:8px;margin-top:14px">
   <button class="sa-btn btn-primary" id="bSave">${isNew ? "Bundel aanmaken" : "Wijzigingen opslaan"}</button>
   ${(!isNew && !b.custom) ? `<button class="sa-btn btn-danger" id="bDelete">Verwijderen</button>` : ""}
-  <span id="bMsg" style="font-size:12.5px;align-self:center;color:#64748b"></span>
+  <span id="bMsg" style="font-size:12.5px;align-self:center;color:var(--gray-500)"></span>
 </div>`;
         wireSubToggle(ed, "b");
         document.getElementById("bSave").addEventListener("click", async () => {
@@ -1712,7 +1712,7 @@ ${canManage ? `
 <div id="tGrid">${grid("t", ent.modules, ent.submodules || {}, { subs: false })}</div>
 <div style="display:flex;gap:8px;margin-top:14px">
   <button class="sa-btn btn-primary" id="tSave">Opslaan</button>
-  <span style="font-size:12px;align-self:center;color:#94a3b8">Baseline bundel '${esc(baseBundle.label || ent.plan)}': ${baseBundle.modules.length} modules</span>
+  <span style="font-size:12px;align-self:center;color:var(--gray-400)">Baseline bundel '${esc(baseBundle.label || ent.plan)}': ${baseBundle.modules.length} modules</span>
 </div>`;
           // Bij bundelwissel: herlaad raster op die bundel-baseline (nog niet opgeslagen).
           document.getElementById("tPlan").addEventListener("change", e => {
@@ -1754,7 +1754,7 @@ ${canManage ? `
 <div class="sa-card">
   <div class="sa-card-head"><div class="sa-card-title">Integraties &amp; API-sleutels</div><div class="sa-card-sub">Beheer hier de echte sleutels. Standaard staan dummy-waarden ingesteld zodat niets crasht.</div></div>
   <div style="padding:16px;display:flex;flex-direction:column;gap:8px">
-    <div style="font-size:12px;color:#92400e;background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:10px 12px">
+    <div style="font-size:12px;color:var(--wf-yellow);background:var(--wf-yellow-l);border:1px solid var(--wf-yellow-l);border-radius:8px;padding:10px 12px">
       ⚠️ Geheime sleutels worden gemaskeerd getoond. Laat een veld op de gemaskeerde waarde staan om het ongewijzigd te laten; typ een nieuwe waarde om te overschrijven.
     </div>
   </div>
@@ -1814,7 +1814,7 @@ ${canManage ? `
   <div class="sa-card">
     <div class="sa-card-head"><div class="sa-card-title">🦺 Checkin@Work (CIAW) + Limosa — RSZ-gateway</div><div class="sa-card-sub">${statusPill(cfg.ciaw?.configured)}</div></div>
     <div style="padding:16px;display:grid;gap:12px">
-      <div style="font-size:12px;color:#64748b;font-weight:400">Deze RSZ-gateway dekt <strong>zowel de Checkin@Work-aanwezigheidsaangiftes als de Limosa-meldingen</strong>. Zonder live provider draait alles in mock-modus. Het RSZ-werkgeversnummer stelt elke klant zelf in (Compliance → Checkin@Work).</div>
+      <div style="font-size:12px;color:var(--gray-500);font-weight:400">Deze RSZ-gateway dekt <strong>zowel de Checkin@Work-aanwezigheidsaangiftes als de Limosa-meldingen</strong>. Zonder live provider draait alles in mock-modus. Het RSZ-werkgeversnummer stelt elke klant zelf in (Compliance → Checkin@Work).</div>
       <label class="sa-fld"><span>Provider</span>
         <select name="ciaw.provider">
           ${["mock","rsz"].map(p=>`<option value="${p}" ${cfg.ciaw?.provider===p?"selected":""}>${p}</option>`).join("")}
@@ -1829,7 +1829,7 @@ ${canManage ? `
   <div class="sa-card">
     <div class="sa-card-head"><div class="sa-card-title">🤖 Boden — AI-assistent (OpenAI)</div><div class="sa-card-sub">${statusPill(cfg.openai?.configured)}</div></div>
     <div style="padding:16px;display:grid;gap:12px">
-      <div style="font-size:12px;color:#64748b;font-weight:400">Zonder echte sleutel draait Boden in <strong>gratis demo-modus</strong> (gesimuleerde antwoorden, ideaal voor QA). Vul de OpenAI-sleutel in om de echte AI te activeren. Boden respecteert altijd de rechten van de ingelogde gebruiker.</div>
+      <div style="font-size:12px;color:var(--gray-500);font-weight:400">Zonder echte sleutel draait Boden in <strong>gratis demo-modus</strong> (gesimuleerde antwoorden, ideaal voor QA). Vul de OpenAI-sleutel in om de echte AI te activeren. Boden respecteert altijd de rechten van de ingelogde gebruiker.</div>
       <label class="sa-fld"><span>OpenAI API-sleutel</span><input name="openai.apiKey" value="${esc(cfg.openai?.apiKey||"")}" placeholder="sk-..."></label>
       <label class="sa-fld"><span>Model</span><input name="openai.model" value="${esc(cfg.openai?.model||"")}" placeholder="bv. gpt-4o-mini of gpt-4o"></label>
     </div>
@@ -1844,14 +1844,14 @@ ${canManage ? `
 <div class="sa-card" style="margin-top:8px">
   <div class="sa-card-head"><div class="sa-card-title">🔌 Klant-koppelingen (alleen-lezen)</div><div class="sa-card-sub">${(tint.connected||0)}/${(tint.total||0)} verbonden · eigen ERP/boekhouding van klanten — beheerd door de klant zelf</div></div>
   <div class="sa-tbl-wrap"><table class="sa-tbl"><thead><tr><th>Tenant</th><th>Koppeling</th><th>Status</th><th>Sleutel</th><th>Laatste sync</th></tr></thead><tbody>
-    ${(tint.rows||[]).map(r => `<tr><td>${esc(r.tenant)}</td><td>${esc(r.provider)}</td><td>${esc(r.status)}</td><td>${r.hasSecret?badge("ingesteld","badge-green"):badge("geen","badge-gray")}</td><td style="font-size:12px;color:#64748b">${r.lastSyncAt?fmtDT(r.lastSyncAt):"—"}</td></tr>`).join("") || "<tr><td colspan=5 style='color:#64748b;padding:14px'>Nog geen klant-koppelingen. Klanten verbinden hun ERP via hun eigen Koppelingen-scherm.</td></tr>"}
+    ${(tint.rows||[]).map(r => `<tr><td>${esc(r.tenant)}</td><td>${esc(r.provider)}</td><td>${esc(r.status)}</td><td>${r.hasSecret?badge("ingesteld","badge-green"):badge("geen","badge-gray")}</td><td style="font-size:12px;color:var(--gray-500)">${r.lastSyncAt?fmtDT(r.lastSyncAt):"—"}</td></tr>`).join("") || "<tr><td colspan=5 style='color:var(--gray-500);padding:14px'>Nog geen klant-koppelingen. Klanten verbinden hun ERP via hun eigen Koppelingen-scherm.</td></tr>"}
   </tbody></table></div>
 </div>
 <style>
-.sa-int-sec{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#64748b;margin:20px 4px 8px;padding-top:6px;border-top:1px solid #eef2f7}
+.sa-int-sec{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--gray-500);margin:20px 4px 8px;padding-top:6px;border-top:1px solid var(--gray-100)}
 .sa-int-sec:first-of-type{border-top:none;margin-top:4px;padding-top:0}
-.sa-fld{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:600;color:#334155}
-.sa-fld input,.sa-fld select{padding:9px 11px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;font-weight:400}
+.sa-fld{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:600;color:var(--gray-700)}
+.sa-fld input,.sa-fld select{padding:9px 11px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:13px;font-family:inherit;font-weight:400}
 .sa-fld input:focus,.sa-fld select:focus{outline:none;border-color:var(--wf-blue);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
 </style>`;
 
@@ -1861,12 +1861,12 @@ ${canManage ? `
         const body = { stripe:{}, peppol:{}, email:{}, kbo:{}, ciaw:{}, openai:{} };
         for (const [k,v] of fd.entries()) { const [s,f]=k.split("."); if(body[s]) body[s][f]=v; }
         const st = document.getElementById("saIntStatus");
-        st.textContent = "Opslaan…"; st.style.color = "#64748b";
+        st.textContent = "Opslaan…"; st.style.color = "var(--gray-500)";
         try {
           await api("/api/admin/integrations", { method:"PUT", body: JSON.stringify(body) });
-          st.textContent = "✓ Opgeslagen"; st.style.color = "#15803d";
+          st.textContent = "✓ Opgeslagen"; st.style.color = "var(--wf-green)";
           setTimeout(() => integrations(), 700);
-        } catch(err) { st.textContent = "Fout: "+err.message; st.style.color = "#dc2626"; }
+        } catch(err) { st.textContent = "Fout: "+err.message; st.style.color = "var(--wf-red)"; }
       });
     } catch(e) { content().innerHTML = err(e); }
   }
@@ -1910,7 +1910,7 @@ ${canManage ? `
 <div class="sa-card">
   <div class="sa-card-head"><div class="sa-card-title">Beveiliging — MFA verplichten</div></div>
   <div style="padding:16px">
-    <p style="font-size:13px;color:#64748b;margin:0 0 12px">Schakelt 2FA in voor álle beheerders (tenant-admins + super-admins) die nog geen MFA hebben. Bij hun volgende login is een authenticator-code vereist. De secrets en recovery codes worden hieronder éénmalig getoond.</p>
+    <p style="font-size:13px;color:var(--gray-500);margin:0 0 12px">Schakelt 2FA in voor álle beheerders (tenant-admins + super-admins) die nog geen MFA hebben. Bij hun volgende login is een authenticator-code vereist. De secrets en recovery codes worden hieronder éénmalig getoond.</p>
     <button id="saMfaEnforce" class="sa-btn btn-primary">🛡️ MFA verplichten voor alle beheerders</button>
     <div id="saMfaResult" style="margin-top:14px"></div>
   </div>
@@ -1939,30 +1939,30 @@ ${canManage ? `
           const d = await api("/api/admin/mfa/enforce", { method: "POST", body: "{}" });
           const enrolled = d.enrolled || [];
           if (!enrolled.length) {
-            out.innerHTML = `<div style="color:#15803d;font-weight:600;font-size:13px">✅ Alle beheerders hebben al MFA actief.</div>`;
+            out.innerHTML = `<div style="color:var(--wf-green);font-weight:600;font-size:13px">✅ Alle beheerders hebben al MFA actief.</div>`;
             btn.textContent = "🛡️ MFA verplichten voor alle beheerders"; btn.disabled = false;
             return;
           }
           out.innerHTML = `
-<div style="font-size:12px;color:#92400e;background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:10px 12px;margin-bottom:10px">
+<div style="font-size:12px;color:var(--wf-yellow);background:var(--wf-yellow-l);border:1px solid var(--wf-yellow-l);border-radius:8px;padding:10px 12px;margin-bottom:10px">
   ⚠️ Bewaar onderstaande gegevens nu. Ze worden niet opnieuw getoond. Voeg de sleutel toe aan een authenticator-app.
 </div>
 ${enrolled.map(e => `
-  <div style="border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin-bottom:10px">
-    <div style="font-weight:600;font-size:13px;color:#0f172a;margin-bottom:6px">${esc(e.name||e.email)} <span style="color:#94a3b8;font-weight:400">· ${esc(e.email)}</span></div>
+  <div style="border:1px solid var(--gray-200);border-radius:10px;padding:12px;margin-bottom:10px">
+    <div style="font-weight:600;font-size:13px;color:var(--gray-900);margin-bottom:6px">${esc(e.name||e.email)} <span style="color:var(--gray-400);font-weight:400">· ${esc(e.email)}</span></div>
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
       <div style="flex:1;min-width:180px">
-        <div style="font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px">Geheime sleutel</div>
-        <div class="mono" style="background:#f1f5f9;padding:6px 10px;border-radius:6px;font-size:12px;word-break:break-all;margin:3px 0 8px">${esc(e.secret||"")}</div>
-        <div style="font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px">Recovery codes</div>
-        <div class="mono" style="font-size:11.5px;color:#374151;line-height:1.7">${(e.recoveryCodes||[]).map(c=>esc(c)).join(" &nbsp; ")}</div>
+        <div style="font-size:11px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.4px">Geheime sleutel</div>
+        <div class="mono" style="background:var(--gray-100);padding:6px 10px;border-radius:6px;font-size:12px;word-break:break-all;margin:3px 0 8px">${esc(e.secret||"")}</div>
+        <div style="font-size:11px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.4px">Recovery codes</div>
+        <div class="mono" style="font-size:11.5px;color:var(--gray-700);line-height:1.7">${(e.recoveryCodes||[]).map(c=>esc(c)).join(" &nbsp; ")}</div>
       </div>
     </div>
   </div>`).join("")}
-<div style="color:#15803d;font-weight:600;font-size:13px;margin-top:4px">✅ ${enrolled.length} beheerder(s) ingeschreven — Foundation-MFA voldaan.</div>`;
+<div style="color:var(--wf-green);font-weight:600;font-size:13px;margin-top:4px">✅ ${enrolled.length} beheerder(s) ingeschreven — Foundation-MFA voldaan.</div>`;
           btn.textContent = "Ingeschreven ✓";
         } catch(e) {
-          out.innerHTML = `<div style="color:#dc2626;font-size:13px">Fout: ${esc(e.message)}</div>`;
+          out.innerHTML = `<div style="color:var(--wf-red);font-size:13px">Fout: ${esc(e.message)}</div>`;
           btn.textContent = "🛡️ MFA verplichten voor alle beheerders"; btn.disabled = false;
         }
       });
@@ -1971,9 +1971,9 @@ ${enrolled.map(e => `
 
   function checklist(items) {
     return items.map(([ok, label]) => `
-    <div style="display:flex;align-items:center;gap:10px;font-size:13px;padding:6px 10px;background:${ok?"#f0fdf4":"#fef2f2"};border-radius:7px;border:1px solid ${ok?"#bbf7d0":"#fecaca"}">
+    <div style="display:flex;align-items:center;gap:10px;font-size:13px;padding:6px 10px;background:${ok?"var(--wf-green-l)":"var(--wf-red-l)"};border-radius:7px;border:1px solid ${ok?"var(--wf-green-l)":"var(--wf-red-l)"}">
       <span style="font-size:16px">${ok?"✅":"❌"}</span>
-      <span style="color:${ok?"#14532d":"#7f1d1d"}">${label}</span>
+      <span style="color:${ok?"var(--wf-green)":"var(--wf-red)"}">${label}</span>
     </div>`).join("");
   }
 

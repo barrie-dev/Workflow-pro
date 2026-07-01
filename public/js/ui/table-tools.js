@@ -23,14 +23,14 @@
     + SEL.split(",").map(function (s) { return s + " thead th"; }).join(",")
     + "{cursor:pointer;user-select:none;white-space:nowrap;}"
     + SEL.split(",").map(function (s) { return s + " thead th:hover"; }).join(",")
-    + "{color:var(--wf-blue,#0071e3);}"
+    + "{color:var(--wf-blue);}"
     + ".tt-arrow{font-size:9px;opacity:.7;margin-left:4px;}"
     + ".tt-filter-wrap{display:flex;justify-content:flex-end;margin:0 0 10px;}"
     + ".tt-filter{height:34px;width:100%;max-width:240px;padding:0 12px 0 32px;border:1px solid var(--line,#e5e5ea);"
     + "border-radius:980px;font-size:13px;color:var(--ink,#1d1d1f);background:var(--surface,#fff) "
     + "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%239ca3af'%3E%3Cpath d='M15.5 14h-.79l-.28-.27a6.5 6.5 0 10-.7.7l.27.28v.79l5 5 1.5-1.5-5-5zm-6 0A4.5 4.5 0 1114 9.5 4.5 4.5 0 019.5 14z'/%3E%3C/svg%3E\") no-repeat 9px center;"
     + "background-size:15px;outline:none;font-family:inherit;transition:border-color .15s, box-shadow .15s;}"
-    + ".tt-filter:focus{border-color:var(--wf-blue,#0071e3);box-shadow:0 0 0 3px rgba(0,113,227,.15);}";
+    + ".tt-filter:focus{border-color:var(--wf-blue);box-shadow:0 0 0 3px rgba(0,113,227,.15);}";
   var st = document.createElement("style"); st.textContent = css; document.head.appendChild(st);
 
   // ── Waarde-parsing voor slim sorteren ─────────────────────────────────────

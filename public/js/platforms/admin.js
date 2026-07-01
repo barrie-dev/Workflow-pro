@@ -95,9 +95,9 @@
     ov.style.cssText = "position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:16px;";
     ov.innerHTML = `
       <div style="background:#fff;border-radius:16px;max-width:560px;width:100%;max-height:92vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
-        <div style="padding:20px 22px;border-bottom:1px solid #f1f5f9">
-          <h2 style="margin:0;font-size:18px;color:#0f172a">Welkom bij Monargo One 👋</h2>
-          <p style="margin:6px 0 0;font-size:13px;color:#64748b">Vul je bedrijfsgegevens aan zodat we ${esc(t.name || "je organisatie")} correct kunnen instellen. Duurt een minuutje.</p>
+        <div style="padding:20px 22px;border-bottom:1px solid var(--gray-100)">
+          <h2 style="margin:0;font-size:18px;color:var(--gray-900)">Welkom bij Monargo One 👋</h2>
+          <p style="margin:6px 0 0;font-size:13px;color:var(--gray-500)">Vul je bedrijfsgegevens aan zodat we ${esc(t.name || "je organisatie")} correct kunnen instellen. Duurt een minuutje.</p>
         </div>
         <form id="admObForm" style="padding:20px 22px;display:flex;flex-direction:column;gap:14px">
           <div class="adm-form-group"><label>Sector</label>
@@ -110,7 +110,7 @@
               <option value="">Aantal medewerkers…</option>
               ${teamSizes.map(s => `<option value="${esc(s)}" ${t.teamSize===s?"selected":""}>${esc(s)} medewerkers</option>`).join("")}
             </select></div>
-          <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-top:4px">Facturatiegegevens ${ip.vat ? "(via KBO opgehaald)" : ""}</div>
+          <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-top:4px">Facturatiegegevens ${ip.vat ? "(via KBO opgehaald)" : ""}</div>
           <div class="adm-form-row" style="display:flex;gap:10px">
             <div class="adm-form-group" style="flex:1"><label>BTW-nummer</label><input name="vat" value="${esc(ip.vat||"")}" placeholder="BE0123.456.789"></div>
             <div class="adm-form-group" style="flex:1"><label>Ondernemingsnr.</label><input name="companyNumber" value="${esc(ip.companyNumber||"")}" placeholder="0123.456.789"></div>
@@ -121,13 +121,13 @@
             <div class="adm-form-group" style="flex:1"><label>Gemeente</label><input name="city" value="${esc(ip.city||"")}" placeholder="Gent"></div>
           </div>
           <div class="adm-form-group"><label>Facturatie-e-mail</label><input name="billingEmail" type="email" value="${esc(t.billingEmail||"")}" placeholder="facturatie@bedrijf.be"></div>
-          <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-top:4px">Contactpersoon</div>
+          <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-top:4px">Contactpersoon</div>
           <div class="adm-form-row" style="display:flex;gap:10px">
             <div class="adm-form-group" style="flex:1"><label>Naam</label><input name="contactName" value="${esc(ct.contactName||"")}" placeholder="Voornaam Naam"></div>
             <div class="adm-form-group" style="flex:1"><label>Functie</label><input name="contactRole" value="${esc(ct.contactRole||"")}" placeholder="Zaakvoerder"></div>
           </div>
           <div class="adm-form-group"><label>Telefoon</label><input name="phone" value="${esc(ct.phone||"")}" placeholder="+32 ..."></div>
-          <div id="admObErr" style="display:none;background:#fef2f2;color:#dc2626;border-radius:8px;padding:8px;font-size:12px"></div>
+          <div id="admObErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:8px;font-size:12px"></div>
           <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
             <button type="button" class="adm-btn adm-btn-secondary" id="admObLater">Later invullen</button>
             <button type="submit" class="adm-btn adm-btn-primary">Opslaan &amp; starten</button>
@@ -169,11 +169,11 @@
     const b = document.createElement("div");
     b.id = "wfpSupportBanner";
     b.setAttribute("role", "status");
-    b.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:9999;background:#b91c1c;color:#fff;font:600 13px/1.4 system-ui,sans-serif;padding:6px 16px;display:flex;align-items:center;justify-content:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,.2)";
+    b.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:9999;background:var(--wf-red);color:#fff;font:600 13px/1.4 system-ui,sans-serif;padding:6px 16px;display:flex;align-items:center;justify-content:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,.2)";
     b.innerHTML = `<span>🛟 Support-sessie actief — ${esc(s.agent || "supportmedewerker")} (${scope}). Deze sessie wordt geaudit.</span>`;
     const exit = document.createElement("button");
     exit.textContent = "Sessie verlaten";
-    exit.style.cssText = "background:#fff;color:#b91c1c;border:none;border-radius:6px;font:600 12px system-ui,sans-serif;padding:5px 12px;cursor:pointer;flex-shrink:0";
+    exit.style.cssText = "background:#fff;color:var(--wf-red);border:none;border-radius:6px;font:600 12px system-ui,sans-serif;padding:5px 12px;cursor:pointer;flex-shrink:0";
     exit.onclick = () => window.WorkFlowProPlatformRouter && window.WorkFlowProPlatformRouter.exitSupportSession();
     b.appendChild(exit);
     document.body.appendChild(b);
@@ -263,7 +263,7 @@
       <a class="adm-nav-item" data-view="offertes" href="#">
         <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13zM10.5 11.5l1.4 1.4 2.6-2.6.7.7-3.3 3.3-2.1-2.1z"/></svg>
         <span>Offertes</span>
-        <span class="adm-nav-badge" id="admOfferteBadge" style="display:none;background:#F59E0B">0</span>
+        <span class="adm-nav-badge" id="admOfferteBadge" style="display:none;background:var(--wf-yellow)">0</span>
       </a>
       <a class="adm-nav-item" data-view="facturen" href="#">
         <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
@@ -546,7 +546,7 @@
       : `<div class="adm-empty"><div class="adm-empty-icon">📊</div><div class="adm-empty-text">${mode === "org" ? "Je organisatie heeft nog geen dashboard gepubliceerd." : "Nog geen widgets gekozen — klik ⚙ Aanpassen."}</div></div>`;
     const r = await api("GET", `/me/dashboard/render?mode=${mode}`).catch(() => ({ widgets: [] }));
     if (mode === "org") {
-      body.innerHTML = `<div style="background:var(--wf-blue-l);border:1px solid #bfdbfe;border-radius:10px;padding:10px 14px;font-size:12.5px;color:#1e40af;margin-bottom:14px">🔒 Dit dashboard is door je organisatie ingesteld; je ziet enkel widgets waar je rechten op hebt.</div>${grid(r.widgets || [])}`;
+      body.innerHTML = `<div style="background:var(--wf-blue-l);border:1px solid var(--wf-blue-l);border-radius:10px;padding:10px 14px;font-size:12.5px;color:var(--wf-blue);margin-bottom:14px">🔒 Dit dashboard is door je organisatie ingesteld; je ziet enkel widgets waar je rechten op hebt.</div>${grid(r.widgets || [])}`;
       return;
     }
     const chosen = new Set(personalKeys);
@@ -555,17 +555,17 @@
       <div class="adm-card" id="dashConfigPanel" style="margin-top:18px;display:none">
         <div class="adm-card-header"><h3 class="adm-card-title">Widgets samenstellen</h3></div>
         <div class="adm-card-body">
-          <p style="font-size:12.5px;color:#64748b;margin:0 0 12px">Kies de blokken die je wil zien. Je ziet enkel widgets waar je rechten op hebt.</p>
+          <p style="font-size:12.5px;color:var(--gray-500);margin:0 0 12px">Kies de blokken die je wil zien. Je ziet enkel widgets waar je rechten op hebt.</p>
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px">
             ${available.map(w => `<label style="display:flex;align-items:center;gap:8px;font-size:13px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;cursor:pointer">
               <input type="checkbox" class="mb-w" value="${esc(w.key)}" ${chosen.has(w.key) ? "checked" : ""}>
-              <span>${esc(w.label)}</span><span style="margin-left:auto;font-size:10px;color:#94a3b8">${esc(w.group)}</span>
-            </label>`).join("") || `<div style="font-size:13px;color:#94a3b8">Geen widgets beschikbaar voor jouw rechten/pakket.</div>`}
+              <span>${esc(w.label)}</span><span style="margin-left:auto;font-size:10px;color:var(--gray-400)">${esc(w.group)}</span>
+            </label>`).join("") || `<div style="font-size:13px;color:var(--gray-400)">Geen widgets beschikbaar voor jouw rechten/pakket.</div>`}
           </div>
           <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
             <button class="adm-btn adm-btn-primary adm-btn-sm" id="mbSave">Opslaan</button>
             ${canPublish ? `<button class="adm-btn adm-btn-secondary adm-btn-sm" id="mbPublish">🏢 Publiceer voor organisatie</button>` : ""}
-            <span id="mbMsg" style="font-size:12.5px;color:#16a34a;align-self:center"></span>
+            <span id="mbMsg" style="font-size:12.5px;color:var(--wf-green);align-self:center"></span>
           </div>
         </div>
       </div>`;
@@ -573,13 +573,13 @@
     document.getElementById("mbSave")?.addEventListener("click", async () => {
       const msg = document.getElementById("mbMsg");
       try { await api("POST", "/me/dashboard/config", { widgets: picked() }); renderDashboard(); window.showToast && window.showToast("Mijn dashboard opgeslagen ✓", "success"); }
-      catch (e) { msg.style.color = "#dc2626"; msg.textContent = e.message; }
+      catch (e) { msg.style.color = "var(--wf-red)"; msg.textContent = e.message; }
     });
     document.getElementById("mbPublish")?.addEventListener("click", async () => {
       if (!confirm("Deze widgetselectie publiceren als vast organisatie-dashboard voor iedereen?")) return;
       const msg = document.getElementById("mbMsg");
       try { await api("POST", "/me/dashboard/publish", { widgets: picked() }); renderDashboard(); window.showToast && window.showToast("Gepubliceerd voor de organisatie ✓", "success"); }
-      catch (e) { msg.style.color = "#dc2626"; msg.textContent = e.message; }
+      catch (e) { msg.style.color = "var(--wf-red)"; msg.textContent = e.message; }
     });
   }
 
@@ -650,7 +650,7 @@
 
   <div class="adm-card">
     <div class="adm-card-header">
-      <h3 class="adm-card-title">Verlof aanvragen <span style="background:#fef3c7;color:#92400e;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:600;">${(pending.leaves||pending||[]).length}</span></h3>
+      <h3 class="adm-card-title">Verlof aanvragen <span style="background:var(--wf-yellow-l);color:var(--wf-yellow);border-radius:999px;padding:1px 8px;font-size:11px;font-weight:600;">${(pending.leaves||pending||[]).length}</span></h3>
       <a href="#" class="adm-btn adm-btn-secondary adm-btn-sm" id="admViewAllLeaves">Alles bekijken</a>
     </div>
     <div class="adm-card-body adm-table-wrap">
@@ -685,13 +685,13 @@ ${(() => {
   ];
   if (!items.length) return "";
   return `<div class="adm-card" style="margin-top:16px">
-  <div class="adm-card-header"><h3 class="adm-card-title">Actie vereist <span style="background:#fef2f2;color:#dc2626;border-radius:999px;padding:2px 8px;font-size:11px;font-weight:700;">${items.length}</span></h3></div>
+  <div class="adm-card-header"><h3 class="adm-card-title">Actie vereist <span style="background:var(--wf-red-l);color:var(--wf-red);border-radius:999px;padding:2px 8px;font-size:11px;font-weight:700;">${items.length}</span></h3></div>
   <div class="adm-card-body" style="padding:0">
     ${items.map(it => `
-    <div class="adm-action-item" data-view="${it.view}" style="padding:10px 16px;border-bottom:1px solid #f8fafc;display:flex;align-items:center;gap:10px;cursor:pointer;transition:background .1s;">
+    <div class="adm-action-item" data-view="${it.view}" style="padding:10px 16px;border-bottom:1px solid var(--gray-50);display:flex;align-items:center;gap:10px;cursor:pointer;transition:background .1s;">
       <span style="font-size:16px;">${it.icon}</span>
-      <span style="font-size:13px;color:#374151;flex:1;">${it.text}</span>
-      <svg viewBox="0 0 24 24" style="width:14px;fill:#94a3b8;flex-shrink:0"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+      <span style="font-size:13px;color:var(--gray-700);flex:1;">${it.text}</span>
+      <svg viewBox="0 0 24 24" style="width:14px;fill:var(--gray-400);flex-shrink:0"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
     </div>`).join("")}
   </div>
 </div>`;
@@ -715,7 +715,7 @@ ${(() => {
     });
     document.querySelectorAll(".adm-action-item").forEach(el => {
       el.addEventListener("click", () => switchView(el.dataset.view));
-      el.addEventListener("mouseenter", () => el.style.background = "#f8fafc");
+      el.addEventListener("mouseenter", () => el.style.background = "var(--gray-50)");
       el.addEventListener("mouseleave", () => el.style.background = "");
     });
 
@@ -732,20 +732,20 @@ ${(() => {
         gpDiv.style.marginTop = "16px";
         gpDiv.innerHTML = `
 <div class="adm-card-header" style="cursor:pointer;" id="admGpHeader">
-  <h3 class="adm-card-title">🎯 Pilot voortgang <span style="font-size:12px;font-weight:400;color:#64748b;">${doneCount}/${steps.length} stappen</span></h3>
+  <h3 class="adm-card-title">🎯 Pilot voortgang <span style="font-size:12px;font-weight:400;color:var(--gray-500);">${doneCount}/${steps.length} stappen</span></h3>
   <div style="display:flex;align-items:center;gap:12px;">
-    <div style="font-size:18px;font-weight:700;color:${pct===100?"#10b981":pct>50?"#f59e0b":"#6366f1"};">${pct}%</div>
+    <div style="font-size:18px;font-weight:700;color:${pct===100?"var(--wf-green)":pct>50?"var(--wf-yellow)":"var(--wf-purple)"};">${pct}%</div>
     <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admGpDetails">Details</button>
     <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admGpRoadmap">Roadmap →</button>
   </div>
 </div>
-<div style="height:8px;background:#f1f5f9;border-radius:4px;overflow:hidden;margin:-8px 20px 0;">
-  <div style="height:100%;width:${pct}%;background:${pct===100?"#10b981":pct>50?"#f59e0b":"#6366f1"};transition:width .6s;border-radius:4px;"></div>
+<div style="height:8px;background:var(--gray-100);border-radius:4px;overflow:hidden;margin:-8px 20px 0;">
+  <div style="height:100%;width:${pct}%;background:${pct===100?"var(--wf-green)":pct>50?"var(--wf-yellow)":"var(--wf-purple)"};transition:width .6s;border-radius:4px;"></div>
 </div>
 <div class="hidden" id="admGpSteps" style="padding:12px 20px 4px;">
   ${steps.map(s=>`<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px;">
-    <span style="color:${s.done?"#10b981":"#94a3b8"};font-size:16px;">${s.done?"✅":"⭕"}</span>
-    <span style="color:${s.done?"#374151":"#94a3b8"}">${esc(s.key||"")}</span>
+    <span style="color:${s.done?"var(--wf-green)":"var(--gray-400)"};font-size:16px;">${s.done?"✅":"⭕"}</span>
+    <span style="color:${s.done?"var(--gray-700)":"var(--gray-400)"}">${esc(s.key||"")}</span>
   </div>`).join("")}
 </div>`;
         gpEl.appendChild(gpDiv);
@@ -796,8 +796,8 @@ ${(() => {
   <div class="adm-card-header">
     <h3 class="adm-card-title">${activeCount} actief${inactiveCount ? ` · ${inactiveCount} inactief` : ""}</h3>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-      <input type="search" placeholder="Zoeken…" id="admEmpSearch" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;width:180px;">
-      ${inactiveCount ? `<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#64748b;cursor:pointer;">
+      <input type="search" placeholder="Zoeken…" id="admEmpSearch" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;width:180px;">
+      ${inactiveCount ? `<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--gray-500);cursor:pointer;">
         <input type="checkbox" id="admEmpShowInactive" ${_empShowInactive?"checked":""}> Toon inactief
       </label>` : ""}
       <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admEmpImport" title="CSV importeren">📥 CSV Import</button>
@@ -872,10 +872,10 @@ ${(() => {
       <thead><tr><th></th><th>Naam</th><th>E-mail</th><th>Functie</th><th>Rol</th><th>Status</th><th>Acties</th></tr></thead>
       <tbody>${employees.map(u => `
         <tr class="adm-row-link adm-emp-row" data-id="${esc(u.id)}" title="Open medewerker">
-          <td><span class="adm-avatar" style="background:${u.active===false?"#f1f5f9":"#e0e7ff"};color:${u.active===false?"#94a3b8":"#4f46e5"}">${(u.name||u.email||"?")[0].toUpperCase()}</span></td>
-          <td><div style="font-weight:600;color:${u.active===false?"#94a3b8":"#0f172a"}">${esc(u.name||"—")}</div><div style="font-size:11px;color:#94a3b8">${esc(u.phone||"")}</div></td>
+          <td><span class="adm-avatar" style="background:${u.active===false?"var(--gray-100)":"var(--wf-purple-l)"};color:${u.active===false?"var(--gray-400)":"var(--wf-purple)"}">${(u.name||u.email||"?")[0].toUpperCase()}</span></td>
+          <td><div style="font-weight:600;color:${u.active===false?"var(--gray-400)":"var(--gray-900)"}">${esc(u.name||"—")}</div><div style="font-size:11px;color:var(--gray-400)">${esc(u.phone||"")}</div></td>
           <td style="font-size:12px">${esc(u.email)}</td>
-          <td style="font-size:12px;color:#64748b">${esc(u.function||u.jobTitle||"—")}</td>
+          <td style="font-size:12px;color:var(--gray-500)">${esc(u.function||u.jobTitle||"—")}</td>
           <td><span class="adm-status ${u.role==="manager"?"adm-status-pending":"adm-status-open"}">${u.role==="manager"?"Manager":u.role==="tenant_admin"?"Admin":"Medewerker"}</span></td>
           <td>${u.active!==false ? '<span class="adm-status adm-status-active">Actief</span>' : '<span class="adm-status adm-status-inactive">Inactief</span>'}</td>
           <td style="white-space:nowrap">
@@ -923,20 +923,20 @@ ${(() => {
     title.textContent = emp ? "Medewerker bewerken" : "Medewerker toevoegen";
     body.innerHTML = `
 <form id="admEmpForm">
-  <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Persoonsgegevens</div>
+  <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Persoonsgegevens</div>
   <div class="adm-form-row">
     <div class="adm-form-group"><label>Voornaam *</label><input name="firstName" value="${esc(emp?.firstName||(emp?.name?.split(" ")[0])||"")}" required placeholder="Jan"></div>
     <div class="adm-form-group"><label>Achternaam *</label><input name="lastName" value="${esc(emp?.lastName||(emp?.name?.split(" ").slice(1).join(" "))||"")}" required placeholder="Janssen"></div>
   </div>
   <div class="adm-form-row">
-    <div class="adm-form-group"><label>E-mail *</label><input name="email" type="email" value="${esc(emp?.email||"")}" ${emp?"readonly style='background:#f8fafc;color:#64748b'":""} required placeholder="jan@bedrijf.be"></div>
+    <div class="adm-form-group"><label>E-mail *</label><input name="email" type="email" value="${esc(emp?.email||"")}" ${emp?"readonly style='background:var(--gray-50);color:var(--gray-500)'":""} required placeholder="jan@bedrijf.be"></div>
     <div class="adm-form-group"><label>Telefoon</label><input name="phone" value="${esc(emp?.phone||"")}" placeholder="+32 4xx xx xx xx"></div>
   </div>
   <div class="adm-form-row">
     <div class="adm-form-group"><label>Functie</label><input name="function" value="${esc(emp?.function||emp?.jobTitle||"")}" placeholder="Technieker, Chauffeur…"></div>
     <div class="adm-form-group"><label>Rol</label>
       ${isAdminUser
-        ? `<input value="Beheerder" disabled style="background:#f8fafc;color:#64748b">`
+        ? `<input value="Beheerder" disabled style="background:var(--gray-50);color:var(--gray-500)">`
         : `<select name="role">
         <option value="employee" ${(emp?.role||"employee")==="employee"?"selected":""}>Medewerker</option>
         <option value="manager" ${emp?.role==="manager"?"selected":""}>Manager</option>
@@ -944,43 +944,43 @@ ${(() => {
     </div>
   </div>
 
-  <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin:14px 0 10px;">Adres & IBAN</div>
+  <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 10px;">Adres & IBAN</div>
   <div class="adm-form-group"><label>Adres</label><input name="address" value="${esc(emp?.address||"")}" placeholder="Straat 1, 1000 Brussel"></div>
   <div class="adm-form-row">
     <div class="adm-form-group"><label>IBAN</label><input name="iban" value="${esc(emp?.iban||"")}" placeholder="BE68 5390 0754 7034"></div>
     <div class="adm-form-group"><label>Rijksregisternr.</label><input name="nationalId" value="${esc(emp?.nationalId||"")}" placeholder="00.00.00-000.00"></div>
   </div>
 
-  <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin:14px 0 10px;">Verlof</div>
+  <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 10px;">Verlof</div>
   <div class="adm-form-row">
     <div class="adm-form-group"><label>Vakantiedagen / jaar</label>
       <input name="leaveQuota" type="number" min="0" max="365" value="${esc(emp?.leaveQuota ?? 20)}" placeholder="20">
     </div>
-    <div class="adm-form-group" style="align-self:flex-end;padding-bottom:4px;font-size:12px;color:#64748b;">
+    <div class="adm-form-group" style="align-self:flex-end;padding-bottom:4px;font-size:12px;color:var(--gray-500);">
       Standaard: 20 dagen. Wijzig voor deeltijdse of contractuele afwijkingen.
     </div>
   </div>
 
-  <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin:14px 0 6px;">Toegang &amp; rechten</div>
-  ${isAdminUser ? `<div style="font-size:12px;color:#64748b;">Beheerders hebben volledige toegang. Rechten beheer je hier alleen voor medewerkers en managers.</div>` : `
-  <div style="font-size:12px;color:#64748b;margin-bottom:8px;">Bepaal welke modules deze gebruiker mag gebruiken. Enkel modules uit jullie pakket worden getoond. In- en uitprikken (prikklok) kan iedereen altijd, ongeacht functie.</div>
+  <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 6px;">Toegang &amp; rechten</div>
+  ${isAdminUser ? `<div style="font-size:12px;color:var(--gray-500);">Beheerders hebben volledige toegang. Rechten beheer je hier alleen voor medewerkers en managers.</div>` : `
+  <div style="font-size:12px;color:var(--gray-500);margin-bottom:8px;">Bepaal welke modules deze gebruiker mag gebruiken. Enkel modules uit jullie pakket worden getoond. In- en uitprikken (prikklok) kan iedereen altijd, ongeacht functie.</div>
   ${_grantable.length ? `<div id="admEmpPerms" style="display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;">
     ${_grantable.map(p => {
       const on = emp
         ? (emp.permissions || []).some(x => x === p.key || x === `own:${p.key}`)
         : ROLE_DEFAULT_PERMS[emp?.role || "employee"].includes(p.key);
-      return `<label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#334155;cursor:pointer;">
+      return `<label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--gray-700);cursor:pointer;">
         <input type="checkbox" class="adm-perm" data-key="${p.key}" ${on ? "checked" : ""}> ${esc(p.label)}
       </label>`;
     }).join("")}
-  </div>` : `<div style="font-size:12px;color:#94a3b8;">Geen toewijsbare modules in het huidige pakket.</div>`}
+  </div>` : `<div style="font-size:12px;color:var(--gray-400);">Geen toewijsbare modules in het huidige pakket.</div>`}
   `}
 
   ${!emp ? `
-  <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin:14px 0 10px;">Toegang</div>
-  <div class="adm-form-group" style="font-size:12px;color:#64748b;background:#f8fafc;border-radius:8px;padding:10px 12px;">De medewerker ontvangt een activatiemail om binnen 7 dagen zelf een wachtwoord in te stellen. Je kiest hier dus geen wachtwoord.</div>` : ""}
+  <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 10px;">Toegang</div>
+  <div class="adm-form-group" style="font-size:12px;color:var(--gray-500);background:var(--gray-50);border-radius:8px;padding:10px 12px;">De medewerker ontvangt een activatiemail om binnen 7 dagen zelf een wachtwoord in te stellen. Je kiest hier dus geen wachtwoord.</div>` : ""}
 
-  <div id="admEmpFormErr" style="display:none;background:#fef2f2;color:#dc2626;border-radius:8px;padding:8px;font-size:12px;margin-top:8px;"></div>
+  <div id="admEmpFormErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:8px;font-size:12px;margin-top:8px;"></div>
   <div class="adm-form-actions" style="margin-top:16px;">
     <button type="button" class="adm-btn adm-btn-secondary" id="admEmpCancel">Annuleren</button>
     ${emp ? `<button type="button" class="adm-btn adm-btn-warning adm-btn-sm" id="admEmpPwReset">🔑 Wachtwoord reset</button>` : ""}
@@ -988,8 +988,8 @@ ${(() => {
   </div>
 </form>
 ${emp ? `
-<div style="margin-top:20px;padding-top:16px;border-top:1px solid #f1f5f9;">
-  <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Accountbeheer</div>
+<div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--gray-100);">
+  <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Accountbeheer</div>
   <div style="display:flex;gap:8px;flex-wrap:wrap">
     <button class="adm-btn adm-btn-sm ${emp.active!==false?"adm-btn-warning":"adm-btn-success"}" id="admEmpToggle">${emp.active!==false?"⏸ Deactiveer account":"▶ Activeer account"}</button>
   </div>
@@ -1048,7 +1048,7 @@ ${emp ? `
           // echte mailprovider) geeft de server de activatielink terug zodat het
           // testbaar blijft; in productie wordt die nooit getoond.
           if (result.activationLink) {
-            document.getElementById("admEmpFormErr").style.cssText = "display:block;background:#d1fae5;color:#065f46;border-radius:8px;padding:8px;font-size:12px;margin-top:8px;word-break:break-all;";
+            document.getElementById("admEmpFormErr").style.cssText = "display:block;background:var(--wf-green-l);color:var(--wf-green);border-radius:8px;padding:8px;font-size:12px;margin-top:8px;word-break:break-all;";
             document.getElementById("admEmpFormErr").innerHTML = `✅ Medewerker aangemaakt. Activatielink (dev): <a href="${result.activationLink}">${result.activationLink}</a>`;
             e.target.querySelector("[type=submit]").textContent = "Sluiten";
             e.target.querySelector("[type=submit]").type = "button";
@@ -1118,15 +1118,15 @@ ${emp ? `
     <table class="adm-table adm-plan-table">
       <thead><tr><th>Medewerker</th>${days.map(d => {
         const dayName = new Date(d).toLocaleDateString("nl-BE",{weekday:"short",day:"numeric",month:"numeric"});
-        return `<th style="${d===today?"color:#0ea5e9;font-weight:700;background:#f0f9ff":""}">${dayName}</th>`;
+        return `<th style="${d===today?"color:var(--wf-blue);font-weight:700;background:var(--wf-blue-l)":""}">${dayName}</th>`;
       }).join("")}</tr></thead>
       <tbody>
         ${renderPlanningRows(shifts, days, leaveMap)}
       </tbody>
     </table>
   </div>
-  <div style="padding:8px 16px;font-size:11px;color:#94a3b8;display:flex;gap:14px;border-top:1px solid #f8fafc;">
-    <span>🟦 Shift</span><span style="color:#d97706">🟧 Verlof (afwezig)</span>
+  <div style="padding:8px 16px;font-size:11px;color:var(--gray-400);display:flex;gap:14px;border-top:1px solid var(--gray-50);">
+    <span>🟦 Shift</span><span style="color:var(--wf-yellow)">🟧 Verlof (afwezig)</span>
     <span style="margin-left:auto">${shifts.length} shifts · ${Object.keys(leaveMap).length} personen op verlof</span>
   </div>
 </div>`;
@@ -1162,9 +1162,9 @@ ${emp ? `
 
   // Persoonlijke kleuren per medewerker (cyclisch)
   const PLAN_COLORS = [
-    ["#dbeafe","#1d4ed8"],["#dcfce7","#15803d"],["#fef3c7","#92400e"],
-    ["#fce7f3","#9d174d"],["#f3e8ff","#6b21a8"],["#cffafe","#0e7490"],
-    ["#fee2e2","#991b1b"],["#e0f2fe","#0369a1"]
+    ["var(--wf-blue-l)","var(--wf-blue)"],["var(--wf-green-l)","var(--wf-green)"],["var(--wf-yellow-l)","var(--wf-yellow)"],
+    ["var(--wf-purple-l)","var(--wf-purple)"],["var(--wf-purple-l)","var(--wf-purple)"],["var(--wf-blue-l)","#0e7490"],
+    ["var(--wf-red-l)","var(--wf-red)"],["var(--wf-blue-l)","var(--wf-blue)"]
   ];
   const _planColorMap = {};
   let _planColorIdx = 0;
@@ -1199,23 +1199,23 @@ ${emp ? `
         <td style="font-weight:500;">
           <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${fg};margin-right:5px;vertical-align:middle;"></span>
           ${esc(u.name)}
-          <span style="font-size:10px;color:#94a3b8;margin-left:4px;">${totalShifts}×</span>
+          <span style="font-size:10px;color:var(--gray-400);margin-left:4px;">${totalShifts}×</span>
         </td>
         ${days.map(d => {
           const dayShifts = u.days[d] || [];
           const isToday = d === today;
           const userId = Object.keys(byUser).find(k => byUser[k] === u) || "";
           const onLeave = leaveMap[userId]?.[d];
-          let cellBg = isToday ? "#f0f9ff" : "";
-          if (onLeave) cellBg = "#fffbeb";
+          let cellBg = isToday ? "var(--wf-blue-l)" : "";
+          if (onLeave) cellBg = "var(--wf-yellow-l)";
           return `<td style="${cellBg?"background:"+cellBg+";":""}">
-            ${onLeave && !dayShifts.length ? `<span style="background:#fef3c7;color:#92400e;border-radius:4px;padding:2px 6px;font-size:10px;font-weight:600;display:inline-block;">🟧 ${esc(onLeave)}</span>` : ""}
+            ${onLeave && !dayShifts.length ? `<span style="background:var(--wf-yellow-l);color:var(--wf-yellow);border-radius:4px;padding:2px 6px;font-size:10px;font-weight:600;display:inline-block;">🟧 ${esc(onLeave)}</span>` : ""}
             ${dayShifts.map(s =>
               `<span class="adm-shift-pill" data-id="${s.id}" title="${esc(s.note||s.location||"")} — klik om te bewerken"
                 style="background:${bg};color:${fg};border:1px solid ${fg}30;border-radius:5px;padding:2px 7px;font-size:11px;font-weight:600;cursor:pointer;display:inline-block;margin-bottom:2px;white-space:nowrap;">
                 ${esc(s.start||"")}${s.end?`–${esc(s.end)}`:""}${s.location?` <span style="opacity:.7;font-weight:400">${esc(s.location.slice(0,8))}</span>`:""}
               </span>`
-            ).join("<br>")||(!onLeave?`<span style="color:#e2e8f0;font-size:12px;">—</span>`:"")}
+            ).join("<br>")||(!onLeave?`<span style="color:var(--gray-200);font-size:12px;">—</span>`:"")}
           </td>`;
         }).join("")}
       </tr>`;
@@ -1257,27 +1257,27 @@ ${emp ? `
     <input name="note" placeholder="Optionele notitie" value="${esc(shift?.note||"")}">
   </div>
   ${!isEdit ? `
-  <div style="background:#f8fafc;border-radius:8px;padding:12px;margin-bottom:4px;">
+  <div style="background:var(--gray-50);border-radius:8px;padding:12px;margin-bottom:4px;">
     <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;cursor:pointer;">
       <input type="checkbox" id="shiftRecurring" style="width:16px;height:16px;"> Wekelijks herhalen
     </label>
     <div id="shiftRecurWrap" style="display:none;margin-top:10px;">
       <div class="adm-form-row">
         <div class="adm-form-group"><label>Aantal weken</label>
-          <select id="shiftRecurWeeks" style="width:100%;padding:7px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;">
+          <select id="shiftRecurWeeks" style="width:100%;padding:7px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;">
             <option value="2">2 weken</option>
             <option value="4" selected>4 weken</option>
             <option value="8">8 weken</option>
             <option value="12">12 weken</option>
           </select>
         </div>
-        <div class="adm-form-group" style="align-self:flex-end;padding-bottom:4px;font-size:12px;color:#64748b;" id="shiftRecurInfo">
+        <div class="adm-form-group" style="align-self:flex-end;padding-bottom:4px;font-size:12px;color:var(--gray-500);" id="shiftRecurInfo">
           Maakt 4 shifts aan
         </div>
       </div>
     </div>
   </div>` : ""}
-  <div id="admShiftErr" style="display:none;color:#ef4444;font-size:12px;padding:4px 0;"></div>
+  <div id="admShiftErr" style="display:none;color:var(--wf-red);font-size:12px;padding:4px 0;"></div>
   <div class="adm-form-actions" style="justify-content:space-between;">
     ${isEdit ? `<button type="button" class="adm-btn adm-btn-danger adm-btn-sm" id="admShiftDelete">🗑 Verwijderen</button>` : `<span></span>`}
     <div style="display:flex;gap:8px;">
@@ -1351,7 +1351,7 @@ ${emp ? `
   <div class="adm-card-header">
     <h3 class="adm-card-title">Prikklok overzicht</h3>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <input type="date" id="admClockDate" value="${_clockDate}" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
+      <input type="date" id="admClockDate" value="${_clockDate}" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
       <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admClockPrev">‹ Vorige</button>
       <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admClockToday">Vandaag</button>
       <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admClockNext">Volgende ›</button>
@@ -1406,17 +1406,17 @@ ${emp ? `
 
       tableEl.innerHTML = `
 <div style="display:flex;gap:12px;padding:12px 16px 0;flex-wrap:wrap;">
-  <div style="background:#eff6ff;border-radius:8px;padding:8px 14px;text-align:center">
-    <div style="font-size:18px;font-weight:700;color:#1d4ed8">${clocks.length}</div>
-    <div style="font-size:11px;color:#64748b">Registraties</div>
+  <div style="background:var(--wf-blue-l);border-radius:8px;padding:8px 14px;text-align:center">
+    <div style="font-size:18px;font-weight:700;color:var(--wf-blue)">${clocks.length}</div>
+    <div style="font-size:11px;color:var(--gray-500)">Registraties</div>
   </div>
-  <div style="background:${ingeklokt>0?"#d1fae5":"#f8fafc"};border-radius:8px;padding:8px 14px;text-align:center">
-    <div style="font-size:18px;font-weight:700;color:${ingeklokt>0?"#065f46":"#94a3b8"}">${ingeklokt}</div>
-    <div style="font-size:11px;color:#64748b">Nog ingeklokt</div>
+  <div style="background:${ingeklokt>0?"var(--wf-green-l)":"var(--gray-50)"};border-radius:8px;padding:8px 14px;text-align:center">
+    <div style="font-size:18px;font-weight:700;color:${ingeklokt>0?"var(--wf-green)":"var(--gray-400)"}">${ingeklokt}</div>
+    <div style="font-size:11px;color:var(--gray-500)">Nog ingeklokt</div>
   </div>
-  <div style="background:#f0fdf4;border-radius:8px;padding:8px 14px;text-align:center">
-    <div style="font-size:18px;font-weight:700;color:#15803d">${totalHours.toFixed(1)} u</div>
-    <div style="font-size:11px;color:#64748b">Totaal uren</div>
+  <div style="background:var(--wf-green-l);border-radius:8px;padding:8px 14px;text-align:center">
+    <div style="font-size:18px;font-weight:700;color:var(--wf-green)">${totalHours.toFixed(1)} u</div>
+    <div style="font-size:11px;color:var(--gray-500)">Totaal uren</div>
   </div>
 </div>
 <table class="adm-table" style="margin-top:10px">
@@ -1428,7 +1428,7 @@ ${emp ? `
       return `<tr class="${noOut ? "" : "adm-row-link clk-row"}" data-id="${esc(c.id)}" ${noOut ? "" : 'title="Open correctie"'}>
         <td style="font-weight:500">${esc(uName(c))}</td>
         <td>${c.clockedIn ? new Date(c.clockedIn).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}) : "—"}</td>
-        <td>${c.clockedOut ? new Date(c.clockedOut).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}) : '<span style="color:#f59e0b">Niet uitgeklokt</span>'}</td>
+        <td>${c.clockedOut ? new Date(c.clockedOut).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}) : '<span style="color:var(--wf-yellow)">Niet uitgeklokt</span>'}</td>
         <td>${hours}</td>
         <td>${c.status==="in"||noOut ? '<span class="adm-status adm-status-active">Ingeklokt</span>' : '<span class="adm-status adm-status-inactive">Uitgeklokt</span>'}</td>
         <td>${noOut ? `<button class="adm-btn adm-btn-warning adm-btn-sm clk-force-out" data-id="${esc(c.id)}" data-uid="${esc(c.userId)}">Klokt uit</button>` : `<button class="adm-btn adm-btn-secondary adm-btn-sm clk-edit" data-id="${esc(c.id)}">✏ Corrigeer</button>`}</td>
@@ -1458,7 +1458,7 @@ ${emp ? `
       });
 
     } catch(e) {
-      tableEl.innerHTML = `<div class="adm-empty" style="color:#dc2626">Fout: ${e.message}</div>`;
+      tableEl.innerHTML = `<div class="adm-empty" style="color:var(--wf-red)">Fout: ${e.message}</div>`;
     }
   }
 
@@ -1534,7 +1534,7 @@ ${emp ? `
     document.getElementById("admDrawerBody").innerHTML = `
 <form id="clkEditForm">
   <div class="adm-form-group"><label>Medewerker</label>
-    <input value="${esc(uName(clk))}" disabled style="background:#f8fafc">
+    <input value="${esc(uName(clk))}" disabled style="background:var(--gray-50)">
   </div>
   <div class="adm-form-row">
     <div class="adm-form-group"><label>Inkloktijd *</label>
@@ -1547,7 +1547,7 @@ ${emp ? `
   <div class="adm-form-group"><label>Reden correctie</label>
     <input name="note" placeholder="Bijv. vergeten uitkloktijd" value="${esc(clk.note||"")}">
   </div>
-  <div id="clkEditErr" style="display:none;color:#ef4444;font-size:12px;padding:6px 0;margin-bottom:4px;"></div>
+  <div id="clkEditErr" style="display:none;color:var(--wf-red);font-size:12px;padding:6px 0;margin-bottom:4px;"></div>
   <div class="adm-form-actions">
     <button type="button" class="adm-btn adm-btn-secondary" id="clkEditCancel">Annuleren</button>
     <button type="submit" class="adm-btn adm-btn-primary">Opslaan</button>
@@ -1674,9 +1674,9 @@ ${emp ? `
   </div>
   <div class="adm-form-group">
     <label>Reden / notitie</label>
-    <textarea name="reason" rows="2" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;" placeholder="Optionele opmerking"></textarea>
+    <textarea name="reason" rows="2" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;" placeholder="Optionele opmerking"></textarea>
   </div>
-  <div id="createLeaveErr" style="display:none;background:#fef2f2;color:#dc2626;border-radius:8px;padding:8px;font-size:12px;margin-bottom:8px;"></div>
+  <div id="createLeaveErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:8px;font-size:12px;margin-bottom:8px;"></div>
   <div class="adm-form-actions">
     <button type="button" class="adm-btn adm-btn-secondary" id="createLeaveCancel">Annuleren</button>
     <button type="submit" class="adm-btn adm-btn-primary">Aanmaken</button>
@@ -1714,14 +1714,14 @@ ${emp ? `
 
     const body = document.getElementById("admLeaveBody");
     if (!body) return;
-    body.innerHTML = `<div style="padding:24px;text-align:center;color:#94a3b8;font-size:13px;">Laden…</div>`;
+    body.innerHTML = `<div style="padding:24px;text-align:center;color:var(--gray-400);font-size:13px;">Laden…</div>`;
 
     if (_leaveTab === "aanvragen") {
       const data = await api("GET", "/leaves");
       const leaves = data.leaves || data || [];
       body.innerHTML = `
-<div style="padding:12px 16px;border-bottom:1px solid #f1f5f9;display:flex;gap:8px;align-items:center;">
-  <select id="admLeaveFilter" style="padding:6px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;">
+<div style="padding:12px 16px;border-bottom:1px solid var(--gray-100);display:flex;gap:8px;align-items:center;">
+  <select id="admLeaveFilter" style="padding:6px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;">
     <option value="">Alle statussen</option>
     <option value="aangevraagd">Aangevraagd</option>
     <option value="goedgekeurd">Goedgekeurd</option>
@@ -1752,7 +1752,7 @@ ${emp ? `
     try {
       calData = await api("GET", `/leaves/calendar?year=${_leaveCalYear}&month=${_leaveCalMonth}`);
     } catch(e) {
-      container.innerHTML = `<div style="padding:24px;color:#ef4444;">${esc(e.message)}</div>`;
+      container.innerHTML = `<div style="padding:24px;color:var(--wf-red);">${esc(e.message)}</div>`;
       return;
     }
     const { days = {}, leaves = [] } = calData;
@@ -1778,10 +1778,10 @@ ${emp ? `
       const dow = new Date(_leaveCalYear, _leaveCalMonth - 1, d).getDay();
       const isWeekend = dow === 0 || dow === 6;
       const isToday = dateStr === new Date().toISOString().slice(0,10);
-      cells += `<div style="min-height:52px;border-radius:8px;padding:4px 6px;background:${isToday?"#eff6ff":isWeekend?"#f8fafc":"#fff"};border:1px solid ${isToday?"#bfdbfe":"#e2e8f0"};">
-        <div style="font-size:11px;font-weight:${isToday?"700":"500"};color:${isWeekend?"#94a3b8":isToday?"#2563eb":"#374151"};margin-bottom:2px;">${d}</div>
-        ${userIds.slice(0,3).map(uid => { const nm = empMap[uid] || empNameById(uid) || "Onbekend"; return `<div style="font-size:10px;background:#dbeafe;color:#1e40af;border-radius:4px;padding:1px 4px;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(nm)}">${esc(nm.split(" ")[0])}</div>`; }).join("")}
-        ${userIds.length > 3 ? `<div style="font-size:10px;color:#64748b;">+${userIds.length-3}</div>` : ""}
+      cells += `<div style="min-height:52px;border-radius:8px;padding:4px 6px;background:${isToday?"var(--wf-blue-l)":isWeekend?"var(--gray-50)":"#fff"};border:1px solid ${isToday?"var(--wf-blue-l)":"var(--gray-200)"};">
+        <div style="font-size:11px;font-weight:${isToday?"700":"500"};color:${isWeekend?"var(--gray-400)":isToday?"var(--wf-blue)":"var(--gray-700)"};margin-bottom:2px;">${d}</div>
+        ${userIds.slice(0,3).map(uid => { const nm = empMap[uid] || empNameById(uid) || "Onbekend"; return `<div style="font-size:10px;background:var(--wf-blue-l);color:var(--wf-blue);border-radius:4px;padding:1px 4px;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(nm)}">${esc(nm.split(" ")[0])}</div>`; }).join("")}
+        ${userIds.length > 3 ? `<div style="font-size:10px;color:var(--gray-500);">+${userIds.length-3}</div>` : ""}
       </div>`;
     }
 
@@ -1791,17 +1791,17 @@ ${emp ? `
     <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admCalPrev">‹</button>
     <span style="font-size:15px;font-weight:600;min-width:160px;text-align:center;">${MONTHS_NL[_leaveCalMonth]} ${_leaveCalYear}</span>
     <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admCalNext">›</button>
-    <span style="font-size:12px;color:#64748b;margin-left:8px;">${leaves.length} goedgekeurde verloven</span>
+    <span style="font-size:12px;color:var(--gray-500);margin-left:8px;">${leaves.length} goedgekeurde verloven</span>
   </div>
   <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:6px;">
-    ${["Ma","Di","Wo","Do","Vr","Za","Zo"].map(d=>`<div style="text-align:center;font-size:11px;font-weight:600;color:#64748b;padding:4px 0;">${d}</div>`).join("")}
+    ${["Ma","Di","Wo","Do","Vr","Za","Zo"].map(d=>`<div style="text-align:center;font-size:11px;font-weight:600;color:var(--gray-500);padding:4px 0;">${d}</div>`).join("")}
   </div>
   <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;">${cells}</div>
   ${leaves.length ? `
-  <div style="margin-top:16px;padding-top:12px;border-top:1px solid #f1f5f9;">
-    <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Verloven deze maand</div>
+  <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--gray-100);">
+    <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Verloven deze maand</div>
     <div style="display:flex;flex-wrap:wrap;gap:6px;">
-    ${leaves.map(l=>`<div style="font-size:12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:4px 8px;color:#166534;">
+    ${leaves.map(l=>`<div style="font-size:12px;background:var(--wf-green-l);border:1px solid var(--wf-green-l);border-radius:6px;padding:4px 8px;color:#166534;">
       <strong>${esc(empMap[l.userId]||uName(l))}</strong> · ${esc(l.type)} · ${l.startDate}→${l.endDate} (${l.days}d)
     </div>`).join("")}
     </div>
@@ -1826,33 +1826,33 @@ ${emp ? `
     try {
       balData = await api("GET", `/leaves/balance?year=${year}`);
     } catch(e) {
-      container.innerHTML = `<div style="padding:24px;color:#ef4444;">${esc(e.message)}</div>`;
+      container.innerHTML = `<div style="padding:24px;color:var(--wf-red);">${esc(e.message)}</div>`;
       return;
     }
     const balance = balData.balance || [];
     if (!balance.length) {
-      container.innerHTML = `<div style="padding:24px;text-align:center;color:#94a3b8;">Geen medewerkers gevonden.</div>`;
+      container.innerHTML = `<div style="padding:24px;text-align:center;color:var(--gray-400);">Geen medewerkers gevonden.</div>`;
       return;
     }
 
     container.innerHTML = `
 <div style="padding:16px;">
-  <div style="font-size:13px;color:#64748b;margin-bottom:12px;">Vakantiesaldo ${year} — op basis van goedgekeurde verlofaanvragen</div>
+  <div style="font-size:13px;color:var(--gray-500);margin-bottom:12px;">Vakantiesaldo ${year} — op basis van goedgekeurde verlofaanvragen</div>
   <table class="adm-table">
     <thead><tr><th>Medewerker</th><th>Quota</th><th>Gebruikt</th><th>Resterend</th><th>Voortgang</th></tr></thead>
     <tbody>${balance.map(b => {
       const pct = b.quota ? Math.min(100, Math.round((b.used / b.quota) * 100)) : 0;
-      const color = pct >= 90 ? "#ef4444" : pct >= 70 ? "#f59e0b" : "#10b981";
+      const color = pct >= 90 ? "var(--wf-red)" : pct >= 70 ? "var(--wf-yellow)" : "var(--wf-green)";
       return `<tr>
-        <td><div style="font-weight:500;">${esc(b.name)}</div><div style="font-size:11px;color:#94a3b8;">${esc(b.email)}</div></td>
+        <td><div style="font-weight:500;">${esc(b.name)}</div><div style="font-size:11px;color:var(--gray-400);">${esc(b.email)}</div></td>
         <td>${b.quota}d</td>
         <td>${b.used}d</td>
-        <td style="font-weight:600;color:${b.remaining<=2?"#ef4444":b.remaining<=5?"#f59e0b":"#10b981"};">${b.remaining}d</td>
+        <td style="font-weight:600;color:${b.remaining<=2?"var(--wf-red)":b.remaining<=5?"var(--wf-yellow)":"var(--wf-green)"};">${b.remaining}d</td>
         <td style="min-width:120px;">
-          <div style="background:#f1f5f9;border-radius:20px;height:8px;overflow:hidden;">
+          <div style="background:var(--gray-100);border-radius:20px;height:8px;overflow:hidden;">
             <div style="height:100%;width:${pct}%;background:${color};border-radius:20px;transition:width .3s;"></div>
           </div>
-          <div style="font-size:10px;color:#94a3b8;margin-top:2px;">${pct}%</div>
+          <div style="font-size:10px;color:var(--gray-400);margin-top:2px;">${pct}%</div>
         </td>
       </tr>`;
     }).join("")}</tbody>
@@ -1872,7 +1872,7 @@ ${emp ? `
           <td>${esc(l.endDate||"")}</td>
           <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(l.reason||"")}">${esc(l.reason||"—")}</td>
           <td><span class="adm-status adm-status-${l.status}">${esc(l.status||"")}</span></td>
-          <td style="font-size:12px;color:#64748b;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(l.reviewNote||"")}">${esc(l.reviewNote||"—")}</td>
+          <td style="font-size:12px;color:var(--gray-500);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(l.reviewNote||"")}">${esc(l.reviewNote||"—")}</td>
           <td style="white-space:nowrap;">${l.status==="aangevraagd" ? `
             <button class="adm-btn adm-btn-success adm-btn-sm adm-leave-action" data-id="${esc(l.id)}" data-status="goedgekeurd">✓ Goed</button>
             <button class="adm-btn adm-btn-danger adm-btn-sm adm-leave-action" data-id="${esc(l.id)}" data-status="geweigerd">✗ Weiger</button>
@@ -1900,11 +1900,11 @@ ${emp ? `
     overlay.innerHTML = `
 <div style="background:#fff;border-radius:14px;width:420px;max-width:100%;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.2);">
   <h3 style="font-size:15px;font-weight:700;margin:0 0 6px;">${label}</h3>
-  <p style="font-size:13px;color:#64748b;margin:0 0 16px;">${esc(leave?.userName||leave?.userId||"")} · ${esc(leave?.type||"verlof")} · ${leave?.startDate||""}${leave?.endDate&&leave?.endDate!==leave?.startDate?" → "+leave?.endDate:""}</p>
-  <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Opmerking ${isApprove?"(optioneel)":"(optioneel)"}</label>
+  <p style="font-size:13px;color:var(--gray-500);margin:0 0 16px;">${esc(leave?.userName||leave?.userId||"")} · ${esc(leave?.type||"verlof")} · ${leave?.startDate||""}${leave?.endDate&&leave?.endDate!==leave?.startDate?" → "+leave?.endDate:""}</p>
+  <label style="font-size:12px;font-weight:600;color:var(--gray-700);display:block;margin-bottom:4px;">Opmerking ${isApprove?"(optioneel)":"(optioneel)"}</label>
   <textarea id="admLeaveNote" rows="3" placeholder="Voeg een opmerking toe…"
-    style="width:100%;border:1px solid #e2e8f0;border-radius:8px;padding:8px;font-size:13px;resize:vertical;box-sizing:border-box;"></textarea>
-  <div id="admLeaveModalErr" style="display:none;color:#ef4444;font-size:12px;margin-top:6px;"></div>
+    style="width:100%;border:1px solid var(--gray-200);border-radius:8px;padding:8px;font-size:13px;resize:vertical;box-sizing:border-box;"></textarea>
+  <div id="admLeaveModalErr" style="display:none;color:var(--wf-red);font-size:12px;margin-top:6px;"></div>
   <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
     <button id="admLeaveModalCancel" class="adm-btn adm-btn-secondary adm-btn-sm">Annuleren</button>
     <button id="admLeaveModalConfirm" class="adm-btn ${isApprove?"adm-btn-success":"adm-btn-danger"} adm-btn-sm">${label}</button>
@@ -1968,8 +1968,8 @@ ${emp ? `
 </div>
 <div class="adm-card">
   <div class="adm-card-header">
-    <h3 class="adm-card-title">Onkostennota's <span style="background:#e0f2fe;color:#0284c7;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${expenses.length}</span></h3>
-    <select id="admExpFilter" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;">
+    <h3 class="adm-card-title">Onkostennota's <span style="background:var(--wf-blue-l);color:#0284c7;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${expenses.length}</span></h3>
+    <select id="admExpFilter" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;">
       <option value="">Alle statussen</option>
       <option value="ingediend">In behandeling</option>
       <option value="goedgekeurd">Goedgekeurd</option>
@@ -1991,7 +1991,7 @@ ${emp ? `
           <td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(e.description||"")}">${esc(e.description||"—")}</td>
           <td>
             <span class="adm-status adm-status-${e.status}">${esc(e.status)}</span>
-            ${e.reviewNote ? `<div style="font-size:11px;color:#64748b;margin-top:2px;" title="${esc(e.reviewNote)}">💬 ${esc(e.reviewNote.slice(0,30))}${e.reviewNote.length>30?"…":""}</div>` : ""}
+            ${e.reviewNote ? `<div style="font-size:11px;color:var(--gray-500);margin-top:2px;" title="${esc(e.reviewNote)}">💬 ${esc(e.reviewNote.slice(0,30))}${e.reviewNote.length>30?"…":""}</div>` : ""}
           </td>
           <td style="white-space:nowrap;">${["pending","ingediend"].includes(e.status) ? `
             <button class="adm-btn adm-btn-success adm-btn-sm adm-exp-review" data-id="${e.id}" data-dec="goedgekeurd" data-name="${esc(uName(e))}" data-amount="${e.amount}" data-cat="${esc(e.category||"")}">✓ Goed</button>
@@ -2029,13 +2029,13 @@ ${emp ? `
     overlay.innerHTML = `
 <div style="background:#fff;border-radius:16px;width:100%;max-width:400px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.2);">
   <div style="font-size:15px;font-weight:700;margin-bottom:4px;">${isApprove ? "Onkost goedkeuren" : "Onkost weigeren"}</div>
-  <div style="font-size:13px;color:#64748b;margin-bottom:16px;">${esc(name)} · ${esc(cat)} · <strong>€ ${Number(amount||0).toFixed(2)}</strong></div>
+  <div style="font-size:13px;color:var(--gray-500);margin-bottom:16px;">${esc(name)} · ${esc(cat)} · <strong>€ ${Number(amount||0).toFixed(2)}</strong></div>
   <div style="margin-bottom:16px;">
-    <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Opmerking ${isApprove?"(optioneel)":"(verplicht bij weigering)"}</label>
+    <label style="font-size:12px;font-weight:600;color:var(--gray-700);display:block;margin-bottom:4px;">Opmerking ${isApprove?"(optioneel)":"(verplicht bij weigering)"}</label>
     <textarea id="expReviewNote" rows="3" placeholder="${isApprove?"Goedgekeurd voor uitbetaling…":"Geef een reden op…"}"
-      style="width:100%;border:1px solid #e2e8f0;border-radius:8px;padding:8px;font-size:13px;resize:vertical;box-sizing:border-box;"></textarea>
+      style="width:100%;border:1px solid var(--gray-200);border-radius:8px;padding:8px;font-size:13px;resize:vertical;box-sizing:border-box;"></textarea>
   </div>
-  <div id="expReviewErr" style="display:none;color:#ef4444;font-size:12px;margin-bottom:8px;"></div>
+  <div id="expReviewErr" style="display:none;color:var(--wf-red);font-size:12px;margin-bottom:8px;"></div>
   <div style="display:flex;gap:8px;justify-content:flex-end;">
     <button id="expReviewCancel" class="adm-btn adm-btn-secondary adm-btn-sm">Annuleren</button>
     <button id="expReviewConfirm" class="adm-btn ${isApprove?"adm-btn-success":"adm-btn-danger"} adm-btn-sm">${isApprove?"✓ Goedkeuren":"✗ Weigeren"}</button>
@@ -2106,23 +2106,23 @@ ${emp ? `
 <div class="adm-card">
   <div class="adm-card-header">
     <h3 class="adm-card-title">Werkbonnen
-      <span style="background:#e0f2fe;color:#0284c7;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${workorders.length}/${allWorkorders.length}</span>
+      <span style="background:var(--wf-blue-l);color:#0284c7;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${workorders.length}/${allWorkorders.length}</span>
     </h3>
     <button class="adm-btn adm-btn-primary adm-btn-sm" id="admNewWO">+ Werkbon</button>
   </div>
 
   <!-- Filter bar -->
-  <div style="display:flex;gap:10px;flex-wrap:wrap;padding:0 20px 14px;border-bottom:1px solid #f1f5f9;">
+  <div style="display:flex;gap:10px;flex-wrap:wrap;padding:0 20px 14px;border-bottom:1px solid var(--gray-100);">
     <input id="admWoSearch" type="search" placeholder="Zoek op titel / klant…" value="${esc(_woFilterSearch)}"
-      style="flex:1;min-width:160px;border:1px solid #e2e8f0;border-radius:8px;padding:6px 10px;font-size:13px;">
-    <select id="admWoStatusFilter" style="border:1px solid #e2e8f0;border-radius:8px;padding:6px 10px;font-size:13px;min-width:140px;">
+      style="flex:1;min-width:160px;border:1px solid var(--gray-200);border-radius:8px;padding:6px 10px;font-size:13px;">
+    <select id="admWoStatusFilter" style="border:1px solid var(--gray-200);border-radius:8px;padding:6px 10px;font-size:13px;min-width:140px;">
       <option value="">Alle statussen</option>
       <option value="open"        ${_woFilterStatus==="open"?"selected":""}>Open (${statusCounts.open||0})</option>
       <option value="in_progress" ${_woFilterStatus==="in_progress"?"selected":""}>In uitvoering (${statusCounts.in_progress||0})</option>
       <option value="done"        ${_woFilterStatus==="done"?"selected":""}>Voltooid (${doneCount})</option>
       <option value="geannuleerd" ${_woFilterStatus==="geannuleerd"?"selected":""}>Geannuleerd (${statusCounts.geannuleerd||0})</option>
     </select>
-    <select id="admWoUserFilter" style="border:1px solid #e2e8f0;border-radius:8px;padding:6px 10px;font-size:13px;min-width:160px;">
+    <select id="admWoUserFilter" style="border:1px solid var(--gray-200);border-radius:8px;padding:6px 10px;font-size:13px;min-width:160px;">
       <option value="">Alle medewerkers</option>
       ${employees.map(u => `<option value="${esc(u.id)}" ${_woFilterUser===u.id?"selected":""}>${esc(u.name||u.email)}</option>`).join("")}
     </select>
@@ -2227,14 +2227,14 @@ ${emp ? `
     </select>
   </div>
   <div class="adm-form-group"><label>Omschrijving</label>
-    <textarea name="description" rows="3" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;">${esc(workorder?.description || "")}</textarea>
+    <textarea name="description" rows="3" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;">${esc(workorder?.description || "")}</textarea>
   </div>
   <div class="adm-form-group"><label>Notities</label>
-    <textarea name="notes" rows="2" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;">${esc(workorder?.notes || "")}</textarea>
+    <textarea name="notes" rows="2" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;">${esc(workorder?.notes || "")}</textarea>
   </div>
-  <div style="background:#f8fafc;border-radius:8px;padding:12px;margin-bottom:8px;">
-    <div style="font-weight:600;font-size:12px;color:#334155;margin-bottom:8px;">Facturatie</div>
-    ${workorder?.clockedHours ? `<div style="font-size:12px;color:#0369a1;margin-bottom:8px;">⏱ ${workorder.clockedHours} u geklokt op deze werkbon${workorder?.billableHours==null?" — wordt overgenomen als factureerbare uren bij afronden":""}.</div>` : ""}
+  <div style="background:var(--gray-50);border-radius:8px;padding:12px;margin-bottom:8px;">
+    <div style="font-weight:600;font-size:12px;color:var(--gray-700);margin-bottom:8px;">Facturatie</div>
+    ${workorder?.clockedHours ? `<div style="font-size:12px;color:var(--wf-blue);margin-bottom:8px;">⏱ ${workorder.clockedHours} u geklokt op deze werkbon${workorder?.billableHours==null?" — wordt overgenomen als factureerbare uren bij afronden":""}.</div>` : ""}
     <div class="adm-form-row">
       <div class="adm-form-group"><label>Factureerbare uren</label>
         <input name="billableHours" type="number" step="0.25" min="0" value="${workorder?.billableHours ?? ""}" placeholder="${workorder?.clockedHours ? workorder.clockedHours+" geklokt" : "bv. 8"}">
@@ -2250,14 +2250,14 @@ ${emp ? `
       <input type="checkbox" name="billable" ${workorder?.billable === false ? "" : "checked"} style="width:16px;height:16px;"> Factureerbaar
     </label>
   </div>
-  ${workorder?.invoiceId ? `<div style="background:#d1fae5;border-radius:8px;padding:8px 12px;font-size:12px;color:#065f46;margin-bottom:8px;">🧾 Factuur aangemaakt</div>` : ""}
-  <div id="woFormErr" style="display:none;background:#fef2f2;color:#dc2626;border-radius:8px;padding:8px;font-size:12px;margin-bottom:8px;"></div>
+  ${workorder?.invoiceId ? `<div style="background:var(--wf-green-l);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--wf-green);margin-bottom:8px;">🧾 Factuur aangemaakt</div>` : ""}
+  <div id="woFormErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:8px;font-size:12px;margin-bottom:8px;"></div>
   <div class="adm-form-actions" style="flex-wrap:wrap;gap:8px;">
     <button type="button" class="adm-btn adm-btn-secondary" id="woCancel">Annuleren</button>
     ${workorder ? `<button type="button" class="adm-btn adm-btn-danger" id="woDelete">🗑</button>` : ""}
     ${workorder ? `<button type="button" class="adm-btn adm-btn-secondary" id="woReport" title="Werkbon-rapport afdrukken">📄 Rapport</button>` : ""}
     ${workorder && ["Voltooid","Afgewerkt"].includes(workorder.status) && !workorder.invoiceId
-      ? `<button type="button" class="adm-btn adm-btn-secondary" id="woMakeInvoice" style="color:#4f46e5;border-color:#c7d2fe;">🧾 Factuur aanmaken</button>`
+      ? `<button type="button" class="adm-btn adm-btn-secondary" id="woMakeInvoice" style="color:var(--wf-purple);border-color:#c7d2fe;">🧾 Factuur aanmaken</button>`
       : ""}
     <button type="submit" class="adm-btn adm-btn-primary">${workorder ? "Opslaan" : "Aanmaken"}</button>
   </div>
@@ -2346,8 +2346,8 @@ ${emp ? `
     content.innerHTML = `
 <div class="adm-card">
   <div class="adm-card-header" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-    <h3 class="adm-card-title">Berichten <span style="background:#e0f2fe;color:#0284c7;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${messages.length}</span></h3>
-    <label style="font-size:12px;color:#475569;display:flex;align-items:center;gap:6px">Werf-chat:
+    <h3 class="adm-card-title">Berichten <span style="background:var(--wf-blue-l);color:#0284c7;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${messages.length}</span></h3>
+    <label style="font-size:12px;color:var(--gray-600);display:flex;align-items:center;gap:6px">Werf-chat:
       <select id="admMsgVenueFilter" class="adm-input" style="max-width:200px">
         <option value="">Alle berichten</option>
         ${venues.map(v => `<option value="${esc(v.id)}" ${_msgVenueFilter === v.id ? "selected" : ""}>${esc(v.name || v.id)}</option>`).join("")}
@@ -2361,11 +2361,11 @@ ${emp ? `
         ${messages.length ? messages.map(m => `
         <tr>
           <td>${esc(m.senderName||m.senderId||"Systeem")}</td>
-          <td><span style="font-size:11px;background:#f1f5f9;border-radius:4px;padding:2px 6px;">${toLabel(m)}</span></td>
-          <td>${m.venueId ? `<span style="font-size:11px;background:#fef3c7;color:#92400e;border-radius:4px;padding:2px 6px;">🏗 ${esc(venueName(m.venueId))}</span>` : '<span style="color:#cbd5e1">—</span>'}</td>
+          <td><span style="font-size:11px;background:var(--gray-100);border-radius:4px;padding:2px 6px;">${toLabel(m)}</span></td>
+          <td>${m.venueId ? `<span style="font-size:11px;background:var(--wf-yellow-l);color:var(--wf-yellow);border-radius:4px;padding:2px 6px;">🏗 ${esc(venueName(m.venueId))}</span>` : '<span style="color:var(--gray-300)">—</span>'}</td>
           <td style="font-weight:500;">${esc(m.subject||"—")}</td>
-          <td style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#64748b;font-size:12px;" title="${esc(m.body||m.message||"")}">${esc(m.body||m.message||"—")}</td>
-          <td style="white-space:nowrap;font-size:12px;color:#94a3b8;">${m.createdAt?.slice(0,16)||""}</td>
+          <td style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--gray-500);font-size:12px;" title="${esc(m.body||m.message||"")}">${esc(m.body||m.message||"—")}</td>
+          <td style="white-space:nowrap;font-size:12px;color:var(--gray-400);">${m.createdAt?.slice(0,16)||""}</td>
           <td>
             <button class="adm-btn adm-btn-secondary adm-btn-sm adm-msg-view" data-id="${esc(m.id)}" title="Bekijk bericht">👁</button>
             <button class="adm-btn adm-btn-danger adm-btn-sm adm-msg-del" data-id="${esc(m.id)}" title="Verwijder" style="margin-left:4px;">🗑</button>
@@ -2388,12 +2388,12 @@ ${emp ? `
 <div style="background:#fff;border-radius:16px;width:100%;max-width:480px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.2);">
   <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
     <div>
-      <div style="font-size:16px;font-weight:700;color:#0f172a;">${esc(msg.subject||"Bericht")}</div>
-      <div style="font-size:12px;color:#64748b;margin-top:4px;">Van: <strong>${esc(msg.senderName||msg.senderId||"?")}</strong> · ${toLabel(msg)} · ${msg.createdAt?.slice(0,16)||""}</div>
+      <div style="font-size:16px;font-weight:700;color:var(--gray-900);">${esc(msg.subject||"Bericht")}</div>
+      <div style="font-size:12px;color:var(--gray-500);margin-top:4px;">Van: <strong>${esc(msg.senderName||msg.senderId||"?")}</strong> · ${toLabel(msg)} · ${msg.createdAt?.slice(0,16)||""}</div>
     </div>
-    <button id="msgViewClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:#94a3b8;padding:0;line-height:1;">×</button>
+    <button id="msgViewClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--gray-400);padding:0;line-height:1;">×</button>
   </div>
-  <div style="background:#f8fafc;border-radius:10px;padding:14px;font-size:14px;line-height:1.6;color:#374151;white-space:pre-wrap;">${esc(msg.body||msg.message||"")}</div>
+  <div style="background:var(--gray-50);border-radius:10px;padding:14px;font-size:14px;line-height:1.6;color:var(--gray-700);white-space:pre-wrap;">${esc(msg.body||msg.message||"")}</div>
   <div style="margin-top:16px;display:flex;justify-content:flex-end;">
     <button id="msgViewOk" class="adm-btn adm-btn-primary adm-btn-sm">Sluiten</button>
   </div>
@@ -2451,8 +2451,8 @@ ${emp ? `
     </select>
   </div>
   <div class="adm-form-group"><label>Onderwerp</label><input name="subject" required placeholder="Onderwerp van het bericht"></div>
-  <div class="adm-form-group"><label>Bericht *</label><textarea name="body" rows="5" required placeholder="Schrijf hier je bericht…" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;resize:vertical;box-sizing:border-box;"></textarea></div>
-  <div id="admMsgErr" style="display:none;color:#ef4444;font-size:12px;padding-bottom:4px;"></div>
+  <div class="adm-form-group"><label>Bericht *</label><textarea name="body" rows="5" required placeholder="Schrijf hier je bericht…" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;resize:vertical;box-sizing:border-box;"></textarea></div>
+  <div id="admMsgErr" style="display:none;color:var(--wf-red);font-size:12px;padding-bottom:4px;"></div>
   <div class="adm-form-actions">
     <button type="button" class="adm-btn adm-btn-secondary" id="admMsgCancel">Annuleren</button>
     <button type="submit" class="adm-btn adm-btn-primary">Verzenden</button>
@@ -2522,9 +2522,9 @@ ${emp ? `
   <div class="adm-card-header">
     <h3 class="adm-card-title">Rapportages</h3>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-      <input type="date" id="repFrom" value="${firstOfMonth}" style="padding:6px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;">
-      <span style="font-size:13px;color:#94a3b8;">t/m</span>
-      <input type="date" id="repTo" value="${lastOfMonth}" style="padding:6px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;">
+      <input type="date" id="repFrom" value="${firstOfMonth}" style="padding:6px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;">
+      <span style="font-size:13px;color:var(--gray-400);">t/m</span>
+      <input type="date" id="repTo" value="${lastOfMonth}" style="padding:6px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;">
       <button class="adm-btn adm-btn-primary adm-btn-sm" id="repLoad">Laden</button>
       <button class="adm-btn adm-btn-secondary adm-btn-sm" id="repBeslissers" title="Printbaar beslissersrapport genereren">📊 Beslissersrapport</button>
     </div>
@@ -2653,19 +2653,19 @@ ${emp ? `
         });
         const hourRows = Object.values(hoursByUser).sort((a,b) => b.hours - a.hours);
         const maxHours = hourRows[0]?.hours || 1;
-        const BAR_COLORS = ["#6366f1","#0ea5e9","#10b981","#f59e0b","#ef4444","#8b5cf6","#06b6d4","#84cc16"];
+        const BAR_COLORS = ["var(--wf-purple)","var(--wf-blue)","var(--wf-green)","var(--wf-yellow)","var(--wf-red)","var(--wf-orange)","var(--wf-blue-d)","var(--gray-500)"];
         document.getElementById("repClocksTable").innerHTML = hourRows.length
           ? `<div style="padding:8px 0;">${hourRows.map((r,i) => `
-            <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #f8fafc;">
-              <div style="width:110px;font-size:12px;font-weight:500;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(r.name)}">${esc(r.name)}</div>
-              <div style="flex:1;background:#f1f5f9;border-radius:4px;height:18px;overflow:hidden;">
+            <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--gray-50);">
+              <div style="width:110px;font-size:12px;font-weight:500;color:var(--gray-700);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(r.name)}">${esc(r.name)}</div>
+              <div style="flex:1;background:var(--gray-100);border-radius:4px;height:18px;overflow:hidden;">
                 <div style="width:${(r.hours/maxHours*100).toFixed(1)}%;background:${BAR_COLORS[i%BAR_COLORS.length]};height:100%;border-radius:4px;transition:width .4s;"></div>
               </div>
-              <div style="width:52px;font-size:12px;font-weight:600;color:#0f172a;text-align:right;">${r.hours.toFixed(1)} u</div>
-              <div style="width:40px;font-size:11px;color:#94a3b8;text-align:right;">${r.days.size}d</div>
+              <div style="width:52px;font-size:12px;font-weight:600;color:var(--gray-900);text-align:right;">${r.hours.toFixed(1)} u</div>
+              <div style="width:40px;font-size:11px;color:var(--gray-400);text-align:right;">${r.days.size}d</div>
             </div>`).join("")}
             </div>
-            <div style="font-size:11px;color:#94a3b8;margin-top:6px;text-align:right">Totaal: ${totalHours.toFixed(1)} u · ${hourRows.length} medewerkers</div>`
+            <div style="font-size:11px;color:var(--gray-400);margin-top:6px;text-align:right">Totaal: ${totalHours.toFixed(1)} u · ${hourRows.length} medewerkers</div>`
           : '<div class="adm-empty">Geen kloktijden in deze periode</div>';
 
         // ── Onkosten ──────────────────────────────────────────
@@ -2685,21 +2685,21 @@ ${emp ? `
         // ── Werkbonnen ────────────────────────────────────────
         const woByStatus = {};
         workorders.forEach(w => { woByStatus[w.status||"Onbekend"] = (woByStatus[w.status||"Onbekend"]||0)+1; });
-        const woStatusColors = { open:"#3b82f6", in_progress:"#f59e0b", Voltooid:"#10b981", Afgewerkt:"#10b981", geannuleerd:"#ef4444" };
+        const woStatusColors = { open:"var(--wf-blue)", in_progress:"var(--wf-yellow)", Voltooid:"var(--wf-green)", Afgewerkt:"var(--wf-green)", geannuleerd:"var(--wf-red)" };
         const woTotal = workorders.length;
         document.getElementById("repWOTable").innerHTML = workorders.length
           ? `<div style="padding:8px 0;">
               <div style="display:flex;height:20px;border-radius:6px;overflow:hidden;margin-bottom:14px;">
-                ${Object.entries(woByStatus).map(([s,n]) => `<div style="flex:${n};background:${woStatusColors[s]||"#94a3b8"};transition:flex .4s;" title="${s}: ${n}"></div>`).join("")}
+                ${Object.entries(woByStatus).map(([s,n]) => `<div style="flex:${n};background:${woStatusColors[s]||"var(--gray-400)"};transition:flex .4s;" title="${s}: ${n}"></div>`).join("")}
               </div>
               ${Object.entries(woByStatus).map(([s,n]) => `
-              <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f8fafc;">
-                <div style="width:10px;height:10px;border-radius:50%;background:${woStatusColors[s]||"#94a3b8"};flex-shrink:0;"></div>
-                <div style="font-size:13px;color:#374151;flex:1;">${s}</div>
-                <div style="font-size:13px;font-weight:700;color:#0f172a;">${n}</div>
-                <div style="font-size:11px;color:#94a3b8;width:36px;text-align:right;">${(n/woTotal*100).toFixed(0)}%</div>
+              <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--gray-50);">
+                <div style="width:10px;height:10px;border-radius:50%;background:${woStatusColors[s]||"var(--gray-400)"};flex-shrink:0;"></div>
+                <div style="font-size:13px;color:var(--gray-700);flex:1;">${s}</div>
+                <div style="font-size:13px;font-weight:700;color:var(--gray-900);">${n}</div>
+                <div style="font-size:11px;color:var(--gray-400);width:36px;text-align:right;">${(n/woTotal*100).toFixed(0)}%</div>
               </div>`).join("")}
-              <div style="font-size:11px;color:#94a3b8;margin-top:6px;text-align:right">Totaal: ${woTotal} werkbonnen</div>
+              <div style="font-size:11px;color:var(--gray-400);margin-top:6px;text-align:right">Totaal: ${woTotal} werkbonnen</div>
             </div>`
           : '<div class="adm-empty">Geen werkbonnen in deze periode</div>';
 
@@ -2734,7 +2734,7 @@ ${emp ? `
             payrollTbl.innerHTML = `
 <table class="adm-table">
   <thead>
-    <tr style="background:#f8fafc;">
+    <tr style="background:var(--gray-50);">
       <th>Medewerker</th>
       <th style="text-align:right">Gewerkte dagen</th>
       <th style="text-align:right">Gewerkte uren</th>
@@ -2748,13 +2748,13 @@ ${emp ? `
       <td><strong>${esc(r.name)}</strong></td>
       <td style="text-align:right;font-variant-numeric:tabular-nums;">${r.days.size}</td>
       <td style="text-align:right;font-weight:600;font-variant-numeric:tabular-nums;">${r.hours.toFixed(2)}</td>
-      <td style="text-align:right;color:#64748b;">${r.days.size ? (r.hours/r.days.size).toFixed(2) : "—"}</td>
+      <td style="text-align:right;color:var(--gray-500);">${r.days.size ? (r.hours/r.days.size).toFixed(2) : "—"}</td>
       <td style="text-align:right;">${r.leaveDays||"—"}</td>
       <td style="text-align:right;font-weight:600;">€${r.expAmt.toFixed(2)}</td>
     </tr>`).join("")}
   </tbody>
   <tfoot>
-    <tr style="background:#f1f5f9;font-weight:700;border-top:2px solid #e2e8f0;">
+    <tr style="background:var(--gray-100);font-weight:700;border-top:2px solid var(--gray-200);">
       <td>Totaal (${payrollRows.length} medewerkers)</td>
       <td style="text-align:right;">—</td>
       <td style="text-align:right;">${totH.toFixed(2)} u</td>
@@ -2768,7 +2768,7 @@ ${emp ? `
         }
 
       } catch (err) {
-        document.getElementById("repClocksTable").innerHTML = `<div class="adm-empty" style="color:#ef4444;">Fout: ${err.message}</div>`;
+        document.getElementById("repClocksTable").innerHTML = `<div class="adm-empty" style="color:var(--wf-red);">Fout: ${err.message}</div>`;
       }
     }
 
@@ -2895,8 +2895,8 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
   <div class="adm-card-header" style="flex-wrap:wrap;gap:8px;">
     <h3 class="adm-card-title">Audittrail</h3>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-      <input placeholder="Actor (e-mail)" id="auditActor" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;width:160px;">
-      <select id="auditArea" style="padding:6px 8px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;">
+      <input placeholder="Actor (e-mail)" id="auditActor" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;width:160px;">
+      <select id="auditArea" style="padding:6px 8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;">
         <option value="">Alle gebieden</option>
         <option value="auth">Auth</option>
         <option value="employees">Medewerkers</option>
@@ -2910,16 +2910,16 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
         <option value="stock">Stock</option>
         <option value="settings">Instellingen</option>
       </select>
-      <input type="date" id="auditFrom" value="${weekAgoStr}" style="padding:6px 8px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;">
-      <span style="font-size:12px;color:#94a3b8;">t/m</span>
-      <input type="date" id="auditTo" value="${todayStr}" style="padding:6px 8px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;">
-      <input type="number" placeholder="Max" id="auditLimit" value="200" min="10" max="1000" style="padding:6px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;width:70px;">
+      <input type="date" id="auditFrom" value="${weekAgoStr}" style="padding:6px 8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;">
+      <span style="font-size:12px;color:var(--gray-400);">t/m</span>
+      <input type="date" id="auditTo" value="${todayStr}" style="padding:6px 8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;">
+      <input type="number" placeholder="Max" id="auditLimit" value="200" min="10" max="1000" style="padding:6px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;width:70px;">
       <button class="adm-btn adm-btn-primary adm-btn-sm" id="auditLoad">↻ Laden</button>
       <button class="adm-btn adm-btn-secondary adm-btn-sm" id="auditExport">⬇ CSV</button>
     </div>
   </div>
 </div>
-<div id="auditSummary" style="display:none;background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:#0369a1;"></div>
+<div id="auditSummary" style="display:none;background:var(--wf-blue-l);border:1px solid var(--wf-blue-l);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:var(--wf-blue);"></div>
 <div class="adm-card">
   <div class="adm-card-body adm-table-wrap" id="auditTable">
     <div class="adm-loading">Laden…</div>
@@ -2951,12 +2951,12 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
           const actors = new Set(_auditRows.map(r => r.actor)).size;
           const areas  = new Set(_auditRows.filter(r=>r.area).map(r => r.area)).size;
           const fails  = _auditRows.filter(r => r.action?.includes("fail") || r.action?.includes("lock") || r.action?.includes("denied")).length;
-          summaryEl.innerHTML = `📊 <strong>${_auditRows.length}</strong> events &nbsp;·&nbsp; <strong>${actors}</strong> actoren &nbsp;·&nbsp; <strong>${areas}</strong> gebieden${fails ? ` &nbsp;·&nbsp; <span style="color:#dc2626;font-weight:600;">⚠ ${fails} fouten/weigeringen</span>` : ""}`;
+          summaryEl.innerHTML = `📊 <strong>${_auditRows.length}</strong> events &nbsp;·&nbsp; <strong>${actors}</strong> actoren &nbsp;·&nbsp; <strong>${areas}</strong> gebieden${fails ? ` &nbsp;·&nbsp; <span style="color:var(--wf-red);font-weight:600;">⚠ ${fails} fouten/weigeringen</span>` : ""}`;
           summaryEl.style.display = "block";
         }
         renderAuditTable(_auditRows);
       } catch (err) {
-        tableEl.innerHTML = `<div class="adm-empty" style="color:#ef4444;">Fout: ${err.message}</div>`;
+        tableEl.innerHTML = `<div class="adm-empty" style="color:var(--wf-red);">Fout: ${err.message}</div>`;
       }
     }
 
@@ -2975,7 +2975,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
             <td style="font-size:12px;">${r.actor||"systeem"}</td>
             <td><span class="adm-status ${r.action?.includes("fail")||r.action?.includes("lock")||r.action?.includes("denied") ? "adm-status-inactive" : "adm-status-active"}">${r.action||"—"}</span></td>
             <td style="font-size:12px;">${r.area||"—"}</td>
-            <td style="font-size:12px;color:#64748b;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.detail||""}">${r.detail||"—"}</td>
+            <td style="font-size:12px;color:var(--gray-500);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.detail||""}">${r.detail||"—"}</td>
           </tr>`).join("")}
         </tbody>
       </table>`;
@@ -3003,8 +3003,8 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
       content.innerHTML = `
 <div class="adm-card">
   <div class="adm-card-header">
-    <h3 class="adm-card-title">Klanten <span style="background:#e0e7ff;color:#4f46e5;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${rows.length}</span></h3>
-    <input id="custSearch" placeholder="Zoek naam, e-mail…" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;min-width:200px;">
+    <h3 class="adm-card-title">Klanten <span style="background:var(--wf-purple-l);color:var(--wf-purple);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${rows.length}</span></h3>
+    <input id="custSearch" placeholder="Zoek naam, e-mail…" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:12px;min-width:200px;">
   </div>
   ${rows.length === 0
     ? `<div class="adm-empty"><div class="adm-empty-icon">🏢</div><div class="adm-empty-text">Nog geen klanten</div><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewCust" style="margin-top:12px">+ Eerste klant aanmaken</button></div>`
@@ -3028,13 +3028,13 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
         wireCustButtons();
       });
       wireCustButtons();
-    } catch(e) { content.innerHTML = `<div style="padding:20px;color:#dc2626">Fout: ${e.message}</div>`; }
+    } catch(e) { content.innerHTML = `<div style="padding:20px;color:var(--wf-red)">Fout: ${e.message}</div>`; }
   }
   function buildCustRows(rows) {
     return rows.map(c => `<tr style="cursor:pointer;" class="cust-detail-row" data-id="${c.id}">
       <td><strong>${esc(c.name)}</strong></td>
       <td>${esc(c.contactName||"—")}</td>
-      <td><a href="mailto:${esc(c.email||"")}" style="color:#4f46e5">${esc(c.email||"—")}</a></td>
+      <td><a href="mailto:${esc(c.email||"")}" style="color:var(--wf-purple)">${esc(c.email||"—")}</a></td>
       <td>${esc(c.phone||"—")}</td>
       <td style="font-family:monospace;font-size:12px">${esc(c.vatNumber||"—")}</td>
       <td style="white-space:nowrap">
@@ -3067,7 +3067,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
       function renderTabs() {
         content.querySelector("#custDetailTabs")?.querySelectorAll(".cdt-tab").forEach(t => {
           t.style.fontWeight = t.dataset.tab === _custTab ? "700" : "400";
-          t.style.borderBottom = t.dataset.tab === _custTab ? "2px solid #6366f1" : "2px solid transparent";
+          t.style.borderBottom = t.dataset.tab === _custTab ? "2px solid var(--wf-purple)" : "2px solid transparent";
         });
         const body = content.querySelector("#custDetailBody");
         if (!body) return;
@@ -3121,7 +3121,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
 <!-- Back header -->
 <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
   <button class="adm-btn adm-btn-secondary adm-btn-sm" id="custDetailBack">← Terug</button>
-  <h2 style="font-size:18px;font-weight:700;color:#0f172a;margin:0;">${esc(customer.name)}</h2>
+  <h2 style="font-size:18px;font-weight:700;color:var(--gray-900);margin:0;">${esc(customer.name)}</h2>
   <button class="adm-btn adm-btn-secondary adm-btn-sm" id="custDetailEdit">✏ Bewerk</button>
 </div>
 
@@ -3138,12 +3138,12 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
   <div class="adm-card">
     <div class="adm-card-header"><h3 class="adm-card-title">Contactgegevens</h3></div>
     <div class="adm-card-body" style="display:flex;flex-direction:column;gap:8px;">
-      ${customer.contactName?`<div style="font-size:13px;"><span style="color:#94a3b8;min-width:110px;display:inline-block">Contactpersoon</span>${esc(customer.contactName)}</div>`:""}
-      ${customer.email?`<div style="font-size:13px;"><span style="color:#94a3b8;min-width:110px;display:inline-block">E-mail</span><a href="mailto:${esc(customer.email)}" style="color:#4f46e5">${esc(customer.email)}</a></div>`:""}
-      ${customer.phone?`<div style="font-size:13px;"><span style="color:#94a3b8;min-width:110px;display:inline-block">Telefoon</span>${esc(customer.phone)}</div>`:""}
-      ${customer.vatNumber?`<div style="font-size:13px;"><span style="color:#94a3b8;min-width:110px;display:inline-block">BTW-nummer</span><span style="font-family:monospace">${esc(customer.vatNumber)}</span></div>`:""}
-      ${customer.address?`<div style="font-size:13px;"><span style="color:#94a3b8;min-width:110px;display:inline-block">Adres</span>${esc(customer.address)}</div>`:""}
-      ${customer.notes?`<div style="font-size:13px;margin-top:4px;"><span style="color:#94a3b8;display:block;margin-bottom:2px;">Notities</span><span style="color:#64748b">${esc(customer.notes)}</span></div>`:""}
+      ${customer.contactName?`<div style="font-size:13px;"><span style="color:var(--gray-400);min-width:110px;display:inline-block">Contactpersoon</span>${esc(customer.contactName)}</div>`:""}
+      ${customer.email?`<div style="font-size:13px;"><span style="color:var(--gray-400);min-width:110px;display:inline-block">E-mail</span><a href="mailto:${esc(customer.email)}" style="color:var(--wf-purple)">${esc(customer.email)}</a></div>`:""}
+      ${customer.phone?`<div style="font-size:13px;"><span style="color:var(--gray-400);min-width:110px;display:inline-block">Telefoon</span>${esc(customer.phone)}</div>`:""}
+      ${customer.vatNumber?`<div style="font-size:13px;"><span style="color:var(--gray-400);min-width:110px;display:inline-block">BTW-nummer</span><span style="font-family:monospace">${esc(customer.vatNumber)}</span></div>`:""}
+      ${customer.address?`<div style="font-size:13px;"><span style="color:var(--gray-400);min-width:110px;display:inline-block">Adres</span>${esc(customer.address)}</div>`:""}
+      ${customer.notes?`<div style="font-size:13px;margin-top:4px;"><span style="color:var(--gray-400);display:block;margin-bottom:2px;">Notities</span><span style="color:var(--gray-500)">${esc(customer.notes)}</span></div>`:""}
       <div style="margin-top:8px;display:flex;gap:8px;">
         <button class="adm-btn adm-btn-primary adm-btn-sm" id="custNewWO">+ Werkbon</button>
         <button class="adm-btn adm-btn-secondary adm-btn-sm" id="custNewInv">🧾 Factuur</button>
@@ -3154,9 +3154,9 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
   <!-- Tabs card -->
   <div class="adm-card">
     <div class="adm-card-header" style="flex-direction:column;gap:0;padding-bottom:0;" id="custDetailTabs">
-      <div style="display:flex;gap:0;border-bottom:1px solid #f1f5f9;width:100%;">
-        <button class="cdt-tab" data-tab="werkbonnen" style="background:none;border:none;cursor:pointer;padding:10px 16px;font-size:13px;color:#374151;border-bottom:2px solid #6366f1;font-weight:700;">Werkbonnen (${custWOs.length})</button>
-        <button class="cdt-tab" data-tab="facturen" style="background:none;border:none;cursor:pointer;padding:10px 16px;font-size:13px;color:#374151;border-bottom:2px solid transparent;">Facturen (${custInvs.length})</button>
+      <div style="display:flex;gap:0;border-bottom:1px solid var(--gray-100);width:100%;">
+        <button class="cdt-tab" data-tab="werkbonnen" style="background:none;border:none;cursor:pointer;padding:10px 16px;font-size:13px;color:var(--gray-700);border-bottom:2px solid var(--wf-purple);font-weight:700;">Werkbonnen (${custWOs.length})</button>
+        <button class="cdt-tab" data-tab="facturen" style="background:none;border:none;cursor:pointer;padding:10px 16px;font-size:13px;color:var(--gray-700);border-bottom:2px solid transparent;">Facturen (${custInvs.length})</button>
       </div>
     </div>
     <div class="adm-card-body adm-table-wrap" id="custDetailBody"></div>
@@ -3190,7 +3190,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
         t.addEventListener("click", () => { _custTab = t.dataset.tab; renderTabs(); });
       });
       renderTabs();
-    } catch(e) { content.innerHTML = `<div style="padding:20px;color:#dc2626">Fout: ${e.message}</div>`; }
+    } catch(e) { content.innerHTML = `<div style="padding:20px;color:var(--wf-red)">Fout: ${e.message}</div>`; }
   }
   function openCustomerDrawer(customer) {
     document.getElementById("admDrawerTitle").textContent = customer ? "Klant bewerken" : "Nieuwe klant";
@@ -3201,10 +3201,10 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
     <div class="adm-form-group"><label>Contactpersoon</label><input name="contactName" value="${esc(customer?.contactName||"")}" placeholder="Jan Janssen"></div>
     <div class="adm-form-group">
       <label>BTW-nummer
-        <button type="button" id="kboLookupBtn" style="background:none;border:none;cursor:pointer;font-size:11px;color:#4f46e5;font-weight:600;margin-left:6px;padding:1px 6px;border:1px solid #c7d2fe;border-radius:4px;">🔍 KBO opzoeken</button>
+        <button type="button" id="kboLookupBtn" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--wf-purple);font-weight:600;margin-left:6px;padding:1px 6px;border:1px solid #c7d2fe;border-radius:4px;">🔍 KBO opzoeken</button>
       </label>
       <input name="vatNumber" id="custVatInput" value="${esc(customer?.vatNumber||"")}" placeholder="BE0000.000.000">
-      <div id="kboResult" style="display:none;margin-top:6px;background:#f0fdf4;border-radius:6px;padding:8px;font-size:12px;color:#166534;"></div>
+      <div id="kboResult" style="display:none;margin-top:6px;background:var(--wf-green-l);border-radius:6px;padding:8px;font-size:12px;color:#166534;"></div>
     </div>
   </div>
   <div class="adm-form-row">
@@ -3212,8 +3212,8 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
     <div class="adm-form-group"><label>Telefoon</label><input name="phone" value="${esc(customer?.phone||"")}"></div>
   </div>
   <div class="adm-form-group"><label>Adres</label><input name="address" value="${esc(customer?.address||"")}"></div>
-  <div class="adm-form-group"><label>Notities</label><textarea name="notes" rows="3" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px">${esc(customer?.notes||"")}</textarea></div>
-  <div id="custFormErr" style="display:none;background:#fef2f2;color:#dc2626;border-radius:8px;padding:8px;font-size:12px;margin-bottom:8px;"></div>
+  <div class="adm-form-group"><label>Notities</label><textarea name="notes" rows="3" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px">${esc(customer?.notes||"")}</textarea></div>
+  <div id="custFormErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:8px;font-size:12px;margin-bottom:8px;"></div>
   <div class="adm-form-actions">
     <button type="button" class="adm-btn adm-btn-secondary" id="custCancel">Annuleren</button>
     ${customer ? `<button type="button" class="adm-btn adm-btn-danger adm-btn-sm" id="custDelete">🗑 Verwijderen</button>` : ""}
@@ -3238,7 +3238,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
         if (resultEl) {
           resultEl.style.display = "";
           resultEl.innerHTML = `<strong>${esc(c.name||"Onbekend")}</strong><br>${esc(c.vatNumber||"")} · ${esc(c.address||"")}
-            <button type="button" id="kboApplyBtn" style="background:none;border:none;cursor:pointer;color:#4f46e5;font-size:11px;font-weight:600;margin-left:8px;">↗ Toepassen</button>`;
+            <button type="button" id="kboApplyBtn" style="background:none;border:none;cursor:pointer;color:var(--wf-purple);font-size:11px;font-weight:600;margin-left:8px;">↗ Toepassen</button>`;
           document.getElementById("kboApplyBtn")?.addEventListener("click", () => {
             if (nameInput && c.name) nameInput.value = c.name;
             if (vatInput && c.vatNumber) vatInput.value = c.vatNumber;
@@ -3287,8 +3287,8 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
       content.innerHTML = `
 <div class="adm-card">
   <div class="adm-card-header">
-    <h3 class="adm-card-title">Locaties / Werven <span style="background:#e0e7ff;color:#4f46e5;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${rows.length}</span></h3>
-    <input id="venSearch" placeholder="Zoek locatie…" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;min-width:180px;">
+    <h3 class="adm-card-title">Locaties / Werven <span style="background:var(--wf-purple-l);color:var(--wf-purple);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${rows.length}</span></h3>
+    <input id="venSearch" placeholder="Zoek locatie…" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:12px;min-width:180px;">
   </div>
   ${rows.length === 0
     ? `<div class="adm-empty"><div class="adm-empty-icon">📍</div><div class="adm-empty-text">Nog geen locaties</div><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewVen" style="margin-top:12px">+ Eerste locatie aanmaken</button></div>`
@@ -3311,7 +3311,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
         wireVenRows();
       });
       wireVenRows();
-    } catch(e) { content.innerHTML = `<div style="padding:20px;color:#dc2626">Fout: ${e.message}</div>`; }
+    } catch(e) { content.innerHTML = `<div style="padding:20px;color:var(--wf-red)">Fout: ${e.message}</div>`; }
   }
   function buildVenRows(rows) {
     return rows.map(v => `<tr class="adm-row-link ven-row" data-id="${v.id}" title="Open locatie">
@@ -3333,9 +3333,9 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
     <div class="adm-form-group"><label>Contactpersoon</label><input name="contactName" value="${esc(venue?.contactName||"")}"></div>
     <div class="adm-form-group"><label>Telefoon</label><input name="phone" value="${esc(venue?.phone||"")}"></div>
   </div>
-  <div class="adm-form-group"><label>Notities</label><textarea name="notes" rows="3" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px">${esc(venue?.notes||"")}</textarea></div>
+  <div class="adm-form-group"><label>Notities</label><textarea name="notes" rows="3" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px">${esc(venue?.notes||"")}</textarea></div>
   <div class="adm-form-group"><label><input type="checkbox" name="active" value="true" ${venue?.active !== false ? "checked" : ""}> Actieve locatie</label></div>
-  <div id="venFormErr" style="display:none;background:#fef2f2;color:#dc2626;border-radius:8px;padding:8px;font-size:12px;margin-bottom:8px;"></div>
+  <div id="venFormErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:8px;font-size:12px;margin-bottom:8px;"></div>
   <div class="adm-form-actions">
     <button type="button" class="adm-btn adm-btn-secondary" id="venCancel">Annuleren</button>
     ${venue ? `<button type="button" class="adm-btn adm-btn-danger adm-btn-sm" id="venDelete">🗑 Verwijderen</button>` : ""}
@@ -3379,19 +3379,19 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
       const vehicles = data.vehicles || [];
       const alerts = data.alerts || [];
       content.innerHTML = `
-${alerts.length ? `<div style="background:#fef3c7;border:1px solid #fde68a;border-radius:10px;padding:12px 16px;margin-bottom:14px;font-size:13px;color:#92400e">
+${alerts.length ? `<div style="background:var(--wf-yellow-l);border:1px solid var(--wf-yellow-l);border-radius:10px;padding:12px 16px;margin-bottom:14px;font-size:13px;color:var(--wf-yellow)">
   ⚠️ <strong>${alerts.length} alert${alerts.length>1?"s":""}</strong>: ${alerts.map(a=>esc(a.message||a.type)).join(", ")}
 </div>` : ""}
 <div class="adm-card">
   <div class="adm-card-header">
-    <h3 class="adm-card-title">Voertuigen <span style="background:#e0e7ff;color:#4f46e5;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${vehicles.length}</span></h3>
+    <h3 class="adm-card-title">Voertuigen <span style="background:var(--wf-purple-l);color:var(--wf-purple);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${vehicles.length}</span></h3>
   </div>
   ${vehicles.length === 0
     ? `<div class="adm-empty"><div class="adm-empty-icon">🚗</div><div class="adm-empty-text">Nog geen voertuigen</div><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewVeh" style="margin-top:12px">+ Eerste voertuig aanmaken</button></div>`
     : `<div class="adm-table-wrap"><table class="adm-table">
         <thead><tr><th>Naam / Kenteken</th><th>Merk / Model</th><th>Chauffeur</th><th>KM-stand</th><th>Status</th><th>Volgende service</th><th>Acties</th></tr></thead>
         <tbody>${vehicles.map(v => `<tr class="adm-row-link veh-row" data-id="${v.id}" title="Open voertuig">
-          <td><strong>${esc(v.name||v.plate||"—")}</strong><br><span style="font-size:11px;color:#94a3b8;font-family:monospace">${esc(v.plate||"")}</span></td>
+          <td><strong>${esc(v.name||v.plate||"—")}</strong><br><span style="font-size:11px;color:var(--gray-400);font-family:monospace">${esc(v.plate||"")}</span></td>
           <td>${esc(v.brand||"")} ${esc(v.model||"")}</td>
           <td>${esc(v.driverName||v.driverId||"—")}</td>
           <td>${v.mileage ? Number(v.mileage).toLocaleString("nl-BE") + " km" : "—"}</td>
@@ -3410,7 +3410,7 @@ ${alerts.length ? `<div style="background:#fef3c7;border:1px solid #fde68a;borde
       }));
       document.querySelectorAll(".veh-edit").forEach(b => b.addEventListener("click", () => openVehicleDrawer(vehicles.find(x => x.id === b.dataset.id))));
       document.querySelectorAll(".veh-km").forEach(b => b.addEventListener("click", () => openMileageDrawer(b.dataset.id)));
-    } catch(e) { content.innerHTML = `<div style="padding:20px;color:#dc2626">Fout: ${e.message}</div>`; }
+    } catch(e) { content.innerHTML = `<div style="padding:20px;color:var(--wf-red)">Fout: ${e.message}</div>`; }
   }
   function openVehicleDrawer(vehicle) {
     document.getElementById("admDrawerTitle").textContent = vehicle ? "Voertuig bewerken" : "Nieuw voertuig";
@@ -3510,13 +3510,13 @@ ${alerts.length ? `<div style="background:#fef3c7;border:1px solid #fde68a;borde
   <div class="adm-kpi adm-kpi-${alerts.length>0?"red":"green"}"><div class="adm-kpi-label">Lage voorraad alerts</div><div class="adm-kpi-value">${alerts.length}</div></div>
   <div class="adm-kpi adm-kpi-purple"><div class="adm-kpi-label">Totale stockwaarde</div><div class="adm-kpi-value" style="font-size:18px">${new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR"}).format(totalValue)}</div></div>
 </div>
-${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:12px 16px;margin-bottom:14px;font-size:13px;color:#7f1d1d">
+${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(--wf-red-l);border-radius:10px;padding:12px 16px;margin-bottom:14px;font-size:13px;color:var(--wf-red)">
   ⚠️ Lage voorraad: ${alerts.map(a=>esc(a.name||a.itemId)).join(", ")}
 </div>` : ""}
 <div class="adm-card">
   <div class="adm-card-header">
     <h3 class="adm-card-title">Stockbeheer</h3>
-    <input id="stSearch" placeholder="Zoek artikel…" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;min-width:160px;">
+    <input id="stSearch" placeholder="Zoek artikel…" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:12px;min-width:160px;">
   </div>
   ${items.length === 0
     ? `<div class="adm-empty"><div class="adm-empty-icon">📦</div><div class="adm-empty-text">Nog geen stockartikelen</div><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewStock" style="margin-top:12px">+ Eerste artikel aanmaken</button></div>`
@@ -3532,16 +3532,16 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
         wireStockBtns(items);
       });
       wireStockBtns(items);
-    } catch(e) { content.innerHTML = `<div style="padding:20px;color:#dc2626">Fout: ${e.message}</div>`; }
+    } catch(e) { content.innerHTML = `<div style="padding:20px;color:var(--wf-red)">Fout: ${e.message}</div>`; }
   }
   function buildStockRows(rows) {
     return rows.map(i => {
       const low = i.minQuantity && Number(i.quantity||0) <= Number(i.minQuantity||0);
-      return `<tr class="adm-row-link st-row" data-id="${i.id}" title="Open artikel" style="${low?"background:#fef2f2":""}">
-        <td><strong>${esc(i.name)}</strong>${low?` <span style="background:#fee2e2;color:#dc2626;border-radius:4px;padding:1px 5px;font-size:10px">LAAG</span>`:""}</td>
+      return `<tr class="adm-row-link st-row" data-id="${i.id}" title="Open artikel" style="${low?"background:var(--wf-red-l)":""}">
+        <td><strong>${esc(i.name)}</strong>${low?` <span style="background:var(--wf-red-l);color:var(--wf-red);border-radius:4px;padding:1px 5px;font-size:10px">LAAG</span>`:""}</td>
         <td style="font-family:monospace;font-size:12px">${esc(i.sku||"—")}</td>
         <td>${esc(i.category||"—")}</td>
-        <td style="font-weight:700;color:${low?"#dc2626":"#0f172a"}">${esc(i.quantity??0)}</td>
+        <td style="font-weight:700;color:${low?"var(--wf-red)":"var(--gray-900)"}">${esc(i.quantity??0)}</td>
         <td>${esc(i.unit||"st")}</td>
         <td>${esc(i.minQuantity||"—")}</td>
         <td>${i.unitPrice ? new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR"}).format(i.unitPrice) : "—"}</td>
@@ -3611,7 +3611,7 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
     document.getElementById("admDrawerTitle").textContent = "Stockmutatie";
     document.getElementById("admDrawerBody").innerHTML = `
 <form id="mutForm">
-  <p style="font-size:13px;color:#64748b;margin-bottom:12px">Pas de voorraad aan met een positieve (aanvulling) of negatieve (gebruik) waarde.</p>
+  <p style="font-size:13px;color:var(--gray-500);margin-bottom:12px">Pas de voorraad aan met een positieve (aanvulling) of negatieve (gebruik) waarde.</p>
   <div class="adm-form-group"><label>Hoeveelheid (+ aanvulling / − gebruik) *</label><input name="delta" type="number" step="0.01" required placeholder="bv. -5 of +20"></div>
   <div class="adm-form-group"><label>Reden</label><input name="reason" placeholder="Gebruikt op werf Brussel"></div>
   <div class="adm-form-group"><label>Datum</label><input name="date" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
@@ -3638,7 +3638,7 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
     const fE = n => new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR"}).format(Number(n||0));
     const fD = iso => iso ? new Date(iso).toLocaleDateString("nl-BE",{day:"2-digit",month:"2-digit",year:"numeric"}) : "—";
     const stLabel = { open:"Openstaand", paid:"Betaald", overdue:"Vervallen", draft:"Concept", sent:"Verstuurd" };
-    const stColor = { open:"#f59e0b", paid:"#10b981", overdue:"#ef4444", draft:"#94a3b8", sent:"#3b82f6" };
+    const stColor = { open:"var(--wf-yellow)", paid:"var(--wf-green)", overdue:"var(--wf-red)", draft:"var(--gray-400)", sent:"var(--wf-blue)" };
     const lines = inv.lines || [];
     const win = window.open("", "_blank");
     win.document.write(`<!DOCTYPE html><html lang="nl"><head><meta charset="UTF-8">
@@ -3781,8 +3781,8 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
 </div>
 <div class="adm-card">
   <div class="adm-card-header">
-    <h3 class="adm-card-title">Offertes <span style="background:#fef3c7;color:#92400e;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${filtered.length}</span></h3>
-    <select id="qStatusFilter" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;">
+    <h3 class="adm-card-title">Offertes <span style="background:var(--wf-yellow-l);color:var(--wf-yellow);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${filtered.length}</span></h3>
+    <select id="qStatusFilter" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;">
       <option value="">Alle statussen</option>
       ${["concept","verzonden","aanvaard","geweigerd","verlopen"].map(s=>`<option value="${s}" ${filterSel===s?"selected":""}>${QUOTE_STATUS[s].label}</option>`).join("")}
     </select>
@@ -3798,9 +3798,9 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
             <td style="font-family:monospace;font-weight:600">${esc(q.number||"")}</td>
             <td>${q.quoteDate?new Date(q.quoteDate).toLocaleDateString("nl-BE"):"—"}</td>
             <td><strong>${esc(q.customerName||"—")}</strong></td>
-            <td style="${q.status==="verlopen"?"color:#ef4444;font-weight:600":""}">${q.validUntil?new Date(q.validUntil).toLocaleDateString("nl-BE"):"—"}</td>
+            <td style="${q.status==="verlopen"?"color:var(--wf-red);font-weight:600":""}">${q.validUntil?new Date(q.validUntil).toLocaleDateString("nl-BE"):"—"}</td>
             <td style="font-weight:600">${fmtEurInv(q.total)}</td>
-            <td><span class="adm-status ${st.css}">${st.label}</span>${q.invoiceId?`<div style="font-size:10px;color:#94a3b8">→ gefactureerd</div>`:""}</td>
+            <td><span class="adm-status ${st.css}">${st.label}</span>${q.invoiceId?`<div style="font-size:10px;color:var(--gray-400)">→ gefactureerd</div>`:""}</td>
             <td style="white-space:nowrap;display:flex;gap:5px;flex-wrap:wrap;">
               <button class="adm-btn adm-btn-secondary adm-btn-sm q-edit" data-id="${q.id}" title="Bewerk">✏</button>
               <button class="adm-btn adm-btn-secondary adm-btn-sm q-pdf" data-id="${q.id}" title="PDF / Afdrukken">📄</button>
@@ -3842,7 +3842,7 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
         try { const d = await api("POST", `/offertes/${b.dataset.id}/convert`, { target:"workorder" }); window.showToast && window.showToast("Werkbon "+(d.workorder?.number||"")+" aangemaakt ✓","success"); renderOffertes(); }
         catch(e){ window.showToast && window.showToast("Fout: "+e.message,"error"); }
       }));
-    } catch(e) { content.innerHTML = `<div style="padding:20px;color:#dc2626">Fout: ${e.message}</div>`; }
+    } catch(e) { content.innerHTML = `<div style="padding:20px;color:var(--wf-red)">Fout: ${e.message}</div>`; }
   }
 
   async function openOfferteDrawer(quote) {
@@ -3855,19 +3855,19 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
     document.getElementById("admDrawerTitle").textContent = isEdit ? `Offerte ${quote.number}` : "Nieuwe offerte";
 
     const lineRow = (l) => `<div class="q-line-row" style="display:grid;grid-template-columns:1fr 60px 90px 60px 24px;gap:6px;align-items:center;margin-bottom:8px;">
-        <input placeholder="Omschrijving" value="${esc(l.description||"")}" class="q-line-desc" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;" ${isEdit?"disabled":""}>
-        <input type="number" min="1" value="${l.qty||1}" class="q-line-qty" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;text-align:right;" ${isEdit?"disabled":""}>
-        <input type="number" min="0" step="0.01" value="${Number(l.unitPrice||0).toFixed(2)}" class="q-line-price" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;text-align:right;" ${isEdit?"disabled":""}>
-        <select class="q-line-vat" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;" ${isEdit?"disabled":""}>
+        <input placeholder="Omschrijving" value="${esc(l.description||"")}" class="q-line-desc" style="padding:6px;border:1px solid var(--gray-200);border-radius:6px;font-size:13px;" ${isEdit?"disabled":""}>
+        <input type="number" min="1" value="${l.qty||1}" class="q-line-qty" style="padding:6px;border:1px solid var(--gray-200);border-radius:6px;font-size:13px;text-align:right;" ${isEdit?"disabled":""}>
+        <input type="number" min="0" step="0.01" value="${Number(l.unitPrice||0).toFixed(2)}" class="q-line-price" style="padding:6px;border:1px solid var(--gray-200);border-radius:6px;font-size:13px;text-align:right;" ${isEdit?"disabled":""}>
+        <select class="q-line-vat" style="padding:6px;border:1px solid var(--gray-200);border-radius:6px;font-size:12px;" ${isEdit?"disabled":""}>
           ${[0,6,12,21].map(v=>`<option value="${v}" ${(l.vatRate==v||(v==21&&l.vatRate==null))?"selected":""}>${v}%</option>`).join("")}
         </select>
-        <button type="button" class="q-line-del" style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:16px;padding:0;" ${isEdit?"disabled":""}>&times;</button>
+        <button type="button" class="q-line-del" style="background:none;border:none;cursor:pointer;color:var(--gray-400);font-size:16px;padding:0;" ${isEdit?"disabled":""}>&times;</button>
       </div>`;
 
     document.getElementById("admDrawerBody").innerHTML = `
 <form id="qForm">
   <div class="adm-form-group"><label>Klant *</label>
-    <select name="customerId" id="qCustSel" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;" ${isEdit?"disabled":""}>
+    <select name="customerId" id="qCustSel" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;" ${isEdit?"disabled":""}>
       <option value="">— Handmatig invullen —</option>
       ${customers.map(c=>`<option value="${c.id}" ${quote?.customerId===c.id?"selected":""}>${esc(c.name)}</option>`).join("")}
     </select>
@@ -3883,18 +3883,18 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
     <div class="adm-form-group"><label>Offertedatum</label><input type="date" name="quoteDate" value="${quote?.quoteDate||today}" ${isEdit?"disabled":""}></div>
     <div class="adm-form-group"><label>Geldig tot</label><input type="date" name="validUntil" value="${quote?.validUntil||valid30}" ${isEdit?"disabled":""}></div>
   </div>
-  <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px;">Offerteregels</div>
+  <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px;">Offerteregels</div>
   <div id="qLines">${lines0.map(lineRow).join("")}</div>
   ${!isEdit?`<button type="button" class="adm-btn adm-btn-secondary adm-btn-sm" id="qAddLine" style="margin-bottom:16px;">+ Regel toevoegen</button>`:""}
-  <div style="background:#f8fafc;border-radius:10px;padding:12px;margin-bottom:16px;">
-    <div style="display:flex;justify-content:space-between;font-size:13px;color:#64748b;margin-bottom:4px;"><span>Subtotaal</span><span id="qSubtotal">€0,00</span></div>
-    <div style="display:flex;justify-content:space-between;font-size:13px;color:#64748b;margin-bottom:4px;"><span>BTW</span><span id="qVat">€0,00</span></div>
-    <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;border-top:1px solid #e2e8f0;padding-top:8px;margin-top:4px;"><span>Totaal</span><span id="qTotal">€0,00</span></div>
+  <div style="background:var(--gray-50);border-radius:10px;padding:12px;margin-bottom:16px;">
+    <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--gray-500);margin-bottom:4px;"><span>Subtotaal</span><span id="qSubtotal">€0,00</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--gray-500);margin-bottom:4px;"><span>BTW</span><span id="qVat">€0,00</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;border-top:1px solid var(--gray-200);padding-top:8px;margin-top:4px;"><span>Totaal</span><span id="qTotal">€0,00</span></div>
   </div>
   <div class="adm-form-group"><label>Opmerkingen</label>
-    <textarea name="notes" rows="2" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px" ${isEdit?"disabled":""}>${esc(quote?.notes||"")}</textarea>
+    <textarea name="notes" rows="2" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px" ${isEdit?"disabled":""}>${esc(quote?.notes||"")}</textarea>
   </div>
-  <div id="qFormErr" style="display:none;background:#fef2f2;color:#dc2626;border-radius:8px;padding:8px;font-size:12px;margin-bottom:8px;"></div>
+  <div id="qFormErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:8px;font-size:12px;margin-bottom:8px;"></div>
   <div class="adm-form-actions" style="flex-wrap:wrap;gap:8px;">
     <button type="button" class="adm-btn adm-btn-secondary" id="qCancel">Sluiten</button>
     ${isEdit && !["aanvaard"].includes(quote.status)?`<button type="button" class="adm-btn adm-btn-danger adm-btn-sm" id="qDelete">🗑 Verwijderen</button>`:""}
@@ -3995,9 +3995,9 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
 
 <div class="adm-card">
   <div class="adm-card-header">
-    <h3 class="adm-card-title">Facturen <span style="background:#e0e7ff;color:#4f46e5;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${filtered.length}</span></h3>
+    <h3 class="adm-card-title">Facturen <span style="background:var(--wf-purple-l);color:var(--wf-purple);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${filtered.length}</span></h3>
     <div style="display:flex;gap:8px;align-items:center;">
-      <select id="invStatusFilter" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;">
+      <select id="invStatusFilter" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;">
         <option value="">Alle statussen</option>
         <option value="open" ${filterSel==="open"?"selected":""}>Open</option>
         <option value="paid" ${filterSel==="paid"?"selected":""}>Betaald</option>
@@ -4015,8 +4015,8 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
           return `<tr class="adm-row-link inv-row" data-id="${inv.id}" title="Open factuur">
             <td style="font-family:monospace;font-weight:600">${esc(inv.number||inv.id.slice(-6))}</td>
             <td>${inv.invoiceDate ? new Date(inv.invoiceDate).toLocaleDateString("nl-BE") : "—"}</td>
-            <td><strong>${esc(inv.customerName||"—")}</strong>${inv.customerVatNumber?`<div style="font-size:11px;color:#94a3b8">${esc(inv.customerVatNumber)}</div>`:""}</td>
-            <td style="${inv.status==="overdue"?"color:#ef4444;font-weight:600":""}">${inv.dueDate ? new Date(inv.dueDate).toLocaleDateString("nl-BE") : "—"}</td>
+            <td><strong>${esc(inv.customerName||"—")}</strong>${inv.customerVatNumber?`<div style="font-size:11px;color:var(--gray-400)">${esc(inv.customerVatNumber)}</div>`:""}</td>
+            <td style="${inv.status==="overdue"?"color:var(--wf-red);font-weight:600":""}">${inv.dueDate ? new Date(inv.dueDate).toLocaleDateString("nl-BE") : "—"}</td>
             <td style="font-weight:600">${fmtEurInv(inv.total)}</td>
             <td><span class="adm-status ${st.css}">${st.label}</span></td>
             <td style="white-space:nowrap;display:flex;gap:6px;">
@@ -4109,7 +4109,7 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
           renderFacturen();
         });
       });
-    } catch(e) { content.innerHTML = `<div style="padding:20px;color:#dc2626">Fout: ${e.message}</div>`; }
+    } catch(e) { content.innerHTML = `<div style="padding:20px;color:var(--wf-red)">Fout: ${e.message}</div>`; }
   }
 
   async function openFactuurDrawer(invoice, prefill = {}) {
@@ -4127,7 +4127,7 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
 <form id="invForm">
   <div class="adm-form-group">
     <label>Klant *</label>
-    <select name="customerId" id="invCustSel" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;">
+    <select name="customerId" id="invCustSel" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;">
       <option value="">— Handmatig invullen —</option>
       ${customers.map(c => `<option value="${c.id}" ${invoice?.customerId===c.id?"selected":""}>${esc(c.name)}</option>`).join("")}
     </select>
@@ -4165,37 +4165,37 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
         <option value="medecontractant" ${invoice?.vatRegime==="medecontractant"?"selected":""}>Medecontractant (bouw, KB nr. 1 art. 20) — btw verlegd (0%)</option>
       </select>
     </div>
-    <div class="adm-form-group" style="align-self:flex-end;padding-bottom:7px;font-size:11.5px;color:#64748b;">Bij 'btw verlegd' wordt 0% btw toegepast met de wettelijke vermelding op de factuur.</div>
+    <div class="adm-form-group" style="align-self:flex-end;padding-bottom:7px;font-size:11.5px;color:var(--gray-500);">Bij 'btw verlegd' wordt 0% btw toegepast met de wettelijke vermelding op de factuur.</div>
   </div>
-  ${invoice?.structuredComm ? `<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:12.5px;">
-    <span style="color:#64748b;">Gestructureerde mededeling:</span> <strong style="font-family:monospace;font-size:13px;">${esc(invoice.structuredComm)}</strong>
-    ${invoice.vatNote ? `<div style="color:#92400e;margin-top:4px;">⚖ ${esc(invoice.vatNote)}</div>` : ""}
+  ${invoice?.structuredComm ? `<div style="background:var(--wf-blue-l);border:1px solid var(--wf-blue-l);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:12.5px;">
+    <span style="color:var(--gray-500);">Gestructureerde mededeling:</span> <strong style="font-family:monospace;font-size:13px;">${esc(invoice.structuredComm)}</strong>
+    ${invoice.vatNote ? `<div style="color:var(--wf-yellow);margin-top:4px;">⚖ ${esc(invoice.vatNote)}</div>` : ""}
   </div>` : ""}
 
-  <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px;">Factuurregels</div>
+  <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px;">Factuurregels</div>
   <div id="invLines">
     ${existingLines.map((l, i) => renderInvLine(l, i)).join("")}
   </div>
   <button type="button" class="adm-btn adm-btn-secondary adm-btn-sm" id="invAddLine" style="margin-bottom:16px;">+ Regel toevoegen</button>
 
-  <div style="background:#f8fafc;border-radius:10px;padding:12px;margin-bottom:16px;" id="invTotals">
-    <div style="display:flex;justify-content:space-between;font-size:13px;color:#64748b;margin-bottom:4px;">
+  <div style="background:var(--gray-50);border-radius:10px;padding:12px;margin-bottom:16px;" id="invTotals">
+    <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--gray-500);margin-bottom:4px;">
       <span>Subtotaal</span><span id="invSubtotal">€0,00</span>
     </div>
-    <div style="display:flex;justify-content:space-between;font-size:13px;color:#64748b;margin-bottom:4px;">
+    <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--gray-500);margin-bottom:4px;">
       <span>BTW</span><span id="invVat">€0,00</span>
     </div>
-    <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;color:#0f172a;border-top:1px solid #e2e8f0;padding-top:8px;margin-top:4px;">
+    <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;color:var(--gray-900);border-top:1px solid var(--gray-200);padding-top:8px;margin-top:4px;">
       <span>Totaal</span><span id="invTotal">€0,00</span>
     </div>
   </div>
 
   <div class="adm-form-group">
     <label>Opmerkingen</label>
-    <textarea name="notes" rows="2" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">${esc(invoice?.notes||prefill.prefillNotes||"")}</textarea>
+    <textarea name="notes" rows="2" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">${esc(invoice?.notes||prefill.prefillNotes||"")}</textarea>
   </div>
   ${prefill.workorderId ? `<input type="hidden" name="workorderId" value="${esc(prefill.workorderId)}">` : ""}
-  <div id="invFormErr" style="display:none;background:#fef2f2;color:#dc2626;border-radius:8px;padding:8px;font-size:12px;margin-bottom:8px;"></div>
+  <div id="invFormErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:8px;font-size:12px;margin-bottom:8px;"></div>
   <div class="adm-form-actions">
     <button type="button" class="adm-btn adm-btn-secondary" id="invCancel">Annuleren</button>
     ${invoice && invoice.status !== "paid" ? `<button type="button" class="adm-btn adm-btn-danger adm-btn-sm" id="invDelete">🗑 Verwijderen</button>` : ""}
@@ -4205,16 +4205,16 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
 
     function renderInvLine(l, i) {
       return `<div class="inv-line-row" style="display:grid;grid-template-columns:1fr 60px 90px 60px 24px;gap:6px;align-items:center;margin-bottom:8px;" data-idx="${i}">
-        <input placeholder="Omschrijving" value="${esc(l.description||"")}" class="inv-line-desc" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;">
-        <input type="number" min="1" placeholder="Qty" value="${l.qty||1}" class="inv-line-qty" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;text-align:right;">
-        <input type="number" min="0" step="0.01" placeholder="Prijs" value="${Number(l.unitPrice||0).toFixed(2)}" class="inv-line-price" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;text-align:right;">
-        <select class="inv-line-vat" style="padding:6px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;">
+        <input placeholder="Omschrijving" value="${esc(l.description||"")}" class="inv-line-desc" style="padding:6px;border:1px solid var(--gray-200);border-radius:6px;font-size:13px;">
+        <input type="number" min="1" placeholder="Qty" value="${l.qty||1}" class="inv-line-qty" style="padding:6px;border:1px solid var(--gray-200);border-radius:6px;font-size:13px;text-align:right;">
+        <input type="number" min="0" step="0.01" placeholder="Prijs" value="${Number(l.unitPrice||0).toFixed(2)}" class="inv-line-price" style="padding:6px;border:1px solid var(--gray-200);border-radius:6px;font-size:13px;text-align:right;">
+        <select class="inv-line-vat" style="padding:6px;border:1px solid var(--gray-200);border-radius:6px;font-size:12px;">
           <option value="0" ${l.vatRate==0?"selected":""}>0%</option>
           <option value="6" ${l.vatRate==6?"selected":""}>6%</option>
           <option value="12" ${l.vatRate==12?"selected":""}>12%</option>
           <option value="21" ${(l.vatRate==21||l.vatRate==null||l.vatRate==undefined)?"selected":""}>21%</option>
         </select>
-        <button type="button" class="inv-line-del" style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:16px;padding:0;" title="Verwijder">&times;</button>
+        <button type="button" class="inv-line-del" style="background:none;border:none;cursor:pointer;color:var(--gray-400);font-size:16px;padding:0;" title="Verwijder">&times;</button>
       </div>`;
     }
 
@@ -4320,8 +4320,8 @@ ${alerts.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;borde
       content.innerHTML = `
 <div style="margin-bottom:20px;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
   <div>
-    <div style="font-size:18px;font-weight:700;color:#0f172a;margin-bottom:4px;">Roadmap — ${esc(rm.tenant?.name||"")}</div>
-    <div style="font-size:13px;color:#64748b;">Gegenereerd op ${new Date(rm.generatedAt||Date.now()).toLocaleString("nl-BE")} · ${rm.summary?.go||0}/${rm.summary?.total||0} fasen gereed · ${rm.summary?.openActions||0} open acties</div>
+    <div style="font-size:18px;font-weight:700;color:var(--gray-900);margin-bottom:4px;">Roadmap — ${esc(rm.tenant?.name||"")}</div>
+    <div style="font-size:13px;color:var(--gray-500);">Gegenereerd op ${new Date(rm.generatedAt||Date.now()).toLocaleString("nl-BE")} · ${rm.summary?.go||0}/${rm.summary?.total||0} fasen gereed · ${rm.summary?.openActions||0} open acties</div>
   </div>
   <div style="display:flex;gap:8px;flex-wrap:wrap;">
     <button class="adm-btn adm-btn-secondary adm-btn-sm" id="rmRefresh">🔄 Vernieuwen</button>
@@ -4336,35 +4336,35 @@ ${phases.map(p => {
   const icon = phaseIcons[p.key]||"📍";
   const isCurrent = p.key === rm.currentPhase;
   return `
-<div style="margin-bottom:16px;border-radius:12px;border:2px solid ${isGo?"#d1fae5":isCurrent?"#fef3c7":"#f1f5f9"};overflow:hidden;">
-  <div style="background:${isGo?"#d1fae5":isCurrent?"#fef3c7":"#f1f5f9"};padding:14px 18px;display:flex;align-items:center;gap:12px;">
+<div style="margin-bottom:16px;border-radius:12px;border:2px solid ${isGo?"var(--wf-green-l)":isCurrent?"var(--wf-yellow-l)":"var(--gray-100)"};overflow:hidden;">
+  <div style="background:${isGo?"var(--wf-green-l)":isCurrent?"var(--wf-yellow-l)":"var(--gray-100)"};padding:14px 18px;display:flex;align-items:center;gap:12px;">
     <span style="font-size:20px;">${icon}</span>
     <div style="flex:1;">
-      <div style="font-size:15px;font-weight:700;color:#0f172a;">${esc(p.label)}${isCurrent?` <span style="background:#f59e0b;color:#fff;border-radius:4px;font-size:10px;padding:1px 6px;font-weight:700;vertical-align:middle;margin-left:6px;">HUIDIGE FASE</span>`:""}</div>
-      <div style="font-size:12px;color:#64748b;margin-top:2px;">${esc(p.detail||"")}</div>
+      <div style="font-size:15px;font-weight:700;color:var(--gray-900);">${esc(p.label)}${isCurrent?` <span style="background:var(--wf-yellow);color:#fff;border-radius:4px;font-size:10px;padding:1px 6px;font-weight:700;vertical-align:middle;margin-left:6px;">HUIDIGE FASE</span>`:""}</div>
+      <div style="font-size:12px;color:var(--gray-500);margin-top:2px;">${esc(p.detail||"")}</div>
     </div>
     <div style="text-align:right;">
-      <div style="font-size:22px;font-weight:700;color:${isGo?"#10b981":isCurrent?"#f59e0b":"#94a3b8"};">${p.score}%</div>
-      <div style="font-size:11px;font-weight:600;color:${isGo?"#10b981":"#ef4444"};">${isGo?"✅ GO":"🔴 NO GO"}</div>
+      <div style="font-size:22px;font-weight:700;color:${isGo?"var(--wf-green)":isCurrent?"var(--wf-yellow)":"var(--gray-400)"};">${p.score}%</div>
+      <div style="font-size:11px;font-weight:600;color:${isGo?"var(--wf-green)":"var(--wf-red)"};">${isGo?"✅ GO":"🔴 NO GO"}</div>
     </div>
   </div>
   <!-- Progress bar -->
-  <div style="height:6px;background:#e2e8f0;">
-    <div style="height:100%;width:${p.score}%;background:${isGo?"#10b981":isCurrent?"#f59e0b":"#6366f1"};transition:width .5s;"></div>
+  <div style="height:6px;background:var(--gray-200);">
+    <div style="height:100%;width:${p.score}%;background:${isGo?"var(--wf-green)":isCurrent?"var(--wf-yellow)":"var(--wf-purple)"};transition:width .5s;"></div>
   </div>
   <!-- Open actions -->
   ${p.actions?.length ? `
   <div style="padding:12px 18px;">
-    <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">${p.actions.length} OPEN ${p.actions.length===1?"ACTIE":"ACTIES"}</div>
+    <div style="font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">${p.actions.length} OPEN ${p.actions.length===1?"ACTIE":"ACTIES"}</div>
     ${p.actions.map(a=>`
-    <div style="display:flex;gap:10px;padding:6px 0;border-bottom:1px solid #f8fafc;">
-      <span style="background:${a.priority==="P0"?"#fee2e2":"#fef3c7"};color:${a.priority==="P0"?"#dc2626":"#92400e"};border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700;flex-shrink:0;height:fit-content;">${esc(a.priority||"P1")}</span>
+    <div style="display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--gray-50);">
+      <span style="background:${a.priority==="P0"?"var(--wf-red-l)":"var(--wf-yellow-l)"};color:${a.priority==="P0"?"var(--wf-red)":"var(--wf-yellow)"};border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700;flex-shrink:0;height:fit-content;">${esc(a.priority||"P1")}</span>
       <div>
-        <div style="font-size:13px;font-weight:600;color:#0f172a;">${esc(a.label||"")}</div>
-        <div style="font-size:12px;color:#64748b;">${esc(a.action||"")}</div>
+        <div style="font-size:13px;font-weight:600;color:var(--gray-900);">${esc(a.label||"")}</div>
+        <div style="font-size:12px;color:var(--gray-500);">${esc(a.action||"")}</div>
       </div>
     </div>`).join("")}
-  </div>` : `<div style="padding:10px 18px;font-size:13px;color:#10b981;font-weight:600;">✓ Alle checks geslaagd</div>`}
+  </div>` : `<div style="padding:10px 18px;font-size:13px;color:var(--wf-green);font-weight:600;">✓ Alle checks geslaagd</div>`}
 </div>`;
 }).join("")}`;
       document.getElementById("rmRefresh")?.addEventListener("click", () => renderRoadmap());
@@ -4404,7 +4404,7 @@ ${phases.map(p => {
         } catch(e) { window.showToast && window.showToast("Fout: "+e.message, "error"); }
         btn.disabled = false; btn.textContent = "🧹 Demodata wissen";
       });
-    } catch(e) { content.innerHTML = `<div style="padding:20px;color:#dc2626">Fout: ${e.message}</div>`; }
+    } catch(e) { content.innerHTML = `<div style="padding:20px;color:var(--wf-red)">Fout: ${e.message}</div>`; }
   }
 
   // ── Facturatie ─────────────────────────────────────────────
@@ -4447,11 +4447,11 @@ ${phases.map(p => {
 ${billing.status === "trial" ? (() => {
   const daysLeft = billing.trialEndsAt ? Math.max(0, Math.ceil((new Date(billing.trialEndsAt) - Date.now()) / 86400000)) : null;
   const endStr = billing.trialEndsAt ? new Date(billing.trialEndsAt).toLocaleDateString("nl-BE") : null;
-  return `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:12px">
+  return `<div style="background:var(--wf-yellow-l);border:1px solid var(--wf-yellow-l);border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:12px">
   <span style="font-size:20px">⏳</span>
   <div>
-    <div style="font-size:14px;font-weight:600;color:#92400e">Gratis proefperiode${daysLeft != null ? ` — nog ${daysLeft} dag${daysLeft === 1 ? "" : "en"}` : " actief"}</div>
-    <div style="font-size:12px;color:#a16207;margin-top:2px">${hasPayment
+    <div style="font-size:14px;font-weight:600;color:var(--wf-yellow)">Gratis proefperiode${daysLeft != null ? ` — nog ${daysLeft} dag${daysLeft === 1 ? "" : "en"}` : " actief"}</div>
+    <div style="font-size:12px;color:var(--wf-yellow);margin-top:2px">${hasPayment
       ? `Je kaart staat geregistreerd. ${endStr ? `Vanaf ${endStr} wordt automatisch ${fmtEur(monthlyShown)}/maand gefactureerd.` : "Na de proefperiode start de facturatie automatisch."} Opzeggen kan altijd in het beheerportaal.`
       : "Kies hieronder je bundel. Je kaartgegevens zijn vereist om te starten — je wordt pas na 14 dagen gefactureerd en kan altijd opzeggen."}</div>
   </div>
@@ -4507,7 +4507,7 @@ ${billing.status === "trial" ? (() => {
     </div>` : ""}
     <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
       <button class="adm-btn adm-btn-secondary adm-btn-sm" id="billPortal">⚙️ Abonnement &amp; betaalmethode beheren</button>
-      <span style="font-size:12px;color:#94A3B8;">Veilig betalen — je betaalgegevens worden door onze betaalpartner (Stripe) verwerkt. Upgraden, downgraden, betaalmethode en opzeggen regel je in het beheerportaal.</span>
+      <span style="font-size:12px;color:var(--gray-400);">Veilig betalen — je betaalgegevens worden door onze betaalpartner (Stripe) verwerkt. Upgraden, downgraden, betaalmethode en opzeggen regel je in het beheerportaal.</span>
     </div>
   </div>
 </div>
@@ -4584,24 +4584,24 @@ ${billing.status === "trial" ? (() => {
         body.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;">
           ${addons.map(a => {
             const has = active.has(a.key);
-            return `<div style="border:1.5px solid ${has ? "#16a34a" : "#E2E8F0"};border-radius:12px;padding:14px;">
+            return `<div style="border:1.5px solid ${has ? "var(--wf-green)" : "var(--gray-200)"};border-radius:12px;padding:14px;">
               <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
-                <strong style="font-size:14px;color:#0F172A;">${esc(a.label)}</strong>
-                ${has ? `<span style="font-size:10px;font-weight:700;background:#dcfce7;color:#15803d;border-radius:999px;padding:2px 8px;">ACTIEF</span>` : ""}
+                <strong style="font-size:14px;color:var(--gray-900);">${esc(a.label)}</strong>
+                ${has ? `<span style="font-size:10px;font-weight:700;background:var(--wf-green-l);color:var(--wf-green);border-radius:999px;padding:2px 8px;">ACTIEF</span>` : ""}
               </div>
-              <div style="font-size:20px;font-weight:800;color:#0F172A;margin:6px 0;">€${a.monthly}<span style="font-size:12px;font-weight:500;color:#94A3B8;">/mnd</span></div>
-              <div style="font-size:12px;color:#64748B;min-height:32px;">${esc(a.description)}</div>
+              <div style="font-size:20px;font-weight:800;color:var(--gray-900);margin:6px 0;">€${a.monthly}<span style="font-size:12px;font-weight:500;color:var(--gray-400);">/mnd</span></div>
+              <div style="font-size:12px;color:var(--gray-500);min-height:32px;">${esc(a.description)}</div>
               ${has
                 ? `<button class="adm-btn adm-btn-secondary adm-btn-sm" disabled style="opacity:.6;width:100%;margin-top:8px;">Inbegrepen</button>`
                 : `<button class="adm-btn adm-btn-primary adm-btn-sm addon-request" data-addon="${esc(a.label)}" style="width:100%;margin-top:8px;">Aanvragen</button>`}
             </div>`;
           }).join("")}
         </div>
-        <div style="font-size:11.5px;color:#94A3B8;margin-top:10px;">Add-ons worden door je accountbeheerder of support geactiveerd. Neem contact op om een add-on toe te voegen.</div>`;
+        <div style="font-size:11.5px;color:var(--gray-400);margin-top:10px;">Add-ons worden door je accountbeheerder of support geactiveerd. Neem contact op om een add-on toe te voegen.</div>`;
         body.querySelectorAll(".addon-request").forEach(btn => btn.addEventListener("click", () =>
           window.showToast && window.showToast(`Bedankt! Vraag '${btn.dataset.addon}' aan via je accountmanager of support — wij activeren het voor je organisatie.`, "info")));
       })();
-    } catch(e) { content.innerHTML = `<div style="padding:20px;color:#dc2626">Fout: ${e.message}</div>`; }
+    } catch(e) { content.innerHTML = `<div style="padding:20px;color:var(--wf-red)">Fout: ${e.message}</div>`; }
   }
 
   // ── Settings ───────────────────────────────────────────────
@@ -4622,13 +4622,13 @@ ${billing.status === "trial" ? (() => {
   return `
 <div class="adm-card">
   <div class="adm-card-header">
-    <h3 class="adm-card-title">${esc(p.label)} <span style="font-weight:400;font-size:12px;color:#94a3b8">· ${esc(p.category)}</span></h3>
+    <h3 class="adm-card-title">${esc(p.label)} <span style="font-weight:400;font-size:12px;color:var(--gray-400)">· ${esc(p.category)}</span></h3>
     <span class="adm-status adm-status-${conn ? (conn.status === "connected" ? "active" : "inactive") : "pending"}">${conn ? esc(conn.status) : "niet verbonden"}</span>
   </div>
   <div class="adm-card-body">
-    <p style="font-size:13px;color:#64748b;margin-bottom:12px">${esc(p.description)}${p.docs ? ` · <a href="${esc(p.docs)}" target="_blank" rel="noopener">documentatie</a>` : ""}</p>
+    <p style="font-size:13px;color:var(--gray-500);margin-bottom:12px">${esc(p.description)}${p.docs ? ` · <a href="${esc(p.docs)}" target="_blank" rel="noopener">documentatie</a>` : ""}</p>
     ${conn ? `
-      <div style="font-size:13px;color:#475569;margin-bottom:10px">
+      <div style="font-size:13px;color:var(--gray-600);margin-bottom:10px">
         Laatste sync: ${fmtDT(conn.lastSyncAt)}${ss.lastStatus ? ` · ${esc(ss.lastStatus)}` : ""}<br>
         ${ss.total || 0} sync(s), ${ss.failed || 0} mislukt${conn.hasSecret ? "" : " · ⚠️ geen sleutel ingesteld"}
       </div>
@@ -4648,10 +4648,10 @@ ${billing.status === "trial" ? (() => {
     };
     const categories = [...new Set(providers.map(p => p.category))];
     content.innerHTML = `
-<div style="font-size:13px;color:#64748b;margin-bottom:14px">Koppel je boekhouding en werfsoftware. Sleutels worden versleuteld bewaard; zonder geldige sleutel draait een sync in testmodus.</div>
-<div class="adm-card" style="margin-bottom:16px;background:#f0f9ff;border:1px solid #bae6fd"><div class="adm-card-body" style="font-size:13px;color:#075985">ℹ️ <strong>Compliance-aangiftes</strong> (Checkin@Work / CIAW en Limosa) verlopen <strong>automatisch</strong> bij in-/uitklokken — die beheer je niet hier maar onder <strong>Compliance → Checkin@Work</strong> en <strong>A1 / Limosa</strong>.</div></div>
+<div style="font-size:13px;color:var(--gray-500);margin-bottom:14px">Koppel je boekhouding en werfsoftware. Sleutels worden versleuteld bewaard; zonder geldige sleutel draait een sync in testmodus.</div>
+<div class="adm-card" style="margin-bottom:16px;background:var(--wf-blue-l);border:1px solid var(--wf-blue-l)"><div class="adm-card-body" style="font-size:13px;color:#075985">ℹ️ <strong>Compliance-aangiftes</strong> (Checkin@Work / CIAW en Limosa) verlopen <strong>automatisch</strong> bij in-/uitklokken — die beheer je niet hier maar onder <strong>Compliance → Checkin@Work</strong> en <strong>A1 / Limosa</strong>.</div></div>
 ${categories.map(cat => `
-  <div class="adm-nav-label" style="margin:18px 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#64748b">${esc(cat)}</div>
+  <div class="adm-nav-label" style="margin:18px 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--gray-500)">${esc(cat)}</div>
   <div class="adm-grid-2">${providers.filter(p => p.category === cat).map(providerCard).join("")}</div>
 `).join("")}`;
 
@@ -4730,13 +4730,13 @@ ${categories.map(cat => `
           <input name="defaultHourlyRate" type="number" step="1" min="0" value="${tenant.defaultHourlyRate ?? ""}" placeholder="bv. 55 — gebruikt voor werkbonnen zonder eigen tarief">
         </div>
         <div id="admOrgMsg" style="display:none;padding:8px 12px;border-radius:8px;font-size:13px;margin-bottom:8px;"></div>
-        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#475569;margin:4px 0 8px;cursor:pointer;">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--gray-600);margin:4px 0 8px;cursor:pointer;">
           <input type="checkbox" id="admEmailNotif" ${tenant.notificationPrefs?.emailEnabled === false ? "" : "checked"}>
           E-mailnotificaties versturen (belangrijke meldingen naar betrokkenen)
         </label>
         <div style="display:flex;align-items:center;gap:10px;margin:0 0 12px;flex-wrap:wrap;">
           <button type="button" class="adm-btn adm-btn-secondary adm-btn-sm" id="admPushToggle">🔔 Pushmeldingen op dit toestel</button>
-          <span id="admPushStatus" style="font-size:12px;color:#94a3b8;"></span>
+          <span id="admPushStatus" style="font-size:12px;color:var(--gray-400);"></span>
         </div>
         <div class="adm-form-actions"><button type="submit" class="adm-btn adm-btn-primary">Opslaan</button></div>
       </form>
@@ -4747,18 +4747,18 @@ ${categories.map(cat => `
     <div class="adm-card-body">
       <div style="display:flex;flex-direction:column;gap:10px;">
         <div style="display:flex;justify-content:space-between;font-size:13px;">
-          <span style="color:#64748b;">Huidig plan</span>
+          <span style="color:var(--gray-500);">Huidig plan</span>
           <strong style="text-transform:capitalize;">${esc(tenant.plan || "—")}</strong>
         </div>
         <div style="display:flex;justify-content:space-between;font-size:13px;">
-          <span style="color:#64748b;">Status</span>
+          <span style="color:var(--gray-500);">Status</span>
           <span class="adm-status adm-status-${tenant.status === "active" ? "active" : tenant.status === "trial" ? "pending" : "inactive"}">${esc(tenant.status || "—")}</span>
         </div>
         <div style="display:flex;justify-content:space-between;font-size:13px;">
-          <span style="color:#64748b;">Facturatie e-mail</span>
+          <span style="color:var(--gray-500);">Facturatie e-mail</span>
           <span>${esc(tenant.billingEmail || "—")}</span>
         </div>
-        <hr style="border:none;border-top:1px solid #f1f5f9;margin:4px 0;">
+        <hr style="border:none;border-top:1px solid var(--gray-100);margin:4px 0;">
         <button class="adm-btn adm-btn-secondary" id="admSettingsToBilling" style="width:100%;">Factuurgeschiedenis bekijken</button>
       </div>
     </div>
@@ -4766,14 +4766,14 @@ ${categories.map(cat => `
   <div class="adm-card">
     <div class="adm-card-header"><h3 class="adm-card-title">Beveiliging — MFA</h3></div>
     <div class="adm-card-body">
-      <div id="admMfaStatus" style="margin-bottom:12px;font-size:13px;color:#64748b;">Status laden…</div>
+      <div id="admMfaStatus" style="margin-bottom:12px;font-size:13px;color:var(--gray-500);">Status laden…</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="adm-btn adm-btn-primary" id="admMfaSetup">🔐 MFA instellen</button>
         <button class="adm-btn adm-btn-secondary" id="admMfaEnforce">🛡️ MFA verplichten voor beheerders</button>
         <button class="adm-btn adm-btn-secondary" id="admMfaDisable" style="display:none;">MFA uitschakelen</button>
       </div>
-      <div style="font-size:11.5px;color:#94A3B8;margin-top:8px;">MFA verplichten schakelt 2FA in voor álle beheerders. Bij de volgende login is een authenticator-code vereist. Bewaar de getoonde codes goed.</div>
-      <div id="admMfaWizard" style="display:none;margin-top:16px;background:#f8fafc;border-radius:10px;padding:16px;"></div>
+      <div style="font-size:11.5px;color:var(--gray-400);margin-top:8px;">MFA verplichten schakelt 2FA in voor álle beheerders. Bij de volgende login is een authenticator-code vereist. Bewaar de getoonde codes goed.</div>
+      <div id="admMfaWizard" style="display:none;margin-top:16px;background:var(--gray-50);border-radius:10px;padding:16px;"></div>
     </div>
   </div>
   <div class="adm-card">
@@ -4810,7 +4810,7 @@ ${categories.map(cat => `
   <div class="adm-card">
     <div class="adm-card-header"><h3 class="adm-card-title">Support-toegang (GDPR)</h3></div>
     <div class="adm-card-body">
-      <p style="font-size:13px;color:#64748b;margin-bottom:12px;">
+      <p style="font-size:13px;color:var(--gray-500);margin-bottom:12px;">
         Geef je toestemming dan kan een supportmedewerker tijdelijk inloggen en je sessie overnemen om je te helpen.
         De toegang is tijdgebonden, wordt volledig geaudit, en je ziet een banner zolang een sessie actief is.
         Je kunt de toestemming op elk moment intrekken — een lopende sessie stopt dan meteen.
@@ -4819,7 +4819,7 @@ ${categories.map(cat => `
       <div class="adm-form-group" id="admSupportReasonWrap">
         <label>Reden / context (optioneel)</label>
         <input id="admSupportReason" placeholder="bv. hulp bij facturatie-instelling">
-        <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px;color:#475569;cursor:pointer;">
+        <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px;color:var(--gray-600);cursor:pointer;">
           <input type="checkbox" id="admSupportAutoRenew" checked>
           Automatisch verlengen — blijft jaarlijks staan, je krijgt jaarlijks een mededeling per e-mail
         </label>
@@ -4848,14 +4848,14 @@ ${categories.map(cat => `
       if (allowed) {
         const renew = sa.autoRenew !== false;
         const review = sa.reviewDueAt ? new Date(sa.reviewDueAt).toLocaleDateString("nl-BE") : null;
-        statusEl.innerHTML = `<span style="display:inline-block;padding:3px 10px;border-radius:999px;background:#d1fae5;color:#065f46;font-weight:600;">Toegestaan</span>`
-          + (sa.allowedBy ? ` <span style="color:#64748b;">door ${esc(sa.allowedBy)}${sa.allowedAt ? " · " + new Date(sa.allowedAt).toLocaleString("nl-BE") : ""}</span>` : "")
-          + `<div style="color:#64748b;margin-top:6px;">${renew ? "🔁 Verlengt jaarlijks automatisch" : "Geen automatische verlenging"}${renew && review ? ` · volgende mededeling ${review}` : ""}</div>`;
+        statusEl.innerHTML = `<span style="display:inline-block;padding:3px 10px;border-radius:999px;background:var(--wf-green-l);color:var(--wf-green);font-weight:600;">Toegestaan</span>`
+          + (sa.allowedBy ? ` <span style="color:var(--gray-500);">door ${esc(sa.allowedBy)}${sa.allowedAt ? " · " + new Date(sa.allowedAt).toLocaleString("nl-BE") : ""}</span>` : "")
+          + `<div style="color:var(--gray-500);margin-top:6px;">${renew ? "🔁 Verlengt jaarlijks automatisch" : "Geen automatische verlenging"}${renew && review ? ` · volgende mededeling ${review}` : ""}</div>`;
         allowBtn.style.display = "none";
         revokeBtn.style.display = "";
         reasonWrap.style.display = "none";
       } else {
-        statusEl.innerHTML = `<span style="display:inline-block;padding:3px 10px;border-radius:999px;background:#f1f5f9;color:#475569;font-weight:600;">Niet toegestaan</span> <span style="color:#64748b;">support kan niet inloggen</span>`;
+        statusEl.innerHTML = `<span style="display:inline-block;padding:3px 10px;border-radius:999px;background:var(--gray-100);color:var(--gray-600);font-weight:600;">Niet toegestaan</span> <span style="color:var(--gray-500);">support kan niet inloggen</span>`;
         allowBtn.style.display = "";
         revokeBtn.style.display = "none";
         reasonWrap.style.display = "";
@@ -4864,7 +4864,7 @@ ${categories.map(cat => `
     function admSupportMsg(text, ok) {
       const m = document.getElementById("admSupportMsg");
       if (!m) return;
-      m.style.cssText = `display:block;padding:8px 12px;border-radius:8px;font-size:13px;margin-top:10px;background:${ok ? "#d1fae5" : "#fee2e2"};color:${ok ? "#065f46" : "#dc2626"};`;
+      m.style.cssText = `display:block;padding:8px 12px;border-radius:8px;font-size:13px;margin-top:10px;background:${ok ? "var(--wf-green-l)" : "var(--wf-red-l)"};color:${ok ? "var(--wf-green)" : "var(--wf-red)"};`;
       m.textContent = text;
     }
     document.getElementById("admSupportAllow")?.addEventListener("click", async () => {
@@ -4897,11 +4897,11 @@ ${categories.map(cat => `
       card.style.display = "";
       function paint(cfg) {
         body.innerHTML = `
-          <p style="font-size:13px;color:#64748b;margin-bottom:12px;">
+          <p style="font-size:13px;color:var(--gray-500);margin-bottom:12px;">
             Laat je medewerkers inloggen via jullie identiteitsprovider (Azure AD, Okta, Google Workspace…).
             Configureer hieronder de IdP-gegevens en geef onderstaande SP-URL's in bij je IdP.
           </p>
-          <div style="background:#f8fafc;border-radius:8px;padding:10px 12px;font-size:12px;margin-bottom:14px;word-break:break-all;">
+          <div style="background:var(--gray-50);border-radius:8px;padding:10px 12px;font-size:12px;margin-bottom:14px;word-break:break-all;">
             <div><strong>ACS / Reply URL:</strong> ${esc(cfg.acsUrl)}</div>
             <div><strong>Entity ID / Issuer:</strong> ${esc(cfg.issuer)}</div>
             <div><strong>SP-metadata:</strong> <a href="${esc(cfg.metadataUrl)}" target="_blank" rel="noopener">${esc(cfg.metadataUrl)}</a></div>
@@ -4940,11 +4940,11 @@ ${categories.map(cat => `
           };
           try {
             const r = await api("PUT", "/sso/config", payload);
-            msg.style.cssText = "display:block;background:#d1fae5;color:#065f46;padding:8px 12px;border-radius:8px;font-size:13px;margin-bottom:8px;";
+            msg.style.cssText = "display:block;background:var(--wf-green-l);color:var(--wf-green);padding:8px 12px;border-radius:8px;font-size:13px;margin-bottom:8px;";
             msg.textContent = "SSO-instellingen opgeslagen ✓";
             paint(r.sso);
           } catch (err) {
-            msg.style.cssText = "display:block;background:#fee2e2;color:#dc2626;padding:8px 12px;border-radius:8px;font-size:13px;margin-bottom:8px;";
+            msg.style.cssText = "display:block;background:var(--wf-red-l);color:var(--wf-red);padding:8px 12px;border-radius:8px;font-size:13px;margin-bottom:8px;";
             msg.textContent = err.message;
           }
         });
@@ -4962,11 +4962,11 @@ ${categories.map(cat => `
       body.notificationPrefs = { emailEnabled: document.getElementById("admEmailNotif")?.checked !== false };
       try {
         await api("PATCH", "/settings", body);
-        msgEl.style.cssText = "display:block;background:#d1fae5;color:#065f46;padding:8px 12px;border-radius:8px;font-size:13px;margin-bottom:8px;";
+        msgEl.style.cssText = "display:block;background:var(--wf-green-l);color:var(--wf-green);padding:8px 12px;border-radius:8px;font-size:13px;margin-bottom:8px;";
         msgEl.textContent = "Instellingen opgeslagen ✓";
         setTimeout(() => { msgEl.style.display = "none"; }, 3000);
       } catch (err) {
-        msgEl.style.cssText = "display:block;background:#fee2e2;color:#dc2626;padding:8px 12px;border-radius:8px;font-size:13px;margin-bottom:8px;";
+        msgEl.style.cssText = "display:block;background:var(--wf-red-l);color:var(--wf-red);padding:8px 12px;border-radius:8px;font-size:13px;margin-bottom:8px;";
         msgEl.textContent = err.message;
       }
     });
@@ -5016,12 +5016,12 @@ ${categories.map(cat => `
       const { currentPassword, newPassword } = Object.fromEntries(new FormData(e.target).entries());
       try {
         await api("POST", "/auth/change-password", { currentPassword, newPassword });
-        msgEl.style.cssText = "display:block;background:#d1fae5;color:#065f46;padding:8px 12px;border-radius:8px;font-size:13px;margin-bottom:8px;";
+        msgEl.style.cssText = "display:block;background:var(--wf-green-l);color:var(--wf-green);padding:8px 12px;border-radius:8px;font-size:13px;margin-bottom:8px;";
         msgEl.textContent = "Wachtwoord gewijzigd ✓";
         e.target.reset();
         setTimeout(() => { msgEl.style.display = "none"; }, 3000);
       } catch (err) {
-        msgEl.style.cssText = "display:block;background:#fee2e2;color:#dc2626;padding:8px 12px;border-radius:8px;font-size:13px;margin-bottom:8px;";
+        msgEl.style.cssText = "display:block;background:var(--wf-red-l);color:var(--wf-red);padding:8px 12px;border-radius:8px;font-size:13px;margin-bottom:8px;";
         msgEl.textContent = err.message;
       }
     });
@@ -5035,11 +5035,11 @@ ${categories.map(cat => `
         const disableBtn = document.getElementById("admMfaDisable");
         const setupBtn = document.getElementById("admMfaSetup");
         if (u.mfaEnabled) {
-          if (statusEl) statusEl.innerHTML = `<span style="color:#10b981;font-weight:600;">✅ MFA actief</span> — uw account is beveiligd met 2FA.`;
+          if (statusEl) statusEl.innerHTML = `<span style="color:var(--wf-green);font-weight:600;">✅ MFA actief</span> — uw account is beveiligd met 2FA.`;
           if (disableBtn) disableBtn.style.display = "";
           if (setupBtn) setupBtn.textContent = "🔄 MFA opnieuw instellen";
         } else {
-          if (statusEl) statusEl.innerHTML = `<span style="color:#f59e0b;font-weight:600;">⚠️ MFA niet actief</span> — wij raden sterk aan om MFA in te schakelen.`;
+          if (statusEl) statusEl.innerHTML = `<span style="color:var(--wf-yellow);font-weight:600;">⚠️ MFA niet actief</span> — wij raden sterk aan om MFA in te schakelen.`;
         }
       } catch(_){}
     })();
@@ -5048,41 +5048,41 @@ ${categories.map(cat => `
       const wizard = document.getElementById("admMfaWizard");
       if (!wizard) return;
       wizard.style.display = "block";
-      wizard.innerHTML = `<div style="font-size:13px;color:#64748b;">Setup laden…</div>`;
+      wizard.innerHTML = `<div style="font-size:13px;color:var(--gray-500);">Setup laden…</div>`;
       try {
         const data = await api("POST", "/me/mfa/setup");
         const setup = data.setup || {};
         wizard.innerHTML = `
 <div style="font-size:14px;font-weight:600;margin-bottom:12px;">MFA instellen — stap 1 van 2</div>
-<p style="font-size:13px;color:#64748b;margin-bottom:10px;">Voeg dit account toe in Google Authenticator, Authy of een andere TOTP-app via <strong>handmatige invoer</strong>:</p>
+<p style="font-size:13px;color:var(--gray-500);margin-bottom:10px;">Voeg dit account toe in Google Authenticator, Authy of een andere TOTP-app via <strong>handmatige invoer</strong>:</p>
 <div style="margin-bottom:14px;">
-  <div style="font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;">Geheime sleutel</div>
-  <div style="font-family:monospace;background:#f1f5f9;padding:10px 12px;border-radius:8px;font-size:15px;margin-top:4px;word-break:break-all;letter-spacing:1px;text-align:center;">${esc(setup.secret||"")}</div>
-  <div style="font-size:11px;color:#94a3b8;margin-top:6px;">Type: tijdgebaseerd (TOTP) · 6 cijfers · 30s. Accountnaam: je e-mailadres.</div>
+  <div style="font-size:11px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.4px;">Geheime sleutel</div>
+  <div style="font-family:monospace;background:var(--gray-100);padding:10px 12px;border-radius:8px;font-size:15px;margin-top:4px;word-break:break-all;letter-spacing:1px;text-align:center;">${esc(setup.secret||"")}</div>
+  <div style="font-size:11px;color:var(--gray-400);margin-top:6px;">Type: tijdgebaseerd (TOTP) · 6 cijfers · 30s. Accountnaam: je e-mailadres.</div>
 </div>
 <div style="font-size:14px;font-weight:600;margin-bottom:8px;">Stap 2: bevestig met code</div>
 <div style="display:flex;gap:8px;">
   <input id="admMfaCode" type="text" inputmode="numeric" maxlength="6" placeholder="6-cijferige code"
-    style="flex:1;padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:16px;letter-spacing:4px;text-align:center;">
+    style="flex:1;padding:8px 12px;border:1px solid var(--gray-200);border-radius:8px;font-size:16px;letter-spacing:4px;text-align:center;">
   <button class="adm-btn adm-btn-primary" id="admMfaVerify">Bevestigen</button>
 </div>
-<div id="admMfaErr" style="display:none;color:#ef4444;font-size:12px;margin-top:6px;"></div>`;
+<div id="admMfaErr" style="display:none;color:var(--wf-red);font-size:12px;margin-top:6px;"></div>`;
         document.getElementById("admMfaVerify")?.addEventListener("click", async () => {
           const code = document.getElementById("admMfaCode")?.value?.trim();
           const errEl = document.getElementById("admMfaErr");
           if (!code || code.length !== 6) { if(errEl){errEl.textContent="Vul een 6-cijferige code in.";errEl.style.display="";} return; }
           try {
             await api("POST", "/me/mfa/verify", { token: code });
-            wizard.innerHTML = `<div style="color:#10b981;font-weight:600;font-size:14px;">✅ MFA is nu actief! Uw account is beveiligd met 2FA.</div>`;
+            wizard.innerHTML = `<div style="color:var(--wf-green);font-weight:600;font-size:14px;">✅ MFA is nu actief! Uw account is beveiligd met 2FA.</div>`;
             const statusEl = document.getElementById("admMfaStatus");
-            if (statusEl) statusEl.innerHTML = `<span style="color:#10b981;font-weight:600;">✅ MFA actief</span>`;
+            if (statusEl) statusEl.innerHTML = `<span style="color:var(--wf-green);font-weight:600;">✅ MFA actief</span>`;
             const disableBtn = document.getElementById("admMfaDisable");
             if (disableBtn) disableBtn.style.display = "";
           } catch(err) {
             if(errEl){errEl.textContent="Ongeldige code. Probeer opnieuw.";errEl.style.display="";}
           }
         });
-      } catch(e) { wizard.innerHTML = `<div style="color:#dc2626;font-size:13px;">Fout: ${e.message}</div>`; }
+      } catch(e) { wizard.innerHTML = `<div style="color:var(--wf-red);font-size:13px;">Fout: ${e.message}</div>`; }
     });
 
     // MFA verplichten voor alle beheerders
@@ -5091,28 +5091,28 @@ ${categories.map(cat => `
       const wizard = document.getElementById("admMfaWizard");
       if (!wizard) return;
       wizard.style.display = "block";
-      wizard.innerHTML = `<div style="font-size:13px;color:#64748b;">MFA inschakelen…</div>`;
+      wizard.innerHTML = `<div style="font-size:13px;color:var(--gray-500);">MFA inschakelen…</div>`;
       try {
         const d = await api("POST", "/admin/mfa/enforce");
         const enrolled = d.enrolled || [];
         if (!enrolled.length) {
-          wizard.innerHTML = `<div style="color:#10b981;font-weight:600;font-size:14px;">✅ Alle beheerders hebben al MFA actief.</div>`;
+          wizard.innerHTML = `<div style="color:var(--wf-green);font-weight:600;font-size:14px;">✅ Alle beheerders hebben al MFA actief.</div>`;
           return;
         }
         wizard.innerHTML = `
-<div style="font-size:14px;font-weight:700;margin-bottom:4px;color:#0F172A;">🛡️ MFA verplicht — ${enrolled.length} beheerder(s) ingeschreven</div>
-<div style="font-size:12px;color:#92400e;background:#FEF3C7;border:1px solid #FDE68A;border-radius:8px;padding:10px 12px;margin:10px 0;">
+<div style="font-size:14px;font-weight:700;margin-bottom:4px;color:var(--gray-900);">🛡️ MFA verplicht — ${enrolled.length} beheerder(s) ingeschreven</div>
+<div style="font-size:12px;color:var(--wf-yellow);background:var(--wf-yellow-l);border:1px solid var(--wf-yellow-l);border-radius:8px;padding:10px 12px;margin:10px 0;">
   ⚠️ Bewaar onderstaande gegevens nu. Ze worden niet opnieuw getoond. Voeg de sleutel toe aan een authenticator-app (Google Authenticator, Authy…).
 </div>
 ${enrolled.map(e => `
-  <div style="border:1px solid #E2E8F0;border-radius:10px;padding:12px;margin-bottom:10px;">
-    <div style="font-weight:600;font-size:13px;color:#0F172A;margin-bottom:6px;">${esc(e.name||e.email)} <span style="color:#94A3B8;font-weight:400;">· ${esc(e.email)}</span></div>
+  <div style="border:1px solid var(--gray-200);border-radius:10px;padding:12px;margin-bottom:10px;">
+    <div style="font-weight:600;font-size:13px;color:var(--gray-900);margin-bottom:6px;">${esc(e.name||e.email)} <span style="color:var(--gray-400);font-weight:400;">· ${esc(e.email)}</span></div>
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
       <div style="flex:1;min-width:180px;">
-        <div style="font-size:11px;color:#94A3B8;text-transform:uppercase;letter-spacing:.4px;">Geheime sleutel</div>
-        <div style="font-family:monospace;background:#F1F5F9;padding:6px 10px;border-radius:6px;font-size:12px;word-break:break-all;margin:3px 0 8px;">${esc(e.secret||"")}</div>
-        <div style="font-size:11px;color:#94A3B8;text-transform:uppercase;letter-spacing:.4px;">Recovery codes</div>
-        <div style="font-family:monospace;font-size:11.5px;color:#374151;line-height:1.7;">${(e.recoveryCodes||[]).map(c=>esc(c)).join(" &nbsp; ")}</div>
+        <div style="font-size:11px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.4px;">Geheime sleutel</div>
+        <div style="font-family:monospace;background:var(--gray-100);padding:6px 10px;border-radius:6px;font-size:12px;word-break:break-all;margin:3px 0 8px;">${esc(e.secret||"")}</div>
+        <div style="font-size:11px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.4px;">Recovery codes</div>
+        <div style="font-family:monospace;font-size:11.5px;color:var(--gray-700);line-height:1.7;">${(e.recoveryCodes||[]).map(c=>esc(c)).join(" &nbsp; ")}</div>
       </div>
     </div>
   </div>`).join("")}
@@ -5120,10 +5120,10 @@ ${enrolled.map(e => `
         document.getElementById("admMfaEnforceDone")?.addEventListener("click", () => {
           wizard.style.display = "none";
           const statusEl = document.getElementById("admMfaStatus");
-          if (statusEl) statusEl.innerHTML = `<span style="color:#10b981;font-weight:600;">✅ MFA verplicht voor beheerders</span>`;
+          if (statusEl) statusEl.innerHTML = `<span style="color:var(--wf-green);font-weight:600;">✅ MFA verplicht voor beheerders</span>`;
           window.showToast && window.showToast("MFA verplicht ingesteld voor beheerders ✓", "success");
         });
-      } catch(e) { wizard.innerHTML = `<div style="color:#dc2626;font-size:13px;">Fout: ${e.message}</div>`; }
+      } catch(e) { wizard.innerHTML = `<div style="color:var(--wf-red);font-size:13px;">Fout: ${e.message}</div>`; }
     });
 
     // Bewaarbeleid (retention) laden + bewerken
@@ -5132,12 +5132,12 @@ ${enrolled.map(e => `
     // Backup
     document.getElementById("admBackupCreate")?.addEventListener("click", async () => {
       const resultEl = document.getElementById("admBackupResult");
-      if(resultEl) resultEl.innerHTML = `<div style="font-size:13px;color:#64748b;">Backup aanmaken…</div>`;
+      if(resultEl) resultEl.innerHTML = `<div style="font-size:13px;color:var(--gray-500);">Backup aanmaken…</div>`;
       try {
         const d = await api("POST", "/admin/backups");
         const backup = d.backup || {};
         if (resultEl) resultEl.innerHTML = `
-<div style="background:#d1fae5;border-radius:8px;padding:10px 14px;font-size:13px;color:#065f46;">
+<div style="background:var(--wf-green-l);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--wf-green);">
   ✅ Backup aangemaakt: <strong>${esc(backup.id||"")}</strong><br>
   <span style="font-size:11px;">${new Date(backup.createdAt||Date.now()).toLocaleString("nl-BE")}</span>
   <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admBackupDownload" style="margin-top:8px;display:block;" data-id="${esc(backup.id||"")}">📥 Download JSON</button>
@@ -5150,7 +5150,7 @@ ${enrolled.map(e => `
             a.download = `backup-${backup.id}.json`; a.click();
           } catch(e2) { window.showToast("Download fout: "+e2.message, "error"); }
         });
-      } catch(e) { if(resultEl) resultEl.innerHTML = `<div style="color:#dc2626;font-size:13px;">Fout: ${e.message}</div>`; }
+      } catch(e) { if(resultEl) resultEl.innerHTML = `<div style="color:var(--wf-red);font-size:13px;">Fout: ${e.message}</div>`; }
     });
 
     document.getElementById("admBackupList")?.addEventListener("click", async () => {
@@ -5160,13 +5160,13 @@ ${enrolled.map(e => `
         const rows = d.rows || [];
         if(resultEl) resultEl.innerHTML = rows.length ? `
 <div style="margin-top:8px;">
-  ${rows.map(b=>`<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #f1f5f9;font-size:12px;">
-    <span style="font-family:monospace;color:#6366f1;">${esc(b.id||"")}</span>
-    <span style="color:#64748b;">${b.createdAt?new Date(b.createdAt).toLocaleString("nl-BE"):""}</span>
-    <span style="color:#64748b;">${b.tenantCount||0} tenants</span>
+  ${rows.map(b=>`<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--gray-100);font-size:12px;">
+    <span style="font-family:monospace;color:var(--wf-purple);">${esc(b.id||"")}</span>
+    <span style="color:var(--gray-500);">${b.createdAt?new Date(b.createdAt).toLocaleString("nl-BE"):""}</span>
+    <span style="color:var(--gray-500);">${b.tenantCount||0} tenants</span>
   </div>`).join("")}
-</div>` : `<div style="font-size:13px;color:#94a3b8;margin-top:8px;">Geen backups gevonden</div>`;
-      } catch(e) { if(resultEl) resultEl.innerHTML = `<div style="color:#dc2626;font-size:13px;">Fout: ${e.message}</div>`; }
+</div>` : `<div style="font-size:13px;color:var(--gray-400);margin-top:8px;">Geen backups gevonden</div>`;
+      } catch(e) { if(resultEl) resultEl.innerHTML = `<div style="color:var(--wf-red);font-size:13px;">Fout: ${e.message}</div>`; }
     });
   }
 
@@ -5367,7 +5367,7 @@ ${enrolled.map(e => `
           <div class="adm-notif-dot ${isRead ? "read" : ""}"></div>
           <div class="adm-notif-body">
             <div>${esc(n.title || n.message || "Notificatie")}</div>
-            ${n.body ? `<div style="color:#64748b;margin-top:2px;font-size:11.5px">${esc(n.body)}</div>` : ""}
+            ${n.body ? `<div style="color:var(--gray-500);margin-top:2px;font-size:11.5px">${esc(n.body)}</div>` : ""}
             <div class="adm-notif-time">${fmtNotifTime(n.createdAt)}</div>
           </div>
         </div>`;
@@ -5441,13 +5441,13 @@ ${enrolled.map(e => `
     if (_tplEditing) return renderTemplateEditor();
     let data;
     try { data = await api("GET", "/templates"); }
-    catch (e) { c.innerHTML = `<div class="adm-card"><div class="adm-card-body" style="color:#dc2626">${esc(e.message)}</div></div>`; return; }
+    catch (e) { c.innerHTML = `<div class="adm-card"><div class="adm-card-body" style="color:var(--wf-red)">${esc(e.message)}</div></div>`; return; }
     _tplMeta = { types: data.types || {}, fields: data.fields || {}, columns: data.columns || {} };
     const tpls = data.templates || [];
     const typeKeys = Object.keys(_tplMeta.types);
     c.innerHTML = `
 <div class="adm-card" style="padding:14px 16px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-  <div style="font-size:13px;color:#475569">Maak je eigen sjablonen voor facturen, offertes en werkbon-rapporten — met je logo, kleuren en de velden die jij wil. Het systeem drukt elk document af volgens het gekozen sjabloon.</div>
+  <div style="font-size:13px;color:var(--gray-600)">Maak je eigen sjablonen voor facturen, offertes en werkbon-rapporten — met je logo, kleuren en de velden die jij wil. Het systeem drukt elk document af volgens het gekozen sjabloon.</div>
   <select id="tplNew" class="adm-input" style="max-width:230px"><option value="">+ Nieuw sjabloon…</option>${typeKeys.map(t => `<option value="${t}">+ ${esc(_tplMeta.types[t].label)}</option>`).join("")}</select>
 </div>
 ${typeKeys.map(tk => {
@@ -5462,7 +5462,7 @@ ${typeKeys.map(tk => {
         <button class="adm-btn adm-btn-secondary adm-btn-sm tpl-prev" data-id="${esc(t.id)}">Voorbeeld</button>
         <button class="adm-btn adm-btn-danger adm-btn-sm tpl-del" data-id="${esc(t.id)}">🗑</button>
       </td></tr>`).join("")}</tbody></table>`
-    : `<div style="padding:16px;color:#94a3b8;font-size:13px">Nog geen sjabloon — er wordt een nette standaard gebruikt tot je er één maakt.</div>`}
+    : `<div style="padding:16px;color:var(--gray-400);font-size:13px">Nog geen sjabloon — er wordt een nette standaard gebruikt tot je er één maakt.</div>`}
     </div></div>`;
 }).join("")}`;
     document.getElementById("tplNew").addEventListener("change", e => { if (e.target.value) { _tplEditing = { type: e.target.value, ...defaultTplDraft(e.target.value) }; renderTemplates(); } });
@@ -5476,7 +5476,7 @@ ${typeKeys.map(tk => {
   }
 
   function defaultTplDraft(type) {
-    return { name: `Mijn ${(_tplMeta.types[type] || {}).label || type}`, accentColor: "#1e6be6", logo: null, headerText: "", introText: "", footerText: "{{bedrijf.naam}} · {{bedrijf.btw}} · {{bedrijf.email}}", paymentTerms: type === "invoice" ? "Gelieve te betalen voor de vervaldatum op {{bedrijf.iban}}." : "", columns: (_tplMeta.types[type] || {}).defaultColumns || ["description", "qty", "unitPrice", "vatRate", "lineTotal"], showVat: true, language: "nl" };
+    return { name: `Mijn ${(_tplMeta.types[type] || {}).label || type}`, accentColor: "var(--wf-blue)", logo: null, headerText: "", introText: "", footerText: "{{bedrijf.naam}} · {{bedrijf.btw}} · {{bedrijf.email}}", paymentTerms: type === "invoice" ? "Gelieve te betalen voor de vervaldatum op {{bedrijf.iban}}." : "", columns: (_tplMeta.types[type] || {}).defaultColumns || ["description", "qty", "unitPrice", "vatRate", "lineTotal"], showVat: true, language: "nl" };
   }
 
   function renderTemplateEditor() {
@@ -5495,10 +5495,10 @@ ${typeKeys.map(tk => {
   <div class="adm-card"><div class="adm-card-body">
     <div class="adm-form-group"><label>Naam</label><input class="adm-input" id="t_name" value="${esc(d.name || "")}"></div>
     <div class="adm-form-row">
-      <div class="adm-form-group"><label>Accentkleur</label><input type="color" class="adm-input" id="t_accent" value="${esc(d.accentColor || "#1e6be6")}" style="height:40px;padding:4px"></div>
+      <div class="adm-form-group"><label>Accentkleur</label><input type="color" class="adm-input" id="t_accent" value="${esc(d.accentColor || "var(--wf-blue)")}" style="height:40px;padding:4px"></div>
       <div class="adm-form-group"><label>Taal</label><select class="adm-input" id="t_lang"><option value="nl" ${d.language === "nl" ? "selected" : ""}>Nederlands</option><option value="fr" ${d.language === "fr" ? "selected" : ""}>Frans</option></select></div>
     </div>
-    <div class="adm-form-group"><label>Logo (optioneel)</label><input type="file" id="t_logo" accept="image/*" class="adm-input" style="padding:6px">${d.logo ? '<div style="font-size:12px;color:#16a34a;margin-top:4px">✓ logo ingesteld <a href="#" id="t_logo_clear">verwijderen</a></div>' : ""}</div>
+    <div class="adm-form-group"><label>Logo (optioneel)</label><input type="file" id="t_logo" accept="image/*" class="adm-input" style="padding:6px">${d.logo ? '<div style="font-size:12px;color:var(--wf-green);margin-top:4px">✓ logo ingesteld <a href="#" id="t_logo_clear">verwijderen</a></div>' : ""}</div>
     <div class="adm-form-group"><label>Eigen koptekst (leeg = bedrijfsblok)</label><textarea class="adm-input" id="t_header" rows="2" placeholder="Bv. {{bedrijf.naam}} — uw partner">${esc(d.headerText || "")}</textarea>${fieldPicker("t_header")}</div>
     <div class="adm-form-group"><label>Inleidingstekst</label><textarea class="adm-input" id="t_intro" rows="2">${esc(d.introText || "")}</textarea>${fieldPicker("t_intro")}</div>
     ${isFinancial ? `<div class="adm-form-group"><label>Kolommen</label><div style="display:flex;flex-wrap:wrap;gap:10px">${Object.keys(colDefs).map(k => `<label style="font-weight:400;font-size:12.5px;display:inline-flex;gap:5px;align-items:center"><input type="checkbox" class="t_col" value="${k}" ${(d.columns || []).includes(k) ? "checked" : ""}>${esc(colDefs[k])}</label>`).join("")}</div></div>
@@ -5506,7 +5506,7 @@ ${typeKeys.map(tk => {
     <div class="adm-form-group"><label>Betaalvoorwaarden</label><textarea class="adm-input" id="t_terms" rows="2">${esc(d.paymentTerms || "")}</textarea>${fieldPicker("t_terms")}</div>` : ""}
     <div class="adm-form-group"><label>Voettekst</label><textarea class="adm-input" id="t_footer" rows="2">${esc(d.footerText || "")}</textarea>${fieldPicker("t_footer")}</div>
     <label style="font-weight:400;font-size:12.5px;display:inline-flex;gap:6px;align-items:center;margin-bottom:12px"><input type="checkbox" id="t_default" ${d.isDefault ? "checked" : ""}> Als standaard gebruiken voor dit type</label>
-    <div class="adm-form-actions"><span id="t_msg" style="font-size:12px;color:#dc2626;flex:1;text-align:left"></span><button class="adm-btn adm-btn-primary" id="t_save">Opslaan</button></div>
+    <div class="adm-form-actions"><span id="t_msg" style="font-size:12px;color:var(--wf-red);flex:1;text-align:left"></span><button class="adm-btn adm-btn-primary" id="t_save">Opslaan</button></div>
   </div></div>
   <div class="adm-card" style="position:sticky;top:16px"><div class="adm-card-header"><h3 class="adm-card-title">Live voorbeeld</h3></div>
     <iframe id="t_prev" style="width:100%;height:560px;border:none;border-radius:0 0 16px 16px;background:#fff"></iframe>
@@ -5562,42 +5562,42 @@ ${typeKeys.map(tk => {
         api("GET", "/ciaw/presence").catch(() => ({ rows: [], present: 0, issues: 0 })),
       ]);
     }
-    catch (e) { c.innerHTML = `<div class="adm-card" style="padding:16px;color:#dc2626">${esc(e.message)}</div>`; return; }
+    catch (e) { c.innerHTML = `<div class="adm-card" style="padding:16px;color:var(--wf-red)">${esc(e.message)}</div>`; return; }
     const rows = data.declarations || [];
     const statusBadge = s => {
-      const map = { confirmed: ["#dcfce7", "#15803d", "bevestigd"], sent: ["#dbeafe", "#1d4ed8", "verzonden"], failed: ["#fee2e2", "#b91c1c", "mislukt"], rejected: ["#fee2e2", "#b91c1c", "geweigerd"] };
-      const [bg, fg, label] = map[s] || ["#f1f5f9", "#475569", s || "—"];
+      const map = { confirmed: ["var(--wf-green-l)", "var(--wf-green)", "bevestigd"], sent: ["var(--wf-blue-l)", "var(--wf-blue)", "verzonden"], failed: ["var(--wf-red-l)", "var(--wf-red)", "mislukt"], rejected: ["var(--wf-red-l)", "var(--wf-red)", "geweigerd"] };
+      const [bg, fg, label] = map[s] || ["var(--gray-100)", "var(--gray-600)", s || "—"];
       return `<span style="background:${bg};color:${fg};padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600">${esc(label)}</span>`;
     };
-    const geoBadge = d => d.geoVerified ? `<span title="binnen geofence" style="color:#15803d">📍 ✓${d.geoDistanceM != null ? ` ${d.geoDistanceM}m` : ""}</span>` : (d.geoDistanceM != null ? `<span title="buiten geofence" style="color:#d97706">📍 ${d.geoDistanceM}m</span>` : `<span style="color:#94a3b8">—</span>`);
+    const geoBadge = d => d.geoVerified ? `<span title="binnen geofence" style="color:var(--wf-green)">📍 ✓${d.geoDistanceM != null ? ` ${d.geoDistanceM}m` : ""}</span>` : (d.geoDistanceM != null ? `<span title="buiten geofence" style="color:var(--wf-yellow)">📍 ${d.geoDistanceM}m</span>` : `<span style="color:var(--gray-400)">—</span>`);
     const rsz = data.rszEmployerId || "";
     c.innerHTML = `
 <div class="adm-card" style="padding:14px 16px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-  <div style="font-size:13px;color:#475569">Aanwezigheidsaangiftes (RSZ/ONSS) gebeuren <strong>automatisch</strong> bij in- en uitklokken. Hieronder de recente aangiftes met locatieverificatie.</div>
+  <div style="font-size:13px;color:var(--gray-600)">Aanwezigheidsaangiftes (RSZ/ONSS) gebeuren <strong>automatisch</strong> bij in- en uitklokken. Hieronder de recente aangiftes met locatieverificatie.</div>
   <button class="adm-btn-secondary" id="ciawRefresh" style="white-space:nowrap">↻ Vernieuwen</button>
 </div>
 <div class="adm-card" style="padding:14px 16px;margin-bottom:14px">
   <div style="font-weight:700;font-size:13px;margin-bottom:6px">RSZ-werkgeversnummer</div>
-  <div style="font-size:12.5px;color:#64748b;margin-bottom:8px">Vereist voor geldige Checkin@Work-aangiftes. Het rijksregisternummer van elke medewerker stel je in op de medewerkersfiche.${rsz ? "" : ` <strong style="color:#b91c1c">Nog niet ingesteld — aangiftes worden geweigerd.</strong>`}</div>
+  <div style="font-size:12.5px;color:var(--gray-500);margin-bottom:8px">Vereist voor geldige Checkin@Work-aangiftes. Het rijksregisternummer van elke medewerker stel je in op de medewerkersfiche.${rsz ? "" : ` <strong style="color:var(--wf-red)">Nog niet ingesteld — aangiftes worden geweigerd.</strong>`}</div>
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     <input id="ciawRsz" class="adm-input" value="${esc(rsz)}" placeholder="bv. 12345678" style="max-width:220px">
     <button class="adm-btn-primary" id="ciawRszSave">Opslaan</button>
-    <span id="ciawRszMsg" style="font-size:12px;color:#16a34a"></span>
+    <span id="ciawRszMsg" style="font-size:12px;color:var(--wf-green)"></span>
   </div>
 </div>
 <div class="adm-card" style="margin-bottom:14px">
   <div class="adm-card-header" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-    <div style="font-weight:700;font-size:13px">Aanwezigheidsregister (werfcontrole) <span style="font-weight:400;color:#64748b">— ${presence.present} aanwezig${presence.issues ? `, <span style="color:#b91c1c">${presence.issues} zonder bevestigde aangifte</span>` : ""}</span></div>
+    <div style="font-weight:700;font-size:13px">Aanwezigheidsregister (werfcontrole) <span style="font-weight:400;color:var(--gray-500)">— ${presence.present} aanwezig${presence.issues ? `, <span style="color:var(--wf-red)">${presence.issues} zonder bevestigde aangifte</span>` : ""}</span></div>
     <button class="adm-btn adm-btn-secondary adm-btn-sm" id="ciawPresenceCsv">⬇ Export voor controle (CSV)</button>
   </div>
   <div class="adm-table-wrap"><table class="adm-table"><thead><tr><th>Werf</th><th>Medewerker</th><th>INSZ</th><th>Sinds</th><th>CIAW</th></tr></thead><tbody>
     ${(presence.rows || []).map(r => `<tr>
       <td>${esc(r.venue)}</td>
       <td>${esc(r.name)}</td>
-      <td style="font-family:monospace;font-size:12px">${r.insz ? esc(r.insz) : '<span style="color:#b91c1c">ontbreekt</span>'}${r.insz && !r.inszValid ? ' <span title="ongeldig controlegetal" style="color:#b91c1c">⚠</span>' : ""}</td>
-      <td style="font-size:12px;color:#64748b">${esc((r.since || "").replace("T", " "))}</td>
+      <td style="font-family:monospace;font-size:12px">${r.insz ? esc(r.insz) : '<span style="color:var(--wf-red)">ontbreekt</span>'}${r.insz && !r.inszValid ? ' <span title="ongeldig controlegetal" style="color:var(--wf-red)">⚠</span>' : ""}</td>
+      <td style="font-size:12px;color:var(--gray-500)">${esc((r.since || "").replace("T", " "))}</td>
       <td>${statusBadge(r.ciawStatus === "none" ? "—" : r.ciawStatus)}</td>
-    </tr>`).join("") || `<tr><td colspan="5" style="padding:18px;text-align:center;color:#94a3b8">Niemand momenteel ingeklokt.</td></tr>`}
+    </tr>`).join("") || `<tr><td colspan="5" style="padding:18px;text-align:center;color:var(--gray-400)">Niemand momenteel ingeklokt.</td></tr>`}
   </tbody></table></div>
 </div>
 <div class="adm-card" style="overflow:auto">
@@ -5609,10 +5609,10 @@ ${typeKeys.map(tk => {
       <td>${d.action === "OUT" ? "Uitklokken" : "Inklokken"}</td>
       <td>${geoBadge(d)}</td>
       <td>${statusBadge(d.status)}</td>
-      <td style="font-family:monospace;font-size:12px">${esc(d.reference || "—")}${d.error ? `<div style="color:#b91c1c;font-size:11px">${esc(d.error)}</div>` : ""}</td>
-      <td>${d.live ? "live" : "<span style='color:#64748b'>mock</span>"}</td>
+      <td style="font-family:monospace;font-size:12px">${esc(d.reference || "—")}${d.error ? `<div style="color:var(--wf-red);font-size:11px">${esc(d.error)}</div>` : ""}</td>
+      <td>${d.live ? "live" : "<span style='color:var(--gray-500)'>mock</span>"}</td>
       <td>${failed ? `<button class="adm-btn adm-btn-secondary adm-btn-sm ciaw-retry" data-clock="${esc(d.clockId)}" data-action="${d.action === "OUT" ? "out" : "in"}" style="padding:3px 9px;font-size:12px">↻ Opnieuw</button>` : ""}</td>
-    </tr>`;}).join("") || `<tr><td colspan="7" style="padding:24px;text-align:center;color:#94a3b8">Nog geen aangiftes. Ze verschijnen zodra medewerkers in-/uitklokken.</td></tr>`}
+    </tr>`;}).join("") || `<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--gray-400)">Nog geen aangiftes. Ze verschijnen zodra medewerkers in-/uitklokken.</td></tr>`}
   </tbody></table>
 </div>`;
     document.getElementById("ciawRefresh").addEventListener("click", renderCiaw);
@@ -5627,8 +5627,8 @@ ${typeKeys.map(tk => {
     });
     document.getElementById("ciawRszSave").addEventListener("click", async () => {
       const msg = document.getElementById("ciawRszMsg"); msg.textContent = "";
-      try { await api("POST", "/compliance/rsz", { rszEmployerId: document.getElementById("ciawRsz").value }); msg.style.color = "#16a34a"; msg.textContent = "Opgeslagen ✓"; }
-      catch (e) { msg.style.color = "#dc2626"; msg.textContent = e.message; }
+      try { await api("POST", "/compliance/rsz", { rszEmployerId: document.getElementById("ciawRsz").value }); msg.style.color = "var(--wf-green)"; msg.textContent = "Opgeslagen ✓"; }
+      catch (e) { msg.style.color = "var(--wf-red)"; msg.textContent = e.message; }
     });
     c.querySelectorAll(".ciaw-retry").forEach(b => b.addEventListener("click", async () => {
       b.disabled = true; b.textContent = "Bezig…";
@@ -5645,34 +5645,34 @@ ${typeKeys.map(tk => {
     const c = document.getElementById("admContent");
     let data = {};
     try { data = await api("GET", "/posted_workers"); }
-    catch (e) { c.innerHTML = `<div class="adm-card" style="padding:16px;color:#dc2626">${esc(e.message)}</div>`; return; }
+    catch (e) { c.innerHTML = `<div class="adm-card" style="padding:16px;color:var(--wf-red)">${esc(e.message)}</div>`; return; }
     const rows = data.rows || [];
     const a1Badge = s => {
-      const map = { valid: ["#dcfce7", "#15803d", "geldig"], expiring: ["#fef9c3", "#a16207", "verloopt < 30d"], expired: ["#fee2e2", "#b91c1c", "verlopen"], missing: ["#f1f5f9", "#475569", "geen A1"], unknown: ["#f1f5f9", "#475569", "onbekend"] };
+      const map = { valid: ["var(--wf-green-l)", "var(--wf-green)", "geldig"], expiring: ["var(--wf-yellow-l)", "var(--wf-yellow)", "verloopt < 30d"], expired: ["var(--wf-red-l)", "var(--wf-red)", "verlopen"], missing: ["var(--gray-100)", "var(--gray-600)", "geen A1"], unknown: ["var(--gray-100)", "var(--gray-600)", "onbekend"] };
       const [bg, fg, label] = map[s] || map.unknown;
       return `<span style="background:${bg};color:${fg};padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600">${esc(label)}</span>`;
     };
     c.innerHTML = `
 <div class="adm-card" style="padding:14px 16px;margin-bottom:14px">
-  <div style="font-size:13px;color:#475569;margin-bottom:6px">Detacheringsdossiers van (onder)aannemers en buitenlandse werknemers. Bewaak de geldigheid van A1-attesten en dien Limosa-meldingen in.</div>
-  <div style="font-size:12px;margin-bottom:6px">Limosa-provider: ${data.limosaMode === "live" ? '<span style="color:#15803d;font-weight:600">● actief (live)</span>' : '<span style="color:#a16207;font-weight:600">● testmodus (mock)</span> — meldingen worden gesimuleerd tot de provider live staat'}</div>
-  <div style="display:flex;gap:14px;font-size:12px;color:#64748b">
+  <div style="font-size:13px;color:var(--gray-600);margin-bottom:6px">Detacheringsdossiers van (onder)aannemers en buitenlandse werknemers. Bewaak de geldigheid van A1-attesten en dien Limosa-meldingen in.</div>
+  <div style="font-size:12px;margin-bottom:6px">Limosa-provider: ${data.limosaMode === "live" ? '<span style="color:var(--wf-green);font-weight:600">● actief (live)</span>' : '<span style="color:var(--wf-yellow);font-weight:600">● testmodus (mock)</span> — meldingen worden gesimuleerd tot de provider live staat'}</div>
+  <div style="display:flex;gap:14px;font-size:12px;color:var(--gray-500)">
     <span>${data.total || 0} dossiers</span>
-    ${data.expired ? `<span style="color:#b91c1c">⛔ ${data.expired} verlopen</span>` : ""}
-    ${data.expiring ? `<span style="color:#a16207">⚠️ ${data.expiring} verloopt binnenkort</span>` : ""}
-    ${data.missing ? `<span style="color:#64748b">${data.missing} zonder A1</span>` : ""}
+    ${data.expired ? `<span style="color:var(--wf-red)">⛔ ${data.expired} verlopen</span>` : ""}
+    ${data.expiring ? `<span style="color:var(--wf-yellow)">⚠️ ${data.expiring} verloopt binnenkort</span>` : ""}
+    ${data.missing ? `<span style="color:var(--gray-500)">${data.missing} zonder A1</span>` : ""}
   </div>
 </div>
 <div class="adm-card" style="padding:14px 16px;margin-bottom:14px">
   <div style="font-weight:700;font-size:13px;margin-bottom:10px">Nieuw detacheringsdossier</div>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;align-items:end">
-    <label style="font-size:12px;font-weight:600;color:#334155">Werknemer<input id="pwName" class="adm-input" placeholder="Naam"></label>
-    <label style="font-size:12px;font-weight:600;color:#334155">Onderaannemer<input id="pwSub" class="adm-input" placeholder="Bedrijf (optioneel)"></label>
-    <label style="font-size:12px;font-weight:600;color:#334155">Land<input id="pwCountry" class="adm-input" placeholder="bv. PL" maxlength="2" style="text-transform:uppercase"></label>
-    <label style="font-size:12px;font-weight:600;color:#334155">A1-referentie<input id="pwRef" class="adm-input" placeholder="A1-nr"></label>
-    <label style="font-size:12px;font-weight:600;color:#334155">Geldig van<input id="pwFrom" type="date" class="adm-input"></label>
-    <label style="font-size:12px;font-weight:600;color:#334155">Geldig tot<input id="pwTo" type="date" class="adm-input"></label>
-    <label style="font-size:12px;font-weight:600;color:#334155">A1-attest (PDF/foto)<input id="pwFile" type="file" accept="application/pdf,image/*" class="adm-input" style="padding:6px"></label>
+    <label style="font-size:12px;font-weight:600;color:var(--gray-700)">Werknemer<input id="pwName" class="adm-input" placeholder="Naam"></label>
+    <label style="font-size:12px;font-weight:600;color:var(--gray-700)">Onderaannemer<input id="pwSub" class="adm-input" placeholder="Bedrijf (optioneel)"></label>
+    <label style="font-size:12px;font-weight:600;color:var(--gray-700)">Land<input id="pwCountry" class="adm-input" placeholder="bv. PL" maxlength="2" style="text-transform:uppercase"></label>
+    <label style="font-size:12px;font-weight:600;color:var(--gray-700)">A1-referentie<input id="pwRef" class="adm-input" placeholder="A1-nr"></label>
+    <label style="font-size:12px;font-weight:600;color:var(--gray-700)">Geldig van<input id="pwFrom" type="date" class="adm-input"></label>
+    <label style="font-size:12px;font-weight:600;color:var(--gray-700)">Geldig tot<input id="pwTo" type="date" class="adm-input"></label>
+    <label style="font-size:12px;font-weight:600;color:var(--gray-700)">A1-attest (PDF/foto)<input id="pwFile" type="file" accept="application/pdf,image/*" class="adm-input" style="padding:6px"></label>
     <button class="adm-btn-primary" id="pwAdd">Toevoegen</button>
   </div>
   <div id="pwMsg" style="font-size:12px;margin-top:8px"></div>
@@ -5683,11 +5683,11 @@ ${typeKeys.map(tk => {
       <td>${esc(r.workerName)}</td>
       <td>${esc(r.subcontractor || "—")}</td>
       <td>${esc(r.country || "—")}</td>
-      <td>${a1Badge(r.a1Status)}${r.documentRef ? `<div style="font-size:11px;color:#64748b;font-family:monospace">${esc(r.documentRef)}</div>` : ""}${r.hasFile ? ` <a class="pw-file" data-id="${esc(r.id)}" href="#" style="font-size:11px">📎 attest</a>` : ""}</td>
-      <td style="font-size:12px;color:#475569">${esc(r.validFrom || "?")} → ${esc(r.validTo || "?")}</td>
-      <td>${r.limosa && r.limosa.reference ? `<span style="font-size:12px;color:#15803d">✓ ${esc(r.limosa.reference)}</span>` : `<button class="adm-btn-secondary pw-limosa" data-id="${esc(r.id)}" style="padding:4px 10px;font-size:12px">Indienen</button>`}</td>
-      <td><button class="pw-del" data-id="${esc(r.id)}" title="Verwijderen" style="border:none;background:none;cursor:pointer;color:#b91c1c;font-size:16px">🗑</button></td>
-    </tr>`).join("") || `<tr><td colspan="7" style="padding:24px;text-align:center;color:#94a3b8">Nog geen detacheringsdossiers.</td></tr>`}
+      <td>${a1Badge(r.a1Status)}${r.documentRef ? `<div style="font-size:11px;color:var(--gray-500);font-family:monospace">${esc(r.documentRef)}</div>` : ""}${r.hasFile ? ` <a class="pw-file" data-id="${esc(r.id)}" href="#" style="font-size:11px">📎 attest</a>` : ""}</td>
+      <td style="font-size:12px;color:var(--gray-600)">${esc(r.validFrom || "?")} → ${esc(r.validTo || "?")}</td>
+      <td>${r.limosa && r.limosa.reference ? `<span style="font-size:12px;color:var(--wf-green)">✓ ${esc(r.limosa.reference)}</span>` : `<button class="adm-btn-secondary pw-limosa" data-id="${esc(r.id)}" style="padding:4px 10px;font-size:12px">Indienen</button>`}</td>
+      <td><button class="pw-del" data-id="${esc(r.id)}" title="Verwijderen" style="border:none;background:none;cursor:pointer;color:var(--wf-red);font-size:16px">🗑</button></td>
+    </tr>`).join("") || `<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--gray-400)">Nog geen detacheringsdossiers.</td></tr>`}
   </tbody></table>
 </div>`;
     document.getElementById("pwAdd").addEventListener("click", async () => {
@@ -5704,12 +5704,12 @@ ${typeKeys.map(tk => {
       const fileInp = document.getElementById("pwFile");
       const file = fileInp && fileInp.files && fileInp.files[0];
       if (file) {
-        if (file.size > 5 * 1024 * 1024) { msg.style.color = "#dc2626"; msg.textContent = "A1-bestand is te groot (max 5MB)"; return; }
+        if (file.size > 5 * 1024 * 1024) { msg.style.color = "var(--wf-red)"; msg.textContent = "A1-bestand is te groot (max 5MB)"; return; }
         payload.documentFile = await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(file); });
         payload.documentFileName = file.name;
       }
       try { await api("POST", "/posted_workers", payload); renderPostedWorkers(); window.showToast && window.showToast("Dossier toegevoegd ✓", "success"); }
-      catch (e) { msg.style.color = "#dc2626"; msg.textContent = e.message; }
+      catch (e) { msg.style.color = "var(--wf-red)"; msg.textContent = e.message; }
     });
     c.querySelectorAll(".pw-file").forEach(a => a.addEventListener("click", async e => {
       e.preventDefault();

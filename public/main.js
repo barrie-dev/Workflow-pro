@@ -2643,7 +2643,7 @@ async function loadRegisterPlans() {
       addonBox.style.display = "";
       addonBox.innerHTML = `<strong>Optionele add-ons</strong><br>`
         + addons.map(a => `+ €${a.monthly}/mnd — ${a.label}`).join("<br>")
-        + `<br><span style="color:#94a3b8">Activeer je later in je account.</span>`;
+        + `<br><span style="color:var(--gray-400)">Activeer je later in je account.</span>`;
     }
     _plansLoaded = true;
   } catch (_) { /* laat placeholder staan */ }
@@ -2652,18 +2652,18 @@ async function loadRegisterPlans() {
 document.getElementById("registerKboBtn")?.addEventListener("click", async () => {
   const vat = (document.getElementById("registerVat")?.value || "").trim();
   const hint = document.getElementById("registerKboHint");
-  if (vat.length < 8) { if (hint) { hint.style.display = ""; hint.style.color = "#dc2626"; hint.textContent = "Geef een geldig BTW-/ondernemingsnummer."; } return; }
+  if (vat.length < 8) { if (hint) { hint.style.display = ""; hint.style.color = "var(--wf-red)"; hint.textContent = "Geef een geldig BTW-/ondernemingsnummer."; } return; }
   try {
     const r = await api(`/api/public/kbo?vat=${encodeURIComponent(vat)}`);
     const c = r.company || {};
     if (regForm && c.name) regForm.elements.companyName.value = c.name;
     if (hint) {
-      hint.style.display = ""; hint.style.color = "#16a34a";
+      hint.style.display = ""; hint.style.color = "var(--wf-green)";
       const addr = [c.street, [c.zip, c.city].filter(Boolean).join(" ")].filter(Boolean).join(", ");
       hint.textContent = c.name ? `✓ ${c.name}${addr ? " · " + addr : ""}` : "Geen gegevens gevonden — vul handmatig in.";
     }
   } catch (e) {
-    if (hint) { hint.style.display = ""; hint.style.color = "#dc2626"; hint.textContent = e.message || "Opzoeken mislukt."; }
+    if (hint) { hint.style.display = ""; hint.style.color = "var(--wf-red)"; hint.textContent = e.message || "Opzoeken mislukt."; }
   }
 });
 document.getElementById("showRegister")?.addEventListener("click", e => { e.preventDefault(); showRegisterForm("tenant"); });
