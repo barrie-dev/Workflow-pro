@@ -4408,6 +4408,10 @@ ${phases.map(p => {
   }
 
   // ── Facturatie ─────────────────────────────────────────────
+  // Facturatieperiode voor de prijsweergave: "year" (jaarlijks, ~17% korting =
+  // 2 maanden gratis) of "month" (maandelijks). Puur presentatie van baseAnnual.
+  let _billPeriod = "year";
+
   async function renderBilling() {
     const content = document.getElementById("admContent");
     content.innerHTML = `<div class="adm-loading"><div class="adm-spinner"></div>Laden…</div>`;
@@ -4445,23 +4449,36 @@ ${billing.status === "trial" ? `<div style="background:#fffbeb;border:1px solid 
 
 <!-- Bundel kiezen -->
 <div class="adm-card">
-  <div class="adm-card-header"><h3 class="adm-card-title">Kies je bundel</h3></div>
+  <div class="adm-card-header"><h3 class="adm-card-title">Kies je bundel</h3>
+    <div style="display:inline-flex;background:var(--gray-100);border-radius:980px;padding:3px;gap:2px;">
+      <button class="adm-period-btn" data-per="year" style="border:none;cursor:pointer;font:600 12px inherit;padding:6px 14px;border-radius:980px;background:${_billPeriod==="year"?"var(--surface)":"transparent"};color:${_billPeriod==="year"?"var(--ink)":"var(--muted)"};box-shadow:${_billPeriod==="year"?"0 1px 2px rgba(0,0,0,.08)":"none"};">Jaarlijks <span style="color:var(--wf-green);font-weight:700;">−17%</span></button>
+      <button class="adm-period-btn" data-per="month" style="border:none;cursor:pointer;font:600 12px inherit;padding:6px 14px;border-radius:980px;background:${_billPeriod==="month"?"var(--surface)":"transparent"};color:${_billPeriod==="month"?"var(--ink)":"var(--muted)"};box-shadow:${_billPeriod==="month"?"0 1px 2px rgba(0,0,0,.08)":"none"};">Maandelijks</button>
+    </div>
+  </div>
   <div class="adm-card-body">
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;align-items:stretch;">
       ${plans.map(p => {
         const isCurrent = p.key === currentPlan;
         const accent = isCurrent ? "var(--wf-blue)" : (p.popular ? "var(--wf-blue)" : "var(--line)");
         const ring = (isCurrent || p.popular) ? "2px" : "1px";
+        // Jaarlijks = baseAnnual/12 per maand (2 maanden gratis t.o.v. maandelijks);
+        // maandelijks = baseAnnual/10 per maand. Puur weergave — checkout blijft gelijk.
+        const annual = p.baseAnnual || 0;
+        const perMonth = _billPeriod === "year" ? Math.round(annual / 12) : Math.round(annual / 10);
+        const seatExtra = _billPeriod === "year" ? Math.round((p.seatAnnual || 0) / 12) : Math.round((p.seatAnnual || 0) / 10);
+        const subStr = p.custom ? "Jaarcontract &amp; SLA"
+          : (_billPeriod === "year" ? `${fmtEur(annual)}/jaar` : "maandelijks gefactureerd")
+            + ` · incl. ${p.includedSeats} gebruikers · +${fmtEur(seatExtra)}/extra`;
         return `<div style="border:${ring} solid ${accent};border-radius:16px;padding:20px 18px;position:relative;display:flex;flex-direction:column;gap:10px;background:var(--surface);">
           ${isCurrent
             ? `<span style="position:absolute;top:-10px;right:16px;background:var(--wf-blue);color:#fff;font-size:10px;font-weight:600;padding:3px 10px;border-radius:999px;">Huidig plan</span>`
             : p.popular ? `<span style="position:absolute;top:-10px;right:16px;background:var(--wf-blue);color:#fff;font-size:10px;font-weight:600;padding:3px 10px;border-radius:999px;">Meest gekozen</span>` : ""}
           <div style="font-size:15px;font-weight:600;color:var(--ink);letter-spacing:-.2px;">${esc(p.label)}</div>
           <div style="display:flex;align-items:baseline;gap:4px;">
-            <span style="font-size:26px;font-weight:600;color:var(--ink);letter-spacing:-1px;">${p.custom?"Op maat":fmtEur(p.baseMonthly)}</span>
+            <span style="font-size:26px;font-weight:600;color:var(--ink);letter-spacing:-1px;">${p.custom?"Op maat":fmtEur(perMonth)}</span>
             ${p.custom?"":`<span style="font-size:12px;color:var(--muted);">/maand</span>`}
           </div>
-          <div style="font-size:11.5px;color:var(--muted);min-height:16px;">${p.custom?"Jaarcontract &amp; SLA":`incl. ${p.includedSeats} gebruikers · +${fmtEur(Math.round((p.seatAnnual||0)/12))}/extra`}</div>
+          <div style="font-size:11.5px;color:var(--muted);min-height:16px;">${subStr}</div>
           <ul style="list-style:none;padding:0;margin:6px 0 2px;display:flex;flex-direction:column;gap:6px;flex:1;">
             ${(p.features||[]).slice(0,8).map(f=>`<li style="font-size:12.5px;color:var(--text);display:flex;gap:7px;align-items:flex-start;"><span style="color:var(--wf-blue);font-weight:700;line-height:1.2;">✓</span> ${esc(f)}</li>`).join("")}
           </ul>
@@ -4521,6 +4538,9 @@ ${billing.status === "trial" ? `<div style="background:#fffbeb;border:1px solid 
       });
       content.querySelectorAll(".bill-contact").forEach(btn => {
         btn.addEventListener("click", () => window.showToast && window.showToast("Voor Enterprise maken we een offerte op maat. Neem contact op via je accountmanager of support.", "info"));
+      });
+      content.querySelectorAll(".adm-period-btn").forEach(btn => {
+        btn.addEventListener("click", () => { _billPeriod = btn.dataset.per; renderBilling(); });
       });
       // Self-service beheer via Stripe Billing Portal (upgrade/downgrade/opzeggen/betaalmethode).
       document.getElementById("billPortal")?.addEventListener("click", async () => {
