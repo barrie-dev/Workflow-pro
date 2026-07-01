@@ -4430,22 +4430,33 @@ ${phases.map(p => {
       const statusCss = { open:"adm-status-open", paid:"adm-status-goedgekeurd", overdue:"adm-status-inactive", draft:"adm-status-pending" };
       const currentPlan = String(billing.plan||"").toLowerCase();
       const hasPayment = !!billing.paymentMethod;
+      // Eerste keer (nog geen betalend abonnement) → plan starten = 14 dagen gratis trial (kaart vereist).
+      const trialEligible = !["active","past_due","paid"].includes(String(billing.status||"").toLowerCase());
+      // Maandbedrag: server-waarde, of val terug op de prijs van het huidige plan.
+      const curPlanObj = plans.find(p => p.key === currentPlan) || null;
+      const monthlyShown = billing.monthlyAmount || (curPlanObj && curPlanObj.baseMonthly) || 0;
 
       content.innerHTML = `
 <div class="adm-kpis" style="margin-bottom:16px">
   <div class="adm-kpi adm-kpi-green"><div class="adm-kpi-label">Huidig abonnement</div><div class="adm-kpi-value" style="font-size:18px;text-transform:capitalize">${esc(billing.plan||"—")}</div><div class="adm-kpi-sub">${esc(billing.status||"")}</div></div>
-  <div class="adm-kpi adm-kpi-blue"><div class="adm-kpi-label">Maandprijs</div><div class="adm-kpi-value" style="font-size:20px">${fmtEur(billing.monthlyAmount||0)}</div><div class="adm-kpi-sub">excl. BTW</div></div>
+  <div class="adm-kpi adm-kpi-blue"><div class="adm-kpi-label">Maandprijs</div><div class="adm-kpi-value" style="font-size:20px">${fmtEur(monthlyShown)}</div><div class="adm-kpi-sub">excl. BTW</div></div>
   <div class="adm-kpi adm-kpi-purple"><div class="adm-kpi-label">Facturen</div><div class="adm-kpi-value">${invoices.length}</div><div class="adm-kpi-sub">${openInvoices.length} openstaand</div></div>
   <div class="adm-kpi ${hasPayment?"adm-kpi-green":"adm-kpi-amber"}"><div class="adm-kpi-label">Betaalmethode</div><div class="adm-kpi-value" style="font-size:15px">${hasPayment?esc(billing.paymentMethod):"Niet ingesteld"}</div></div>
 </div>
 
-${billing.status === "trial" ? `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:12px">
+${billing.status === "trial" ? (() => {
+  const daysLeft = billing.trialEndsAt ? Math.max(0, Math.ceil((new Date(billing.trialEndsAt) - Date.now()) / 86400000)) : null;
+  const endStr = billing.trialEndsAt ? new Date(billing.trialEndsAt).toLocaleDateString("nl-BE") : null;
+  return `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:12px">
   <span style="font-size:20px">⏳</span>
   <div>
-    <div style="font-size:14px;font-weight:600;color:#92400e">Gratis proefperiode actief</div>
-    <div style="font-size:12px;color:#a16207;margin-top:2px">Kies hieronder je bundel en voeg een betaalmethode toe voor een naadloze overgang.</div>
+    <div style="font-size:14px;font-weight:600;color:#92400e">Gratis proefperiode${daysLeft != null ? ` — nog ${daysLeft} dag${daysLeft === 1 ? "" : "en"}` : " actief"}</div>
+    <div style="font-size:12px;color:#a16207;margin-top:2px">${hasPayment
+      ? `Je kaart staat geregistreerd. ${endStr ? `Vanaf ${endStr} wordt automatisch ${fmtEur(monthlyShown)}/maand gefactureerd.` : "Na de proefperiode start de facturatie automatisch."} Opzeggen kan altijd in het beheerportaal.`
+      : "Kies hieronder je bundel. Je kaartgegevens zijn vereist om te starten — je wordt pas na 14 dagen gefactureerd en kan altijd opzeggen."}</div>
   </div>
-</div>` : ""}
+</div>`;
+})() : ""}
 
 <!-- Bundel kiezen -->
 <div class="adm-card">
@@ -4486,10 +4497,14 @@ ${billing.status === "trial" ? `<div style="background:#fffbeb;border:1px solid 
             ? `<button class="adm-btn adm-btn-secondary adm-btn-sm" disabled style="opacity:.55;cursor:default;">Je huidige plan</button>`
             : p.custom
               ? `<button class="adm-btn adm-btn-secondary adm-btn-sm bill-contact">Contacteer ons</button>`
-              : `<button class="adm-btn ${p.popular?"adm-btn-primary":"adm-btn-secondary"} adm-btn-sm bill-select" data-plan="${p.key}">Kies ${esc(p.label)}</button>`}
+              : `<button class="adm-btn ${p.popular?"adm-btn-primary":"adm-btn-secondary"} adm-btn-sm bill-select" data-plan="${p.key}" data-label="${esc(p.label)}">${trialEligible?"Start 14 dagen gratis":`Kies ${esc(p.label)}`}</button>`}
         </div>`;
       }).join("")}
     </div>
+    ${trialEligible ? `<div style="margin-top:14px;background:var(--wf-blue-l);border-radius:12px;padding:12px 16px;font-size:12.5px;color:var(--wf-blue-d);display:flex;gap:9px;align-items:flex-start;">
+      <span style="font-size:15px;">🎁</span>
+      <span><strong>14 dagen gratis</strong> op elk plan. Je kaartgegevens zijn vereist om te starten (via onze beveiligde betaalpartner Stripe), maar je wordt <strong>pas na 14 dagen</strong> gefactureerd — en je kan altijd opzeggen vóór het einde van de proefperiode.</span>
+    </div>` : ""}
     <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
       <button class="adm-btn adm-btn-secondary adm-btn-sm" id="billPortal">⚙️ Abonnement &amp; betaalmethode beheren</button>
       <span style="font-size:12px;color:#94A3B8;">Veilig betalen — je betaalgegevens worden door onze betaalpartner (Stripe) verwerkt. Upgraden, downgraden, betaalmethode en opzeggen regel je in het beheerportaal.</span>
@@ -4526,14 +4541,18 @@ ${billing.status === "trial" ? `<div style="background:#fffbeb;border:1px solid 
       content.querySelectorAll(".bill-select").forEach(btn => {
         btn.addEventListener("click", async () => {
           const plan = btn.dataset.plan;
-          if (!confirm(`Overschakelen naar het ${plan}-abonnement? Je wordt naar de beveiligde betaalpagina geleid.`)) return;
+          const label = btn.dataset.label || plan;
+          const msg = trialEligible
+            ? `Start je 14 dagen gratis proefperiode op ${label}?\n\nJe geeft je kaartgegevens op via onze beveiligde betaalpagina (Stripe), maar je wordt pas na 14 dagen gefactureerd. Opzeggen kan altijd.`
+            : `Overschakelen naar het ${label}-abonnement? Je wordt naar de beveiligde betaalpagina geleid.`;
+          if (!confirm(msg)) return;
           btn.disabled = true; btn.textContent = "Bezig…";
           try {
             const r = await api("POST", "/billing/checkout", { plan });
             if (r.provider === "stripe" && r.url) { window.location.href = r.url; return; }
-            window.showToast && window.showToast(`Abonnement geactiveerd (${plan}) ✓`, "success");
+            window.showToast && window.showToast(r.trial ? `Proefperiode van 14 dagen gestart (${label}) ✓` : `Abonnement geactiveerd (${label}) ✓`, "success");
             renderBilling();
-          } catch(e) { window.showToast && window.showToast(e.message, "error"); btn.disabled = false; btn.textContent = "Kies"; }
+          } catch(e) { window.showToast && window.showToast(e.message, "error"); btn.disabled = false; btn.textContent = trialEligible ? "Start 14 dagen gratis" : "Kies"; }
         });
       });
       content.querySelectorAll(".bill-contact").forEach(btn => {

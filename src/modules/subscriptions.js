@@ -17,6 +17,10 @@ const { getBundle } = require("./bundles");
 const { billingQuote } = require("./billing");
 const { stripePost, isRealStripeKey } = require("./payments");
 
+// Gratis proefperiode: 14 dagen, kaart wél vereist (card-on-file). Na afloop
+// factureert Stripe automatisch. Eén constante zodat UI en checkout gelijk lopen.
+const TRIAL_DAYS = 14;
+
 function stripeKey(store) {
   const cfg = loadPlatformConfig(store);
   return (cfg.stripe && cfg.stripe.secretKey) || config.stripe.secretKey || "";
@@ -63,9 +67,13 @@ async function createSubscriptionCheckout(store, tenant, planKey, actor) {
   if (isRealStripeKey(key)) {
     const seats = activeSeats(store, tenant);
     const customerId = await ensureStripeCustomer(store, tenant, key);
+    // Eerste keer (nog geen actief/afgelopen abonnement) → 14 dagen gratis trial.
+    // payment_method_collection:"always" dwingt kaart af, óók tijdens de trial.
+    const firstTime = !tenant.stripeSubscriptionId && !["active", "past_due", "paid"].includes(tenant.status);
     const session = await stripePost(key, "/v1/checkout/sessions", {
       mode: "subscription",
       customer: customerId,
+      payment_method_collection: "always",
       success_url: `${baseUrl()}/?abonnement=actief`,
       cancel_url: `${baseUrl()}/?abonnement=geannuleerd`,
       client_reference_id: tenant.id,
@@ -78,15 +86,26 @@ async function createSubscriptionCheckout(store, tenant, planKey, actor) {
           product_data: { name: `Monargo One — ${bundle.label} (incl. ${activeSeats(store, tenant)} gebruikers)` },
         },
       }],
-      subscription_data: { metadata: { wfp_tenant_id: tenant.id, wfp_plan: planKey } },
+      subscription_data: {
+        metadata: { wfp_tenant_id: tenant.id, wfp_plan: planKey },
+        ...(firstTime ? { trial_period_days: TRIAL_DAYS } : {}),
+      },
       metadata: { wfp_tenant_id: tenant.id, wfp_plan: planKey },
     });
     store.updateTenant(tenant.id, { billingProvider: "stripe", pendingPlan: planKey });
-    store.audit({ actor: actor.email, tenantId: tenant.id, action: "subscription_checkout_created", area: "billing", detail: `${planKey} × ${seats}` });
-    return { url: session.url, provider: "stripe" };
+    store.audit({ actor: actor.email, tenantId: tenant.id, action: "subscription_checkout_created", area: "billing", detail: `${planKey} × ${seats}${firstTime ? ` · ${TRIAL_DAYS}d trial` : ""}` });
+    return { url: session.url, provider: "stripe", trial: firstTime };
   }
 
-  // Mock-fallback: markeer het plan meteen als gekozen + actief (geen echte betaling).
+  // Mock-fallback (geen echte Stripe-sleutel): simuleer de card-on-file trial.
+  // Eerste keer → 14 dagen trial met (mock) betaalmethode; anders meteen actief.
+  const firstTime = !["active", "past_due", "paid"].includes(tenant.status);
+  if (firstTime) {
+    const trialEndsAt = new Date(Date.now() + TRIAL_DAYS * 86400000).toISOString();
+    store.updateTenant(tenant.id, { plan: planKey, status: "trial", trialEndsAt, paymentMethod: tenant.paymentMethod || "•••• (mock)", billingProvider: "mock" });
+    store.audit({ actor: actor.email, tenantId: tenant.id, action: "subscription_trial_started", area: "billing", detail: `${planKey} · ${TRIAL_DAYS}d (mock)` });
+    return { url: `${baseUrl()}/?abonnement=trial&plan=${encodeURIComponent(planKey)}`, provider: "mock", trial: true };
+  }
   store.updateTenant(tenant.id, { plan: planKey, status: "active", billingProvider: "mock" });
   store.audit({ actor: actor.email, tenantId: tenant.id, action: "subscription_checkout_mock", area: "billing", detail: planKey });
   return { url: `${baseUrl()}/?abonnement=mock&plan=${encodeURIComponent(planKey)}`, provider: "mock" };
@@ -130,11 +149,12 @@ function applySubscriptionEvent(tenant, event) {
   }
   const plan = obj.metadata && obj.metadata.wfp_plan;
   if (plan) patch.plan = plan;
+  patch.trialEndsAt = obj.trial_end ? new Date(obj.trial_end * 1000).toISOString() : null;
   if (patch.status === "active") patch.pendingPlan = null;
   return patch;
 }
 
 module.exports = {
   createSubscriptionCheckout, createBillingPortalSession, applySubscriptionEvent,
-  ensureStripeCustomer, activeSeats, monthlyAmount, STATUS_MAP,
+  ensureStripeCustomer, activeSeats, monthlyAmount, STATUS_MAP, TRIAL_DAYS,
 };

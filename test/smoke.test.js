@@ -793,11 +793,11 @@ test("billing: checkout + portal endpoints (mock), auth-gating", async () => {
   const denied = await fetch(`${BASE}/api/tenants/t_demo/billing/checkout`, { method: "POST", headers: H(emp.token), body: JSON.stringify({ plan: "business" }) });
   assert.equal(denied.status, 403, "employee → geen billing");
 
-  // Admin checkout (mock): activeert plan + geeft mock-URL
+  // Admin checkout (mock): eerste keer → 14 dagen trial (kaart vereist), anders actief.
   const co = await (await fetch(`${BASE}/api/tenants/t_demo/billing/checkout`, { method: "POST", headers: H(admin.token), body: JSON.stringify({ plan: "business" }) })).json();
   assert.equal(co.ok, true);
   assert.equal(co.provider, "mock", "zonder live key → mock");
-  assert.match(co.url, /abonnement=mock/);
+  assert.match(co.url, /abonnement=(mock|trial)/);
 
   // Onbekend plan → 400
   const bad = await fetch(`${BASE}/api/tenants/t_demo/billing/checkout`, { method: "POST", headers: H(admin.token), body: JSON.stringify({ plan: "bestaat-niet" }) });

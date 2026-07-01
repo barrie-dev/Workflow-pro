@@ -186,7 +186,8 @@ function billingSummary(tenant) {
     status: resolvedStatus,            // voor admin UI
     billingStatus: resolvedStatus,     // alias
     monthlyAmount: billingOps.monthlyAmount || 0,
-    paymentMethod,                     // voor admin UI
+    paymentMethod: paymentMethod || tenant.paymentMethod || null, // voor admin UI
+    trialEndsAt: tenant.trialEndsAt || null,
     paymentMethodTokenized: !!billingOps.paymentMethodTokenized,
     autoCharge: !!billingOps.autoCharge,
     paymentMethodRef: billingOps.paymentMethodRef ? "tokenized" : "",
