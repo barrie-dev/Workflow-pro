@@ -147,7 +147,7 @@
         </button>
         <div id="mgrNotifPanel" style="position:absolute;right:0;top:calc(100% + 8px);width:320px;background:#fff;border-radius:12px;border:1px solid var(--gray-200);box-shadow:0 8px 32px rgba(0,0,0,.12);z-index:400;display:none">
           <div style="padding:12px 16px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;gap:8px">
-            <span style="font-size:13px;font-weight:700;color:var(--gray-900);flex:1">Notificaties</span>
+            <span style="font-size:13px;font-weight:600;color:var(--gray-900);flex:1">Notificaties</span>
             <button id="mgrNotifMarkAll" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--wf-blue);font-weight:600;padding:3px 6px;border-radius:6px">Alles gelezen</button>
           </div>
           <div id="mgrNotifList" style="max-height:320px;overflow-y:auto"><div style="padding:28px;text-align:center;font-size:13px;color:var(--gray-400)">Laden…</div></div>
@@ -477,7 +477,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
       <thead>
         <tr>
           <th>Medewerker</th>
-          ${days.map(d => { const dd = new Date(d); return `<th style="${d===todayStr?"color:var(--wf-blue);font-weight:700;background:var(--wf-blue-l)":""}">${dd.toLocaleDateString("nl-BE",{weekday:"short",day:"numeric",month:"numeric"})}</th>`; }).join("")}
+          ${days.map(d => { const dd = new Date(d); return `<th style="${d===todayStr?"color:var(--wf-blue);font-weight:600;background:var(--wf-blue-l)":""}">${dd.toLocaleDateString("nl-BE",{weekday:"short",day:"numeric",month:"numeric"})}</th>`; }).join("")}
         </tr>
       </thead>
       <tbody>
@@ -532,7 +532,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
       modal.innerHTML = `
 <div style="background:#fff;border-radius:14px;width:480px;max-width:100%;max-height:90vh;overflow-y:auto;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.2)">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
-    <h2 style="font-size:17px;font-weight:700;margin:0;color:var(--gray-900)">${isEdit ? "Shift bewerken" : "Shift toevoegen"}</h2>
+    <h2 style="font-size:17px;font-weight:600;margin:0;color:var(--gray-900)">${isEdit ? "Shift bewerken" : "Shift toevoegen"}</h2>
     <button id="shiftClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--gray-400)">×</button>
   </div>
   <form id="shiftForm" style="display:flex;flex-direction:column;gap:14px">
@@ -741,7 +741,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     modal.innerHTML = `
 <div style="background:#fff;border-radius:14px;width:420px;max-width:100%;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.2)">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
-    <h2 style="font-size:16px;font-weight:700;margin:0;color:var(--gray-900)">Kloktijd corrigeren</h2>
+    <h2 style="font-size:16px;font-weight:600;margin:0;color:var(--gray-900)">Kloktijd corrigeren</h2>
     <button id="clkCorrClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--gray-400)">×</button>
   </div>
   <div style="font-size:13px;color:var(--gray-500);margin-bottom:16px;">Medewerker: <strong>${esc(name)}</strong></div>
@@ -987,7 +987,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     overlay.style.cssText = "position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:1200;display:flex;align-items:center;justify-content:center;padding:16px;";
     overlay.innerHTML = `
 <div style="background:#fff;border-radius:16px;width:100%;max-width:400px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.2);">
-  <div style="font-size:15px;font-weight:700;margin-bottom:4px;">${label}</div>
+  <div style="font-size:15px;font-weight:600;margin-bottom:4px;">${label}</div>
   <div style="font-size:13px;color:var(--gray-500);margin-bottom:16px;">
     ${esc(leave.userName||leave.userId)} · ${esc(leave.type||"verlof")} · ${leave.startDate} t/m ${leave.endDate}
   </div>
@@ -1096,7 +1096,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     overlay.style.cssText = "position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:1200;display:flex;align-items:center;justify-content:center;padding:16px;";
     overlay.innerHTML = `
 <div style="background:#fff;border-radius:16px;width:100%;max-width:400px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.2);">
-  <div style="font-size:15px;font-weight:700;margin-bottom:4px;">${isApprove ? "Onkost goedkeuren" : "Onkost weigeren"}</div>
+  <div style="font-size:15px;font-weight:600;margin-bottom:4px;">${isApprove ? "Onkost goedkeuren" : "Onkost weigeren"}</div>
   <div style="font-size:13px;color:var(--gray-500);margin-bottom:16px;">${esc(name)} · ${esc(cat)} · <strong>€ ${Number(amount||0).toFixed(2)}</strong></div>
   <div style="margin-bottom:16px;">
     <label style="font-size:12px;font-weight:600;color:var(--gray-700);display:block;margin-bottom:4px;">Opmerking ${isApprove?"(optioneel)":"(verplicht bij weigering)"}</label>
@@ -1238,7 +1238,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
   <div style="padding:20px 24px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;justify-content:space-between">
     <div>
       <div style="font-size:11px;color:var(--gray-400);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Werkbon #${esc(wo.number||wo.id.slice(-6))}</div>
-      <h2 style="font-size:17px;font-weight:700;margin:4px 0 0;color:var(--gray-900)">${esc(wo.title||"—")}</h2>
+      <h2 style="font-size:17px;font-weight:600;margin:4px 0 0;color:var(--gray-900)">${esc(wo.title||"—")}</h2>
     </div>
     <button id="woDetailClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--gray-400);padding:4px 8px">×</button>
   </div>
@@ -1317,7 +1317,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
       modal.innerHTML = `
 <div style="background:#fff;border-radius:14px;width:480px;max-width:100%;max-height:90vh;overflow-y:auto;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.2)">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
-    <h2 style="font-size:17px;font-weight:700;margin:0;color:var(--gray-900)">Nieuwe werkbon</h2>
+    <h2 style="font-size:17px;font-weight:600;margin:0;color:var(--gray-900)">Nieuwe werkbon</h2>
     <button id="woClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--gray-400)">×</button>
   </div>
   <form id="woForm" style="display:flex;flex-direction:column;gap:14px">
@@ -1400,7 +1400,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     ${messages.length === 0 ? `<div class="mgr-empty">Geen berichten</div>` :
     messages.map(m => `
     <div style="display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--gray-100);align-items:flex-start">
-      <div style="width:34px;height:34px;border-radius:50%;background:var(--wf-blue-l);color:var(--wf-blue-d);display:grid;place-items:center;font-size:12px;font-weight:700;flex-shrink:0">${(m.fromName||"?")[0].toUpperCase()}</div>
+      <div style="width:34px;height:34px;border-radius:50%;background:var(--wf-blue-l);color:var(--wf-blue-d);display:grid;place-items:center;font-size:12px;font-weight:600;flex-shrink:0">${(m.fromName||"?")[0].toUpperCase()}</div>
       <div style="flex:1">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
           <span style="font-size:13px;font-weight:600;color:var(--gray-900)">${esc(m.fromName||m.fromId||"System")}</span>
@@ -1428,7 +1428,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     modal.innerHTML = `
 <div style="background:#fff;border-radius:14px;width:440px;max-width:100%;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.2)">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
-    <h2 style="font-size:16px;font-weight:700;margin:0;color:var(--gray-900)">Nieuw bericht</h2>
+    <h2 style="font-size:16px;font-weight:600;margin:0;color:var(--gray-900)">Nieuw bericht</h2>
     <button id="msgClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--gray-400)">×</button>
   </div>
   <form id="msgForm" style="display:flex;flex-direction:column;gap:14px">
@@ -1526,7 +1526,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     overlay.innerHTML = `
 <div style="background:#fff;border-radius:14px;width:100%;max-width:460px;max-height:90vh;overflow-y:auto;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.2);">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
-    <h3 style="margin:0;font-size:16px;font-weight:700;">${isEdit ? "Voertuig bewerken" : "Nieuw voertuig"}</h3>
+    <h3 style="margin:0;font-size:16px;font-weight:600;">${isEdit ? "Voertuig bewerken" : "Nieuw voertuig"}</h3>
     <button id="vehClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--gray-400);">×</button>
   </div>
   <form id="vehForm" style="display:flex;flex-direction:column;gap:12px;">
@@ -1606,7 +1606,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     overlay.style.cssText = "position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:1200;display:flex;align-items:center;justify-content:center;padding:16px;";
     overlay.innerHTML = `
 <div style="background:#fff;border-radius:14px;width:100%;max-width:360px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.2);">
-  <h3 style="margin:0 0 4px;font-size:15px;font-weight:700;">KM-stand loggen</h3>
+  <h3 style="margin:0 0 4px;font-size:15px;font-weight:600;">KM-stand loggen</h3>
   <p style="font-size:13px;color:var(--gray-500);margin:0 0 16px;">${esc(vehicleName)} · Huidige stand: <strong>${Number(currentMileage).toLocaleString("nl-BE")} km</strong></p>
   <form id="mileageForm" style="display:flex;flex-direction:column;gap:12px;">
     <div>
@@ -1713,7 +1713,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
 
     content.innerHTML = `
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
-  <h2 style="font-size:17px;font-weight:700;color:var(--gray-900);margin:0">Rapporten</h2>
+  <h2 style="font-size:17px;font-weight:600;color:var(--gray-900);margin:0">Rapporten</h2>
   <div style="display:flex;align-items:center;gap:8px">
     <label style="font-size:12px;color:var(--gray-500);font-weight:600">Periode:</label>
     <select id="rptPeriod" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">

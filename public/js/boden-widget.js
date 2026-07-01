@@ -33,8 +33,8 @@
   background:#fff;border:1px solid var(--gray-200);border-radius:16px;box-shadow:0 18px 50px rgba(15,23,42,.25);display:none;flex-direction:column;overflow:hidden}
 #bodenPanel.open{display:flex}
 .boden-head{background:var(--wf-navy);color:#fff;padding:14px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0}
-.boden-head .av{width:32px;height:32px;border-radius:50%;background:var(--wf-blue);display:grid;place-items:center;font-weight:800;font-size:14px}
-.boden-head .nm{font-weight:700;font-size:14px;line-height:1.1}
+.boden-head .av{width:32px;height:32px;border-radius:50%;background:var(--wf-blue);display:grid;place-items:center;font-weight:700;font-size:14px}
+.boden-head .nm{font-weight:600;font-size:14px;line-height:1.1}
 .boden-head .sub{font-size:11px;color:var(--wf-sidebar-dim)}
 .boden-head .x{margin-left:auto;background:none;border:none;color:var(--wf-sidebar-dim);font-size:20px;cursor:pointer;line-height:1}
 .boden-body{flex:1;overflow-y:auto;padding:14px;background:var(--gray-50);display:flex;flex-direction:column;gap:10px}
@@ -42,7 +42,7 @@
 .boden-msg.user{align-self:flex-end;background:var(--wf-blue);color:#fff;border-bottom-right-radius:4px}
 .boden-msg.bot{align-self:flex-start;background:#fff;color:var(--gray-900);border:1px solid var(--gray-200);border-bottom-left-radius:4px}
 .boden-prop{align-self:flex-start;max-width:90%;background:#fff;border:1px solid var(--wf-blue-l);border-radius:12px;padding:10px 12px;font-size:12.5px}
-.boden-prop .pl{font-weight:700;color:var(--wf-navy);margin-bottom:6px}
+.boden-prop .pl{font-weight:600;color:var(--wf-navy);margin-bottom:6px}
 .boden-prop .pp{color:var(--gray-600);font-size:12px;margin-bottom:8px;white-space:pre-wrap}
 .boden-prop button{background:var(--wf-orange);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer}
 .boden-prop button.sec{background:#fff;color:var(--gray-600);border:1px solid var(--gray-200);margin-left:6px}

@@ -153,7 +153,7 @@
         </button>
         <div id="empNotifPanel" style="position:fixed;top:64px;right:12px;width:320px;background:#fff;border-radius:14px;border:1px solid var(--gray-200);box-shadow:0 8px 32px rgba(0,0,0,.15);z-index:999;display:none">
           <div style="padding:12px 16px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;gap:8px">
-            <span style="font-size:13px;font-weight:700;color:var(--gray-900);flex:1">Mijn notificaties</span>
+            <span style="font-size:13px;font-weight:600;color:var(--gray-900);flex:1">Mijn notificaties</span>
             <button id="empNotifMarkAll" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--wf-blue);font-weight:600;padding:3px 6px;border-radius:6px">Alles gelezen</button>
           </div>
           <div id="empNotifList" style="max-height:320px;overflow-y:auto"><div style="padding:28px;text-align:center;font-size:13px;color:var(--gray-400)">Laden…</div></div>
@@ -593,7 +593,7 @@
 }
 .emp-day-pill.today { border-color: var(--wf-blue); color: var(--wf-blue); }
 .emp-day-pill.has-shift { background: var(--wf-blue); color: #fff; }
-.emp-day-num { font-size: 16px; font-weight: 700; line-height: 1.2; }
+.emp-day-num { font-size: 16px; font-weight:600; line-height: 1.2; }
 
 /* ── Breed scherm: medewerker op pc krijgt een echte pc-view ──
    Mobiel-first blijft de basis; vanaf 860px verbreedt de layout en
@@ -827,7 +827,7 @@
       <div style="font-size:13px;font-weight:600;color:var(--wf-green);">Je bent ingeklokt</div>
       <div style="font-size:11px;color:var(--wf-green);">Sinds ${dash.activeClock?.clockedIn ? new Date(dash.activeClock.clockedIn).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}) : "—"}</div>
     </div>
-    <div id="empClockDuration" style="font-size:18px;font-weight:700;color:var(--wf-green);font-family:monospace;"></div>
+    <div id="empClockDuration" style="font-size:18px;font-weight:600;color:var(--wf-green);font-family:monospace;"></div>
   </div>` : `
   <div style="display:flex;align-items:center;gap:8px;background:var(--gray-100);border-radius:10px;padding:10px 12px;">
     <span style="width:8px;height:8px;background:var(--gray-400);border-radius:50%;flex-shrink:0;"></span>
@@ -871,7 +871,7 @@ ${dash.urgentWorkorders > 0 ? `
 <div style="background:var(--wf-red-l);border:1px solid var(--wf-red-l);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;" id="empUrgentWO">
   <span style="font-size:20px;">🔴</span>
   <div style="flex:1">
-    <div style="font-size:13px;font-weight:700;color:var(--wf-red);">${dash.urgentWorkorders} urgente werkbon${dash.urgentWorkorders > 1 ? "nen" : ""}</div>
+    <div style="font-size:13px;font-weight:600;color:var(--wf-red);">${dash.urgentWorkorders} urgente werkbon${dash.urgentWorkorders > 1 ? "nen" : ""}</div>
     <div style="font-size:12px;color:var(--wf-red);">Hoge prioriteit — actie vereist</div>
   </div>
   <svg viewBox="0 0 24 24" style="width:16px;fill:var(--wf-red);flex-shrink:0"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
@@ -881,19 +881,19 @@ ${dash.urgentWorkorders > 0 ? `
   <p class="emp-card-title">Mijn overzicht</p>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
     <div style="background:${dash.openWorkorders>0?"var(--wf-blue-l)":"var(--gray-50)"};border-radius:10px;padding:12px;text-align:center;cursor:pointer;" id="empKpiWO">
-      <div style="font-size:22px;font-weight:700;color:${dash.openWorkorders>0?"var(--wf-blue)":"var(--gray-900)"};">${dash.openWorkorders ?? 0}</div>
+      <div style="font-size:22px;font-weight:600;color:${dash.openWorkorders>0?"var(--wf-blue)":"var(--gray-900)"};">${dash.openWorkorders ?? 0}</div>
       <div style="font-size:11px;color:var(--gray-400);">Open werkbonnen</div>
     </div>
     <div style="background:${dash.unreadMessages>0?"var(--wf-yellow-l)":"var(--gray-50)"};border-radius:10px;padding:12px;text-align:center;cursor:pointer;" id="empKpiMsg">
-      <div style="font-size:22px;font-weight:700;color:${dash.unreadMessages>0?"var(--wf-yellow)":"var(--gray-900)"};">${dash.unreadMessages ?? 0}</div>
+      <div style="font-size:22px;font-weight:600;color:${dash.unreadMessages>0?"var(--wf-yellow)":"var(--gray-900)"};">${dash.unreadMessages ?? 0}</div>
       <div style="font-size:11px;color:var(--gray-400);">Ongelezen berichten</div>
     </div>
     <div style="background:var(--gray-50);border-radius:10px;padding:12px;text-align:center;cursor:pointer;" id="empKpiLeave">
-      <div style="font-size:22px;font-weight:700;color:var(--gray-900);">${dash.pendingLeaves ?? 0}</div>
+      <div style="font-size:22px;font-weight:600;color:var(--gray-900);">${dash.pendingLeaves ?? 0}</div>
       <div style="font-size:11px;color:var(--gray-400);">Verlof aangevraagd</div>
     </div>
     <div style="background:var(--gray-50);border-radius:10px;padding:12px;text-align:center;cursor:pointer;" id="empKpiExp">
-      <div style="font-size:22px;font-weight:700;color:var(--gray-900);">${dash.pendingExpenses ?? 0}</div>
+      <div style="font-size:22px;font-weight:600;color:var(--gray-900);">${dash.pendingExpenses ?? 0}</div>
       <div style="font-size:11px;color:var(--gray-400);">Onkosten in behandeling</div>
     </div>
   </div>
@@ -905,7 +905,7 @@ ${balData ? (() => {
   return `<div class="emp-card" style="cursor:pointer;" id="empLeaveBalCard">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
     <p class="emp-card-title" style="margin:0">Verlofkrediet ${new Date().getFullYear()}</p>
-    <span style="font-size:12px;color:${color};font-weight:700;">${balData.remaining} van ${balData.quota} dagen resterend</span>
+    <span style="font-size:12px;color:${color};font-weight:600;">${balData.remaining} van ${balData.quota} dagen resterend</span>
   </div>
   <div style="background:var(--gray-100);border-radius:6px;height:10px;overflow:hidden;">
     <div style="width:${pct}%;background:${color};height:100%;border-radius:6px;transition:width .5s;"></div>
@@ -1216,11 +1216,11 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
 
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
   <div class="emp-card" style="margin:0;text-align:center;">
-    <div style="font-size:22px;font-weight:700;">${data.pending ?? 0}</div>
+    <div style="font-size:22px;font-weight:600;">${data.pending ?? 0}</div>
     <div style="font-size:11px;color:var(--gray-400);">In behandeling</div>
   </div>
   <div class="emp-card" style="margin:0;text-align:center;">
-    <div style="font-size:22px;font-weight:700;">€${(data.totalApproved||0).toFixed(0)}</div>
+    <div style="font-size:22px;font-weight:600;">€${(data.totalApproved||0).toFixed(0)}</div>
     <div style="font-size:11px;color:var(--gray-400);">Goedgekeurd</div>
   </div>
 </div>
@@ -1339,7 +1339,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
   <!-- Header -->
   <div style="padding:8px 20px 16px;border-bottom:1px solid var(--gray-100);">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
-      <div style="font-size:16px;font-weight:700;color:var(--gray-900);line-height:1.3;">${esc(wo.title||"Werkbon")}</div>
+      <div style="font-size:16px;font-weight:600;color:var(--gray-900);line-height:1.3;">${esc(wo.title||"Werkbon")}</div>
       <span class="emp-pill ${done?"emp-pill-green":inProg?"emp-pill-amber":"emp-pill-blue"}" style="white-space:nowrap;">${esc(wo.status||"—")}</span>
     </div>
     ${wo.number ? `<div style="font-size:12px;color:var(--gray-400);font-family:monospace;margin-top:2px;">#${esc(wo.number)}</div>` : ""}
@@ -1481,7 +1481,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
       <svg viewBox="0 0 24 24" style="fill:${isUnread?"var(--wf-blue)":"var(--wf-blue-d)"}"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
     </div>
     <div class="emp-list-info" style="flex:1;min-width:0;">
-      <div class="emp-list-title" style="${isUnread?"font-weight:700;":""}">
+      <div class="emp-list-title" style="${isUnread?"font-weight:600;":""}">
         ${esc(m.senderName||m.senderId||"Systeem")}
         ${m.subject ? `<span style="font-size:11px;color:var(--gray-500);margin-left:4px">· ${esc(m.subject)}</span>` : ""}
       </div>
@@ -1518,7 +1518,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
   </div>
   <div style="padding:12px 20px 16px;border-bottom:1px solid var(--gray-100);">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
-      <div style="font-size:16px;font-weight:700;color:var(--gray-900);">${esc(msg.subject||"Bericht")}</div>
+      <div style="font-size:16px;font-weight:600;color:var(--gray-900);">${esc(msg.subject||"Bericht")}</div>
       <button id="msgSheetClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--gray-400);padding:2px">×</button>
     </div>
     <div style="margin-top:6px;font-size:12px;color:var(--gray-400);">Van: <strong>${esc(msg.senderName||msg.senderId||"Systeem")}</strong> · ${dateStr}</div>
@@ -1551,7 +1551,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
     modal.innerHTML = `
 <div style="background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:540px;padding:20px 20px 32px;box-shadow:0 -4px 32px rgba(0,0,0,.15)">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-    <h3 style="font-size:16px;font-weight:700;color:var(--gray-900);margin:0">Nieuw bericht</h3>
+    <h3 style="font-size:16px;font-weight:600;color:var(--gray-900);margin:0">Nieuw bericht</h3>
     <button id="empComposeClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--gray-400);padding:2px">×</button>
   </div>
   <form id="empComposeForm" style="display:flex;flex-direction:column;gap:12px">
@@ -1654,15 +1654,15 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
 
 <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;">
   <div class="emp-card" style="margin:0;text-align:center;">
-    <div style="font-size:22px;font-weight:700;color:var(--gray-900);">${totalHours.toFixed(1)}</div>
+    <div style="font-size:22px;font-weight:600;color:var(--gray-900);">${totalHours.toFixed(1)}</div>
     <div style="font-size:11px;color:var(--gray-400);">Uren gewerkt</div>
   </div>
   <div class="emp-card" style="margin:0;text-align:center;">
-    <div style="font-size:22px;font-weight:700;color:var(--gray-900);">${workedDays}</div>
+    <div style="font-size:22px;font-weight:600;color:var(--gray-900);">${workedDays}</div>
     <div style="font-size:11px;color:var(--gray-400);">Dagen aanwezig</div>
   </div>
   <div class="emp-card" style="margin:0;text-align:center;">
-    <div style="font-size:22px;font-weight:700;color:var(--gray-900);">${workedDays?((totalHours/workedDays).toFixed(1)):"—"}</div>
+    <div style="font-size:22px;font-weight:600;color:var(--gray-900);">${workedDays?((totalHours/workedDays).toFixed(1)):"—"}</div>
     <div style="font-size:11px;color:var(--gray-400);">Gem. uur/dag</div>
   </div>
 </div>
@@ -1675,7 +1675,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
     return `<div style="padding:8px 0;border-bottom:1px solid var(--gray-50);">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
         <span style="font-size:13px;font-weight:600;color:var(--gray-900);text-transform:capitalize;">${dayName}</span>
-        <span style="font-size:12px;font-weight:700;color:var(--wf-green);">${dayHours.toFixed(1)} u</span>
+        <span style="font-size:12px;font-weight:600;color:var(--wf-green);">${dayHours.toFixed(1)} u</span>
       </div>
       ${dc.map(c=>`<div style="font-size:11.5px;color:var(--gray-500);display:flex;gap:8px;padding:1px 0;">
         <span>${c.clockedIn?new Date(c.clockedIn).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}):"—"}</span>

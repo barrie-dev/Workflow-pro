@@ -54,7 +54,7 @@
 </div>
 
 <div style="background:#fff;border-radius:14px;padding:18px 20px;margin-bottom:18px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
-  <div style="font-weight:700;margin-bottom:12px">Nieuwe klant aanmaken</div>
+  <div style="font-weight:600;margin-bottom:12px">Nieuwe klant aanmaken</div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:680px">
     <input id="ncName" placeholder="Bedrijfsnaam klant" style="padding:9px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
     <select id="ncPlan" style="padding:9px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px"><option value="starter">Starter</option><option value="business" selected>Business</option><option value="enterprise">Enterprise</option></select>
@@ -69,7 +69,7 @@
 </div>
 
 <div style="background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.06)">
-  <div style="padding:14px 20px;font-weight:700;border-bottom:1px solid var(--gray-100)">Mijn klanten &amp; commissie</div>
+  <div style="padding:14px 20px;font-weight:600;border-bottom:1px solid var(--gray-100)">Mijn klanten &amp; commissie</div>
   <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">
     <thead><tr style="text-align:left;color:var(--gray-500);font-size:12px"><th style="padding:10px 20px">Klant</th><th style="padding:10px">Plan</th><th style="padding:10px">Status</th><th style="padding:10px">MRR</th><th style="padding:10px">Commissie %</th><th style="padding:10px 20px">Commissie/mnd</th></tr></thead>
     <tbody>${(d.rows || []).map(r => `<tr style="border-top:1px solid var(--gray-50)">
@@ -78,7 +78,7 @@
       <td style="padding:10px">${r.status === "active" ? "🟢 actief" : "🟡 " + esc(r.status)}</td>
       <td style="padding:10px">${eur(r.mrr)}</td>
       <td style="padding:10px">${r.commissionPct}%</td>
-      <td style="padding:10px 20px;font-weight:700;color:var(--wf-green)">${eur(r.commission)}</td>
+      <td style="padding:10px 20px;font-weight:600;color:var(--wf-green)">${eur(r.commission)}</td>
     </tr>`).join("") || `<tr><td colspan="6" style="padding:30px;text-align:center;color:var(--gray-400)">Nog geen klanten — maak je eerste klant aan hierboven.</td></tr>`}</tbody>
   </table></div>
 </div>`;

@@ -159,7 +159,7 @@
 .sa-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:flex;align-items:stretch;justify-content:flex-end}
 .sa-drawer{width:480px;max-width:100%;background:#fff;overflow-y:auto;padding:0;box-shadow:-4px 0 32px rgba(0,0,0,.15);display:flex;flex-direction:column}
 .sa-drawer-hd{padding:20px 24px 16px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;gap:10px}
-.sa-drawer-hd h2{font-size:16px;font-weight:700;color:var(--gray-900);flex:1}
+.sa-drawer-hd h2{font-size:16px;font-weight:600;color:var(--gray-900);flex:1}
 .sa-drawer-close{background:none;border:none;cursor:pointer;color:var(--gray-400);padding:4px;border-radius:6px;font-size:18px}
 .sa-drawer-close:hover{color:var(--gray-700);background:var(--gray-100)}
 .sa-drawer-body{padding:20px 24px;flex:1;display:flex;flex-direction:column;gap:16px}
@@ -182,7 +182,7 @@
 /* Stat cards in drawer */
 .sa-stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .sa-stat-card{background:var(--gray-50);border-radius:8px;padding:10px;text-align:center}
-.sa-stat-card .sv{font-size:20px;font-weight:800;color:var(--gray-900)}
+.sa-stat-card .sv{font-size:20px;font-weight:700;color:var(--gray-900)}
 .sa-stat-card .sl{font-size:11px;color:var(--gray-500);margin-top:2px}
 
 /* Divider */
@@ -388,10 +388,10 @@
     const evStatus = s => s === "failed" || s === "payment_failed" ? "badge-red" : (s === "processed" || s === "invoice_paid" || s === "active" ? "badge-green" : "badge-gray");
     c.innerHTML = `
 <div class="sa-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px">
-  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">Productie-readiness</div><div style="font-size:26px;font-weight:800;color:${r.score>=90?"var(--wf-green)":r.score>=60?"var(--wf-yellow)":"var(--wf-red)"}">${r.score}%</div><div style="font-size:12px;color:var(--gray-500)">${r.blockers} P0-blockers</div></div></div>
-  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">Betaal-events (fout)</div><div style="font-size:26px;font-weight:800;color:${(ev.failed||0)?"var(--wf-red)":"var(--wf-green)"}">${ev.failed||0}</div><div style="font-size:12px;color:var(--gray-500)">${ev.total||0} totaal</div></div></div>
-  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">Backups ontbreken/oud</div><div style="font-size:26px;font-weight:800;color:${(bk.missing||0)+(bk.stale||0)?"var(--wf-yellow)":"var(--wf-green)"}">${(bk.missing||0)+(bk.stale||0)}</div><div style="font-size:12px;color:var(--gray-500)">van ${bk.tenants||0} tenants</div></div></div>
-  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">E-mail live</div><div style="font-size:26px;font-weight:800;color:${ml.live?"var(--wf-green)":"var(--wf-yellow)"}">${ml.live?"Ja":"Log"}</div><div style="font-size:12px;color:var(--gray-500)">${mail.filter(m=>!m.ok).length} recente fouten</div></div></div>
+  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">Productie-readiness</div><div style="font-size:26px;font-weight:700;color:${r.score>=90?"var(--wf-green)":r.score>=60?"var(--wf-yellow)":"var(--wf-red)"}">${r.score}%</div><div style="font-size:12px;color:var(--gray-500)">${r.blockers} P0-blockers</div></div></div>
+  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">Betaal-events (fout)</div><div style="font-size:26px;font-weight:700;color:${(ev.failed||0)?"var(--wf-red)":"var(--wf-green)"}">${ev.failed||0}</div><div style="font-size:12px;color:var(--gray-500)">${ev.total||0} totaal</div></div></div>
+  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">Backups ontbreken/oud</div><div style="font-size:26px;font-weight:700;color:${(bk.missing||0)+(bk.stale||0)?"var(--wf-yellow)":"var(--wf-green)"}">${(bk.missing||0)+(bk.stale||0)}</div><div style="font-size:12px;color:var(--gray-500)">van ${bk.tenants||0} tenants</div></div></div>
+  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">E-mail live</div><div style="font-size:26px;font-weight:700;color:${ml.live?"var(--wf-green)":"var(--wf-yellow)"}">${ml.live?"Ja":"Log"}</div><div style="font-size:12px;color:var(--gray-500)">${mail.filter(m=>!m.ok).length} recente fouten</div></div></div>
 </div>
 
 <div class="sa-card" style="margin-bottom:16px"><div class="sa-card-head"><div class="sa-card-title">Productie-readiness</div></div>
@@ -495,11 +495,11 @@
     const gov = kg.governance || { rows: [], blockers: 0, warnings: 0, checked: 0 };
     c.innerHTML = `
 <div class="sa-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px">
-  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">Admins met MFA klaar</div><div style="font-size:26px;font-weight:800;color:${mfa.readyAdmins===mfa.totalAdmins?"var(--wf-green)":"var(--wf-yellow)"}">${mfa.readyAdmins||0}/${mfa.totalAdmins||0}</div><div style="font-size:12px;color:var(--gray-500)">${mfa.missingMfa||0} zonder MFA</div></div></div>
-  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">Vergrendelde accounts</div><div style="font-size:26px;font-weight:800;color:${(s.locked||[]).length?"var(--wf-red)":"var(--wf-green)"}">${(s.locked||[]).length}</div><div style="font-size:12px;color:var(--gray-500)">na mislukte logins</div></div></div>
-  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">DPA ontbreekt</div><div style="font-size:26px;font-weight:800;color:${(gd.dpaMissing||0)?"var(--wf-yellow)":"var(--wf-green)"}">${gd.dpaMissing||0}</div><div style="font-size:12px;color:var(--gray-500)">van ${gd.tenants||0} tenants</div></div></div>
-  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">Open GDPR-verzoeken</div><div style="font-size:26px;font-weight:800;color:${(gd.openRequests||0)?"var(--wf-yellow)":"var(--wf-green)"}">${gd.openRequests||0}</div><div style="font-size:12px;color:var(--gray-500)">export/verwijdering</div></div></div>
-  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">API-key-issues</div><div style="font-size:26px;font-weight:800;color:${gov.blockers?"var(--wf-red)":gov.warnings?"var(--wf-yellow)":"var(--wf-green)"}">${gov.blockers||0}/${gov.warnings||0}</div><div style="font-size:12px;color:var(--gray-500)">P0/P1 · ${gov.checked||0} keys</div></div></div>
+  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">Admins met MFA klaar</div><div style="font-size:26px;font-weight:700;color:${mfa.readyAdmins===mfa.totalAdmins?"var(--wf-green)":"var(--wf-yellow)"}">${mfa.readyAdmins||0}/${mfa.totalAdmins||0}</div><div style="font-size:12px;color:var(--gray-500)">${mfa.missingMfa||0} zonder MFA</div></div></div>
+  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">Vergrendelde accounts</div><div style="font-size:26px;font-weight:700;color:${(s.locked||[]).length?"var(--wf-red)":"var(--wf-green)"}">${(s.locked||[]).length}</div><div style="font-size:12px;color:var(--gray-500)">na mislukte logins</div></div></div>
+  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">DPA ontbreekt</div><div style="font-size:26px;font-weight:700;color:${(gd.dpaMissing||0)?"var(--wf-yellow)":"var(--wf-green)"}">${gd.dpaMissing||0}</div><div style="font-size:12px;color:var(--gray-500)">van ${gd.tenants||0} tenants</div></div></div>
+  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">Open GDPR-verzoeken</div><div style="font-size:26px;font-weight:700;color:${(gd.openRequests||0)?"var(--wf-yellow)":"var(--wf-green)"}">${gd.openRequests||0}</div><div style="font-size:12px;color:var(--gray-500)">export/verwijdering</div></div></div>
+  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">API-key-issues</div><div style="font-size:26px;font-weight:700;color:${gov.blockers?"var(--wf-red)":gov.warnings?"var(--wf-yellow)":"var(--wf-green)"}">${gov.blockers||0}/${gov.warnings||0}</div><div style="font-size:12px;color:var(--gray-500)">P0/P1 · ${gov.checked||0} keys</div></div></div>
 </div>
 
 <div class="sa-card" style="margin-bottom:16px"><div class="sa-card-head"><div class="sa-card-title">MFA-status admins</div></div>
@@ -559,7 +559,7 @@ ${(s.locked||[]).length ? `<div class="sa-card" style="margin-bottom:16px"><div 
 <div class="sa-card"><div class="sa-card-head"><div class="sa-card-title">Releases &amp; roadmap</div>${rel.version ? badge("v" + esc(rel.version), "badge-blue") : ""}</div>
   <div class="sa-card-body" style="padding:16px">
     ${notes.length ? notes.map(n => `<div style="margin-bottom:12px">
-        <div style="font-weight:700;font-size:13.5px">${esc(n.version || n.title || "")} ${n.date ? `<span style="font-weight:400;color:var(--gray-500);font-size:12px">— ${esc(n.date)}</span>` : ""}</div>
+        <div style="font-weight:600;font-size:13.5px">${esc(n.version || n.title || "")} ${n.date ? `<span style="font-weight:400;color:var(--gray-500);font-size:12px">— ${esc(n.date)}</span>` : ""}</div>
         ${Array.isArray(n.items || n.changes) ? `<ul style="margin:4px 0 0 18px;font-size:13px;color:var(--gray-600)">${(n.items || n.changes).map(i => `<li>${esc(i)}</li>`).join("")}</ul>` : (n.summary ? `<div style="font-size:13px;color:var(--gray-600)">${esc(n.summary)}</div>` : "")}
       </div>`).join("") : "<div style='font-size:13px;color:var(--gray-500)'>Geen release-notes beschikbaar.</div>"}
   </div></div>`;
@@ -829,7 +829,7 @@ ${(s.locked||[]).length ? `<div class="sa-card" style="margin-bottom:16px"><div 
     </div>
   </div>
   <div class="sa-divider"></div>
-  <div style="font-size:12px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px">Admin-gebruiker (optioneel)</div>
+  <div style="font-size:12px;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px">Admin-gebruiker (optioneel)</div>
   <div class="sa-form-grid">
     <div class="sa-field"><label>Admin naam</label><input name="adminName" placeholder="Jan Janssen"></div>
     <div class="sa-field"><label>Admin e-mail</label><input name="adminEmail" type="email" placeholder="jan@janssen.be"></div>
@@ -892,13 +892,13 @@ ${(s.locked||[]).length ? `<div class="sa-card" style="margin-bottom:16px"><div 
 ${life ? `<div class="sa-card" style="margin-bottom:16px"><div class="sa-card-head"><div class="sa-card-title">Lifecycle &amp; conversie</div></div>
   <div class="sa-card-body" style="padding:14px 16px">
     <div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:10px">
-      <div><div style="font-size:11px;color:var(--gray-500)">Trials</div><div style="font-size:20px;font-weight:800;color:var(--wf-yellow)">${life.counts.trial}</div></div>
-      <div><div style="font-size:11px;color:var(--gray-500)">Actief (betalend)</div><div style="font-size:20px;font-weight:800;color:var(--wf-green)">${life.counts.active}</div></div>
-      <div><div style="font-size:11px;color:var(--gray-500)">Opgezegd</div><div style="font-size:20px;font-weight:800;color:var(--wf-red)">${life.counts.canceled}</div></div>
-      <div><div style="font-size:11px;color:var(--gray-500)">Conversie</div><div style="font-size:20px;font-weight:800">${life.conversionPct}%</div></div>
-      <div><div style="font-size:11px;color:var(--gray-500)">Nieuw (30d)</div><div style="font-size:20px;font-weight:800">${life.recentSignups}</div></div>
+      <div><div style="font-size:11px;color:var(--gray-500)">Trials</div><div style="font-size:20px;font-weight:700;color:var(--wf-yellow)">${life.counts.trial}</div></div>
+      <div><div style="font-size:11px;color:var(--gray-500)">Actief (betalend)</div><div style="font-size:20px;font-weight:700;color:var(--wf-green)">${life.counts.active}</div></div>
+      <div><div style="font-size:11px;color:var(--gray-500)">Opgezegd</div><div style="font-size:20px;font-weight:700;color:var(--wf-red)">${life.counts.canceled}</div></div>
+      <div><div style="font-size:11px;color:var(--gray-500)">Conversie</div><div style="font-size:20px;font-weight:700">${life.conversionPct}%</div></div>
+      <div><div style="font-size:11px;color:var(--gray-500)">Nieuw (30d)</div><div style="font-size:20px;font-weight:700">${life.recentSignups}</div></div>
     </div>
-    ${life.trials.length ? `<div style="font-size:12px;font-weight:700;color:var(--gray-500);margin-bottom:4px">Trials (oudste eerst — opvolgen)</div>
+    ${life.trials.length ? `<div style="font-size:12px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Trials (oudste eerst — opvolgen)</div>
     <div class="sa-tbl-wrap"><table class="sa-tbl"><thead><tr><th>Tenant</th><th>Plan</th><th>Trial-leeftijd</th><th>Laatste activiteit</th></tr></thead><tbody>
       ${life.trials.slice(0,15).map(t => `<tr><td>${esc(t.tenant)}</td><td>${esc(t.plan||"—")}</td><td>${t.ageDays!=null?t.ageDays+" d":"—"}</td><td>${t.lastActivityAt?fmtDT(t.lastActivityAt):"nooit"}</td></tr>`).join("")}
     </tbody></table></div>` : "<div style='font-size:12.5px;color:var(--gray-500)'>Geen openstaande trials.</div>"}
@@ -915,12 +915,12 @@ ${life ? `<div class="sa-card" style="margin-bottom:16px"><div class="sa-card-he
           <td>${badge(r.status, statusColor[r.status])}</td>
           <td>${r.users}</td>
           <td>${fmtEur(r.mrrUnit)}</td>
-          <td style="font-weight:700;color:${r.mrr>0?"var(--wf-green)":"var(--gray-400)"}">${r.mrr>0?fmtEur(r.mrr):"—"}</td>
+          <td style="font-weight:600;color:${r.mrr>0?"var(--wf-green)":"var(--gray-400)"}">${r.mrr>0?fmtEur(r.mrr):"—"}</td>
           <td style="color:var(--gray-400)">${r.arr>0?fmtEur(r.arr):"—"}</td>
         </tr>`).join("")}
       </tbody>
       <tfoot>
-        <tr style="background:var(--gray-50);font-weight:700">
+        <tr style="background:var(--gray-50);font-weight:600">
           <td colspan="5" style="padding:10px 14px;font-size:12px;color:var(--gray-500)">TOTAAL</td>
           <td style="padding:10px 14px;font-size:14px;color:var(--wf-green)">${fmtEur(bd.totalMrr)}</td>
           <td style="padding:10px 14px;font-size:14px;color:var(--gray-700)">${fmtEur(bd.totalArr)}</td>
@@ -1011,7 +1011,7 @@ ${payouts.length ? `<div class="sa-card" style="margin-bottom:16px"><div class="
   <div class="sa-card-body" style="padding:0 0 6px">
     <div style="padding:12px 16px;font-size:13px;color:var(--gray-600)">Totaal verschuldigd: <strong>${fmtEur(po.totalMonthly||0)}/maand</strong></div>
     <div class="sa-tbl-wrap"><table class="sa-tbl"><thead><tr><th>Reseller</th><th>Klanten</th><th>MRR</th><th>Commissie/maand</th></tr></thead><tbody>
-      ${payouts.map(r => `<tr><td>${esc(r.reseller)}</td><td>${r.clients}</td><td>${fmtEur(r.mrr)}</td><td style="font-weight:700;color:var(--wf-green)">${fmtEur(r.commissionMonthly)}</td></tr>`).join("")}
+      ${payouts.map(r => `<tr><td>${esc(r.reseller)}</td><td>${r.clients}</td><td>${fmtEur(r.mrr)}</td><td style="font-weight:600;color:var(--wf-green)">${fmtEur(r.commissionMonthly)}</td></tr>`).join("")}
     </tbody></table></div></div></div>` : ""}
 <div class="sa-card" style="margin-bottom:16px"><div style="padding:14px 16px;font-size:13px;color:var(--gray-600);line-height:1.5">
   Resellers brengen klanten aan en verdienen een terugkerende commissie (% van het abonnement). Ze beheren hun eigen klanten via het reseller-portaal en zien enkel commerciële gegevens — geen operationele klantdata.
@@ -1065,7 +1065,7 @@ ${canManage ? `
             <td>${r.defaultCommissionPct || 0}%</td>
             <td>${r.clientCount || 0}</td>
             <td>${fmtEur(r.totalMrr || 0)}</td>
-            <td style="font-weight:700;color:var(--wf-green)">${fmtEur(r.totalCommission || 0)}</td>
+            <td style="font-weight:600;color:var(--wf-green)">${fmtEur(r.totalCommission || 0)}</td>
             <td style="text-align:right">${action}</td>
           </tr>`;
         }).join("") || `<tr><td colspan="7"><div class="sa-empty"><div class="sa-empty-icon">🤝</div>Nog geen resellers</div></td></tr>`;
@@ -1637,7 +1637,7 @@ ${canManage ? `
 <div class="sa-field" style="margin-bottom:14px"><label>Omschrijving</label><input id="bDesc" value="${esc(b.description || "")}" placeholder="Korte omschrijving"></div>
 <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--gray-600);margin-bottom:10px"><input type="checkbox" id="bCustom" ${b.custom ? "checked" : ""}> Op aanvraag (custom — klant kan niet zelf kiezen)</label>
 <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--gray-600);margin-bottom:14px"><input type="checkbox" id="bPopular" ${b.popular ? "checked" : ""}> Meest gekozen (uitgelicht in prijzen &amp; abonnementsscherm)</label>
-<div style="font-size:12px;font-weight:700;color:var(--gray-900);margin-bottom:6px">Inbegrepen modules &amp; submodules</div>
+<div style="font-size:12px;font-weight:600;color:var(--gray-900);margin-bottom:6px">Inbegrepen modules &amp; submodules</div>
 <div id="bGrid">${grid("b", b.modules, b.submodules || {})}</div>
 <div style="display:flex;gap:8px;margin-top:14px">
   <button class="sa-btn btn-primary" id="bSave">${isNew ? "Bundel aanmaken" : "Wijzigingen opslaan"}</button>
@@ -1848,7 +1848,7 @@ ${canManage ? `
   </tbody></table></div>
 </div>
 <style>
-.sa-int-sec{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--gray-500);margin:20px 4px 8px;padding-top:6px;border-top:1px solid var(--gray-100)}
+.sa-int-sec{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--gray-500);margin:20px 4px 8px;padding-top:6px;border-top:1px solid var(--gray-100)}
 .sa-int-sec:first-of-type{border-top:none;margin-top:4px;padding-top:0}
 .sa-fld{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:600;color:var(--gray-700)}
 .sa-fld input,.sa-fld select{padding:9px 11px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:13px;font-family:inherit;font-weight:400}

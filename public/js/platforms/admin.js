@@ -734,7 +734,7 @@ ${(() => {
 <div class="adm-card-header" style="cursor:pointer;" id="admGpHeader">
   <h3 class="adm-card-title">🎯 Pilot voortgang <span style="font-size:12px;font-weight:400;color:var(--gray-500);">${doneCount}/${steps.length} stappen</span></h3>
   <div style="display:flex;align-items:center;gap:12px;">
-    <div style="font-size:18px;font-weight:700;color:${pct===100?"var(--wf-green)":pct>50?"var(--wf-yellow)":"var(--wf-purple)"};">${pct}%</div>
+    <div style="font-size:18px;font-weight:600;color:${pct===100?"var(--wf-green)":pct>50?"var(--wf-yellow)":"var(--wf-purple)"};">${pct}%</div>
     <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admGpDetails">Details</button>
     <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admGpRoadmap">Roadmap →</button>
   </div>
@@ -1118,7 +1118,7 @@ ${emp ? `
     <table class="adm-table adm-plan-table">
       <thead><tr><th>Medewerker</th>${days.map(d => {
         const dayName = new Date(d).toLocaleDateString("nl-BE",{weekday:"short",day:"numeric",month:"numeric"});
-        return `<th style="${d===today?"color:var(--wf-blue);font-weight:700;background:var(--wf-blue-l)":""}">${dayName}</th>`;
+        return `<th style="${d===today?"color:var(--wf-blue);font-weight:600;background:var(--wf-blue-l)":""}">${dayName}</th>`;
       }).join("")}</tr></thead>
       <tbody>
         ${renderPlanningRows(shifts, days, leaveMap)}
@@ -1407,15 +1407,15 @@ ${emp ? `
       tableEl.innerHTML = `
 <div style="display:flex;gap:12px;padding:12px 16px 0;flex-wrap:wrap;">
   <div style="background:var(--wf-blue-l);border-radius:8px;padding:8px 14px;text-align:center">
-    <div style="font-size:18px;font-weight:700;color:var(--wf-blue)">${clocks.length}</div>
+    <div style="font-size:18px;font-weight:600;color:var(--wf-blue)">${clocks.length}</div>
     <div style="font-size:11px;color:var(--gray-500)">Registraties</div>
   </div>
   <div style="background:${ingeklokt>0?"var(--wf-green-l)":"var(--gray-50)"};border-radius:8px;padding:8px 14px;text-align:center">
-    <div style="font-size:18px;font-weight:700;color:${ingeklokt>0?"var(--wf-green)":"var(--gray-400)"}">${ingeklokt}</div>
+    <div style="font-size:18px;font-weight:600;color:${ingeklokt>0?"var(--wf-green)":"var(--gray-400)"}">${ingeklokt}</div>
     <div style="font-size:11px;color:var(--gray-500)">Nog ingeklokt</div>
   </div>
   <div style="background:var(--wf-green-l);border-radius:8px;padding:8px 14px;text-align:center">
-    <div style="font-size:18px;font-weight:700;color:var(--wf-green)">${totalHours.toFixed(1)} u</div>
+    <div style="font-size:18px;font-weight:600;color:var(--wf-green)">${totalHours.toFixed(1)} u</div>
     <div style="font-size:11px;color:var(--gray-500)">Totaal uren</div>
   </div>
 </div>
@@ -1899,7 +1899,7 @@ ${emp ? `
     overlay.style.cssText = "position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:1200;display:flex;align-items:center;justify-content:center;padding:16px;";
     overlay.innerHTML = `
 <div style="background:#fff;border-radius:14px;width:420px;max-width:100%;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.2);">
-  <h3 style="font-size:15px;font-weight:700;margin:0 0 6px;">${label}</h3>
+  <h3 style="font-size:15px;font-weight:600;margin:0 0 6px;">${label}</h3>
   <p style="font-size:13px;color:var(--gray-500);margin:0 0 16px;">${esc(leave?.userName||leave?.userId||"")} · ${esc(leave?.type||"verlof")} · ${leave?.startDate||""}${leave?.endDate&&leave?.endDate!==leave?.startDate?" → "+leave?.endDate:""}</p>
   <label style="font-size:12px;font-weight:600;color:var(--gray-700);display:block;margin-bottom:4px;">Opmerking ${isApprove?"(optioneel)":"(optioneel)"}</label>
   <textarea id="admLeaveNote" rows="3" placeholder="Voeg een opmerking toe…"
@@ -2028,7 +2028,7 @@ ${emp ? `
     overlay.style.cssText = "position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:1200;display:flex;align-items:center;justify-content:center;padding:16px;";
     overlay.innerHTML = `
 <div style="background:#fff;border-radius:16px;width:100%;max-width:400px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.2);">
-  <div style="font-size:15px;font-weight:700;margin-bottom:4px;">${isApprove ? "Onkost goedkeuren" : "Onkost weigeren"}</div>
+  <div style="font-size:15px;font-weight:600;margin-bottom:4px;">${isApprove ? "Onkost goedkeuren" : "Onkost weigeren"}</div>
   <div style="font-size:13px;color:var(--gray-500);margin-bottom:16px;">${esc(name)} · ${esc(cat)} · <strong>€ ${Number(amount||0).toFixed(2)}</strong></div>
   <div style="margin-bottom:16px;">
     <label style="font-size:12px;font-weight:600;color:var(--gray-700);display:block;margin-bottom:4px;">Opmerking ${isApprove?"(optioneel)":"(verplicht bij weigering)"}</label>
@@ -2388,7 +2388,7 @@ ${emp ? `
 <div style="background:#fff;border-radius:16px;width:100%;max-width:480px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.2);">
   <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
     <div>
-      <div style="font-size:16px;font-weight:700;color:var(--gray-900);">${esc(msg.subject||"Bericht")}</div>
+      <div style="font-size:16px;font-weight:600;color:var(--gray-900);">${esc(msg.subject||"Bericht")}</div>
       <div style="font-size:12px;color:var(--gray-500);margin-top:4px;">Van: <strong>${esc(msg.senderName||msg.senderId||"?")}</strong> · ${toLabel(msg)} · ${msg.createdAt?.slice(0,16)||""}</div>
     </div>
     <button id="msgViewClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--gray-400);padding:0;line-height:1;">×</button>
@@ -2696,7 +2696,7 @@ ${emp ? `
               <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--gray-50);">
                 <div style="width:10px;height:10px;border-radius:50%;background:${woStatusColors[s]||"var(--gray-400)"};flex-shrink:0;"></div>
                 <div style="font-size:13px;color:var(--gray-700);flex:1;">${s}</div>
-                <div style="font-size:13px;font-weight:700;color:var(--gray-900);">${n}</div>
+                <div style="font-size:13px;font-weight:600;color:var(--gray-900);">${n}</div>
                 <div style="font-size:11px;color:var(--gray-400);width:36px;text-align:right;">${(n/woTotal*100).toFixed(0)}%</div>
               </div>`).join("")}
               <div style="font-size:11px;color:var(--gray-400);margin-top:6px;text-align:right">Totaal: ${woTotal} werkbonnen</div>
@@ -2754,7 +2754,7 @@ ${emp ? `
     </tr>`).join("")}
   </tbody>
   <tfoot>
-    <tr style="background:var(--gray-100);font-weight:700;border-top:2px solid var(--gray-200);">
+    <tr style="background:var(--gray-100);font-weight:600;border-top:2px solid var(--gray-200);">
       <td>Totaal (${payrollRows.length} medewerkers)</td>
       <td style="text-align:right;">—</td>
       <td style="text-align:right;">${totH.toFixed(2)} u</td>
@@ -2837,17 +2837,17 @@ ${emp ? `
 <style>
 *{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#1e293b;background:#fff;padding:32px 40px}
 .page{max-width:800px;margin:0 auto}.header{border-bottom:3px solid #4f46e5;padding-bottom:16px;margin-bottom:28px;display:flex;justify-content:space-between;align-items:flex-end}
-.title{font-size:24px;font-weight:700;color:#4f46e5}.subtitle{font-size:13px;color:#64748b;margin-top:4px}.period{font-size:13px;color:#64748b}
+.title{font-size:24px;font-weight:600;color:#4f46e5}.subtitle{font-size:13px;color:#64748b;margin-top:4px}.period{font-size:13px;color:#64748b}
 .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px}
 .kpi{background:#f8fafc;border-radius:10px;padding:16px;text-align:center;border:1px solid #e2e8f0}
 .kpi-val{font-size:26px;font-weight:700;color:#0f172a;margin-bottom:4px}.kpi-lbl{font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px}
-.section-title{font-size:15px;font-weight:700;color:#0f172a;margin:20px 0 10px;padding-bottom:6px;border-bottom:1px solid #e2e8f0}
+.section-title{font-size:15px;font-weight:600;color:#0f172a;margin:20px 0 10px;padding-bottom:6px;border-bottom:1px solid #e2e8f0}
 table{width:100%;border-collapse:collapse;margin-bottom:20px}
 th{background:#f1f5f9;padding:7px 10px;text-align:left;font-size:11px;font-weight:700;color:#374151;border-bottom:2px solid #e2e8f0}
 td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
 .green{color:#10b981;font-weight:600}.amber{color:#f59e0b;font-weight:600}.red{color:#ef4444;font-weight:600}
 .recommendation{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:16px;margin-top:24px}
-.rec-title{font-size:15px;font-weight:700;color:#1d4ed8;margin-bottom:8px}
+.rec-title{font-size:15px;font-weight:600;color:#1d4ed8;margin-bottom:8px}
 .footer{margin-top:32px;text-align:center;font-size:11px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:12px}
 @media print{body{padding:0}@page{margin:15mm}}
 </style></head><body><div class="page">
@@ -2864,7 +2864,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
 <div class="section-title">Personeelsinzet</div>
 <table><thead><tr><th>Medewerker</th><th>Gewerkte dagen</th><th>Totaal uren</th><th>Gem. uur/dag</th><th>Verlof (d)</th><th>Onkosten</th></tr></thead>
 <tbody>${payroll.map(r=>`<tr><td>${esc(r.name)}</td><td>${r.days.size}</td><td class="${r.hours>0?"green":"red"}">${r.hours.toFixed(1)} u</td><td>${r.days.size?(r.hours/r.days.size).toFixed(1):"—"}</td><td>${r.leaveDays||0}</td><td>${fE(r.expAmt)}</td></tr>`).join("")||"<tr><td colspan='6'>Geen data</td></tr>"}</tbody>
-<tfoot><tr style="font-weight:700;background:#f8fafc"><td>Totaal</td><td>—</td><td>${totalH.toFixed(1)} u</td><td>—</td><td>${payroll.reduce((s,r)=>s+r.leaveDays,0)}</td><td>${fE(totalExp)}</td></tr></tfoot>
+<tfoot><tr style="font-weight:600;background:#f8fafc"><td>Totaal</td><td>—</td><td>${totalH.toFixed(1)} u</td><td>—</td><td>${payroll.reduce((s,r)=>s+r.leaveDays,0)}</td><td>${fE(totalExp)}</td></tr></tfoot>
 </table>
 <div class="section-title">Werkbonnenstatus</div>
 <table><thead><tr><th>Status</th><th>Aantal</th><th>%</th></tr></thead>
@@ -3121,7 +3121,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
 <!-- Back header -->
 <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
   <button class="adm-btn adm-btn-secondary adm-btn-sm" id="custDetailBack">← Terug</button>
-  <h2 style="font-size:18px;font-weight:700;color:var(--gray-900);margin:0;">${esc(customer.name)}</h2>
+  <h2 style="font-size:18px;font-weight:600;color:var(--gray-900);margin:0;">${esc(customer.name)}</h2>
   <button class="adm-btn adm-btn-secondary adm-btn-sm" id="custDetailEdit">✏ Bewerk</button>
 </div>
 
@@ -3155,7 +3155,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
   <div class="adm-card">
     <div class="adm-card-header" style="flex-direction:column;gap:0;padding-bottom:0;" id="custDetailTabs">
       <div style="display:flex;gap:0;border-bottom:1px solid var(--gray-100);width:100%;">
-        <button class="cdt-tab" data-tab="werkbonnen" style="background:none;border:none;cursor:pointer;padding:10px 16px;font-size:13px;color:var(--gray-700);border-bottom:2px solid var(--wf-purple);font-weight:700;">Werkbonnen (${custWOs.length})</button>
+        <button class="cdt-tab" data-tab="werkbonnen" style="background:none;border:none;cursor:pointer;padding:10px 16px;font-size:13px;color:var(--gray-700);border-bottom:2px solid var(--wf-purple);font-weight:600;">Werkbonnen (${custWOs.length})</button>
         <button class="cdt-tab" data-tab="facturen" style="background:none;border:none;cursor:pointer;padding:10px 16px;font-size:13px;color:var(--gray-700);border-bottom:2px solid transparent;">Facturen (${custInvs.length})</button>
       </div>
     </div>
@@ -3541,7 +3541,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
         <td><strong>${esc(i.name)}</strong>${low?` <span style="background:var(--wf-red-l);color:var(--wf-red);border-radius:4px;padding:1px 5px;font-size:10px">LAAG</span>`:""}</td>
         <td style="font-family:monospace;font-size:12px">${esc(i.sku||"—")}</td>
         <td>${esc(i.category||"—")}</td>
-        <td style="font-weight:700;color:${low?"var(--wf-red)":"var(--gray-900)"}">${esc(i.quantity??0)}</td>
+        <td style="font-weight:600;color:${low?"var(--wf-red)":"var(--gray-900)"}">${esc(i.quantity??0)}</td>
         <td>${esc(i.unit||"st")}</td>
         <td>${esc(i.minQuantity||"—")}</td>
         <td>${i.unitPrice ? new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR"}).format(i.unitPrice) : "—"}</td>
@@ -3648,10 +3648,10 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
   body{font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#1e293b;background:#fff;padding:32px 40px}
   .page{max-width:750px;margin:0 auto}
   .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px}
-  .brand{font-size:22px;font-weight:700;color:#4f46e5}
+  .brand{font-size:22px;font-weight:600;color:#4f46e5}
   .brand-sub{font-size:12px;color:#64748b;margin-top:2px}
   .invoice-meta{text-align:right}
-  .invoice-nr{font-size:20px;font-weight:700;color:#0f172a}
+  .invoice-nr{font-size:20px;font-weight:600;color:#0f172a}
   .invoice-status{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;margin-top:4px;background:${stColor[inv.status]||"#94a3b8"}20;color:${stColor[inv.status]||"#94a3b8"}}
   .parties{display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-bottom:28px}
   .party-label{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
@@ -3669,7 +3669,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
   .num{text-align:right;font-variant-numeric:tabular-nums}
   .totals{margin-left:auto;width:260px}
   .totals-row{display:flex;justify-content:space-between;padding:5px 0;font-size:13px}
-  .totals-row.total{font-weight:700;font-size:15px;border-top:2px solid #0f172a;padding-top:8px;margin-top:4px}
+  .totals-row.total{font-weight:600;font-size:15px;border-top:2px solid #0f172a;padding-top:8px;margin-top:4px}
   .notes{background:#f8fafc;border-radius:8px;padding:12px 16px;margin-top:16px;font-size:12px;color:#64748b}
   .footer{margin-top:36px;text-align:center;font-size:11px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:16px}
   @media print{body{padding:0}@page{margin:15mm}}
@@ -3889,7 +3889,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
   <div style="background:var(--gray-50);border-radius:10px;padding:12px;margin-bottom:16px;">
     <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--gray-500);margin-bottom:4px;"><span>Subtotaal</span><span id="qSubtotal">€0,00</span></div>
     <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--gray-500);margin-bottom:4px;"><span>BTW</span><span id="qVat">€0,00</span></div>
-    <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;border-top:1px solid var(--gray-200);padding-top:8px;margin-top:4px;"><span>Totaal</span><span id="qTotal">€0,00</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:600;border-top:1px solid var(--gray-200);padding-top:8px;margin-top:4px;"><span>Totaal</span><span id="qTotal">€0,00</span></div>
   </div>
   <div class="adm-form-group"><label>Opmerkingen</label>
     <textarea name="notes" rows="2" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px" ${isEdit?"disabled":""}>${esc(quote?.notes||"")}</textarea>
@@ -4185,7 +4185,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
     <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--gray-500);margin-bottom:4px;">
       <span>BTW</span><span id="invVat">€0,00</span>
     </div>
-    <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;color:var(--gray-900);border-top:1px solid var(--gray-200);padding-top:8px;margin-top:4px;">
+    <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:600;color:var(--gray-900);border-top:1px solid var(--gray-200);padding-top:8px;margin-top:4px;">
       <span>Totaal</span><span id="invTotal">€0,00</span>
     </div>
   </div>
@@ -4320,7 +4320,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
       content.innerHTML = `
 <div style="margin-bottom:20px;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
   <div>
-    <div style="font-size:18px;font-weight:700;color:var(--gray-900);margin-bottom:4px;">Roadmap — ${esc(rm.tenant?.name||"")}</div>
+    <div style="font-size:18px;font-weight:600;color:var(--gray-900);margin-bottom:4px;">Roadmap — ${esc(rm.tenant?.name||"")}</div>
     <div style="font-size:13px;color:var(--gray-500);">Gegenereerd op ${new Date(rm.generatedAt||Date.now()).toLocaleString("nl-BE")} · ${rm.summary?.go||0}/${rm.summary?.total||0} fasen gereed · ${rm.summary?.openActions||0} open acties</div>
   </div>
   <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -4344,7 +4344,7 @@ ${phases.map(p => {
       <div style="font-size:12px;color:var(--gray-500);margin-top:2px;">${esc(p.detail||"")}</div>
     </div>
     <div style="text-align:right;">
-      <div style="font-size:22px;font-weight:700;color:${isGo?"var(--wf-green)":isCurrent?"var(--wf-yellow)":"var(--gray-400)"};">${p.score}%</div>
+      <div style="font-size:22px;font-weight:600;color:${isGo?"var(--wf-green)":isCurrent?"var(--wf-yellow)":"var(--gray-400)"};">${p.score}%</div>
       <div style="font-size:11px;font-weight:600;color:${isGo?"var(--wf-green)":"var(--wf-red)"};">${isGo?"✅ GO":"🔴 NO GO"}</div>
     </div>
   </div>
@@ -4462,7 +4462,7 @@ ${billing.status === "trial" ? (() => {
 <div class="adm-card">
   <div class="adm-card-header"><h3 class="adm-card-title">Kies je bundel</h3>
     <div style="display:inline-flex;background:var(--gray-100);border-radius:980px;padding:3px;gap:2px;">
-      <button class="adm-period-btn" data-per="year" style="border:none;cursor:pointer;font:600 12px inherit;padding:6px 14px;border-radius:980px;background:${_billPeriod==="year"?"var(--surface)":"transparent"};color:${_billPeriod==="year"?"var(--ink)":"var(--muted)"};box-shadow:${_billPeriod==="year"?"0 1px 2px rgba(0,0,0,.08)":"none"};">Jaarlijks <span style="color:var(--wf-green);font-weight:700;">−17%</span></button>
+      <button class="adm-period-btn" data-per="year" style="border:none;cursor:pointer;font:600 12px inherit;padding:6px 14px;border-radius:980px;background:${_billPeriod==="year"?"var(--surface)":"transparent"};color:${_billPeriod==="year"?"var(--ink)":"var(--muted)"};box-shadow:${_billPeriod==="year"?"0 1px 2px rgba(0,0,0,.08)":"none"};">Jaarlijks <span style="color:var(--wf-green);font-weight:600;">−17%</span></button>
       <button class="adm-period-btn" data-per="month" style="border:none;cursor:pointer;font:600 12px inherit;padding:6px 14px;border-radius:980px;background:${_billPeriod==="month"?"var(--surface)":"transparent"};color:${_billPeriod==="month"?"var(--ink)":"var(--muted)"};box-shadow:${_billPeriod==="month"?"0 1px 2px rgba(0,0,0,.08)":"none"};">Maandelijks</button>
     </div>
   </div>
@@ -4491,7 +4491,7 @@ ${billing.status === "trial" ? (() => {
           </div>
           <div style="font-size:11.5px;color:var(--muted);min-height:16px;">${subStr}</div>
           <ul style="list-style:none;padding:0;margin:6px 0 2px;display:flex;flex-direction:column;gap:6px;flex:1;">
-            ${(p.features||[]).slice(0,8).map(f=>`<li style="font-size:12.5px;color:var(--text);display:flex;gap:7px;align-items:flex-start;"><span style="color:var(--wf-blue);font-weight:700;line-height:1.2;">✓</span> ${esc(f)}</li>`).join("")}
+            ${(p.features||[]).slice(0,8).map(f=>`<li style="font-size:12.5px;color:var(--text);display:flex;gap:7px;align-items:flex-start;"><span style="color:var(--wf-blue);font-weight:600;line-height:1.2;">✓</span> ${esc(f)}</li>`).join("")}
           </ul>
           ${isCurrent
             ? `<button class="adm-btn adm-btn-secondary adm-btn-sm" disabled style="opacity:.55;cursor:default;">Je huidige plan</button>`
@@ -4589,7 +4589,7 @@ ${billing.status === "trial" ? (() => {
                 <strong style="font-size:14px;color:var(--gray-900);">${esc(a.label)}</strong>
                 ${has ? `<span style="font-size:10px;font-weight:700;background:var(--wf-green-l);color:var(--wf-green);border-radius:999px;padding:2px 8px;">ACTIEF</span>` : ""}
               </div>
-              <div style="font-size:20px;font-weight:800;color:var(--gray-900);margin:6px 0;">€${a.monthly}<span style="font-size:12px;font-weight:500;color:var(--gray-400);">/mnd</span></div>
+              <div style="font-size:20px;font-weight:700;color:var(--gray-900);margin:6px 0;">€${a.monthly}<span style="font-size:12px;font-weight:500;color:var(--gray-400);">/mnd</span></div>
               <div style="font-size:12px;color:var(--gray-500);min-height:32px;">${esc(a.description)}</div>
               ${has
                 ? `<button class="adm-btn adm-btn-secondary adm-btn-sm" disabled style="opacity:.6;width:100%;margin-top:8px;">Inbegrepen</button>`
@@ -4651,7 +4651,7 @@ ${billing.status === "trial" ? (() => {
 <div style="font-size:13px;color:var(--gray-500);margin-bottom:14px">Koppel je boekhouding en werfsoftware. Sleutels worden versleuteld bewaard; zonder geldige sleutel draait een sync in testmodus.</div>
 <div class="adm-card" style="margin-bottom:16px;background:var(--wf-blue-l);border:1px solid var(--wf-blue-l)"><div class="adm-card-body" style="font-size:13px;color:#075985">ℹ️ <strong>Compliance-aangiftes</strong> (Checkin@Work / CIAW en Limosa) verlopen <strong>automatisch</strong> bij in-/uitklokken — die beheer je niet hier maar onder <strong>Compliance → Checkin@Work</strong> en <strong>A1 / Limosa</strong>.</div></div>
 ${categories.map(cat => `
-  <div class="adm-nav-label" style="margin:18px 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--gray-500)">${esc(cat)}</div>
+  <div class="adm-nav-label" style="margin:18px 0 8px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--gray-500)">${esc(cat)}</div>
   <div class="adm-grid-2">${providers.filter(p => p.category === cat).map(providerCard).join("")}</div>
 `).join("")}`;
 
@@ -5100,7 +5100,7 @@ ${categories.map(cat => `
           return;
         }
         wizard.innerHTML = `
-<div style="font-size:14px;font-weight:700;margin-bottom:4px;color:var(--gray-900);">🛡️ MFA verplicht — ${enrolled.length} beheerder(s) ingeschreven</div>
+<div style="font-size:14px;font-weight:600;margin-bottom:4px;color:var(--gray-900);">🛡️ MFA verplicht — ${enrolled.length} beheerder(s) ingeschreven</div>
 <div style="font-size:12px;color:var(--wf-yellow);background:var(--wf-yellow-l);border:1px solid var(--wf-yellow-l);border-radius:8px;padding:10px 12px;margin:10px 0;">
   ⚠️ Bewaar onderstaande gegevens nu. Ze worden niet opnieuw getoond. Voeg de sleutel toe aan een authenticator-app (Google Authenticator, Authy…).
 </div>
@@ -5577,7 +5577,7 @@ ${typeKeys.map(tk => {
   <button class="adm-btn-secondary" id="ciawRefresh" style="white-space:nowrap">↻ Vernieuwen</button>
 </div>
 <div class="adm-card" style="padding:14px 16px;margin-bottom:14px">
-  <div style="font-weight:700;font-size:13px;margin-bottom:6px">RSZ-werkgeversnummer</div>
+  <div style="font-weight:600;font-size:13px;margin-bottom:6px">RSZ-werkgeversnummer</div>
   <div style="font-size:12.5px;color:var(--gray-500);margin-bottom:8px">Vereist voor geldige Checkin@Work-aangiftes. Het rijksregisternummer van elke medewerker stel je in op de medewerkersfiche.${rsz ? "" : ` <strong style="color:var(--wf-red)">Nog niet ingesteld — aangiftes worden geweigerd.</strong>`}</div>
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     <input id="ciawRsz" class="adm-input" value="${esc(rsz)}" placeholder="bv. 12345678" style="max-width:220px">
@@ -5587,7 +5587,7 @@ ${typeKeys.map(tk => {
 </div>
 <div class="adm-card" style="margin-bottom:14px">
   <div class="adm-card-header" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-    <div style="font-weight:700;font-size:13px">Aanwezigheidsregister (werfcontrole) <span style="font-weight:400;color:var(--gray-500)">— ${presence.present} aanwezig${presence.issues ? `, <span style="color:var(--wf-red)">${presence.issues} zonder bevestigde aangifte</span>` : ""}</span></div>
+    <div style="font-weight:600;font-size:13px">Aanwezigheidsregister (werfcontrole) <span style="font-weight:400;color:var(--gray-500)">— ${presence.present} aanwezig${presence.issues ? `, <span style="color:var(--wf-red)">${presence.issues} zonder bevestigde aangifte</span>` : ""}</span></div>
     <button class="adm-btn adm-btn-secondary adm-btn-sm" id="ciawPresenceCsv">⬇ Export voor controle (CSV)</button>
   </div>
   <div class="adm-table-wrap"><table class="adm-table"><thead><tr><th>Werf</th><th>Medewerker</th><th>INSZ</th><th>Sinds</th><th>CIAW</th></tr></thead><tbody>
@@ -5664,7 +5664,7 @@ ${typeKeys.map(tk => {
   </div>
 </div>
 <div class="adm-card" style="padding:14px 16px;margin-bottom:14px">
-  <div style="font-weight:700;font-size:13px;margin-bottom:10px">Nieuw detacheringsdossier</div>
+  <div style="font-weight:600;font-size:13px;margin-bottom:10px">Nieuw detacheringsdossier</div>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;align-items:end">
     <label style="font-size:12px;font-weight:600;color:var(--gray-700)">Werknemer<input id="pwName" class="adm-input" placeholder="Naam"></label>
     <label style="font-size:12px;font-weight:600;color:var(--gray-700)">Onderaannemer<input id="pwSub" class="adm-input" placeholder="Bedrijf (optioneel)"></label>
