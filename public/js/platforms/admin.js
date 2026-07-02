@@ -97,7 +97,7 @@
       <div style="background:#fff;border-radius:16px;max-width:560px;width:100%;max-height:92vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
         <div style="padding:20px 22px;border-bottom:1px solid var(--gray-100)">
           <h2 style="margin:0;font-size:18px;color:var(--gray-900)">Welkom bij Monargo One</h2>
-          <p style="margin:6px 0 0;font-size:13px;color:var(--gray-500)">Vul je bedrijfsgegevens aan zodat we ${esc(t.name || "je organisatie")} correct kunnen instellen. Duurt een minuutje.</p>
+          <p style="margin:6px 0 0;font-size:13px;color:var(--gray-500)">Vul je bedrijfsgegevens aan zodat we ${esc(t.name || "je organisatie")} correct kunnen instellen.</p>
         </div>
         <form id="admObForm" style="padding:20px 22px;display:flex;flex-direction:column;gap:14px">
           <div class="adm-form-group"><label>Sector</label>
@@ -796,7 +796,7 @@ ${(() => {
   <div class="adm-card-header">
     <h3 class="adm-card-title">${activeCount} actief${inactiveCount ? ` · ${inactiveCount} inactief` : ""}</h3>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-      <input type="search" placeholder="Zoeken…" id="admEmpSearch" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;width:180px;">
+      <input type="search" placeholder="Zoeken…" id="admEmpSearch" style="width:180px">
       ${inactiveCount ? `<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--gray-500);cursor:pointer;">
         <input type="checkbox" id="admEmpShowInactive" ${_empShowInactive?"checked":""}> Toon inactief
       </label>` : ""}
@@ -1264,7 +1264,7 @@ ${emp ? `
     <div id="shiftRecurWrap" style="display:none;margin-top:10px;">
       <div class="adm-form-row">
         <div class="adm-form-group"><label>Aantal weken</label>
-          <select id="shiftRecurWeeks" style="width:100%;padding:7px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;">
+          <select id="shiftRecurWeeks" style="width:100%;padding:7px">
             <option value="2">2 weken</option>
             <option value="4" selected>4 weken</option>
             <option value="8">8 weken</option>
@@ -1351,7 +1351,7 @@ ${emp ? `
   <div class="adm-card-header">
     <h3 class="adm-card-title">Prikklok overzicht</h3>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <input type="date" id="admClockDate" value="${_clockDate}" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
+      <input type="date" id="admClockDate" value="${_clockDate}">
       <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admClockPrev">‹ Vorige</button>
       <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admClockToday">Vandaag</button>
       <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admClockNext">Volgende ›</button>
@@ -1674,7 +1674,7 @@ ${emp ? `
   </div>
   <div class="adm-form-group">
     <label>Reden / notitie</label>
-    <textarea name="reason" rows="2" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;" placeholder="Optionele opmerking"></textarea>
+    <textarea name="reason" rows="2" style="width:100%" placeholder="Optionele opmerking"></textarea>
   </div>
   <div id="createLeaveErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:8px;font-size:12px;margin-bottom:8px;"></div>
   <div class="adm-form-actions">
@@ -1721,7 +1721,7 @@ ${emp ? `
       const leaves = data.leaves || data || [];
       body.innerHTML = `
 <div style="padding:12px 16px;border-bottom:1px solid var(--gray-100);display:flex;gap:8px;align-items:center;">
-  <select id="admLeaveFilter" style="padding:6px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;">
+  <select id="admLeaveFilter">
     <option value="">Alle statussen</option>
     <option value="aangevraagd">Aangevraagd</option>
     <option value="goedgekeurd">Goedgekeurd</option>
@@ -1903,7 +1903,7 @@ ${emp ? `
   <p style="font-size:13px;color:var(--gray-500);margin:0 0 16px;">${esc(leave?.userName||leave?.userId||"")} · ${esc(leave?.type||"verlof")} · ${leave?.startDate||""}${leave?.endDate&&leave?.endDate!==leave?.startDate?" → "+leave?.endDate:""}</p>
   <label style="font-size:12px;font-weight:600;color:var(--gray-700);display:block;margin-bottom:4px;">Opmerking ${isApprove?"(optioneel)":"(optioneel)"}</label>
   <textarea id="admLeaveNote" rows="3" placeholder="Voeg een opmerking toe…"
-    style="width:100%;border:1px solid var(--gray-200);border-radius:8px;padding:8px;font-size:13px;resize:vertical;box-sizing:border-box;"></textarea>
+    style="width:100%;resize:vertical;box-sizing:border-box"></textarea>
   <div id="admLeaveModalErr" style="display:none;color:var(--wf-red);font-size:12px;margin-top:6px;"></div>
   <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
     <button id="admLeaveModalCancel" class="adm-btn adm-btn-secondary adm-btn-sm">Annuleren</button>
@@ -1969,7 +1969,7 @@ ${emp ? `
 <div class="adm-card">
   <div class="adm-card-header">
     <h3 class="adm-card-title">Onkostennota's <span style="background:var(--wf-blue-l);color:var(--wf-blue);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${expenses.length}</span></h3>
-    <select id="admExpFilter" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;">
+    <select id="admExpFilter">
       <option value="">Alle statussen</option>
       <option value="ingediend">In behandeling</option>
       <option value="goedgekeurd">Goedgekeurd</option>
@@ -2033,7 +2033,7 @@ ${emp ? `
   <div style="margin-bottom:16px;">
     <label style="font-size:12px;font-weight:600;color:var(--gray-700);display:block;margin-bottom:4px;">Opmerking ${isApprove?"(optioneel)":"(verplicht bij weigering)"}</label>
     <textarea id="expReviewNote" rows="3" placeholder="${isApprove?"Goedgekeurd voor uitbetaling…":"Geef een reden op…"}"
-      style="width:100%;border:1px solid var(--gray-200);border-radius:8px;padding:8px;font-size:13px;resize:vertical;box-sizing:border-box;"></textarea>
+      style="width:100%;resize:vertical;box-sizing:border-box"></textarea>
   </div>
   <div id="expReviewErr" style="display:none;color:var(--wf-red);font-size:12px;margin-bottom:8px;"></div>
   <div style="display:flex;gap:8px;justify-content:flex-end;">
@@ -2114,15 +2114,15 @@ ${emp ? `
   <!-- Filter bar -->
   <div style="display:flex;gap:10px;flex-wrap:wrap;padding:0 20px 14px;border-bottom:1px solid var(--gray-100);">
     <input id="admWoSearch" type="search" placeholder="Zoek op titel / klant…" value="${esc(_woFilterSearch)}"
-      style="flex:1;min-width:160px;border:1px solid var(--gray-200);border-radius:8px;padding:6px 10px;font-size:13px;">
-    <select id="admWoStatusFilter" style="border:1px solid var(--gray-200);border-radius:8px;padding:6px 10px;font-size:13px;min-width:140px;">
+      style="flex:1;min-width:160px;10px">
+    <select id="admWoStatusFilter" style="min-width:140px">
       <option value="">Alle statussen</option>
       <option value="open"        ${_woFilterStatus==="open"?"selected":""}>Open (${statusCounts.open||0})</option>
       <option value="in_progress" ${_woFilterStatus==="in_progress"?"selected":""}>In uitvoering (${statusCounts.in_progress||0})</option>
       <option value="done"        ${_woFilterStatus==="done"?"selected":""}>Voltooid (${doneCount})</option>
       <option value="geannuleerd" ${_woFilterStatus==="geannuleerd"?"selected":""}>Geannuleerd (${statusCounts.geannuleerd||0})</option>
     </select>
-    <select id="admWoUserFilter" style="border:1px solid var(--gray-200);border-radius:8px;padding:6px 10px;font-size:13px;min-width:160px;">
+    <select id="admWoUserFilter" style="min-width:160px">
       <option value="">Alle medewerkers</option>
       ${employees.map(u => `<option value="${esc(u.id)}" ${_woFilterUser===u.id?"selected":""}>${esc(u.name||u.email)}</option>`).join("")}
     </select>
@@ -2227,10 +2227,10 @@ ${emp ? `
     </select>
   </div>
   <div class="adm-form-group"><label>Omschrijving</label>
-    <textarea name="description" rows="3" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;">${esc(workorder?.description || "")}</textarea>
+    <textarea name="description" rows="3" style="width:100%">${esc(workorder?.description || "")}</textarea>
   </div>
   <div class="adm-form-group"><label>Notities</label>
-    <textarea name="notes" rows="2" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;">${esc(workorder?.notes || "")}</textarea>
+    <textarea name="notes" rows="2" style="width:100%">${esc(workorder?.notes || "")}</textarea>
   </div>
   <div style="background:var(--gray-50);border-radius:8px;padding:12px;margin-bottom:8px;">
     <div style="font-weight:600;font-size:12px;color:var(--gray-700);margin-bottom:8px;">Facturatie</div>
@@ -2451,7 +2451,7 @@ ${emp ? `
     </select>
   </div>
   <div class="adm-form-group"><label>Onderwerp</label><input name="subject" required placeholder="Onderwerp van het bericht"></div>
-  <div class="adm-form-group"><label>Bericht *</label><textarea name="body" rows="5" required placeholder="Schrijf hier je bericht…" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;resize:vertical;box-sizing:border-box;"></textarea></div>
+  <div class="adm-form-group"><label>Bericht *</label><textarea name="body" rows="5" required placeholder="Schrijf hier je bericht…" style="width:100%;resize:vertical;box-sizing:border-box"></textarea></div>
   <div id="admMsgErr" style="display:none;color:var(--wf-red);font-size:12px;padding-bottom:4px;"></div>
   <div class="adm-form-actions">
     <button type="button" class="adm-btn adm-btn-secondary" id="admMsgCancel">Annuleren</button>
@@ -2522,9 +2522,9 @@ ${emp ? `
   <div class="adm-card-header">
     <h3 class="adm-card-title">Rapportages</h3>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-      <input type="date" id="repFrom" value="${firstOfMonth}" style="padding:6px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;">
+      <input type="date" id="repFrom" value="${firstOfMonth}">
       <span style="font-size:13px;color:var(--gray-400);">t/m</span>
-      <input type="date" id="repTo" value="${lastOfMonth}" style="padding:6px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;">
+      <input type="date" id="repTo" value="${lastOfMonth}">
       <button class="adm-btn adm-btn-primary adm-btn-sm" id="repLoad">Laden</button>
       <button class="adm-btn adm-btn-secondary adm-btn-sm" id="repBeslissers" title="Printbaar beslissersrapport genereren">Beslissersrapport</button>
     </div>
@@ -2895,8 +2895,8 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
   <div class="adm-card-header" style="flex-wrap:wrap;gap:8px;">
     <h3 class="adm-card-title">Audittrail</h3>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-      <input placeholder="Actor (e-mail)" id="auditActor" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;width:160px;">
-      <select id="auditArea" style="padding:6px 8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;">
+      <input placeholder="Actor (e-mail)" id="auditActor" style="width:160px">
+      <select id="auditArea">
         <option value="">Alle gebieden</option>
         <option value="auth">Auth</option>
         <option value="employees">Medewerkers</option>
@@ -2910,10 +2910,10 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
         <option value="stock">Stock</option>
         <option value="settings">Instellingen</option>
       </select>
-      <input type="date" id="auditFrom" value="${weekAgoStr}" style="padding:6px 8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;">
+      <input type="date" id="auditFrom" value="${weekAgoStr}">
       <span style="font-size:12px;color:var(--gray-400);">t/m</span>
-      <input type="date" id="auditTo" value="${todayStr}" style="padding:6px 8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;">
-      <input type="number" placeholder="Max" id="auditLimit" value="200" min="10" max="1000" style="padding:6px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;width:70px;">
+      <input type="date" id="auditTo" value="${todayStr}">
+      <input type="number" placeholder="Max" id="auditLimit" value="200" min="10" max="1000" style="width:70px">
       <button class="adm-btn adm-btn-primary adm-btn-sm" id="auditLoad">↻ Laden</button>
       <button class="adm-btn adm-btn-secondary adm-btn-sm" id="auditExport">CSV</button>
     </div>
@@ -3004,7 +3004,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
 <div class="adm-card">
   <div class="adm-card-header">
     <h3 class="adm-card-title">Klanten <span style="background:var(--wf-purple-l);color:var(--wf-purple);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${rows.length}</span></h3>
-    <input id="custSearch" placeholder="Zoek naam, e-mail…" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:12px;min-width:200px;">
+    <input id="custSearch" placeholder="Zoek naam, e-mail…" style="font-size:12px;min-width:200px">
   </div>
   ${rows.length === 0
     ? `<div class="adm-empty"><div class="adm-empty-text">Nog geen klanten</div><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewCust" style="margin-top:12px">+ Eerste klant aanmaken</button></div>`
@@ -3212,7 +3212,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
     <div class="adm-form-group"><label>Telefoon</label><input name="phone" value="${esc(customer?.phone||"")}"></div>
   </div>
   <div class="adm-form-group"><label>Adres</label><input name="address" value="${esc(customer?.address||"")}"></div>
-  <div class="adm-form-group"><label>Notities</label><textarea name="notes" rows="3" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px">${esc(customer?.notes||"")}</textarea></div>
+  <div class="adm-form-group"><label>Notities</label><textarea name="notes" rows="3" style="width:100%">${esc(customer?.notes||"")}</textarea></div>
   <div id="custFormErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:8px;font-size:12px;margin-bottom:8px;"></div>
   <div class="adm-form-actions">
     <button type="button" class="adm-btn adm-btn-secondary" id="custCancel">Annuleren</button>
@@ -3288,7 +3288,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
 <div class="adm-card">
   <div class="adm-card-header">
     <h3 class="adm-card-title">Locaties / Werven <span style="background:var(--wf-purple-l);color:var(--wf-purple);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${rows.length}</span></h3>
-    <input id="venSearch" placeholder="Zoek locatie…" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:12px;min-width:180px;">
+    <input id="venSearch" placeholder="Zoek locatie…" style="font-size:12px;min-width:180px">
   </div>
   ${rows.length === 0
     ? `<div class="adm-empty"><div class="adm-empty-text">Nog geen locaties</div><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewVen" style="margin-top:12px">+ Eerste locatie aanmaken</button></div>`
@@ -3333,7 +3333,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
     <div class="adm-form-group"><label>Contactpersoon</label><input name="contactName" value="${esc(venue?.contactName||"")}"></div>
     <div class="adm-form-group"><label>Telefoon</label><input name="phone" value="${esc(venue?.phone||"")}"></div>
   </div>
-  <div class="adm-form-group"><label>Notities</label><textarea name="notes" rows="3" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px">${esc(venue?.notes||"")}</textarea></div>
+  <div class="adm-form-group"><label>Notities</label><textarea name="notes" rows="3" style="width:100%">${esc(venue?.notes||"")}</textarea></div>
   <div class="adm-form-group"><label><input type="checkbox" name="active" value="true" ${venue?.active !== false ? "checked" : ""}> Actieve locatie</label></div>
   <div id="venFormErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:8px;font-size:12px;margin-bottom:8px;"></div>
   <div class="adm-form-actions">
@@ -3516,7 +3516,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
 <div class="adm-card">
   <div class="adm-card-header">
     <h3 class="adm-card-title">Stockbeheer</h3>
-    <input id="stSearch" placeholder="Zoek artikel…" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:12px;min-width:160px;">
+    <input id="stSearch" placeholder="Zoek artikel…" style="font-size:12px;min-width:160px">
   </div>
   ${items.length === 0
     ? `<div class="adm-empty"><div class="adm-empty-text">Nog geen stockartikelen</div><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewStock" style="margin-top:12px">+ Eerste artikel aanmaken</button></div>`
@@ -3782,7 +3782,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
 <div class="adm-card">
   <div class="adm-card-header">
     <h3 class="adm-card-title">Offertes <span style="background:var(--wf-yellow-l);color:var(--wf-yellow);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${filtered.length}</span></h3>
-    <select id="qStatusFilter" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;">
+    <select id="qStatusFilter">
       <option value="">Alle statussen</option>
       ${["concept","verzonden","aanvaard","geweigerd","verlopen"].map(s=>`<option value="${s}" ${filterSel===s?"selected":""}>${QUOTE_STATUS[s].label}</option>`).join("")}
     </select>
@@ -3855,10 +3855,10 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
     document.getElementById("admDrawerTitle").textContent = isEdit ? `Offerte ${quote.number}` : "Nieuwe offerte";
 
     const lineRow = (l) => `<div class="q-line-row" style="display:grid;grid-template-columns:1fr 60px 90px 60px 24px;gap:6px;align-items:center;margin-bottom:8px;">
-        <input placeholder="Omschrijving" value="${esc(l.description||"")}" class="q-line-desc" style="padding:6px;border:1px solid var(--gray-200);border-radius:6px;font-size:13px;" ${isEdit?"disabled":""}>
-        <input type="number" min="1" value="${l.qty||1}" class="q-line-qty" style="padding:6px;border:1px solid var(--gray-200);border-radius:6px;font-size:13px;text-align:right;" ${isEdit?"disabled":""}>
-        <input type="number" min="0" step="0.01" value="${Number(l.unitPrice||0).toFixed(2)}" class="q-line-price" style="padding:6px;border:1px solid var(--gray-200);border-radius:6px;font-size:13px;text-align:right;" ${isEdit?"disabled":""}>
-        <select class="q-line-vat" style="padding:6px;border:1px solid var(--gray-200);border-radius:6px;font-size:12px;" ${isEdit?"disabled":""}>
+        <input placeholder="Omschrijving" value="${esc(l.description||"")}" class="q-line-desc" ${isEdit?"disabled":""}>
+        <input type="number" min="1" value="${l.qty||1}" class="q-line-qty" style="text-align:right" ${isEdit?"disabled":""}>
+        <input type="number" min="0" step="0.01" value="${Number(l.unitPrice||0).toFixed(2)}" class="q-line-price" style="text-align:right" ${isEdit?"disabled":""}>
+        <select class="q-line-vat" style="font-size:12px" ${isEdit?"disabled":""}>
           ${[0,6,12,21].map(v=>`<option value="${v}" ${(l.vatRate==v||(v==21&&l.vatRate==null))?"selected":""}>${v}%</option>`).join("")}
         </select>
         <button type="button" class="q-line-del" style="background:none;border:none;cursor:pointer;color:var(--gray-400);font-size:16px;padding:0;" ${isEdit?"disabled":""}>&times;</button>
@@ -3867,7 +3867,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
     document.getElementById("admDrawerBody").innerHTML = `
 <form id="qForm">
   <div class="adm-form-group"><label>Klant *</label>
-    <select name="customerId" id="qCustSel" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;" ${isEdit?"disabled":""}>
+    <select name="customerId" id="qCustSel" style="width:100%" ${isEdit?"disabled":""}>
       <option value="">— Handmatig invullen —</option>
       ${customers.map(c=>`<option value="${c.id}" ${quote?.customerId===c.id?"selected":""}>${esc(c.name)}</option>`).join("")}
     </select>
@@ -3892,7 +3892,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
     <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:600;border-top:1px solid var(--gray-200);padding-top:8px;margin-top:4px;"><span>Totaal</span><span id="qTotal">€0,00</span></div>
   </div>
   <div class="adm-form-group"><label>Opmerkingen</label>
-    <textarea name="notes" rows="2" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px" ${isEdit?"disabled":""}>${esc(quote?.notes||"")}</textarea>
+    <textarea name="notes" rows="2" style="width:100%" ${isEdit?"disabled":""}>${esc(quote?.notes||"")}</textarea>
   </div>
   <div id="qFormErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:8px;font-size:12px;margin-bottom:8px;"></div>
   <div class="adm-form-actions" style="flex-wrap:wrap;gap:8px;">
@@ -3997,7 +3997,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
   <div class="adm-card-header">
     <h3 class="adm-card-title">Facturen <span style="background:var(--wf-purple-l);color:var(--wf-purple);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${filtered.length}</span></h3>
     <div style="display:flex;gap:8px;align-items:center;">
-      <select id="invStatusFilter" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;">
+      <select id="invStatusFilter">
         <option value="">Alle statussen</option>
         <option value="open" ${filterSel==="open"?"selected":""}>Open</option>
         <option value="paid" ${filterSel==="paid"?"selected":""}>Betaald</option>
@@ -4127,7 +4127,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
 <form id="invForm">
   <div class="adm-form-group">
     <label>Klant *</label>
-    <select name="customerId" id="invCustSel" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;">
+    <select name="customerId" id="invCustSel" style="width:100%">
       <option value="">— Handmatig invullen —</option>
       ${customers.map(c => `<option value="${c.id}" ${invoice?.customerId===c.id?"selected":""}>${esc(c.name)}</option>`).join("")}
     </select>
@@ -4192,7 +4192,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
 
   <div class="adm-form-group">
     <label>Opmerkingen</label>
-    <textarea name="notes" rows="2" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">${esc(invoice?.notes||prefill.prefillNotes||"")}</textarea>
+    <textarea name="notes" rows="2" style="width:100%">${esc(invoice?.notes||prefill.prefillNotes||"")}</textarea>
   </div>
   ${prefill.workorderId ? `<input type="hidden" name="workorderId" value="${esc(prefill.workorderId)}">` : ""}
   <div id="invFormErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:8px;font-size:12px;margin-bottom:8px;"></div>
@@ -4205,10 +4205,10 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
 
     function renderInvLine(l, i) {
       return `<div class="inv-line-row" style="display:grid;grid-template-columns:1fr 60px 90px 60px 24px;gap:6px;align-items:center;margin-bottom:8px;" data-idx="${i}">
-        <input placeholder="Omschrijving" value="${esc(l.description||"")}" class="inv-line-desc" style="padding:6px;border:1px solid var(--gray-200);border-radius:6px;font-size:13px;">
-        <input type="number" min="1" placeholder="Qty" value="${l.qty||1}" class="inv-line-qty" style="padding:6px;border:1px solid var(--gray-200);border-radius:6px;font-size:13px;text-align:right;">
-        <input type="number" min="0" step="0.01" placeholder="Prijs" value="${Number(l.unitPrice||0).toFixed(2)}" class="inv-line-price" style="padding:6px;border:1px solid var(--gray-200);border-radius:6px;font-size:13px;text-align:right;">
-        <select class="inv-line-vat" style="padding:6px;border:1px solid var(--gray-200);border-radius:6px;font-size:12px;">
+        <input placeholder="Omschrijving" value="${esc(l.description||"")}" class="inv-line-desc">
+        <input type="number" min="1" placeholder="Qty" value="${l.qty||1}" class="inv-line-qty" style="text-align:right">
+        <input type="number" min="0" step="0.01" placeholder="Prijs" value="${Number(l.unitPrice||0).toFixed(2)}" class="inv-line-price" style="text-align:right">
+        <select class="inv-line-vat" style="font-size:12px">
           <option value="0" ${l.vatRate==0?"selected":""}>0%</option>
           <option value="6" ${l.vatRate==6?"selected":""}>6%</option>
           <option value="12" ${l.vatRate==12?"selected":""}>12%</option>
@@ -5063,7 +5063,7 @@ ${categories.map(cat => `
 <div style="font-size:14px;font-weight:600;margin-bottom:8px;">Stap 2: bevestig met code</div>
 <div style="display:flex;gap:8px;">
   <input id="admMfaCode" type="text" inputmode="numeric" maxlength="6" placeholder="6-cijferige code"
-    style="flex:1;padding:8px 12px;border:1px solid var(--gray-200);border-radius:8px;font-size:16px;letter-spacing:4px;text-align:center;">
+    style="flex:1;12px;font-size:16px;letter-spacing:4px;text-align:center">
   <button class="adm-btn adm-btn-primary" id="admMfaVerify">Bevestigen</button>
 </div>
 <div id="admMfaErr" style="display:none;color:var(--wf-red);font-size:12px;margin-top:6px;"></div>`;

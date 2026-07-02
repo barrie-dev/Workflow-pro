@@ -539,33 +539,33 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div>
         <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Medewerker *</label>
-        <select name="userId" required style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
+        <select name="userId" required style="width:100%;10px">
           <option value="">— Kies medewerker —</option>
           ${team.map(u => `<option value="${esc(u.id||u.userId||"")}" ${shift?.userId===(u.id||u.userId)?"selected":""}>${esc(u.name||u.email)}</option>`).join("")}
         </select>
       </div>
       <div>
         <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Datum *</label>
-        <input name="date" type="date" value="${shift?.date || weekFrom}" required style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
+        <input name="date" type="date" value="${shift?.date || weekFrom}" required style="width:100%;10px">
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div>
         <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Starttijd *</label>
-        <input name="start" type="time" value="${shift?.start || "07:00"}" required style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
+        <input name="start" type="time" value="${shift?.start || "07:00"}" required style="width:100%;10px">
       </div>
       <div>
         <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Eindtijd *</label>
-        <input name="end" type="time" value="${shift?.end || "17:00"}" required style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
+        <input name="end" type="time" value="${shift?.end || "17:00"}" required style="width:100%;10px">
       </div>
     </div>
     <div>
       <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Locatie / Werf</label>
-      <input name="venueId" placeholder="Locatie (optioneel)" value="${esc(shift?.venueId||shift?.location||"")}" style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
+      <input name="venueId" placeholder="Locatie (optioneel)" value="${esc(shift?.venueId||shift?.location||"")}" style="width:100%;10px">
     </div>
     <div>
       <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Notitie</label>
-      <input name="note" placeholder="Optionele notitie" value="${esc(shift?.note||"")}" style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
+      <input name="note" placeholder="Optionele notitie" value="${esc(shift?.note||"")}" style="width:100%;10px">
     </div>
     <div id="shiftErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:10px;font-size:13px"></div>
     <div style="display:flex;gap:10px;${isEdit?"justify-content:space-between":"justify-content:flex-end"};padding-top:4px">
@@ -650,7 +650,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
       <button class="mgr-btn mgr-btn-secondary mgr-btn-sm" id="mgrClkPrev">‹ Vorige</button>
       ${!isToday ? `<button class="mgr-btn mgr-btn-secondary mgr-btn-sm" id="mgrClkToday">Vandaag</button>` : ""}
       <button class="mgr-btn mgr-btn-secondary mgr-btn-sm" id="mgrClkNext" ${isToday?"disabled":""}>Volgende ›</button>
-      <input type="date" id="mgrClkPicker" value="${_mgrClockDate}" style="border:1px solid var(--gray-200);border-radius:8px;padding:5px 8px;font-size:13px;cursor:pointer;" max="${todayStr}">
+      <input type="date" id="mgrClkPicker" value="${_mgrClockDate}" style="padding:5px 8px;cursor:pointer" max="${todayStr}">
     </div>
   </div>
   <div class="mgr-card-body" style="display:flex;gap:16px;flex-wrap:wrap;padding-bottom:0;">
@@ -749,17 +749,17 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     <div>
       <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Inkloktijd *</label>
       <input name="clockedIn" type="datetime-local" value="${toLocal(inDt)}" required
-        style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;">
+        style="width:100%;10px">
     </div>
     <div>
       <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Uitkloktijd</label>
       <input name="clockedOut" type="datetime-local" value="${toLocal(outDt)}"
-        style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;">
+        style="width:100%;10px">
     </div>
     <div>
       <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Notitie bij correctie</label>
       <input name="note" placeholder="Reden voor correctie (optioneel)"
-        style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;">
+        style="width:100%;10px">
     </div>
     <div id="clkCorrErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:10px;font-size:13px"></div>
     <div style="display:flex;gap:10px;justify-content:flex-end">
@@ -994,7 +994,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
   <div style="margin-bottom:16px;">
     <label style="font-size:12px;font-weight:600;color:var(--gray-700);display:block;margin-bottom:4px;">Opmerking ${isApprove?"(optioneel)":"(optioneel — geeft feedback aan medewerker)"}</label>
     <textarea id="mgrLeaveNote" rows="3" placeholder="Voeg een opmerking toe…"
-      style="width:100%;border:1px solid var(--gray-200);border-radius:8px;padding:8px;font-size:13px;resize:vertical;box-sizing:border-box;"></textarea>
+      style="width:100%;resize:vertical;box-sizing:border-box"></textarea>
   </div>
   <div id="mgrLeaveModalErr" style="display:none;color:var(--wf-red);font-size:12px;margin-bottom:8px;"></div>
   <div style="display:flex;gap:8px;justify-content:flex-end;">
@@ -1045,7 +1045,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
 <div class="mgr-card">
   <div class="mgr-card-header">
     <h3 class="mgr-card-title">Onkostennota's</h3>
-    <select id="mgrExpFilter" style="padding:5px 9px;border:1px solid var(--gray-200);border-radius:8px;font-size:12px;">
+    <select id="mgrExpFilter" style="padding:5px 9px;font-size:12px">
       <option value="">Alle</option>
       <option value="ingediend">In behandeling</option>
       <option value="goedgekeurd">Goedgekeurd</option>
@@ -1101,7 +1101,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
   <div style="margin-bottom:16px;">
     <label style="font-size:12px;font-weight:600;color:var(--gray-700);display:block;margin-bottom:4px;">Opmerking ${isApprove?"(optioneel)":"(verplicht bij weigering)"}</label>
     <textarea id="expReviewNote" rows="3" placeholder="${isApprove?"Goedgekeurd voor uitbetaling…":"Geef een reden op…"}"
-      style="width:100%;border:1px solid var(--gray-200);border-radius:8px;padding:8px;font-size:13px;resize:vertical;box-sizing:border-box;"></textarea>
+      style="width:100%;resize:vertical;box-sizing:border-box"></textarea>
   </div>
   <div id="expReviewErr" style="display:none;color:var(--wf-red);font-size:12px;margin-bottom:8px;"></div>
   <div style="display:flex;gap:8px;justify-content:flex-end;">
@@ -1144,8 +1144,8 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
   <div class="mgr-card-header">
     <h3 class="mgr-card-title">Werkbonnen <span style="background:var(--wf-blue-l);color:var(--wf-blue-d);border-radius:999px;padding:2px 9px;font-size:11px;font-weight:600">${workorders.length}</span></h3>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <input id="woSearch" placeholder="Zoek titel, klant…" style="padding:5px 9px;border:1px solid var(--gray-200);border-radius:8px;font-size:12px;min-width:160px;">
-      <select id="woFilter" style="padding:5px 9px;border:1px solid var(--gray-200);border-radius:8px;font-size:12px">
+      <input id="woSearch" placeholder="Zoek titel, klant…" style="padding:5px 9px;font-size:12px;min-width:160px">
+      <select id="woFilter" style="padding:5px 9px;font-size:12px">
         <option value="">Alle statussen</option>
         <option value="open">Open</option>
         <option value="in_progress">In uitvoering</option>
@@ -1275,8 +1275,8 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
   <div style="padding:16px 24px;border-top:1px solid var(--gray-100);background:var(--gray-50);border-radius:0 0 14px 14px">
     <div style="font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:8px">Status wijzigen</div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <select id="woDetailStatus" style="padding:7px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">${statusOpts}</select>
-      <textarea id="woDetailNote" placeholder="Opmerking (optioneel)" rows="2" style="flex:1;padding:7px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;resize:vertical;min-width:150px"></textarea>
+      <select id="woDetailStatus">${statusOpts}</select>
+      <textarea id="woDetailNote" placeholder="Opmerking (optioneel)" rows="2" style="flex:1;resize:vertical;min-width:150px"></textarea>
       <button id="woDetailSave" class="mgr-btn mgr-btn-primary mgr-btn-sm">Opslaan</button>
     </div>
     <div id="woDetailErr" style="display:none;margin-top:8px;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:8px;font-size:12px"></div>
@@ -1323,29 +1323,29 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
   <form id="woForm" style="display:flex;flex-direction:column;gap:14px">
     <div>
       <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Titel *</label>
-      <input name="title" required placeholder="Omschrijving van de opdracht" style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
+      <input name="title" required placeholder="Omschrijving van de opdracht" style="width:100%;10px">
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div>
         <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Medewerker</label>
-        <select name="userId" style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
+        <select name="userId" style="width:100%;10px">
           <option value="">— Niet toegewezen —</option>
           ${team.map(u => `<option value="${esc(u.id)}">${esc(u.name||u.email)}</option>`).join("")}
         </select>
       </div>
       <div>
         <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Klant</label>
-        <input name="clientName" placeholder="Naam klant" style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
+        <input name="clientName" placeholder="Naam klant" style="width:100%;10px">
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div>
         <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Gepland op</label>
-        <input name="scheduledDate" type="date" style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
+        <input name="scheduledDate" type="date" style="width:100%;10px">
       </div>
       <div>
         <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Prioriteit</label>
-        <select name="priority" style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
+        <select name="priority" style="width:100%;10px">
           <option value="normaal" selected>Normaal</option>
           <option value="hoog">Hoog</option>
           <option value="laag">Laag</option>
@@ -1434,15 +1434,15 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
   <form id="msgForm" style="display:flex;flex-direction:column;gap:14px">
     <div>
       <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Onderwerp *</label>
-      <input name="subject" required placeholder="Onderwerp van het bericht" style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
+      <input name="subject" required placeholder="Onderwerp van het bericht" style="width:100%;10px">
     </div>
     <div>
       <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Bericht *</label>
-      <textarea name="body" required rows="4" placeholder="Schrijf hier je bericht…" style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;resize:vertical"></textarea>
+      <textarea name="body" required rows="4" placeholder="Schrijf hier je bericht…" style="width:100%;10px;resize:vertical"></textarea>
     </div>
     <div>
       <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Aan (rol / iedereen)</label>
-      <select name="toRole" style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
+      <select name="toRole" style="width:100%;10px">
         <option value="all">Alle medewerkers</option>
         <option value="employee">Medewerkers</option>
         <option value="manager">Managers</option>
@@ -1532,24 +1532,24 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
   <form id="vehForm" style="display:flex;flex-direction:column;gap:12px;">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
       <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Naam *</label>
-        <input name="name" value="${esc(vehicle?.name||"")}" required placeholder="Bestelwagen 1" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;box-sizing:border-box;"></div>
+        <input name="name" value="${esc(vehicle?.name||"")}" required placeholder="Bestelwagen 1" style="width:100%;box-sizing:border-box"></div>
       <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Kenteken</label>
-        <input name="plate" value="${esc(vehicle?.plate||"")}" placeholder="1-ABC-234" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;box-sizing:border-box;font-family:monospace;"></div>
+        <input name="plate" value="${esc(vehicle?.plate||"")}" placeholder="1-ABC-234" style="width:100%;box-sizing:border-box;font-family:monospace"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
       <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Merk</label>
-        <input name="brand" value="${esc(vehicle?.brand||"")}" placeholder="Ford" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;box-sizing:border-box;"></div>
+        <input name="brand" value="${esc(vehicle?.brand||"")}" placeholder="Ford" style="width:100%;box-sizing:border-box"></div>
       <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Model</label>
-        <input name="model" value="${esc(vehicle?.model||"")}" placeholder="Transit" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;box-sizing:border-box;"></div>
+        <input name="model" value="${esc(vehicle?.model||"")}" placeholder="Transit" style="width:100%;box-sizing:border-box"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
       <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Huidige KM-stand</label>
-        <input name="mileage" type="number" value="${vehicle?.mileage||""}" placeholder="0" min="0" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;box-sizing:border-box;"></div>
+        <input name="mileage" type="number" value="${vehicle?.mileage||""}" placeholder="0" min="0" style="width:100%;box-sizing:border-box"></div>
       <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Volgende service</label>
-        <input name="nextService" type="date" value="${vehicle?.nextService||""}" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;box-sizing:border-box;"></div>
+        <input name="nextService" type="date" value="${vehicle?.nextService||""}" style="width:100%;box-sizing:border-box"></div>
     </div>
     <div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Status</label>
-      <select name="status" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;">
+      <select name="status" style="width:100%">
         <option value="active" ${!vehicle||vehicle.status==="active"?"selected":""}>Actief</option>
         <option value="maintenance" ${vehicle?.status==="maintenance"?"selected":""}>In onderhoud</option>
         <option value="inactive" ${vehicle?.status==="inactive"?"selected":""}>Inactief</option>
@@ -1612,11 +1612,11 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     <div>
       <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Nieuwe KM-stand *</label>
       <input name="mileage" type="number" min="${currentMileage+1}" required placeholder="${currentMileage + 100}"
-        style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:14px;box-sizing:border-box;">
+        style="width:100%;font-size:14px;box-sizing:border-box">
     </div>
     <div>
       <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Opmerking</label>
-      <input name="note" placeholder="Bijv. levering Brussel" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;box-sizing:border-box;">
+      <input name="note" placeholder="Bijv. levering Brussel" style="width:100%;box-sizing:border-box">
     </div>
     <div id="mileageErr" style="display:none;color:var(--wf-red);font-size:12px;"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;">
@@ -1716,7 +1716,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
   <h2 style="font-size:17px;font-weight:600;color:var(--gray-900);margin:0">Rapporten</h2>
   <div style="display:flex;align-items:center;gap:8px">
     <label style="font-size:12px;color:var(--gray-500);font-weight:600">Periode:</label>
-    <select id="rptPeriod" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
+    <select id="rptPeriod">
       ${monthOpts.join("")}
     </select>
   </div>

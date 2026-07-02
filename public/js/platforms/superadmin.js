@@ -147,7 +147,7 @@
 /* Filters */
 .sa-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
 .sa-filters input,.sa-filters select{padding:6.5px 11px;border:1px solid var(--gray-200);border-radius:8px;font-size:12.5px;color:var(--gray-700);background:#fff}
-.sa-filters input:focus,.sa-filters select:focus{outline:none;border-color:var(--wf-blue);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.sa-filters input:focus,.sa-filters select:focus{outline:none;border-color:var(--wf-blue);box-shadow:var(--ring)}
 
 /* Empty / loader / error */
 .sa-empty{padding:36px;text-align:center;color:var(--gray-400);font-size:13px}
@@ -168,8 +168,8 @@
 /* Form fields */
 .sa-field{display:flex;flex-direction:column;gap:5px}
 .sa-field label{font-size:11.5px;font-weight:700;color:var(--gray-700);text-transform:uppercase;letter-spacing:.4px}
-.sa-field input,.sa-field select,.sa-field textarea{padding:8px 11px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;color:var(--gray-900);background:#fff;width:100%}
-.sa-field input:focus,.sa-field select:focus,.sa-field textarea:focus{outline:none;border-color:var(--wf-blue);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.sa-field input,.sa-field select,.sa-field textarea{padding:8px 11px;border:1px solid var(--line);border-radius:10px;font-size:13px;color:var(--gray-900);background:#fff;width:100%}
+.sa-field input:focus,.sa-field select:focus,.sa-field textarea:focus{outline:none;border-color:var(--wf-blue);box-shadow:var(--ring)}
 .sa-field .hint{font-size:11px;color:var(--gray-400)}
 .sa-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 
@@ -545,11 +545,11 @@ ${(s.locked||[]).length ? `<div class="sa-card" style="margin-bottom:16px"><div 
       <input type="checkbox" id="annActive" ${ann.active ? "checked" : ""}> Banner actief
     </label>
     <label style="display:block;font-size:12.5px;font-weight:600;margin-bottom:4px">Niveau</label>
-    <select id="annLevel" style="padding:8px;border:1px solid var(--gray-200);border-radius:8px;margin-bottom:12px;width:200px">
+    <select id="annLevel" style="margin-bottom:12px;width:200px">
       ${lvl("info", "Info (blauw)")}${lvl("warning", "Waarschuwing (oranje)")}${lvl("maintenance", "Onderhoud (rood)")}
     </select>
     <label style="display:block;font-size:12.5px;font-weight:600;margin-bottom:4px">Bericht</label>
-    <textarea id="annMessage" rows="3" maxlength="500" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;margin-bottom:12px" placeholder="Bv. Gepland onderhoud zondag 02:00–04:00. Excuses voor het ongemak.">${esc(ann.message || "")}</textarea>
+    <textarea id="annMessage" rows="3" maxlength="500" style="width:100%;margin-bottom:12px" placeholder="Bv. Gepland onderhoud zondag 02:00–04:00. Excuses voor het ongemak.">${esc(ann.message || "")}</textarea>
     <div style="display:flex;gap:8px;align-items:center">
       <button class="sa-btn btn-primary sm" id="annSave">Opslaan</button>
       <span id="annMsg" style="font-size:12.5px;color:var(--wf-green)"></span>
@@ -1021,10 +1021,10 @@ ${canManage ? `
 <div class="sa-card" style="margin-bottom:16px">
   <div class="sa-card-head"><div class="sa-card-title">Nieuwe reseller</div></div>
   <div style="padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:680px">
-    <input id="rsName" placeholder="Naam (partner/bedrijf)" style="padding:9px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
-    <input id="rsContact" placeholder="Contact-e-mail (optioneel)" style="padding:9px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
-    <input id="rsLogin" type="email" placeholder="Login-e-mail" style="padding:9px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
-    <div><label style="font-size:12px;color:var(--gray-500)">Commissie %</label><input id="rsPct" type="number" min="0" max="100" value="10" style="width:100%;padding:9px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px"></div>
+    <input id="rsName" placeholder="Naam (partner/bedrijf)">
+    <input id="rsContact" placeholder="Contact-e-mail (optioneel)">
+    <input id="rsLogin" type="email" placeholder="Login-e-mail">
+    <div><label style="font-size:12px;color:var(--gray-500)">Commissie %</label><input id="rsPct" type="number" min="0" max="100" value="10" style="width:100%"></div>
     <div style="grid-column:1/3;font-size:12px;color:var(--gray-500)">De reseller ontvangt een activatiemail om zelf een wachtwoord in te stellen.</div>
     <div style="grid-column:1/3;display:flex;gap:8px;align-items:center"><button class="sa-btn btn-primary sm" id="rsCreate">Reseller toevoegen</button><span id="rsMsg" style="font-size:12.5px;color:var(--wf-red)"></span></div>
   </div>
@@ -1127,8 +1127,8 @@ ${canManage ? `
 <div class="sa-card" style="margin-bottom:16px">
   <div class="sa-card-head"><div class="sa-card-title">Nieuw teamlid</div></div>
   <div style="padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:640px">
-    <input id="stfName" placeholder="Naam" style="padding:9px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
-    <input id="stfEmail" type="email" placeholder="E-mail" style="padding:9px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
+    <input id="stfName" placeholder="Naam">
+    <input id="stfEmail" type="email" placeholder="E-mail">
     <div style="grid-column:1/3;font-size:12px;color:var(--gray-500)">Het teamlid ontvangt een activatiemail om zelf een wachtwoord in te stellen.</div>
     <div style="grid-column:1/3">
       <div style="font-size:12px;color:var(--gray-500);margin-bottom:6px">Toegang tot platform-secties:</div>
@@ -1308,16 +1308,16 @@ ${canManage ? `
   <h3 style="margin:0 0 4px;font-size:17px;color:var(--gray-900)">Support-sessie starten</h3>
   <div style="font-size:13px;color:var(--gray-500);margin-bottom:16px">${esc(row.tenantName||tenantId)}</div>
   <label style="display:block;font-size:13px;font-weight:600;color:var(--gray-700);margin-bottom:6px">Wie neem je over?</label>
-  <select id="supUser" style="width:100%;padding:9px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;margin-bottom:14px">
+  <select id="supUser" style="width:100%;margin-bottom:14px">
     ${users.length ? users.map(u=>`<option value="${u.id}">${esc(u.name||u.email)} — ${roleLabel[u.role]||u.role}${u.email?` (${esc(u.email)})`:""}</option>`).join("") : `<option value="">Geen gebruikers gevonden</option>`}
   </select>
   <label style="display:block;font-size:13px;font-weight:600;color:var(--gray-700);margin-bottom:6px">Rechten</label>
-  <select id="supScope" style="width:100%;padding:9px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;margin-bottom:14px">
+  <select id="supScope" style="width:100%;margin-bottom:14px">
     <option value="read">Alleen-lezen (aanbevolen)</option>
     <option value="write">Lezen + schrijven</option>
   </select>
   <label style="display:block;font-size:13px;font-weight:600;color:var(--gray-700);margin-bottom:6px">Reden (verplicht, wordt geaudit)</label>
-  <input id="supReason" placeholder="bv. factuur kan niet verstuurd worden" style="width:100%;padding:9px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;margin-bottom:8px">
+  <input id="supReason" placeholder="bv. factuur kan niet verstuurd worden" style="width:100%;margin-bottom:8px">
   <div id="supErr" style="display:none;color:var(--wf-red);font-size:12.5px;margin-bottom:8px"></div>
   <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
     <button class="sa-btn btn-secondary sm" id="supCancel">Annuleren</button>
@@ -1525,12 +1525,12 @@ ${canManage ? `
       <div class="sa-addon-row" data-key="${esc(a.key)}" style="border:1px solid var(--gray-200);border-radius:10px;padding:12px;display:grid;grid-template-columns:1fr 130px;gap:10px">
         <div>
           <div style="font-size:11px;color:var(--gray-400);font-family:monospace;margin-bottom:4px">${esc(a.key)}</div>
-          <input class="ao-label" value="${esc(a.label)}" placeholder="Naam" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:7px;font-size:13px;font-weight:600;margin-bottom:6px">
-          <textarea class="ao-desc" rows="2" placeholder="Omschrijving" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:7px;font-size:12.5px;resize:vertical">${esc(a.description)}</textarea>
+          <input class="ao-label" value="${esc(a.label)}" placeholder="Naam" style="width:100%;font-weight:600;margin-bottom:6px">
+          <textarea class="ao-desc" rows="2" placeholder="Omschrijving" style="width:100%;font-size:12.5px;resize:vertical">${esc(a.description)}</textarea>
         </div>
         <div style="display:flex;flex-direction:column;gap:8px">
           <label style="font-size:11px;color:var(--gray-500)">€/maand
-            <input class="ao-monthly" type="number" min="0" step="1" value="${a.monthly ?? ""}" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:7px;font-size:13px">
+            <input class="ao-monthly" type="number" min="0" step="1" value="${a.monthly ?? ""}" style="width:100%">
           </label>
           <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--gray-600);cursor:pointer">
             <input class="ao-active" type="checkbox" ${a.active ? "checked" : ""}> Actief
@@ -1581,9 +1581,9 @@ ${canManage ? `
     <div class="sa-tbl-wrap"><table class="sa-tbl"><thead><tr><th>Bundel</th><th>Basis €/jaar</th><th>Per seat €/jaar</th><th>Inbegrepen seats</th></tr></thead><tbody>
       ${plans.map(p => `<tr class="pp-row" data-key="${esc(p.key)}">
         <td><strong>${esc(p.label)}</strong></td>
-        <td><input class="pp-base" type="number" min="0" value="${p.baseAnnual}" style="width:100px;padding:6px;border:1px solid var(--gray-200);border-radius:6px"></td>
-        <td><input class="pp-seat" type="number" min="0" value="${p.seatAnnual}" style="width:100px;padding:6px;border:1px solid var(--gray-200);border-radius:6px"></td>
-        <td><input class="pp-inc" type="number" min="0" value="${p.includedSeats}" style="width:80px;padding:6px;border:1px solid var(--gray-200);border-radius:6px"></td>
+        <td><input class="pp-base" type="number" min="0" value="${p.baseAnnual}" style="width:100px"></td>
+        <td><input class="pp-seat" type="number" min="0" value="${p.seatAnnual}" style="width:100px"></td>
+        <td><input class="pp-inc" type="number" min="0" value="${p.includedSeats}" style="width:80px"></td>
       </tr>`).join("")}
     </tbody></table></div>
     <div style="display:flex;gap:8px;align-items:center;margin-top:10px">

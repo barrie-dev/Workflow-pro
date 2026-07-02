@@ -88,6 +88,9 @@ input[type="radio"] {
   cursor: pointer;
 }
 
+/* Basis-formulierstijl: één globale bron in de FORMS-sectie verderop
+   (input/select/textarea + focus-ring, Editorial-waarden). */
+
 /* Status-dot (vervangt emoji-bolletjes) */
 .adm-dot {
   display: inline-block;
@@ -770,22 +773,22 @@ input,
 select,
 textarea {
   width: 100%;
-  border: 1.5px solid var(--gray-200);
-  border-radius: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  font-size: 0.8125rem;
-  color: var(--gray-800);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 11px;
+  font-size: 13px;
+  color: var(--ink);
   font-family: inherit;
   outline: none;
-  transition: border-color 0.15s;
-  background: white;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  background: var(--surface);
 }
 
 input:focus,
 select:focus,
 textarea:focus {
   border-color: var(--wf-blue);
-  box-shadow: 0 0 0 3px rgba(30,107,230,0.08);
+  box-shadow: var(--ring);
 }
 
 label {
@@ -1554,20 +1557,8 @@ label {
   gap: 0.3125rem;
 }
 
-input, select, textarea {
-  font-size: 0.8125rem;
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.5rem;
-  border-color: var(--gray-200);
-  background: var(--gray-50);
-  transition: all 0.15s;
-}
-
-input:focus, select:focus, textarea:focus {
-  background: white;
-  border-color: var(--wf-blue);
-  box-shadow: 0 0 0 3px rgba(30,107,230,0.08);
-}
+/* (duplicaat-override verwijderd — de FORMS-sectie is de enige bron
+   voor de basis-formulierstijl) */
 
 /* ── Grid layouts: betere max-width controle ── */
 .billing-grid,

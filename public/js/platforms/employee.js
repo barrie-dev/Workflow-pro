@@ -1557,7 +1557,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
   <form id="empComposeForm" style="display:flex;flex-direction:column;gap:12px">
     <div>
       <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Aan</label>
-      <select name="recipientRole" style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
+      <select name="recipientRole" style="width:100%;10px">
         <option value="">Alle teamleden</option>
         <option value="manager">Manager(s)</option>
         <option value="tenant_admin">Admin</option>
@@ -1565,11 +1565,11 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
     </div>
     <div>
       <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Onderwerp</label>
-      <input name="subject" placeholder="Onderwerp van je bericht" style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
+      <input name="subject" placeholder="Onderwerp van je bericht" style="width:100%;10px">
     </div>
     <div>
       <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Bericht *</label>
-      <textarea name="body" required rows="3" placeholder="Schrijf je bericht…" style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;resize:none"></textarea>
+      <textarea name="body" required rows="3" placeholder="Schrijf je bericht…" style="width:100%;10px;resize:none"></textarea>
     </div>
     <div id="empComposeErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:8px 10px;font-size:12px"></div>
     <button type="submit" style="padding:11px;background:var(--wf-blue);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;">Versturen</button>
@@ -1734,19 +1734,19 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
   <form id="empProfileForm" style="display:flex;flex-direction:column;gap:12px;">
     <div>
       <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px;">Naam</label>
-      <input name="name" value="${profile.name||""}" placeholder="Volledige naam" style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;">
+      <input name="name" value="${profile.name||""}" placeholder="Volledige naam" style="width:100%;10px">
     </div>
     <div>
       <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px;">Telefoon</label>
-      <input name="phone" type="tel" value="${profile.phone||""}" placeholder="+32 ..." style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;">
+      <input name="phone" type="tel" value="${profile.phone||""}" placeholder="+32 ..." style="width:100%;10px">
     </div>
     <div>
       <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px;">Adres</label>
-      <input name="address" value="${profile.address||""}" placeholder="Straat 1, 1000 Brussel" style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;">
+      <input name="address" value="${profile.address||""}" placeholder="Straat 1, 1000 Brussel" style="width:100%;10px">
     </div>
     <div>
       <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px;">IBAN <span style="font-weight:400;color:var(--gray-400);">(voor onkostenvergoeding)</span></label>
-      <input name="iban" value="${profile.iban||""}" placeholder="BE68 5390 0754 7034" style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;font-family:monospace;" autocomplete="off">
+      <input name="iban" value="${profile.iban||""}" placeholder="BE68 5390 0754 7034" style="width:100%;10px;font-family:monospace" autocomplete="off">
     </div>
     <div id="empProfileMsg" style="display:none;padding:8px 10px;border-radius:8px;font-size:12px;"></div>
     <button type="submit" style="padding:10px;background:var(--wf-blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Opslaan</button>
@@ -1759,11 +1759,11 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
   <form id="empPwForm" style="display:flex;flex-direction:column;gap:12px;">
     <div>
       <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px;">Huidig wachtwoord</label>
-      <input name="currentPassword" type="password" required style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;">
+      <input name="currentPassword" type="password" required style="width:100%;10px">
     </div>
     <div>
       <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px;">Nieuw wachtwoord</label>
-      <input name="newPassword" type="password" required minlength="8" style="width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;">
+      <input name="newPassword" type="password" required minlength="8" style="width:100%;10px">
     </div>
     <div id="empPwMsg" style="display:none;padding:8px 10px;border-radius:8px;font-size:12px;"></div>
     <button type="submit" style="padding:10px;background:var(--gray-900);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Wijzigen</button>

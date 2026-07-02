@@ -56,10 +56,10 @@
 <div style="background:#fff;border-radius:14px;padding:18px 20px;margin-bottom:18px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
   <div style="font-weight:600;margin-bottom:12px">Nieuwe klant aanmaken</div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:680px">
-    <input id="ncName" placeholder="Bedrijfsnaam klant" style="padding:9px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
-    <select id="ncPlan" style="padding:9px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px"><option value="starter">Starter</option><option value="business" selected>Business</option><option value="enterprise">Enterprise</option></select>
-    <input id="ncEmail" type="email" placeholder="Login-e-mail beheerder klant" style="padding:9px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
-    <input id="ncAdminName" placeholder="Naam beheerder" style="padding:9px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px">
+    <input id="ncName" placeholder="Bedrijfsnaam klant">
+    <select id="ncPlan"><option value="starter">Starter</option><option value="business" selected>Business</option><option value="enterprise">Enterprise</option></select>
+    <input id="ncEmail" type="email" placeholder="Login-e-mail beheerder klant">
+    <input id="ncAdminName" placeholder="Naam beheerder">
     <div style="grid-column:1/3;font-size:12px;color:var(--gray-500)">De beheerder van de klant ontvangt een activatiemail om zelf een wachtwoord in te stellen.</div>
     <div style="grid-column:1/3;display:flex;gap:8px;align-items:center">
       <button id="ncCreate" style="background:var(--wf-blue);color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer">Klant aanmaken</button>
