@@ -46,7 +46,7 @@
     b.setAttribute("role", "status");
     b.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:9999;background:var(--wf-red);color:#fff;font:600 13px/1.4 system-ui,sans-serif;padding:6px 16px;display:flex;align-items:center;justify-content:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,.2)";
     const span = document.createElement("span");
-    span.textContent = `🛟 Support-sessie actief — ${s.agent || "supportmedewerker"} (${scope}). Deze sessie wordt geaudit.`;
+    span.textContent = `Support-sessie actief — ${s.agent || "supportmedewerker"} (${scope}). Deze sessie wordt geaudit.`;
     b.appendChild(span);
     const exit = document.createElement("button");
     exit.textContent = "Sessie verlaten";
@@ -283,7 +283,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
       btn.disabled = true;
       try {
         await api("POST", active ? "/me/clock/out" : "/me/clock/in", {});
-        window.showToast && window.showToast(active ? "Uitgeklokt ✓" : "Ingeklokt ✓", "success");
+        window.showToast && window.showToast(active ? "Uitgeklokt" : "Ingeklokt", "success");
         await refresh();
       } catch (e) { window.showToast && window.showToast(e.message, "error"); }
       finally { btn.disabled = false; }
@@ -569,7 +569,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     </div>
     <div id="shiftErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:10px;font-size:13px"></div>
     <div style="display:flex;gap:10px;${isEdit?"justify-content:space-between":"justify-content:flex-end"};padding-top:4px">
-      ${isEdit ? `<button type="button" id="shiftDelete" style="padding:8px 14px;background:var(--wf-red-l);color:var(--wf-red);border:1px solid var(--wf-red-l);border-radius:8px;font-size:13px;cursor:pointer;">🗑 Verwijderen</button>` : ""}
+      ${isEdit ? `<button type="button" id="shiftDelete" style="padding:8px 14px;background:var(--wf-red-l);color:var(--wf-red);border:1px solid var(--wf-red-l);border-radius:8px;font-size:13px;cursor:pointer;">Verwijderen</button>` : ""}
       <div style="display:flex;gap:8px;">
         <button type="button" id="shiftCancel" style="padding:8px 16px;border:1px solid var(--gray-200);background:#fff;border-radius:8px;font-size:13px;cursor:pointer">Annuleren</button>
         <button type="submit" style="padding:8px 20px;background:var(--wf-blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">${isEdit ? "Opslaan" : "Aanmaken"}</button>
@@ -682,7 +682,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
             <td style="white-space:nowrap;">
               <button class="mgr-btn mgr-btn-secondary mgr-btn-sm mgr-clk-edit" data-id="${esc(c.id)}"
                 data-in="${esc(c.clockedIn||"")}" data-out="${esc(c.clockedOut||"")}" data-name="${esc(c.userName||c.userId)}"
-                title="Corrigeer tijden" style="font-size:12px;">✏ Corrigeer</button>
+                title="Corrigeer tijden" style="font-size:12px;">Corrigeer</button>
               ${c.status==="in" ? `<button class="mgr-btn mgr-btn-danger mgr-btn-sm mgr-clk-forceout" data-id="${esc(c.id)}" data-name="${esc(c.userName||c.userId)}"
                 title="Forceer uitklopping" style="font-size:12px;margin-left:4px;">⏹ Uitkloppen</button>` : ""}
             </td>
@@ -853,9 +853,9 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
               <td style="font-size:12px;color:var(--gray-500);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(l.reason||"")}">${esc(l.reason||"—")}</td>
               <td><span class="mgr-status mgr-status-${l.status}">${esc(l.status)}</span></td>
               <td>${l.status==="aangevraagd" ? `
-                <button class="mgr-btn mgr-btn-success mgr-btn-sm mgr-leave-approve" data-id="${esc(l.id)}" data-dec="goedgekeurd">✓ Goed</button>
-                <button class="mgr-btn mgr-btn-danger mgr-btn-sm mgr-leave-approve" data-id="${esc(l.id)}" data-dec="geweigerd">✗ Weiger</button>
-              ` : `<span style="font-size:11px;color:var(--gray-400);">${l.reviewNote ? `💬 ${esc(l.reviewNote)}` : "—"}</span>`}</td>
+                <button class="mgr-btn mgr-btn-success mgr-btn-sm mgr-leave-approve" data-id="${esc(l.id)}" data-dec="goedgekeurd">Goed</button>
+                <button class="mgr-btn mgr-btn-danger mgr-btn-sm mgr-leave-approve" data-id="${esc(l.id)}" data-dec="geweigerd">Weigeren</button>
+              ` : `<span style="font-size:11px;color:var(--gray-400);">${l.reviewNote ? `${esc(l.reviewNote)}` : "—"}</span>`}</td>
             </tr>`).join("") || '<tr><td colspan="7" class="mgr-empty">Geen aanvragen</td></tr>'}
           </tbody>
         </table>
@@ -1017,7 +1017,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
       try {
         await api("PATCH", `/leaves/${leaveId}/review`, { decision, reviewNote: reviewNote || undefined });
         close();
-        window.showToast && window.showToast(isApprove ? "Verlof goedgekeurd ✓" : "Verlof geweigerd", isApprove ? "success" : "info");
+        window.showToast && window.showToast(isApprove ? "Verlof goedgekeurd" : "Verlof geweigerd", isApprove ? "success" : "info");
         if (onDone) onDone(); else renderLeaves();
       } catch(e) {
         errEl.textContent = e.message; errEl.style.display = "";
@@ -1066,10 +1066,10 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
         <td>${esc(e.date)}</td>
         <td>${esc(e.category||"—")}</td>
         <td style="font-weight:600;">€ ${Number(e.amount||0).toFixed(2)}</td>
-        <td><span class="mgr-status mgr-status-${e.status}">${esc(e.status)}</span>${e.reviewNote?`<div style="font-size:11px;color:var(--gray-500);margin-top:2px;">💬 ${esc(e.reviewNote.slice(0,30))}${e.reviewNote.length>30?"…":""}</div>`:""}</td>
+        <td><span class="mgr-status mgr-status-${e.status}">${esc(e.status)}</span>${e.reviewNote?`<div style="font-size:11px;color:var(--gray-500);margin-top:2px;">${esc(e.reviewNote.slice(0,30))}${e.reviewNote.length>30?"…":""}</div>`:""}</td>
         <td style="white-space:nowrap;">${["pending","ingediend"].includes(e.status)?`
-          <button class="mgr-btn mgr-btn-success mgr-btn-sm mgr-exp-review" data-id="${e.id}" data-dec="goedgekeurd" data-name="${esc(e.userName||e.userId)}" data-amount="${e.amount}" data-cat="${esc(e.category||"")}">✓ Goed</button>
-          <button class="mgr-btn mgr-btn-danger  mgr-btn-sm mgr-exp-review" data-id="${e.id}" data-dec="geweigerd"  data-name="${esc(e.userName||e.userId)}" data-amount="${e.amount}" data-cat="${esc(e.category||"")}">✗ Weiger</button>
+          <button class="mgr-btn mgr-btn-success mgr-btn-sm mgr-exp-review" data-id="${e.id}" data-dec="goedgekeurd" data-name="${esc(e.userName||e.userId)}" data-amount="${e.amount}" data-cat="${esc(e.category||"")}">Goed</button>
+          <button class="mgr-btn mgr-btn-danger  mgr-btn-sm mgr-exp-review" data-id="${e.id}" data-dec="geweigerd"  data-name="${esc(e.userName||e.userId)}" data-amount="${e.amount}" data-cat="${esc(e.category||"")}">Weigeren</button>
         `:"—"}</td>
       </tr>`).join("") || '<tr><td colspan="6" class="mgr-empty">Geen onkosten</td></tr>';
     }
@@ -1106,7 +1106,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
   <div id="expReviewErr" style="display:none;color:var(--wf-red);font-size:12px;margin-bottom:8px;"></div>
   <div style="display:flex;gap:8px;justify-content:flex-end;">
     <button id="expReviewCancel" class="mgr-btn mgr-btn-secondary mgr-btn-sm">Annuleren</button>
-    <button id="expReviewConfirm" class="mgr-btn ${isApprove?"mgr-btn-success":"mgr-btn-danger"} mgr-btn-sm">${isApprove?"✓ Goedkeuren":"✗ Weigeren"}</button>
+    <button id="expReviewConfirm" class="mgr-btn ${isApprove?"mgr-btn-success":"mgr-btn-danger"} mgr-btn-sm">${isApprove?"Goedkeuren":"Weigeren"}</button>
   </div>
 </div>`;
     document.body.appendChild(overlay);
@@ -1122,11 +1122,11 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
       try {
         await api("PATCH", `/expenses/${id}`, { status: dec, reviewNote: note || undefined });
         close();
-        window.showToast && window.showToast(isApprove ? "Onkost goedgekeurd ✓" : "Onkost geweigerd", isApprove ? "success" : "info");
+        window.showToast && window.showToast(isApprove ? "Onkost goedgekeurd" : "Onkost geweigerd", isApprove ? "success" : "info");
         onDone();
       } catch(e) {
         errEl.textContent = e.message; errEl.style.display = "";
-        confirmBtn.disabled = false; confirmBtn.textContent = isApprove ? "✓ Goedkeuren" : "✗ Weigeren";
+        confirmBtn.disabled = false; confirmBtn.textContent = isApprove ? "Goedkeuren" : "Weigeren";
       }
     });
   }
@@ -1194,8 +1194,8 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
       <td><span style="font-size:11px;font-weight:600;color:${prioColor[w.priority]||"var(--gray-400)"}">${esc(w.priority||"—")}</span></td>
       <td>${w.scheduledDate||w.createdAt?.slice(0,10)||"—"}</td>
       <td style="white-space:nowrap">
-        <button class="mgr-btn mgr-btn-secondary mgr-btn-sm wo-detail" data-id="${esc(w.id)}">👁 Detail</button>
-        ${w.status !== "done" ? `<button class="mgr-btn mgr-btn-success mgr-btn-sm wo-done" data-id="${esc(w.id)}">✓ Voltooid</button>` : ""}
+        <button class="mgr-btn mgr-btn-secondary mgr-btn-sm wo-detail" data-id="${esc(w.id)}">Detail</button>
+        ${w.status !== "done" ? `<button class="mgr-btn mgr-btn-success mgr-btn-sm wo-done" data-id="${esc(w.id)}">Voltooid</button>` : ""}
       </td>
     </tr>`).join("");
   }
@@ -1500,8 +1500,8 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
           <td><span class="mgr-status ${statusCss[v.status]||"mgr-status-pending"}">${esc(v.status||"—")}</span></td>
           <td>${v.nextService ? new Date(v.nextService).toLocaleDateString("nl-BE") : "—"}</td>
           <td style="white-space:nowrap;">
-            <button class="mgr-btn mgr-btn-secondary mgr-btn-sm mgr-veh-edit" data-id="${v.id}" style="margin-right:4px;">✏</button>
-            <button class="mgr-btn mgr-btn-secondary mgr-btn-sm mgr-veh-mileage" data-id="${v.id}" data-name="${esc(v.name||v.plate||"")}" data-mileage="${v.mileage||0}" title="KM loggen">🚗 KM</button>
+            <button class="mgr-btn mgr-btn-secondary mgr-btn-sm mgr-veh-edit" data-id="${v.id}" style="margin-right:4px;"></button>
+            <button class="mgr-btn mgr-btn-secondary mgr-btn-sm mgr-veh-mileage" data-id="${v.id}" data-name="${esc(v.name||v.plate||"")}" data-mileage="${v.mileage||0}" title="KM loggen">KM</button>
           </td>
         </tr>`).join("")}
       </tbody>
@@ -1557,7 +1557,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     </div>
     <div id="vehErr" style="display:none;color:var(--wf-red);font-size:12px;"></div>
     <div style="display:flex;justify-content:${isEdit?"space-between":"flex-end"};gap:8px;padding-top:4px;">
-      ${isEdit ? `<button type="button" id="vehDelete" style="padding:8px 12px;background:var(--wf-red-l);color:var(--wf-red);border:1px solid var(--wf-red-l);border-radius:8px;font-size:12px;cursor:pointer;">🗑 Verwijderen</button>` : ""}
+      ${isEdit ? `<button type="button" id="vehDelete" style="padding:8px 12px;background:var(--wf-red-l);color:var(--wf-red);border:1px solid var(--wf-red-l);border-radius:8px;font-size:12px;cursor:pointer;">Verwijderen</button>` : ""}
       <div style="display:flex;gap:8px;">
         <button type="button" id="vehCancel" style="padding:8px 16px;border:1px solid var(--gray-200);background:#fff;border-radius:8px;font-size:13px;cursor:pointer;">Annuleren</button>
         <button type="submit" style="padding:8px 20px;background:var(--wf-blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">${isEdit?"Opslaan":"Aanmaken"}</button>
@@ -1791,7 +1791,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
         </div>
         <div style="display:flex;gap:5px">
           <button class="mgr-btn mgr-btn-success mgr-btn-sm rpt-lv-ok" data-id="${esc(l.id)}" data-name="${esc(l.userName||l.userId||"")}" data-type="${esc(l.type||"Verlof")}">✓</button>
-          <button class="mgr-btn mgr-btn-danger mgr-btn-sm rpt-lv-rej" data-id="${esc(l.id)}" data-name="${esc(l.userName||l.userId||"")}" data-type="${esc(l.type||"Verlof")}">✗</button>
+          <button class="mgr-btn mgr-btn-danger mgr-btn-sm rpt-lv-rej" data-id="${esc(l.id)}" data-name="${esc(l.userName||l.userId||"")}" data-type="${esc(l.type||"Verlof")}">✕</button>
         </div>
       </div>`).join("") || '<div style="padding:12px 0;font-size:12px;color:var(--gray-400)">Geen aanvragen</div>'}
     </div>
@@ -1845,7 +1845,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
 
     function renderMgrNotifList() {
       if (!_mgrNotifs.length) {
-        mgrList.innerHTML = `<div style="padding:28px;text-align:center;font-size:13px;color:var(--gray-400)">🔔 Geen notificaties</div>`;
+        mgrList.innerHTML = `<div style="padding:28px;text-align:center;font-size:13px;color:var(--gray-400)">Geen notificaties</div>`;
         return;
       }
       mgrList.innerHTML = _mgrNotifs.slice(0, 15).map(n => {

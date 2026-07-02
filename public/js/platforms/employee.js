@@ -55,7 +55,7 @@
     } else {
       await api("POST", path, payload);
     }
-    window.showToast && window.showToast(dir === "in" ? "Ingeklokt ✓" : "Uitgeklokt ✓", "success");
+    window.showToast && window.showToast(dir === "in" ? "Ingeklokt" : "Uitgeklokt", "success");
   }
 
   // Toon een discrete badge zolang er offline acties wachten op synchronisatie.
@@ -71,8 +71,8 @@
     }
     const online = e.detail && e.detail.online;
     bar.textContent = online
-      ? `⏳ ${n} actie(s) worden gesynchroniseerd…`
-      : `📴 Offline — ${n} actie(s) bewaard, sync zodra je verbinding hebt`;
+      ? `${n} actie(s) worden gesynchroniseerd…`
+      : `Offline — ${n} actie(s) bewaard, sync zodra je verbinding hebt`;
   });
 
   // Verberg tabs voor modules die niet in het pakket van de tenant zitten.
@@ -106,7 +106,7 @@
     b.setAttribute("role", "status");
     b.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:9999;background:var(--wf-red);color:#fff;font:600 13px/1.4 system-ui,sans-serif;padding:6px 16px;display:flex;align-items:center;justify-content:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,.2)";
     const span = document.createElement("span");
-    span.textContent = `🛟 Support-sessie actief — ${s.agent || "supportmedewerker"} (${scope}). Deze sessie wordt geaudit.`;
+    span.textContent = `Support-sessie actief — ${s.agent || "supportmedewerker"} (${scope}). Deze sessie wordt geaudit.`;
     b.appendChild(span);
     const exit = document.createElement("button");
     exit.textContent = "Sessie verlaten";
@@ -757,7 +757,7 @@
         const result = await api("POST", "/me/leaves", Object.fromEntries(fd));
         const days = result.leave?.days || result.row?.days || "";
         closeSheets();
-        window.showToast && window.showToast(`Verlofaanvraag ingediend ✓${days?" ("+days+" dag"+(days!==1?"en":"")+")":" "}`, "success");
+        window.showToast && window.showToast(`Verlofaanvraag ingediend${days?" ("+days+" dag"+(days!==1?"en":"")+")":" "}`, "success");
         switchView("leaves");
       } catch(err) {
         btn.disabled = false; btn.textContent = "Indienen";
@@ -771,7 +771,7 @@
       const fd = new FormData(e.target);
       await api("POST", "/me/expenses", Object.fromEntries(fd));
       closeSheets();
-      window.showToast && window.showToast("Onkosten ingediend ✓", "success");
+      window.showToast && window.showToast("Onkosten ingediend", "success");
       switchView("expenses");
     });
   }
@@ -869,7 +869,7 @@
 
 ${dash.urgentWorkorders > 0 ? `
 <div style="background:var(--wf-red-l);border:1px solid var(--wf-red-l);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;" id="empUrgentWO">
-  <span style="font-size:20px;">🔴</span>
+  <span class="adm-dot" style="background:var(--wf-red);width:12px;height:12px"></span>
   <div style="flex:1">
     <div style="font-size:13px;font-weight:600;color:var(--wf-red);">${dash.urgentWorkorders} urgente werkbon${dash.urgentWorkorders > 1 ? "nen" : ""}</div>
     <div style="font-size:12px;color:var(--wf-red);">Hoge prioriteit — actie vereist</div>
@@ -1029,7 +1029,7 @@ ${(() => {
       <div class="emp-list-sub">${c.clockedIn ? new Date(c.clockedIn).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}) : "—"} – ${c.clockedOut ? new Date(c.clockedOut).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}) : "Lopend"}</div>
     </div>
     <span class="emp-pill ${c.status==="in"?"emp-pill-green":"emp-pill-gray"}">${c.status==="in"?"Actief":"Klaar"}</span>
-  </div>`).join("") || '<div class="emp-empty"><div class="emp-empty-icon">🕐</div><div class="emp-empty-text">Geen registraties</div></div>'}
+  </div>`).join("") || '<div class="emp-empty"><div class="emp-empty-text">Geen registraties</div></div>'}
 </div>`;
 
     // live clock tick — tijd, sessieduur en voortgangsring
@@ -1124,7 +1124,7 @@ ${shifts.length ? shifts.map(s => `
       <div class="emp-shift-sub">${esc(s.notes||"")}</div>
     </div>
   </div>
-</div>`).join("") : `<div class="emp-empty"><div class="emp-empty-icon">📅</div><div class="emp-empty-text">Geen shifts gepland deze week</div></div>`}`;
+</div>`).join("") : `<div class="emp-empty"><div class="emp-empty-text">Geen shifts gepland deze week</div></div>`}`;
 
     document.getElementById("empPlanPrev")?.addEventListener("click", () => {
       _empPlanningWeekOffset--; renderPlanning();
@@ -1185,7 +1185,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
       <span class="emp-pill ${l.status==="goedgekeurd"?"emp-pill-green":l.status==="geweigerd"?"emp-pill-red":l.status==="geannuleerd"?"":"emp-pill-amber"}">${esc(l.status)}</span>
       ${l.status==="aangevraagd" ? `<button class="emp-btn emp-btn-danger emp-btn-sm emp-leave-cancel" data-id="${esc(l.id)}" style="font-size:11px;padding:3px 8px;">Intrekken</button>` : ""}
     </div>
-  </div>`).join("") : '<div class="emp-empty"><div class="emp-empty-icon">📅</div><div class="emp-empty-text">Geen verlofaanvragen</div></div>'}
+  </div>`).join("") : '<div class="emp-empty"><div class="emp-empty-text">Geen verlofaanvragen</div></div>'}
 </div>`;
 
     document.getElementById("empNewLeave")?.addEventListener("click", openLeaveSheet);
@@ -1242,7 +1242,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
       <span class="emp-pill ${e.status==="goedgekeurd"||e.status==="approved"?"emp-pill-green":e.status==="geweigerd"?"emp-pill-red":"emp-pill-amber"}">${esc(e.status)}</span>
       ${isPending ? `<button class="emp-btn emp-btn-danger emp-btn-sm emp-exp-delete" data-id="${esc(e.id)}" style="font-size:11px;padding:3px 8px;">✕</button>` : ""}
     </div>
-  </div>`;}).join("") : '<div class="emp-empty"><div class="emp-empty-icon">🧾</div><div class="emp-empty-text">Geen declaraties</div></div>'}
+  </div>`;}).join("") : '<div class="emp-empty"><div class="emp-empty-text">Geen declaraties</div></div>'}
 </div>`;
 
     document.getElementById("empNewExp")?.addEventListener("click", openExpSheet);
@@ -1279,7 +1279,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
     if (!isDone && !isInProg) {
       actionBtn = `<button class="emp-wo-start emp-pill" data-id="${esc(w.id)}" style="background:var(--wf-blue);color:#fff;border:none;cursor:pointer;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:600;">▶ Start</button>`;
     } else if (isInProg) {
-      actionBtn = `<button class="emp-wo-done emp-pill" data-id="${esc(w.id)}" style="background:var(--wf-green);color:#fff;border:none;cursor:pointer;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:600;">✓ Voltooid</button>`;
+      actionBtn = `<button class="emp-wo-done emp-pill" data-id="${esc(w.id)}" style="background:var(--wf-green);color:#fff;border:none;cursor:pointer;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:600;">Voltooid</button>`;
     }
     return `
   <div class="emp-list-item emp-wo-row" data-id="${esc(w.id)}" style="gap:10px;align-items:center;cursor:pointer;">
@@ -1292,7 +1292,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
     </div>
     ${actionBtn || `<span class="emp-pill ${isDone?"emp-pill-green":"emp-pill-blue"}">${esc(w.status||"—")}</span>`}
   </div>`;
-  }).join("") : '<div class="emp-empty"><div class="emp-empty-icon">📋</div><div class="emp-empty-text">Geen werkbonnen</div></div>'}
+  }).join("") : '<div class="emp-empty"><div class="emp-empty-text">Geen werkbonnen</div></div>'}
 </div>`;
 
     // Wire start/done buttons
@@ -1307,7 +1307,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
       btn.addEventListener("click", async () => {
         btn.disabled = true; btn.textContent = "…";
         try { await api("PATCH", `/me/workorders/${btn.dataset.id}`, { status: "Voltooid" }); renderWorkorders(); }
-        catch(e) { window.showToast(e.message, "error"); btn.disabled = false; btn.textContent = "✓ Voltooid"; }
+        catch(e) { window.showToast(e.message, "error"); btn.disabled = false; btn.textContent = "Voltooid"; }
       });
     });
 
@@ -1325,7 +1325,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
   function openWorkorderSheet(wo) {
     const done    = ["Voltooid","Afgewerkt","done"].includes(wo.status);
     const inProg  = wo.status === "in_progress";
-    const priorityLabel = { hoog:"🔴 Hoog", normaal:"🟡 Normaal", laag:"🟢 Laag" }[wo.priority] || wo.priority || "—";
+    const priorityLabel = { hoog:"Hoog", normaal:"Normaal", laag:"Laag" }[wo.priority] || wo.priority || "—";
 
     const sheet = document.createElement("div");
     sheet.style.cssText = "position:fixed;inset:0;z-index:1100;display:flex;flex-direction:column;justify-content:flex-end;";
@@ -1383,10 +1383,10 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
   ${!done ? `
   <div style="padding:0 20px;display:flex;flex-direction:column;gap:10px;">
     ${!inProg ? `<button id="woSheetStart" class="emp-btn emp-btn-primary" style="padding:12px;font-size:14px;font-weight:600;">▶ Start werkbon</button>` : ""}
-    ${inProg  ? `<button id="woSheetDone"  class="emp-btn emp-btn-primary" style="padding:12px;font-size:14px;font-weight:600;background:var(--wf-green);">✓ Afsluiten & notitie toevoegen</button>` : ""}
+    ${inProg  ? `<button id="woSheetDone"  class="emp-btn emp-btn-primary" style="padding:12px;font-size:14px;font-weight:600;background:var(--wf-green);">Afsluiten & notitie toevoegen</button>` : ""}
   </div>` : `
   <div style="padding:0 20px 8px;">
-    <div style="background:var(--wf-green-l);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--wf-green);font-weight:600;">✅ Werkbon voltooid${wo.completedAt?" op "+new Date(wo.completedAt).toLocaleDateString("nl-BE"):""}</div>
+    <div style="background:var(--wf-green-l);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--wf-green);font-weight:600;">Werkbon voltooid${wo.completedAt?" op "+new Date(wo.completedAt).toLocaleDateString("nl-BE"):""}</div>
     ${wo.completionNote?`<div style="margin-top:8px;font-size:12px;color:var(--gray-500);background:var(--gray-50);border-radius:6px;padding:8px;">${esc(wo.completionNote)}</div>`:""}
   </div>`}
   <!-- Foto's sectie -->
@@ -1394,7 +1394,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
     <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Foto's</div>
     ${(wo.photos||[]).length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;">${(wo.photos||[]).map(p=>`<img src="${p}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--gray-200);">`).join("")}</div>` : `<div style="font-size:12px;color:var(--gray-400);">Geen foto's</div>`}
     <label id="woAddPhotoBtn" style="display:inline-flex;align-items:center;gap:6px;margin-top:8px;background:var(--gray-100);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-weight:500;color:var(--gray-700);">
-      📷 Foto toevoegen <input type="file" accept="image/*" capture="environment" id="woPhotoInput" style="display:none;">
+      Foto toevoegen <input type="file" accept="image/*" capture="environment" id="woPhotoInput" style="display:none;">
     </label>
     <div id="woPhotoPreview" style="margin-top:8px;"></div>
   </div>
@@ -1424,7 +1424,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
         try {
           const existing = wo.photos || [];
           await api("PATCH", `/me/workorders/${wo.id}`, { photos: [...existing, b64] });
-          window.showToast && window.showToast("Foto opgeslagen ✓", "success");
+          window.showToast && window.showToast("Foto opgeslagen", "success");
           wo.photos = [...existing, b64];
         } catch(err) { window.showToast("Upload fout: "+err.message, "error"); }
       };
@@ -1441,7 +1441,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
     style="width:100%;padding:8px;border:1px solid var(--wf-green-l);border-radius:8px;font-size:13px;resize:vertical;"></textarea>
   <div style="display:flex;gap:8px;margin-top:10px;">
     <button id="woCompleteCancelBtn" class="emp-btn emp-btn-secondary" style="flex:1;padding:10px;">Annuleren</button>
-    <button id="woCompleteConfirmBtn" class="emp-btn emp-btn-primary" style="flex:2;padding:10px;background:var(--wf-green);font-weight:600;">✓ Bevestigen</button>
+    <button id="woCompleteConfirmBtn" class="emp-btn emp-btn-primary" style="flex:2;padding:10px;background:var(--wf-green);font-weight:600;">Bevestigen</button>
   </div>
 </div>`;
       document.getElementById("woCompleteCancelBtn")?.addEventListener("click", close);
@@ -1449,7 +1449,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
         const note = document.getElementById("woCompletionNote")?.value?.trim();
         try {
           await api("PATCH", `/me/workorders/${wo.id}`, { status: "Voltooid", completionNote: note||undefined });
-          window.showToast && window.showToast("Werkbon voltooid ✓", "success");
+          window.showToast && window.showToast("Werkbon voltooid", "success");
           close(); renderWorkorders();
         } catch(e) { window.showToast(e.message, "error"); }
       });
@@ -1492,7 +1492,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
       ${isUnread ? '<div style="width:8px;height:8px;border-radius:50%;background:var(--wf-blue);"></div>' : ""}
     </div>
   </div>`;
-  }).join("") : '<div class="emp-empty"><div class="emp-empty-icon">💬</div><div class="emp-empty-text">Geen berichten</div></div>'}
+  }).join("") : '<div class="emp-empty"><div class="emp-empty-text">Geen berichten</div></div>'}
 </div>`;
 
     document.getElementById("empComposeBtn")?.addEventListener("click", openComposeSheet);
@@ -1649,7 +1649,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
     <button class="emp-btn emp-btn-secondary emp-btn-sm" id="tsNext" ${_tsMonthOffset===0?"disabled":""}>›</button>
     ${_tsMonthOffset!==0?`<button class="emp-btn emp-btn-secondary emp-btn-sm" id="tsNow">Nu</button>`:""}
   </div>
-  <button class="emp-btn emp-btn-secondary emp-btn-sm" id="tsExport">📥 CSV</button>
+  <button class="emp-btn emp-btn-secondary emp-btn-sm" id="tsExport">CSV</button>
 </div>
 
 <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;">
@@ -1684,7 +1684,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
         <span style="margin-left:auto;">${c.clockedOut?((new Date(c.clockedOut)-new Date(c.clockedIn))/3600000).toFixed(1)+" u":""}</span>
       </div>`).join("")}
     </div>`;
-  }).join("") : `<div class="emp-empty"><div class="emp-empty-icon">🕐</div><div class="emp-empty-text">Geen registraties in ${monthLabel}</div></div>`}
+  }).join("") : `<div class="emp-empty"><div class="emp-empty-text">Geen registraties in ${monthLabel}</div></div>`}
 </div>`;
 
     document.getElementById("tsPrev")?.addEventListener("click", () => { _tsMonthOffset--; renderTimesheet(); });

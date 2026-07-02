@@ -79,6 +79,25 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Formulier-controls in merkstijl — geen kale browser-defaults */
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--wf-blue);
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+
+/* Status-dot (vervangt emoji-bolletjes) */
+.adm-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }

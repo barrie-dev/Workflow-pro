@@ -96,7 +96,7 @@
     ov.innerHTML = `
       <div style="background:#fff;border-radius:16px;max-width:560px;width:100%;max-height:92vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
         <div style="padding:20px 22px;border-bottom:1px solid var(--gray-100)">
-          <h2 style="margin:0;font-size:18px;color:var(--gray-900)">Welkom bij Monargo One 👋</h2>
+          <h2 style="margin:0;font-size:18px;color:var(--gray-900)">Welkom bij Monargo One</h2>
           <p style="margin:6px 0 0;font-size:13px;color:var(--gray-500)">Vul je bedrijfsgegevens aan zodat we ${esc(t.name || "je organisatie")} correct kunnen instellen. Duurt een minuutje.</p>
         </div>
         <form id="admObForm" style="padding:20px 22px;display:flex;flex-direction:column;gap:14px">
@@ -155,7 +155,7 @@
       try {
         await api("POST", "/onboarding", payload);
         ov.remove();
-        window.showToast && window.showToast("Bedrijfsgegevens opgeslagen ✓ Welkom!", "success");
+        window.showToast && window.showToast("Bedrijfsgegevens opgeslagen.", "success");
       } catch (err) {
         const eEl = document.getElementById("admObErr"); eEl.style.display = "block"; eEl.textContent = err.message;
       }
@@ -170,7 +170,7 @@
     b.id = "wfpSupportBanner";
     b.setAttribute("role", "status");
     b.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:9999;background:var(--wf-red);color:#fff;font:600 13px/1.4 system-ui,sans-serif;padding:6px 16px;display:flex;align-items:center;justify-content:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,.2)";
-    b.innerHTML = `<span>🛟 Support-sessie actief — ${esc(s.agent || "supportmedewerker")} (${scope}). Deze sessie wordt geaudit.</span>`;
+    b.innerHTML = `<span>Support-sessie actief — ${esc(s.agent || "supportmedewerker")} (${scope}). Deze sessie wordt geaudit.</span>`;
     const exit = document.createElement("button");
     exit.textContent = "Sessie verlaten";
     exit.style.cssText = "background:#fff;color:var(--wf-red);border:none;border-radius:6px;font:600 12px system-ui,sans-serif;padding:5px 12px;cursor:pointer;flex-shrink:0";
@@ -523,7 +523,7 @@
         ${chip("standaard", "Overzicht")}
         ${chip("personal", "Mijn dashboard")}
         ${hasOrg ? chip("org", "Organisatie") : ""}
-        ${_dashMode === "personal" ? `<button class="adm-btn adm-btn-secondary adm-btn-sm" id="dashConfigToggle" style="margin-left:auto">⚙ Aanpassen</button>` : ""}
+        ${_dashMode === "personal" ? `<button class="adm-btn adm-btn-secondary adm-btn-sm" id="dashConfigToggle" style="margin-left:auto">Aanpassen</button>` : ""}
       </div>
       <div id="dashBody"></div>`;
     content.querySelectorAll("[data-dashmode]").forEach(btn => btn.addEventListener("click", () => { _dashMode = btn.dataset.dashmode; renderDashboard(); }));
@@ -543,10 +543,10 @@
     const kpiCard = w => `<div class="adm-kpi"><div class="adm-kpi-label">${esc(w.label)}</div><div class="adm-kpi-value">${esc(String(w.value))}</div><div class="adm-kpi-sub">${esc(w.sub || "")}</div></div>`;
     const grid = widgets => widgets.length
       ? `<div class="adm-kpis">${widgets.map(kpiCard).join("")}</div>`
-      : `<div class="adm-empty"><div class="adm-empty-icon">📊</div><div class="adm-empty-text">${mode === "org" ? "Je organisatie heeft nog geen dashboard gepubliceerd." : "Nog geen widgets gekozen — klik ⚙ Aanpassen."}</div></div>`;
+      : `<div class="adm-empty"><div class="adm-empty-text">${mode === "org" ? "Je organisatie heeft nog geen dashboard gepubliceerd." : "Nog geen widgets gekozen — klik Aanpassen."}</div></div>`;
     const r = await api("GET", `/me/dashboard/render?mode=${mode}`).catch(() => ({ widgets: [] }));
     if (mode === "org") {
-      body.innerHTML = `<div style="background:var(--wf-blue-l);border:1px solid var(--wf-blue-l);border-radius:10px;padding:10px 14px;font-size:12.5px;color:var(--wf-blue);margin-bottom:14px">🔒 Dit dashboard is door je organisatie ingesteld; je ziet enkel widgets waar je rechten op hebt.</div>${grid(r.widgets || [])}`;
+      body.innerHTML = `<div style="background:var(--wf-blue-l);border:1px solid var(--wf-blue-l);border-radius:10px;padding:10px 14px;font-size:12.5px;color:var(--wf-blue);margin-bottom:14px">Dit dashboard is door je organisatie ingesteld; je ziet enkel widgets waar je rechten op hebt.</div>${grid(r.widgets || [])}`;
       return;
     }
     const chosen = new Set(personalKeys);
@@ -564,7 +564,7 @@
           </div>
           <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
             <button class="adm-btn adm-btn-primary adm-btn-sm" id="mbSave">Opslaan</button>
-            ${canPublish ? `<button class="adm-btn adm-btn-secondary adm-btn-sm" id="mbPublish">🏢 Publiceer voor organisatie</button>` : ""}
+            ${canPublish ? `<button class="adm-btn adm-btn-secondary adm-btn-sm" id="mbPublish">Publiceer voor organisatie</button>` : ""}
             <span id="mbMsg" style="font-size:12.5px;color:var(--wf-green);align-self:center"></span>
           </div>
         </div>
@@ -572,13 +572,13 @@
     const picked = () => [...document.querySelectorAll(".mb-w:checked")].map(c => c.value);
     document.getElementById("mbSave")?.addEventListener("click", async () => {
       const msg = document.getElementById("mbMsg");
-      try { await api("POST", "/me/dashboard/config", { widgets: picked() }); renderDashboard(); window.showToast && window.showToast("Mijn dashboard opgeslagen ✓", "success"); }
+      try { await api("POST", "/me/dashboard/config", { widgets: picked() }); renderDashboard(); window.showToast && window.showToast("Mijn dashboard opgeslagen", "success"); }
       catch (e) { msg.style.color = "var(--wf-red)"; msg.textContent = e.message; }
     });
     document.getElementById("mbPublish")?.addEventListener("click", async () => {
       if (!confirm("Deze widgetselectie publiceren als vast organisatie-dashboard voor iedereen?")) return;
       const msg = document.getElementById("mbMsg");
-      try { await api("POST", "/me/dashboard/publish", { widgets: picked() }); renderDashboard(); window.showToast && window.showToast("Gepubliceerd voor de organisatie ✓", "success"); }
+      try { await api("POST", "/me/dashboard/publish", { widgets: picked() }); renderDashboard(); window.showToast && window.showToast("Gepubliceerd voor de organisatie", "success"); }
       catch (e) { msg.style.color = "var(--wf-red)"; msg.textContent = e.message; }
     });
   }
@@ -663,8 +663,8 @@
             <td>${esc(l.type||"—")}</td>
             <td style="white-space:nowrap">${esc(l.startDate)} – ${esc(l.endDate)}</td>
             <td style="white-space:nowrap">
-              <button class="adm-btn adm-btn-success adm-btn-sm adm-dash-lv-ok" data-id="${esc(l.id)}">✓ Goed</button>
-              <button class="adm-btn adm-btn-danger adm-btn-sm adm-dash-lv-rej" data-id="${esc(l.id)}">✗ Weiger</button>
+              <button class="adm-btn adm-btn-success adm-btn-sm adm-dash-lv-ok" data-id="${esc(l.id)}">Goed</button>
+              <button class="adm-btn adm-btn-danger adm-btn-sm adm-dash-lv-rej" data-id="${esc(l.id)}">Weigeren</button>
             </td>
           </tr>`).join("") || '<tr><td colspan="4" class="adm-empty">Geen aanvragen</td></tr>'}
         </tbody>
@@ -679,9 +679,9 @@ ${(() => {
   const openInv    = invoices.filter(i => i.status === "open");
   const expensesPending = (expData.expenses || []).filter(e => e.status === "pending" || !e.status);
   const items = [
-    ...overdueInv.map(i => ({ icon:"🔴", text:`Factuur ${i.number} vervallen — ${new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR"}).format(i.total)}`, view:"facturen", urgent:true })),
-    ...expensesPending.slice(0,3).map(e => ({ icon:"🟡", text:`Onkostennota €${e.amount||0} van ${esc(uName(e)||"medewerker")} wacht op goedkeuring`, view:"expenses", urgent:false })),
-    ...openInv.slice(0,2).map(i => ({ icon:"🔵", text:`Factuur ${i.number} openstaand — ${new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR"}).format(i.total)}`, view:"facturen", urgent:false }))
+    ...overdueInv.map(i => ({ icon:"<span class=\"adm-dot\" style=\"background:var(--wf-red)\"></span>", text:`Factuur ${i.number} vervallen — ${new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR"}).format(i.total)}`, view:"facturen", urgent:true })),
+    ...expensesPending.slice(0,3).map(e => ({ icon:"<span class=\"adm-dot\" style=\"background:var(--wf-yellow)\"></span>", text:`Onkostennota €${e.amount||0} van ${esc(uName(e)||"medewerker")} wacht op goedkeuring`, view:"expenses", urgent:false })),
+    ...openInv.slice(0,2).map(i => ({ icon:"<span class=\"adm-dot\" style=\"background:var(--wf-blue)\"></span>", text:`Factuur ${i.number} openstaand — ${new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR"}).format(i.total)}`, view:"facturen", urgent:false }))
   ];
   if (!items.length) return "";
   return `<div class="adm-card" style="margin-top:16px">
@@ -732,7 +732,7 @@ ${(() => {
         gpDiv.style.marginTop = "16px";
         gpDiv.innerHTML = `
 <div class="adm-card-header" style="cursor:pointer;" id="admGpHeader">
-  <h3 class="adm-card-title">🎯 Pilot voortgang <span style="font-size:12px;font-weight:400;color:var(--gray-500);">${doneCount}/${steps.length} stappen</span></h3>
+  <h3 class="adm-card-title">Pilot voortgang <span style="font-size:12px;font-weight:400;color:var(--gray-500);">${doneCount}/${steps.length} stappen</span></h3>
   <div style="display:flex;align-items:center;gap:12px;">
     <div style="font-size:18px;font-weight:600;color:${pct===100?"var(--wf-green)":pct>50?"var(--wf-yellow)":"var(--wf-purple)"};">${pct}%</div>
     <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admGpDetails">Details</button>
@@ -744,7 +744,7 @@ ${(() => {
 </div>
 <div class="hidden" id="admGpSteps" style="padding:12px 20px 4px;">
   ${steps.map(s=>`<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px;">
-    <span style="color:${s.done?"var(--wf-green)":"var(--gray-400)"};font-size:16px;">${s.done?"✅":"⭕"}</span>
+    <span style="color:${s.done?"var(--wf-green)":"var(--gray-400)"};font-size:16px;">${s.done?"✓":"○"}</span>
     <span style="color:${s.done?"var(--gray-700)":"var(--gray-400)"}">${esc(s.key||"")}</span>
   </div>`).join("")}
 </div>`;
@@ -800,8 +800,8 @@ ${(() => {
       ${inactiveCount ? `<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--gray-500);cursor:pointer;">
         <input type="checkbox" id="admEmpShowInactive" ${_empShowInactive?"checked":""}> Toon inactief
       </label>` : ""}
-      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admEmpImport" title="CSV importeren">📥 CSV Import</button>
-      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admEmpExport" title="Exporteer als CSV">📤 Export</button>
+      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admEmpImport" title="CSV importeren">CSV Import</button>
+      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admEmpExport" title="Exporteer als CSV">Export</button>
     </div>
   </div>
   <div class="adm-card-body adm-table-wrap" id="admEmpTable">
@@ -867,7 +867,7 @@ ${(() => {
   }
 
   function renderEmployeeTable(employees) {
-    if (!employees.length) return `<div class="adm-empty"><div class="adm-empty-icon">👥</div><div class="adm-empty-text">Geen medewerkers gevonden</div></div>`;
+    if (!employees.length) return `<div class="adm-empty"><div class="adm-empty-text">Geen medewerkers gevonden</div></div>`;
     return `<table class="adm-table">
       <thead><tr><th></th><th>Naam</th><th>E-mail</th><th>Functie</th><th>Rol</th><th>Status</th><th>Acties</th></tr></thead>
       <tbody>${employees.map(u => `
@@ -879,7 +879,7 @@ ${(() => {
           <td><span class="adm-status ${u.role==="manager"?"adm-status-pending":"adm-status-open"}">${u.role==="manager"?"Manager":u.role==="tenant_admin"?"Admin":"Medewerker"}</span></td>
           <td>${u.active!==false ? '<span class="adm-status adm-status-active">Actief</span>' : '<span class="adm-status adm-status-inactive">Inactief</span>'}</td>
           <td style="white-space:nowrap">
-            <button class="adm-btn adm-btn-secondary adm-btn-sm adm-edit-emp" data-id="${esc(u.id)}">✏ Bewerken</button>
+            <button class="adm-btn adm-btn-secondary adm-btn-sm adm-edit-emp" data-id="${esc(u.id)}">Bewerken</button>
             <button class="adm-btn adm-btn-sm ${u.active!==false?"adm-btn-warning":"adm-btn-success"} adm-toggle-emp" data-id="${esc(u.id)}" data-active="${u.active!==false}">${u.active!==false?"⏸ Deactiveer":"▶ Activeer"}</button>
           </td>
         </tr>`).join("")}
@@ -983,7 +983,7 @@ ${(() => {
   <div id="admEmpFormErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:8px;font-size:12px;margin-top:8px;"></div>
   <div class="adm-form-actions" style="margin-top:16px;">
     <button type="button" class="adm-btn adm-btn-secondary" id="admEmpCancel">Annuleren</button>
-    ${emp ? `<button type="button" class="adm-btn adm-btn-warning adm-btn-sm" id="admEmpPwReset">🔑 Wachtwoord reset</button>` : ""}
+    ${emp ? `<button type="button" class="adm-btn adm-btn-warning adm-btn-sm" id="admEmpPwReset">Wachtwoord reset</button>` : ""}
     <button type="submit" class="adm-btn adm-btn-primary">${emp ? "Opslaan" : "Aanmaken"}</button>
   </div>
 </form>
@@ -1049,7 +1049,7 @@ ${emp ? `
           // testbaar blijft; in productie wordt die nooit getoond.
           if (result.activationLink) {
             document.getElementById("admEmpFormErr").style.cssText = "display:block;background:var(--wf-green-l);color:var(--wf-green);border-radius:8px;padding:8px;font-size:12px;margin-top:8px;word-break:break-all;";
-            document.getElementById("admEmpFormErr").innerHTML = `✅ Medewerker aangemaakt. Activatielink (dev): <a href="${result.activationLink}">${result.activationLink}</a>`;
+            document.getElementById("admEmpFormErr").innerHTML = `Medewerker aangemaakt. Activatielink (dev): <a href="${result.activationLink}">${result.activationLink}</a>`;
             e.target.querySelector("[type=submit]").textContent = "Sluiten";
             e.target.querySelector("[type=submit]").type = "button";
             e.target.querySelector("[type=submit]").addEventListener("click", () => { closeDrawer(); renderEmployees(); });
@@ -1126,7 +1126,7 @@ ${emp ? `
     </table>
   </div>
   <div style="padding:8px 16px;font-size:11px;color:var(--gray-400);display:flex;gap:14px;border-top:1px solid var(--gray-50);">
-    <span>🟦 Shift</span><span style="color:var(--wf-yellow)">🟧 Verlof (afwezig)</span>
+    <span><span class="adm-dot" style="background:var(--wf-blue)"></span> Shift</span><span style="color:var(--wf-yellow)"><span class="adm-dot" style="background:var(--wf-yellow)"></span> Verlof (afwezig)</span>
     <span style="margin-left:auto">${shifts.length} shifts · ${Object.keys(leaveMap).length} personen op verlof</span>
   </div>
 </div>`;
@@ -1147,7 +1147,7 @@ ${emp ? `
           await api("POST", "/planning", { userId: s.userId, date: newDate.toISOString().slice(0,10), start: s.start, end: s.end, location: s.location||"", note: s.note||"" });
           copied++;
         }
-        window.showToast && window.showToast(`${copied} shifts gekopieerd naar volgende week ✓`, "success");
+        window.showToast && window.showToast(`${copied} shifts gekopieerd naar volgende week`, "success");
         _planningWeekOffset++;
         renderPlanning();
       } catch(e) { window.showToast && window.showToast("Fout: "+e.message, "error"); btn.disabled = false; btn.textContent = "⧉ Kopieer week"; }
@@ -1209,7 +1209,7 @@ ${emp ? `
           let cellBg = isToday ? "var(--wf-blue-l)" : "";
           if (onLeave) cellBg = "var(--wf-yellow-l)";
           return `<td style="${cellBg?"background:"+cellBg+";":""}">
-            ${onLeave && !dayShifts.length ? `<span style="background:var(--wf-yellow-l);color:var(--wf-yellow);border-radius:4px;padding:2px 6px;font-size:10px;font-weight:600;display:inline-block;">🟧 ${esc(onLeave)}</span>` : ""}
+            ${onLeave && !dayShifts.length ? `<span style="background:var(--wf-yellow-l);color:var(--wf-yellow);border-radius:4px;padding:2px 6px;font-size:10px;font-weight:600;display:inline-block;"><span class="adm-dot" style="background:var(--wf-yellow)"></span> ${esc(onLeave)}</span>` : ""}
             ${dayShifts.map(s =>
               `<span class="adm-shift-pill" data-id="${s.id}" title="${esc(s.note||s.location||"")} — klik om te bewerken"
                 style="background:${bg};color:${fg};border:1px solid ${fg}30;border-radius:5px;padding:2px 7px;font-size:11px;font-weight:600;cursor:pointer;display:inline-block;margin-bottom:2px;white-space:nowrap;">
@@ -1279,7 +1279,7 @@ ${emp ? `
   </div>` : ""}
   <div id="admShiftErr" style="display:none;color:var(--wf-red);font-size:12px;padding:4px 0;"></div>
   <div class="adm-form-actions" style="justify-content:space-between;">
-    ${isEdit ? `<button type="button" class="adm-btn adm-btn-danger adm-btn-sm" id="admShiftDelete">🗑 Verwijderen</button>` : `<span></span>`}
+    ${isEdit ? `<button type="button" class="adm-btn adm-btn-danger adm-btn-sm" id="admShiftDelete">Verwijderen</button>` : `<span></span>`}
     <div style="display:flex;gap:8px;">
       <button type="button" class="adm-btn adm-btn-secondary" id="admShiftCancel">Annuleren</button>
       <button type="submit" class="adm-btn adm-btn-primary">${isEdit ? "Opslaan" : "Aanmaken"}</button>
@@ -1327,7 +1327,7 @@ ${emp ? `
               const d = new Date(baseDate); d.setDate(baseDate.getDate() + w*7);
               await api("POST", "/planning", { ...body, date: d.toISOString().slice(0,10) });
             }
-            if (weeks > 1) window.showToast && window.showToast(`${weeks} shifts aangemaakt ✓`, "success");
+            if (weeks > 1) window.showToast && window.showToast(`${weeks} shifts aangemaakt`, "success");
           }
           closeDrawer(); renderPlanning();
         } catch (err) {
@@ -1431,7 +1431,7 @@ ${emp ? `
         <td>${c.clockedOut ? new Date(c.clockedOut).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}) : '<span style="color:var(--wf-yellow)">Niet uitgeklokt</span>'}</td>
         <td>${hours}</td>
         <td>${c.status==="in"||noOut ? '<span class="adm-status adm-status-active">Ingeklokt</span>' : '<span class="adm-status adm-status-inactive">Uitgeklokt</span>'}</td>
-        <td>${noOut ? `<button class="adm-btn adm-btn-warning adm-btn-sm clk-force-out" data-id="${esc(c.id)}" data-uid="${esc(c.userId)}">Klokt uit</button>` : `<button class="adm-btn adm-btn-secondary adm-btn-sm clk-edit" data-id="${esc(c.id)}">✏ Corrigeer</button>`}</td>
+        <td>${noOut ? `<button class="adm-btn adm-btn-warning adm-btn-sm clk-force-out" data-id="${esc(c.id)}" data-uid="${esc(c.userId)}">Klokt uit</button>` : `<button class="adm-btn adm-btn-secondary adm-btn-sm clk-edit" data-id="${esc(c.id)}">Corrigeer</button>`}</td>
       </tr>`;
     }).join("") || '<tr><td colspan="6" class="adm-empty">Geen klokregistraties voor deze datum</td></tr>'}
   </tbody>
@@ -1698,7 +1698,7 @@ ${emp ? `
         closeDrawer();
         _leaveTab = "aanvragen";
         renderLeaves();
-        window.showToast && window.showToast("Verlof aangemaakt ✓", "success");
+        window.showToast && window.showToast("Verlof aangemaakt", "success");
       } catch(err) {
         if (errEl) { errEl.textContent = err.message; errEl.style.display = ""; }
       }
@@ -1861,7 +1861,7 @@ ${emp ? `
   }
 
   function renderLeaveTable(leaves) {
-    if (!leaves.length) return `<div class="adm-empty"><div class="adm-empty-icon">📅</div><div class="adm-empty-text">Geen verlofaanvragen</div></div>`;
+    if (!leaves.length) return `<div class="adm-empty"><div class="adm-empty-text">Geen verlofaanvragen</div></div>`;
     return `<table class="adm-table">
       <thead><tr><th>Medewerker</th><th>Type</th><th>Van</th><th>Tot</th><th>Reden</th><th>Status</th><th>Opmerking</th><th>Acties</th></tr></thead>
       <tbody>${leaves.map(l => `
@@ -1874,8 +1874,8 @@ ${emp ? `
           <td><span class="adm-status adm-status-${l.status}">${esc(l.status||"")}</span></td>
           <td style="font-size:12px;color:var(--gray-500);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(l.reviewNote||"")}">${esc(l.reviewNote||"—")}</td>
           <td style="white-space:nowrap;">${l.status==="aangevraagd" ? `
-            <button class="adm-btn adm-btn-success adm-btn-sm adm-leave-action" data-id="${esc(l.id)}" data-status="goedgekeurd">✓ Goed</button>
-            <button class="adm-btn adm-btn-danger adm-btn-sm adm-leave-action" data-id="${esc(l.id)}" data-status="geweigerd">✗ Weiger</button>
+            <button class="adm-btn adm-btn-success adm-btn-sm adm-leave-action" data-id="${esc(l.id)}" data-status="goedgekeurd">Goed</button>
+            <button class="adm-btn adm-btn-danger adm-btn-sm adm-leave-action" data-id="${esc(l.id)}" data-status="geweigerd">Weigeren</button>
           ` : "—"}</td>
         </tr>`).join("")}
       </tbody>
@@ -1991,11 +1991,11 @@ ${emp ? `
           <td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(e.description||"")}">${esc(e.description||"—")}</td>
           <td>
             <span class="adm-status adm-status-${e.status}">${esc(e.status)}</span>
-            ${e.reviewNote ? `<div style="font-size:11px;color:var(--gray-500);margin-top:2px;" title="${esc(e.reviewNote)}">💬 ${esc(e.reviewNote.slice(0,30))}${e.reviewNote.length>30?"…":""}</div>` : ""}
+            ${e.reviewNote ? `<div style="font-size:11px;color:var(--gray-500);margin-top:2px;" title="${esc(e.reviewNote)}">${esc(e.reviewNote.slice(0,30))}${e.reviewNote.length>30?"…":""}</div>` : ""}
           </td>
           <td style="white-space:nowrap;">${["pending","ingediend"].includes(e.status) ? `
-            <button class="adm-btn adm-btn-success adm-btn-sm adm-exp-review" data-id="${e.id}" data-dec="goedgekeurd" data-name="${esc(uName(e))}" data-amount="${e.amount}" data-cat="${esc(e.category||"")}">✓ Goed</button>
-            <button class="adm-btn adm-btn-danger  adm-btn-sm adm-exp-review" data-id="${e.id}" data-dec="geweigerd"  data-name="${esc(uName(e))}" data-amount="${e.amount}" data-cat="${esc(e.category||"")}">✗ Weiger</button>
+            <button class="adm-btn adm-btn-success adm-btn-sm adm-exp-review" data-id="${e.id}" data-dec="goedgekeurd" data-name="${esc(uName(e))}" data-amount="${e.amount}" data-cat="${esc(e.category||"")}">Goed</button>
+            <button class="adm-btn adm-btn-danger  adm-btn-sm adm-exp-review" data-id="${e.id}" data-dec="geweigerd"  data-name="${esc(uName(e))}" data-amount="${e.amount}" data-cat="${esc(e.category||"")}">Weigeren</button>
           ` : "—"}</td>
         </tr>`).join("")}</tbody>
       </table>`;
@@ -2038,7 +2038,7 @@ ${emp ? `
   <div id="expReviewErr" style="display:none;color:var(--wf-red);font-size:12px;margin-bottom:8px;"></div>
   <div style="display:flex;gap:8px;justify-content:flex-end;">
     <button id="expReviewCancel" class="adm-btn adm-btn-secondary adm-btn-sm">Annuleren</button>
-    <button id="expReviewConfirm" class="adm-btn ${isApprove?"adm-btn-success":"adm-btn-danger"} adm-btn-sm">${isApprove?"✓ Goedkeuren":"✗ Weigeren"}</button>
+    <button id="expReviewConfirm" class="adm-btn ${isApprove?"adm-btn-success":"adm-btn-danger"} adm-btn-sm">${isApprove?"Goedkeuren":"Weigeren"}</button>
   </div>
 </div>`;
     document.body.appendChild(overlay);
@@ -2054,11 +2054,11 @@ ${emp ? `
       try {
         await api("PATCH", `/expenses/${id}`, { status: dec, reviewNote: note || undefined });
         close();
-        window.showToast && window.showToast(isApprove ? "Onkost goedgekeurd ✓" : "Onkost geweigerd", isApprove ? "success" : "info");
+        window.showToast && window.showToast(isApprove ? "Onkost goedgekeurd" : "Onkost geweigerd", isApprove ? "success" : "info");
         onDone();
       } catch(e) {
         errEl.textContent = e.message; errEl.style.display = "";
-        confirmBtn.disabled = false; confirmBtn.textContent = isApprove ? "✓ Goedkeuren" : "✗ Weigeren";
+        confirmBtn.disabled = false; confirmBtn.textContent = isApprove ? "Goedkeuren" : "Weigeren";
       }
     });
   }
@@ -2126,7 +2126,7 @@ ${emp ? `
       <option value="">Alle medewerkers</option>
       ${employees.map(u => `<option value="${esc(u.id)}" ${_woFilterUser===u.id?"selected":""}>${esc(u.name||u.email)}</option>`).join("")}
     </select>
-    ${(_woFilterStatus||_woFilterUser||_woFilterSearch) ? `<button class="adm-btn adm-btn-secondary adm-btn-sm" id="admWoClearFilter" style="white-space:nowrap;">✕ Wis filters</button>` : ""}
+    ${(_woFilterStatus||_woFilterUser||_woFilterSearch) ? `<button class="adm-btn adm-btn-secondary adm-btn-sm" id="admWoClearFilter" style="white-space:nowrap;">Wis filters</button>` : ""}
   </div>
 
   <div class="adm-card-body adm-table-wrap">
@@ -2140,9 +2140,9 @@ ${emp ? `
           <td>${esc(uName(w) || "—")}</td>
           <td>${esc(w.clientName || "—")}</td>
           <td><span class="adm-status adm-status-${(w.status||"").toLowerCase().replace(/\s/g,"-")}">${esc(w.status||"—")}</span></td>
-          <td><span style="font-size:12px;">${w.priority==="hoog"?"🔴":w.priority==="laag"?"🟢":"🟡"} ${esc(w.priority||"normaal")}</span></td>
+          <td><span style="font-size:12px;">${w.priority==="hoog"?'<span class="adm-dot" style="background:var(--wf-red)"></span>':w.priority==="laag"?'<span class="adm-dot" style="background:var(--wf-green)"></span>':'<span class="adm-dot" style="background:var(--wf-yellow)"></span>'} ${esc(w.priority||"normaal")}</span></td>
           <td>${w.scheduledDate || w.createdAt?.slice(0,10) || "—"}</td>
-          <td><button class="adm-btn adm-btn-secondary adm-btn-sm adm-wo-edit" data-id="${w.id}">✏</button></td>
+          <td><button class="adm-btn adm-btn-secondary adm-btn-sm adm-wo-edit" data-id="${w.id}"></button></td>
         </tr>`).join("") || `<tr><td colspan="8" class="adm-empty">${_woFilterStatus||_woFilterUser||_woFilterSearch ? "Geen resultaten voor deze filters" : `Nog geen werkbonnen.<br><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewWO" style="margin-top:10px">+ Eerste werkbon aanmaken</button>`}</td></tr>`}
       </tbody>
     </table>
@@ -2250,14 +2250,14 @@ ${emp ? `
       <input type="checkbox" name="billable" ${workorder?.billable === false ? "" : "checked"} style="width:16px;height:16px;"> Factureerbaar
     </label>
   </div>
-  ${workorder?.invoiceId ? `<div style="background:var(--wf-green-l);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--wf-green);margin-bottom:8px;">🧾 Factuur aangemaakt</div>` : ""}
+  ${workorder?.invoiceId ? `<div style="background:var(--wf-green-l);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--wf-green);margin-bottom:8px;">Factuur aangemaakt</div>` : ""}
   <div id="woFormErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:8px;font-size:12px;margin-bottom:8px;"></div>
   <div class="adm-form-actions" style="flex-wrap:wrap;gap:8px;">
     <button type="button" class="adm-btn adm-btn-secondary" id="woCancel">Annuleren</button>
-    ${workorder ? `<button type="button" class="adm-btn adm-btn-danger" id="woDelete">🗑</button>` : ""}
-    ${workorder ? `<button type="button" class="adm-btn adm-btn-secondary" id="woReport" title="Werkbon-rapport afdrukken">📄 Rapport</button>` : ""}
+    ${workorder ? `<button type="button" class="adm-btn adm-btn-danger" id="woDelete"><svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>` : ""}
+    ${workorder ? `<button type="button" class="adm-btn adm-btn-secondary" id="woReport" title="Werkbon-rapport afdrukken">Rapport</button>` : ""}
     ${workorder && ["Voltooid","Afgewerkt"].includes(workorder.status) && !workorder.invoiceId
-      ? `<button type="button" class="adm-btn adm-btn-secondary" id="woMakeInvoice" style="color:var(--wf-purple);border-color:var(--wf-purple-l);">🧾 Factuur aanmaken</button>`
+      ? `<button type="button" class="adm-btn adm-btn-secondary" id="woMakeInvoice" style="color:var(--wf-purple);border-color:var(--wf-purple-l);">Factuur aanmaken</button>`
       : ""}
     <button type="submit" class="adm-btn adm-btn-primary">${workorder ? "Opslaan" : "Aanmaken"}</button>
   </div>
@@ -2335,11 +2335,11 @@ ${emp ? `
     const venueName = id => (venues.find(v => v.id === id) || {}).name || (id ? "Werf" : "—");
 
     const toLabel = m => {
-      if (m.recipientId) return `👤 Persoonlijk`;
-      if (m.toRole === "all") return "📢 Alle medewerkers";
-      if (m.toRole === "employee") return "👷 Medewerkers";
-      if (m.toRole === "manager") return "👔 Managers";
-      return "📢 Iedereen";
+      if (m.recipientId) return `Persoonlijk`;
+      if (m.toRole === "all") return "Alle medewerkers";
+      if (m.toRole === "employee") return "Medewerkers";
+      if (m.toRole === "manager") return "Managers";
+      return "Iedereen";
     };
 
     const content = document.getElementById("admContent");
@@ -2362,13 +2362,13 @@ ${emp ? `
         <tr>
           <td>${esc(m.senderName||m.senderId||"Systeem")}</td>
           <td><span style="font-size:11px;background:var(--gray-100);border-radius:4px;padding:2px 6px;">${toLabel(m)}</span></td>
-          <td>${m.venueId ? `<span style="font-size:11px;background:var(--wf-yellow-l);color:var(--wf-yellow);border-radius:4px;padding:2px 6px;">🏗 ${esc(venueName(m.venueId))}</span>` : '<span style="color:var(--gray-300)">—</span>'}</td>
+          <td>${m.venueId ? `<span style="font-size:11px;background:var(--wf-yellow-l);color:var(--wf-yellow);border-radius:4px;padding:2px 6px;">${esc(venueName(m.venueId))}</span>` : '<span style="color:var(--gray-300)">—</span>'}</td>
           <td style="font-weight:500;">${esc(m.subject||"—")}</td>
           <td style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--gray-500);font-size:12px;" title="${esc(m.body||m.message||"")}">${esc(m.body||m.message||"—")}</td>
           <td style="white-space:nowrap;font-size:12px;color:var(--gray-400);">${m.createdAt?.slice(0,16)||""}</td>
           <td>
-            <button class="adm-btn adm-btn-secondary adm-btn-sm adm-msg-view" data-id="${esc(m.id)}" title="Bekijk bericht">👁</button>
-            <button class="adm-btn adm-btn-danger adm-btn-sm adm-msg-del" data-id="${esc(m.id)}" title="Verwijder" style="margin-left:4px;">🗑</button>
+            <button class="adm-btn adm-btn-secondary adm-btn-sm adm-msg-view" data-id="${esc(m.id)}" title="Bekijk bericht">Bekijk</button>
+            <button class="adm-btn adm-btn-danger adm-btn-sm adm-msg-del" data-id="${esc(m.id)}" title="Verwijder" style="margin-left:4px;"><svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>
           </td>
         </tr>`).join("") : `<tr><td colspan="7" class="adm-empty">${_msgVenueFilter ? "Nog geen berichten in deze werf-chat" : "Geen berichten"}</td></tr>`}
       </tbody>
@@ -2413,7 +2413,7 @@ ${emp ? `
         try {
           await api("DELETE", `/messages/${btn.dataset.id}`);
           renderMessages();
-        } catch(e) { window.showToast(e.message, "error"); btn.disabled = false; btn.textContent = "🗑"; }
+        } catch(e) { window.showToast(e.message, "error"); btn.disabled = false; btn.textContent = ""; }
       });
     });
   }
@@ -2434,10 +2434,10 @@ ${emp ? `
 <form id="admMsgForm">
   <div class="adm-form-group"><label>Sturen naar</label>
     <select name="toMode" id="admMsgToMode" style="margin-bottom:8px;">
-      <option value="all">📢 Alle medewerkers</option>
-      <option value="role_employee">👷 Alleen medewerkers (rol: employee)</option>
-      <option value="role_manager">👔 Alleen managers</option>
-      <option value="person">👤 Specifieke persoon</option>
+      <option value="all">Alle medewerkers</option>
+      <option value="role_employee">Alleen medewerkers (rol: employee)</option>
+      <option value="role_manager">Alleen managers</option>
+      <option value="person">Specifieke persoon</option>
     </select>
     <select name="recipientId" id="admMsgRecipient" style="display:none;">
       <option value="">— Kies persoon —</option>
@@ -2497,7 +2497,7 @@ ${emp ? `
         try {
           await api("POST", "/messages", body);
           closeDrawer();
-          window.showToast && window.showToast("Bericht verzonden ✓", "success");
+          window.showToast && window.showToast("Bericht verzonden", "success");
           renderMessages();
         } catch (err) {
           errEl.textContent = err.message; errEl.style.display = "";
@@ -2526,7 +2526,7 @@ ${emp ? `
       <span style="font-size:13px;color:var(--gray-400);">t/m</span>
       <input type="date" id="repTo" value="${lastOfMonth}" style="padding:6px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;">
       <button class="adm-btn adm-btn-primary adm-btn-sm" id="repLoad">Laden</button>
-      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="repBeslissers" title="Printbaar beslissersrapport genereren">📊 Beslissersrapport</button>
+      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="repBeslissers" title="Printbaar beslissersrapport genereren">Beslissersrapport</button>
     </div>
   </div>
 </div>
@@ -2587,8 +2587,8 @@ ${emp ? `
 <!-- Loonlijst -->
 <div class="adm-card" style="margin-top:16px;">
   <div class="adm-card-header">
-    <h3 class="adm-card-title">🧾 Loonlijst overzicht</h3>
-    <button class="adm-btn adm-btn-secondary adm-btn-sm" id="repExportPayroll">📥 Export CSV</button>
+    <h3 class="adm-card-title">Loonlijst overzicht</h3>
+    <button class="adm-btn adm-btn-secondary adm-btn-sm" id="repExportPayroll">Export CSV</button>
   </div>
   <div class="adm-card-body adm-table-wrap" id="repPayrollTable">
     <div class="adm-loading">Klik op Laden…</div>
@@ -2871,7 +2871,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
 <tbody>${Object.entries(workorders.reduce((a,w)=>{a[w.status||"?"]=(a[w.status||"?"]||0)+1;return a},{})).map(([s,n])=>`<tr><td>${esc(s)}</td><td>${n}</td><td>${workorders.length?(n/workorders.length*100).toFixed(0):0}%</td></tr>`).join("")||"<tr><td colspan='3'>Geen werkbonnen</td></tr>"}</tbody>
 </table>
 <div class="recommendation">
-  <div class="rec-title">🎯 Pilotevaluatie</div>
+  <div class="rec-title">Pilotevaluatie</div>
   <p style="font-size:13px;color:#1e40af;line-height:1.6;">
     In de periode ${from} t/m ${to} werden <strong>${workorders.length} werkbonnen</strong> aangemaakt met een afwerkingsrate van <strong>${completionRate}%</strong>.
     Het team presteerde <strong>${totalH.toFixed(0)} uur</strong> op ${payroll.length} medewerkers.
@@ -2915,7 +2915,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
       <input type="date" id="auditTo" value="${todayStr}" style="padding:6px 8px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;">
       <input type="number" placeholder="Max" id="auditLimit" value="200" min="10" max="1000" style="padding:6px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;width:70px;">
       <button class="adm-btn adm-btn-primary adm-btn-sm" id="auditLoad">↻ Laden</button>
-      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="auditExport">⬇ CSV</button>
+      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="auditExport">CSV</button>
     </div>
   </div>
 </div>
@@ -2951,7 +2951,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
           const actors = new Set(_auditRows.map(r => r.actor)).size;
           const areas  = new Set(_auditRows.filter(r=>r.area).map(r => r.area)).size;
           const fails  = _auditRows.filter(r => r.action?.includes("fail") || r.action?.includes("lock") || r.action?.includes("denied")).length;
-          summaryEl.innerHTML = `📊 <strong>${_auditRows.length}</strong> events &nbsp;·&nbsp; <strong>${actors}</strong> actoren &nbsp;·&nbsp; <strong>${areas}</strong> gebieden${fails ? ` &nbsp;·&nbsp; <span style="color:var(--wf-red);font-weight:600;">⚠ ${fails} fouten/weigeringen</span>` : ""}`;
+          summaryEl.innerHTML = `<strong>${_auditRows.length}</strong> events &nbsp;·&nbsp; <strong>${actors}</strong> actoren &nbsp;·&nbsp; <strong>${areas}</strong> gebieden${fails ? ` &nbsp;·&nbsp; <span style="color:var(--wf-red);font-weight:600;">${fails} fouten/weigeringen</span>` : ""}`;
           summaryEl.style.display = "block";
         }
         renderAuditTable(_auditRows);
@@ -2962,7 +2962,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
 
     function renderAuditTable(rows) {
       if (!rows.length) {
-        document.getElementById("auditTable").innerHTML = '<div class="adm-empty"><div class="adm-empty-icon">📋</div><div class="adm-empty-text">Geen audit-events gevonden</div></div>';
+        document.getElementById("auditTable").innerHTML = '<div class="adm-empty"><div class="adm-empty-text">Geen audit-events gevonden</div></div>';
         return;
       }
       document.getElementById("auditTable").innerHTML = `
@@ -3007,7 +3007,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
     <input id="custSearch" placeholder="Zoek naam, e-mail…" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:12px;min-width:200px;">
   </div>
   ${rows.length === 0
-    ? `<div class="adm-empty"><div class="adm-empty-icon">🏢</div><div class="adm-empty-text">Nog geen klanten</div><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewCust" style="margin-top:12px">+ Eerste klant aanmaken</button></div>`
+    ? `<div class="adm-empty"><div class="adm-empty-text">Nog geen klanten</div><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewCust" style="margin-top:12px">+ Eerste klant aanmaken</button></div>`
     : `<div class="adm-table-wrap"><table class="adm-table">
         <thead><tr><th>Naam</th><th>Contactpersoon</th><th>E-mail</th><th>Telefoon</th><th>BTW-nr</th><th>Acties</th></tr></thead>
         <tbody id="custTbody">${buildCustRows(rows)}</tbody>
@@ -3038,8 +3038,8 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
       <td>${esc(c.phone||"—")}</td>
       <td style="font-family:monospace;font-size:12px">${esc(c.vatNumber||"—")}</td>
       <td style="white-space:nowrap">
-        <button class="adm-btn adm-btn-primary adm-btn-sm cust-view" data-id="${c.id}">🔍 Detail</button>
-        <button class="adm-btn adm-btn-secondary adm-btn-sm cust-edit" data-id="${c.id}">✏</button>
+        <button class="adm-btn adm-btn-primary adm-btn-sm cust-view" data-id="${c.id}">Detail</button>
+        <button class="adm-btn adm-btn-secondary adm-btn-sm cust-edit" data-id="${c.id}"></button>
       </td>
     </tr>`).join("");
   }
@@ -3080,9 +3080,9 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
               <td>${esc(uName(w)||"—")}</td>
               <td><span class="adm-status adm-status-${(w.status||"").toLowerCase().replace(/\s/g,"-")}">${esc(w.status||"—")}</span></td>
               <td>${w.scheduledDate||w.createdAt?.slice(0,10)||"—"}</td>
-              <td><button class="adm-btn adm-btn-secondary adm-btn-sm wo-from-cust" data-id="${w.id}">✏ Bewerk</button></td>
+              <td><button class="adm-btn adm-btn-secondary adm-btn-sm wo-from-cust" data-id="${w.id}">Bewerk</button></td>
             </tr>`).join("")}</tbody>
-          </table>` : `<div class="adm-empty"><div class="adm-empty-icon">📋</div><div class="adm-empty-text">Geen werkbonnen voor deze klant</div></div>`;
+          </table>` : `<div class="adm-empty"><div class="adm-empty-text">Geen werkbonnen voor deze klant</div></div>`;
           body.querySelectorAll(".wo-from-cust").forEach(btn => {
             btn.addEventListener("click", () => openWorkorderDrawer(custWOs.find(w => w.id === btn.dataset.id)));
           });
@@ -3098,12 +3098,12 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
                 <td style="font-weight:600">${fmtEurCD(inv.total)}</td>
                 <td><span class="adm-status ${st.css}">${st.label}</span></td>
                 <td style="display:flex;gap:4px;">
-                  <button class="adm-btn adm-btn-secondary adm-btn-sm inv-from-cust" data-id="${inv.id}">✏</button>
-                  ${["open","overdue"].includes(inv.status)?`<button class="adm-btn adm-btn-success adm-btn-sm inv-paid-cust" data-id="${inv.id}">✓ Betaald</button>`:""}
+                  <button class="adm-btn adm-btn-secondary adm-btn-sm inv-from-cust" data-id="${inv.id}"></button>
+                  ${["open","overdue"].includes(inv.status)?`<button class="adm-btn adm-btn-success adm-btn-sm inv-paid-cust" data-id="${inv.id}">Betaald</button>`:""}
                 </td>
               </tr>`;
             }).join("")}</tbody>
-          </table>` : `<div class="adm-empty"><div class="adm-empty-icon">🧾</div><div class="adm-empty-text">Geen facturen voor deze klant</div></div>`;
+          </table>` : `<div class="adm-empty"><div class="adm-empty-text">Geen facturen voor deze klant</div></div>`;
           body.querySelectorAll(".inv-from-cust").forEach(btn => {
             btn.addEventListener("click", () => openFactuurDrawer(custInvs.find(i => i.id === btn.dataset.id)));
           });
@@ -3122,7 +3122,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
 <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
   <button class="adm-btn adm-btn-secondary adm-btn-sm" id="custDetailBack">← Terug</button>
   <h2 style="font-size:18px;font-weight:600;color:var(--gray-900);margin:0;">${esc(customer.name)}</h2>
-  <button class="adm-btn adm-btn-secondary adm-btn-sm" id="custDetailEdit">✏ Bewerk</button>
+  <button class="adm-btn adm-btn-secondary adm-btn-sm" id="custDetailEdit">Bewerk</button>
 </div>
 
 <!-- KPIs -->
@@ -3146,7 +3146,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
       ${customer.notes?`<div style="font-size:13px;margin-top:4px;"><span style="color:var(--gray-400);display:block;margin-bottom:2px;">Notities</span><span style="color:var(--gray-500)">${esc(customer.notes)}</span></div>`:""}
       <div style="margin-top:8px;display:flex;gap:8px;">
         <button class="adm-btn adm-btn-primary adm-btn-sm" id="custNewWO">+ Werkbon</button>
-        <button class="adm-btn adm-btn-secondary adm-btn-sm" id="custNewInv">🧾 Factuur</button>
+        <button class="adm-btn adm-btn-secondary adm-btn-sm" id="custNewInv">Factuur</button>
       </div>
     </div>
   </div>
@@ -3201,7 +3201,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
     <div class="adm-form-group"><label>Contactpersoon</label><input name="contactName" value="${esc(customer?.contactName||"")}" placeholder="Jan Janssen"></div>
     <div class="adm-form-group">
       <label>BTW-nummer
-        <button type="button" id="kboLookupBtn" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--wf-purple);font-weight:600;margin-left:6px;padding:1px 6px;border:1px solid var(--wf-purple-l);border-radius:4px;">🔍 KBO opzoeken</button>
+        <button type="button" id="kboLookupBtn" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--wf-purple);font-weight:600;margin-left:6px;padding:1px 6px;border:1px solid var(--wf-purple-l);border-radius:4px;">KBO opzoeken</button>
       </label>
       <input name="vatNumber" id="custVatInput" value="${esc(customer?.vatNumber||"")}" placeholder="BE0000.000.000">
       <div id="kboResult" style="display:none;margin-top:6px;background:var(--wf-green-l);border-radius:6px;padding:8px;font-size:12px;color:var(--wf-green);"></div>
@@ -3216,7 +3216,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
   <div id="custFormErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:8px;font-size:12px;margin-bottom:8px;"></div>
   <div class="adm-form-actions">
     <button type="button" class="adm-btn adm-btn-secondary" id="custCancel">Annuleren</button>
-    ${customer ? `<button type="button" class="adm-btn adm-btn-danger adm-btn-sm" id="custDelete">🗑 Verwijderen</button>` : ""}
+    ${customer ? `<button type="button" class="adm-btn adm-btn-danger adm-btn-sm" id="custDelete">Verwijderen</button>` : ""}
     <button type="submit" class="adm-btn adm-btn-primary">${customer ? "Opslaan" : "Aanmaken"}</button>
   </div>
 </form>`;
@@ -3250,7 +3250,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
           });
         }
       } catch(e) { window.showToast&&window.showToast("KBO fout: "+e.message,"error"); }
-      finally { btn.textContent="🔍 KBO opzoeken"; btn.disabled=false; }
+      finally { btn.textContent="KBO opzoeken"; btn.disabled=false; }
     });
 
     document.getElementById("custDelete")?.addEventListener("click", async () => {
@@ -3291,7 +3291,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
     <input id="venSearch" placeholder="Zoek locatie…" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:12px;min-width:180px;">
   </div>
   ${rows.length === 0
-    ? `<div class="adm-empty"><div class="adm-empty-icon">📍</div><div class="adm-empty-text">Nog geen locaties</div><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewVen" style="margin-top:12px">+ Eerste locatie aanmaken</button></div>`
+    ? `<div class="adm-empty"><div class="adm-empty-text">Nog geen locaties</div><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewVen" style="margin-top:12px">+ Eerste locatie aanmaken</button></div>`
     : `<div class="adm-table-wrap"><table class="adm-table">
         <thead><tr><th>Naam</th><th>Adres</th><th>Contactpersoon</th><th>Telefoon</th><th>Actief</th><th>Acties</th></tr></thead>
         <tbody id="venTbody">${buildVenRows(rows)}</tbody>
@@ -3320,7 +3320,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
       <td>${esc(v.contactName||"—")}</td>
       <td>${esc(v.phone||"—")}</td>
       <td>${v.active !== false ? '<span class="adm-status adm-status-active">Actief</span>' : '<span class="adm-status adm-status-inactive">Inactief</span>'}</td>
-      <td><button class="adm-btn adm-btn-secondary adm-btn-sm ven-edit" data-id="${v.id}">✏ Bewerk</button></td>
+      <td><button class="adm-btn adm-btn-secondary adm-btn-sm ven-edit" data-id="${v.id}">Bewerk</button></td>
     </tr>`).join("");
   }
   function openVenueDrawer(venue) {
@@ -3338,7 +3338,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
   <div id="venFormErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:8px;font-size:12px;margin-bottom:8px;"></div>
   <div class="adm-form-actions">
     <button type="button" class="adm-btn adm-btn-secondary" id="venCancel">Annuleren</button>
-    ${venue ? `<button type="button" class="adm-btn adm-btn-danger adm-btn-sm" id="venDelete">🗑 Verwijderen</button>` : ""}
+    ${venue ? `<button type="button" class="adm-btn adm-btn-danger adm-btn-sm" id="venDelete">Verwijderen</button>` : ""}
     <button type="submit" class="adm-btn adm-btn-primary">${venue ? "Opslaan" : "Aanmaken"}</button>
   </div>
 </form>`;
@@ -3380,14 +3380,14 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
       const alerts = data.alerts || [];
       content.innerHTML = `
 ${alerts.length ? `<div style="background:var(--wf-yellow-l);border:1px solid var(--wf-yellow-l);border-radius:10px;padding:12px 16px;margin-bottom:14px;font-size:13px;color:var(--wf-yellow)">
-  ⚠️ <strong>${alerts.length} alert${alerts.length>1?"s":""}</strong>: ${alerts.map(a=>esc(a.message||a.type)).join(", ")}
+  <strong>${alerts.length} alert${alerts.length>1?"s":""}</strong>: ${alerts.map(a=>esc(a.message||a.type)).join(", ")}
 </div>` : ""}
 <div class="adm-card">
   <div class="adm-card-header">
     <h3 class="adm-card-title">Voertuigen <span style="background:var(--wf-purple-l);color:var(--wf-purple);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${vehicles.length}</span></h3>
   </div>
   ${vehicles.length === 0
-    ? `<div class="adm-empty"><div class="adm-empty-icon">🚗</div><div class="adm-empty-text">Nog geen voertuigen</div><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewVeh" style="margin-top:12px">+ Eerste voertuig aanmaken</button></div>`
+    ? `<div class="adm-empty"><div class="adm-empty-text">Nog geen voertuigen</div><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewVeh" style="margin-top:12px">+ Eerste voertuig aanmaken</button></div>`
     : `<div class="adm-table-wrap"><table class="adm-table">
         <thead><tr><th>Naam / Kenteken</th><th>Merk / Model</th><th>Chauffeur</th><th>KM-stand</th><th>Status</th><th>Volgende service</th><th>Acties</th></tr></thead>
         <tbody>${vehicles.map(v => `<tr class="adm-row-link veh-row" data-id="${v.id}" title="Open voertuig">
@@ -3398,7 +3398,7 @@ ${alerts.length ? `<div style="background:var(--wf-yellow-l);border:1px solid va
           <td><span class="adm-status adm-status-${v.status||"active"}">${esc(v.status||"actief")}</span></td>
           <td>${v.nextService ? new Date(v.nextService).toLocaleDateString("nl-BE") : "—"}</td>
           <td>
-            <button class="adm-btn adm-btn-secondary adm-btn-sm veh-edit" data-id="${v.id}">✏</button>
+            <button class="adm-btn adm-btn-secondary adm-btn-sm veh-edit" data-id="${v.id}"></button>
             <button class="adm-btn adm-btn-secondary adm-btn-sm veh-km" data-id="${v.id}">KM log</button>
           </td>
         </tr>`).join("")}</tbody>
@@ -3439,7 +3439,7 @@ ${alerts.length ? `<div style="background:var(--wf-yellow-l);border:1px solid va
     <div class="adm-form-group"><label>Volgende service (datum)</label><input name="nextService" type="date" value="${esc(vehicle?.nextService||"")}"></div>
   </div>
   <div class="adm-form-actions" style="justify-content:space-between;">
-    ${vehicle ? `<button type="button" class="adm-btn adm-btn-danger adm-btn-sm" id="vehDelete">🗑 Verwijderen</button>` : `<span></span>`}
+    ${vehicle ? `<button type="button" class="adm-btn adm-btn-danger adm-btn-sm" id="vehDelete">Verwijderen</button>` : `<span></span>`}
     <div style="display:flex;gap:8px;">
       <button type="button" class="adm-btn adm-btn-secondary" id="vehCancel">Annuleren</button>
       <button type="submit" class="adm-btn adm-btn-primary">${vehicle ? "Opslaan" : "Aanmaken"}</button>
@@ -3511,7 +3511,7 @@ ${alerts.length ? `<div style="background:var(--wf-yellow-l);border:1px solid va
   <div class="adm-kpi adm-kpi-purple"><div class="adm-kpi-label">Totale stockwaarde</div><div class="adm-kpi-value" style="font-size:18px">${new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR"}).format(totalValue)}</div></div>
 </div>
 ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(--wf-red-l);border-radius:10px;padding:12px 16px;margin-bottom:14px;font-size:13px;color:var(--wf-red)">
-  ⚠️ Lage voorraad: ${alerts.map(a=>esc(a.name||a.itemId)).join(", ")}
+  Lage voorraad: ${alerts.map(a=>esc(a.name||a.itemId)).join(", ")}
 </div>` : ""}
 <div class="adm-card">
   <div class="adm-card-header">
@@ -3519,7 +3519,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
     <input id="stSearch" placeholder="Zoek artikel…" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:12px;min-width:160px;">
   </div>
   ${items.length === 0
-    ? `<div class="adm-empty"><div class="adm-empty-icon">📦</div><div class="adm-empty-text">Nog geen stockartikelen</div><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewStock" style="margin-top:12px">+ Eerste artikel aanmaken</button></div>`
+    ? `<div class="adm-empty"><div class="adm-empty-text">Nog geen stockartikelen</div><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewStock" style="margin-top:12px">+ Eerste artikel aanmaken</button></div>`
     : `<div class="adm-table-wrap"><table class="adm-table">
         <thead><tr><th>Artikel</th><th>SKU</th><th>Categorie</th><th>Hoeveelheid</th><th>Eenheid</th><th>Min. stock</th><th>Prijs/stuk</th><th>Acties</th></tr></thead>
         <tbody id="stTbody">${buildStockRows(items)}</tbody>
@@ -3546,7 +3546,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
         <td>${esc(i.minQuantity||"—")}</td>
         <td>${i.unitPrice ? new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR"}).format(i.unitPrice) : "—"}</td>
         <td>
-          <button class="adm-btn adm-btn-secondary adm-btn-sm st-edit" data-id="${i.id}">✏</button>
+          <button class="adm-btn adm-btn-secondary adm-btn-sm st-edit" data-id="${i.id}"></button>
           <button class="adm-btn adm-btn-secondary adm-btn-sm st-mut" data-id="${i.id}">± Mutatie</button>
         </td>
       </tr>`;
@@ -3578,7 +3578,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
     <div class="adm-form-group"><label>Prijs per eenheid (€)</label><input name="unitPrice" type="number" step="0.01" value="${esc(item?.unitPrice||"")}"></div>
   </div>
   <div class="adm-form-actions" style="justify-content:space-between;">
-    ${item ? `<button type="button" class="adm-btn adm-btn-danger adm-btn-sm" id="stDelete">🗑 Verwijderen</button>` : `<span></span>`}
+    ${item ? `<button type="button" class="adm-btn adm-btn-danger adm-btn-sm" id="stDelete">Verwijderen</button>` : `<span></span>`}
     <div style="display:flex;gap:8px;">
       <button type="button" class="adm-btn adm-btn-secondary" id="stCancel">Annuleren</button>
       <button type="submit" class="adm-btn adm-btn-primary">${item ? "Opslaan" : "Aanmaken"}</button>
@@ -3788,7 +3788,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
     </select>
   </div>
   ${filtered.length === 0
-    ? `<div class="adm-empty"><div class="adm-empty-icon">📋</div><div class="adm-empty-text">Nog geen offertes</div><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewQuote" style="margin-top:12px">+ Eerste offerte aanmaken</button></div>`
+    ? `<div class="adm-empty"><div class="adm-empty-text">Nog geen offertes</div><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewQuote" style="margin-top:12px">+ Eerste offerte aanmaken</button></div>`
     : `<div class="adm-table-wrap"><table class="adm-table">
         <thead><tr><th>Nr.</th><th>Datum</th><th>Klant</th><th>Geldig tot</th><th>Bedrag</th><th>Status</th><th>Acties</th></tr></thead>
         <tbody>${filtered.slice().sort((a,b)=>(b.quoteDate||"").localeCompare(a.quoteDate||"")).map(q => {
@@ -3802,9 +3802,9 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
             <td style="font-weight:600">${fmtEurInv(q.total)}</td>
             <td><span class="adm-status ${st.css}">${st.label}</span>${q.invoiceId?`<div style="font-size:10px;color:var(--gray-400)">→ gefactureerd</div>`:""}</td>
             <td style="white-space:nowrap;display:flex;gap:5px;flex-wrap:wrap;">
-              <button class="adm-btn adm-btn-secondary adm-btn-sm q-edit" data-id="${q.id}" title="Bewerk">✏</button>
-              <button class="adm-btn adm-btn-secondary adm-btn-sm q-pdf" data-id="${q.id}" title="PDF / Afdrukken">📄</button>
-              ${["concept","verzonden"].includes(q.status)?`<button class="adm-btn adm-btn-secondary adm-btn-sm q-send" data-id="${q.id}" title="Versturen + link">📤</button>`:""}
+              <button class="adm-btn adm-btn-secondary adm-btn-sm q-edit" data-id="${q.id}" title="Bewerk"></button>
+              <button class="adm-btn adm-btn-secondary adm-btn-sm q-pdf" data-id="${q.id}" title="PDF / Afdrukken"><svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg></button>
+              ${["concept","verzonden"].includes(q.status)?`<button class="adm-btn adm-btn-secondary adm-btn-sm q-send" data-id="${q.id}" title="Versturen + link"><svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>`:""}
               ${canConvert && !q.invoiceId?`<button class="adm-btn adm-btn-success adm-btn-sm q-toinv" data-id="${q.id}" title="Naar factuur">→ Factuur</button>`:""}
               ${canConvert && !q.workorderId?`<button class="adm-btn adm-btn-secondary adm-btn-sm q-towo" data-id="${q.id}" title="Naar werkbon">→ Werkbon</button>`:""}
             </td>
@@ -3834,12 +3834,12 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
       }));
       content.querySelectorAll(".q-toinv").forEach(b => b.addEventListener("click", async () => {
         if(!confirm("Offerte omzetten naar factuur?")) return;
-        try { const d = await api("POST", `/offertes/${b.dataset.id}/convert`, { target:"invoice" }); window.showToast && window.showToast("Factuur "+(d.invoice?.number||"")+" aangemaakt ✓","success"); renderOffertes(); }
+        try { const d = await api("POST", `/offertes/${b.dataset.id}/convert`, { target:"invoice" }); window.showToast && window.showToast("Factuur "+(d.invoice?.number||"")+" aangemaakt","success"); renderOffertes(); }
         catch(e){ window.showToast && window.showToast("Fout: "+e.message,"error"); }
       }));
       content.querySelectorAll(".q-towo").forEach(b => b.addEventListener("click", async () => {
         if(!confirm("Offerte omzetten naar werkbon?")) return;
-        try { const d = await api("POST", `/offertes/${b.dataset.id}/convert`, { target:"workorder" }); window.showToast && window.showToast("Werkbon "+(d.workorder?.number||"")+" aangemaakt ✓","success"); renderOffertes(); }
+        try { const d = await api("POST", `/offertes/${b.dataset.id}/convert`, { target:"workorder" }); window.showToast && window.showToast("Werkbon "+(d.workorder?.number||"")+" aangemaakt","success"); renderOffertes(); }
         catch(e){ window.showToast && window.showToast("Fout: "+e.message,"error"); }
       }));
     } catch(e) { content.innerHTML = `<div style="padding:20px;color:var(--wf-red)">Fout: ${e.message}</div>`; }
@@ -3897,7 +3897,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
   <div id="qFormErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:8px;font-size:12px;margin-bottom:8px;"></div>
   <div class="adm-form-actions" style="flex-wrap:wrap;gap:8px;">
     <button type="button" class="adm-btn adm-btn-secondary" id="qCancel">Sluiten</button>
-    ${isEdit && !["aanvaard"].includes(quote.status)?`<button type="button" class="adm-btn adm-btn-danger adm-btn-sm" id="qDelete">🗑 Verwijderen</button>`:""}
+    ${isEdit && !["aanvaard"].includes(quote.status)?`<button type="button" class="adm-btn adm-btn-danger adm-btn-sm" id="qDelete">Verwijderen</button>`:""}
     ${!isEdit?`<button type="submit" class="adm-btn adm-btn-primary">Aanmaken</button>`:""}
   </div>
 </form>`;
@@ -3942,7 +3942,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
         unitPrice:Number(r.querySelector(".q-line-price").value||0),
         vatRate:Number(r.querySelector(".q-line-vat").value||21)
       }));
-      try { await api("POST", "/offertes", body); closeDrawer(); renderOffertes(); window.showToast && window.showToast("Offerte aangemaakt ✓","success"); }
+      try { await api("POST", "/offertes", body); closeDrawer(); renderOffertes(); window.showToast && window.showToast("Offerte aangemaakt","success"); }
       catch(err){ if(errEl){errEl.textContent=err.message;errEl.style.display="";} }
     });
   }
@@ -4007,7 +4007,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
     </div>
   </div>
   ${filtered.length === 0
-    ? `<div class="adm-empty"><div class="adm-empty-icon">🧾</div><div class="adm-empty-text">Nog geen facturen</div><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewInv" style="margin-top:12px">+ Eerste factuur aanmaken</button></div>`
+    ? `<div class="adm-empty"><div class="adm-empty-text">Nog geen facturen</div><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewInv" style="margin-top:12px">+ Eerste factuur aanmaken</button></div>`
     : `<div class="adm-table-wrap"><table class="adm-table">
         <thead><tr><th>Nr.</th><th>Datum</th><th>Klant</th><th>Vervaldatum</th><th>Bedrag</th><th>Status</th><th>Acties</th></tr></thead>
         <tbody>${filtered.slice().sort((a,b) => (b.invoiceDate||"").localeCompare(a.invoiceDate||"")).map(inv => {
@@ -4020,14 +4020,14 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
             <td style="font-weight:600">${fmtEurInv(inv.total)}</td>
             <td><span class="adm-status ${st.css}">${st.label}</span></td>
             <td style="white-space:nowrap;display:flex;gap:6px;">
-              <button class="adm-btn adm-btn-secondary adm-btn-sm inv-edit" data-id="${inv.id}">✏</button>
-              <button class="adm-btn adm-btn-secondary adm-btn-sm inv-pdf" data-id="${inv.id}" title="PDF / Afdrukken">📄</button>
+              <button class="adm-btn adm-btn-secondary adm-btn-sm inv-edit" data-id="${inv.id}">Bewerken</button>
+              <button class="adm-btn adm-btn-secondary adm-btn-sm inv-pdf" data-id="${inv.id}" title="PDF / Afdrukken"><svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg></button>
               ${inv.peppolStatus === "delivered" || inv.peppolStatus === "sent"
-                ? `<span class="adm-status adm-status-active" title="Peppol: ${esc(inv.peppolReference||"")}">📧 Peppol ✓</span>`
-                : (subEnabled("invoices","peppol") ? `<button class="adm-btn adm-btn-secondary adm-btn-sm inv-peppol" data-id="${inv.id}" title="Verstuur via Peppol e-facturatie">📧 Peppol</button>` : "")}
-              <button class="adm-btn adm-btn-secondary adm-btn-sm inv-ubl" data-id="${inv.id}" title="UBL-XML downloaden">⬇ UBL</button>
-              ${["open","overdue"].includes(inv.status) && subEnabled("invoices","online-payment") ? `<button class="adm-btn adm-btn-secondary adm-btn-sm inv-paylink" data-id="${inv.id}" title="Betaallink genereren">💳 Link</button>` : ""}
-              ${["open","overdue"].includes(inv.status) ? `<button class="adm-btn adm-btn-success adm-btn-sm inv-paid" data-id="${inv.id}" title="Markeer als betaald">✓ Betaald</button>` : ""}
+                ? `<span class="adm-status adm-status-active" title="Peppol: ${esc(inv.peppolReference||"")}">Peppol ✓</span>`
+                : (subEnabled("invoices","peppol") ? `<button class="adm-btn adm-btn-secondary adm-btn-sm inv-peppol" data-id="${inv.id}" title="Verstuur via Peppol e-facturatie">Peppol</button>` : "")}
+              <button class="adm-btn adm-btn-secondary adm-btn-sm inv-ubl" data-id="${inv.id}" title="UBL-XML downloaden">UBL</button>
+              ${["open","overdue"].includes(inv.status) && subEnabled("invoices","online-payment") ? `<button class="adm-btn adm-btn-secondary adm-btn-sm inv-paylink" data-id="${inv.id}" title="Betaallink genereren">Link</button>` : ""}
+              ${["open","overdue"].includes(inv.status) ? `<button class="adm-btn adm-btn-success adm-btn-sm inv-paid" data-id="${inv.id}" title="Markeer als betaald">Betaald</button>` : ""}
             </td>
           </tr>`;
         }).join("")}</tbody>
@@ -4097,7 +4097,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
             let copied = false;
             try { await navigator.clipboard.writeText(d.url); copied = true; } catch(_){}
             const via = d.provider === "stripe" ? "Stripe" : "demo";
-            window.showToast && window.showToast(`Betaallink (${via}) ${copied?"gekopieerd ✓":"aangemaakt"}: ${d.url}`, "success");
+            window.showToast && window.showToast(`Betaallink (${via}) ${copied?"gekopieerd":"aangemaakt"}: ${d.url}`, "success");
           } catch(e) { window.showToast && window.showToast("Fout: "+e.message, "error"); }
           btn.disabled = false; btn.textContent = old;
         });
@@ -4169,7 +4169,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
   </div>
   ${invoice?.structuredComm ? `<div style="background:var(--wf-blue-l);border:1px solid var(--wf-blue-l);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:12.5px;">
     <span style="color:var(--gray-500);">Gestructureerde mededeling:</span> <strong style="font-family:monospace;font-size:13px;">${esc(invoice.structuredComm)}</strong>
-    ${invoice.vatNote ? `<div style="color:var(--wf-yellow);margin-top:4px;">⚖ ${esc(invoice.vatNote)}</div>` : ""}
+    ${invoice.vatNote ? `<div style="color:var(--wf-yellow);margin-top:4px;"><${esc(invoice.vatNote)}</div>` : ""}
   </div>` : ""}
 
   <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px;">Factuurregels</div>
@@ -4198,7 +4198,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
   <div id="invFormErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:8px;font-size:12px;margin-bottom:8px;"></div>
   <div class="adm-form-actions">
     <button type="button" class="adm-btn adm-btn-secondary" id="invCancel">Annuleren</button>
-    ${invoice && invoice.status !== "paid" ? `<button type="button" class="adm-btn adm-btn-danger adm-btn-sm" id="invDelete">🗑 Verwijderen</button>` : ""}
+    ${invoice && invoice.status !== "paid" ? `<button type="button" class="adm-btn adm-btn-danger adm-btn-sm" id="invDelete">Verwijderen</button>` : ""}
     ${!invoice ? `<button type="submit" class="adm-btn adm-btn-primary">Aanmaken</button>` : ""}
   </div>
 </form>`;
@@ -4300,7 +4300,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
       try {
         await api("POST", "/facturen", body);
         closeDrawer(); renderFacturen();
-        window.showToast && window.showToast("Factuur aangemaakt ✓", "success");
+        window.showToast && window.showToast("Factuur aangemaakt", "success");
       } catch(err) {
         if (errEl) { errEl.textContent = err.message; errEl.style.display = ""; }
       }
@@ -4315,7 +4315,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
       const d = await api("GET", "/roadmap");
       const rm = d.roadmap || {};
       const phases = rm.phases || [];
-      const phaseIcons = { foundation:"🏗️", core_operations:"⚙️", billing_compliance:"💳", pilot_launch:"🚀", commercial_launch:"🌐" };
+      const phaseIcons = { foundation:"", core_operations:"", billing_compliance:"", pilot_launch:"", commercial_launch:"" };
 
       content.innerHTML = `
 <div style="margin-bottom:20px;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
@@ -4324,16 +4324,16 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
     <div style="font-size:13px;color:var(--gray-500);">Gegenereerd op ${new Date(rm.generatedAt||Date.now()).toLocaleString("nl-BE")} · ${rm.summary?.go||0}/${rm.summary?.total||0} fasen gereed · ${rm.summary?.openActions||0} open acties</div>
   </div>
   <div style="display:flex;gap:8px;flex-wrap:wrap;">
-    <button class="adm-btn adm-btn-secondary adm-btn-sm" id="rmRefresh">🔄 Vernieuwen</button>
-    <button class="adm-btn adm-btn-secondary adm-btn-sm" id="rmBackfill" title="Herstel datakwaliteit: werkbon-nummers, notificatie-userId, verlof-dagen">🔧 Data repareren</button>
-    <button class="adm-btn adm-btn-secondary adm-btn-sm" id="rmDemoData" title="Vult alle schermen met realistische voorbeelddata (klanten, offertes, facturen, planning, klok…)">🎲 Demodata laden</button>
-    <button class="adm-btn adm-btn-secondary adm-btn-sm" id="rmDemoClear" title="Verwijdert alle geladen demodata weer">🧹 Demodata wissen</button>
+    <button class="adm-btn adm-btn-secondary adm-btn-sm" id="rmRefresh">Vernieuwen</button>
+    <button class="adm-btn adm-btn-secondary adm-btn-sm" id="rmBackfill" title="Herstel datakwaliteit: werkbon-nummers, notificatie-userId, verlof-dagen">Data repareren</button>
+    <button class="adm-btn adm-btn-secondary adm-btn-sm" id="rmDemoData" title="Vult alle schermen met realistische voorbeelddata (klanten, offertes, facturen, planning, klok…)">Demodata laden</button>
+    <button class="adm-btn adm-btn-secondary adm-btn-sm" id="rmDemoClear" title="Verwijdert alle geladen demodata weer">Demodata wissen</button>
   </div>
 </div>
 
 ${phases.map(p => {
   const isGo = p.go;
-  const icon = phaseIcons[p.key]||"📍";
+  const icon = phaseIcons[p.key]||"";
   const isCurrent = p.key === rm.currentPhase;
   return `
 <div style="margin-bottom:16px;border-radius:12px;border:2px solid ${isGo?"var(--wf-green-l)":isCurrent?"var(--wf-yellow-l)":"var(--gray-100)"};overflow:hidden;">
@@ -4345,7 +4345,7 @@ ${phases.map(p => {
     </div>
     <div style="text-align:right;">
       <div style="font-size:22px;font-weight:600;color:${isGo?"var(--wf-green)":isCurrent?"var(--wf-yellow)":"var(--gray-400)"};">${p.score}%</div>
-      <div style="font-size:11px;font-weight:600;color:${isGo?"var(--wf-green)":"var(--wf-red)"};">${isGo?"✅ GO":"🔴 NO GO"}</div>
+      <div style="font-size:11px;font-weight:600;color:${isGo?"var(--wf-green)":"var(--wf-red)"};">${isGo?"GO":"NO GO"}</div>
     </div>
   </div>
   <!-- Progress bar -->
@@ -4364,7 +4364,7 @@ ${phases.map(p => {
         <div style="font-size:12px;color:var(--gray-500);">${esc(a.action||"")}</div>
       </div>
     </div>`).join("")}
-  </div>` : `<div style="padding:10px 18px;font-size:13px;color:var(--wf-green);font-weight:600;">✓ Alle checks geslaagd</div>`}
+  </div>` : `<div style="padding:10px 18px;font-size:13px;color:var(--wf-green);font-weight:600;">Alle checks geslaagd</div>`}
 </div>`;
 }).join("")}`;
       document.getElementById("rmRefresh")?.addEventListener("click", () => renderRoadmap());
@@ -4378,8 +4378,8 @@ ${phases.map(p => {
             `Data gerepareerd: ${res.workorderNumbers||0} werkbonnen genummerd, ${res.notificationUserIds||0} notificaties gelinkt, ${res.leaveDays||0} verloven bijgewerkt`,
             "success"
           );
-          btn.disabled = false; btn.textContent = "🔧 Data repareren";
-        } catch(e) { window.showToast && window.showToast("Fout: "+e.message,"error"); btn.disabled=false; btn.textContent="🔧 Data repareren"; }
+          btn.disabled = false; btn.textContent = "Data repareren";
+        } catch(e) { window.showToast && window.showToast("Fout: "+e.message,"error"); btn.disabled=false; btn.textContent="Data repareren"; }
       });
       document.getElementById("rmDemoData")?.addEventListener("click", async () => {
         if (!confirm("Dit vult álle schermen met realistische voorbeelddata: klanten, offertes, facturen, werkbonnen, planning, klokregistraties, verlof, onkosten, stock en voertuigen.\n\nJe kunt het achteraf weer wissen met 'Demodata wissen'. Doorgaan?")) return;
@@ -4391,7 +4391,7 @@ ${phases.map(p => {
           window.showToast && window.showToast(`Demodata geladen ✓ (${total} records over ${Object.keys(r.counts||{}).length} modules)`, "success");
           switchView("dashboard");
         } catch(e) { window.showToast && window.showToast("Fout: "+e.message, "error"); }
-        btn.disabled = false; btn.textContent = "🎲 Demodata laden";
+        btn.disabled = false; btn.textContent = "Demodata laden";
       });
       document.getElementById("rmDemoClear")?.addEventListener("click", async () => {
         if (!confirm("Alle geladen demodata verwijderen? Eigen ingevoerde data blijft staan.")) return;
@@ -4402,7 +4402,7 @@ ${phases.map(p => {
           window.showToast && window.showToast(`Demodata gewist ✓ (${r.removed} records)`, "success");
           renderRoadmap();
         } catch(e) { window.showToast && window.showToast("Fout: "+e.message, "error"); }
-        btn.disabled = false; btn.textContent = "🧹 Demodata wissen";
+        btn.disabled = false; btn.textContent = "Demodata wissen";
       });
     } catch(e) { content.innerHTML = `<div style="padding:20px;color:var(--wf-red)">Fout: ${e.message}</div>`; }
   }
@@ -4448,7 +4448,7 @@ ${billing.status === "trial" ? (() => {
   const daysLeft = billing.trialEndsAt ? Math.max(0, Math.ceil((new Date(billing.trialEndsAt) - Date.now()) / 86400000)) : null;
   const endStr = billing.trialEndsAt ? new Date(billing.trialEndsAt).toLocaleDateString("nl-BE") : null;
   return `<div style="background:var(--wf-yellow-l);border:1px solid var(--wf-yellow-l);border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:12px">
-  <span style="font-size:20px">⏳</span>
+  <span style="font-size:20px"></span>
   <div>
     <div style="font-size:14px;font-weight:600;color:var(--wf-yellow)">Gratis proefperiode${daysLeft != null ? ` — nog ${daysLeft} dag${daysLeft === 1 ? "" : "en"}` : " actief"}</div>
     <div style="font-size:12px;color:var(--wf-yellow);margin-top:2px">${hasPayment
@@ -4502,11 +4502,11 @@ ${billing.status === "trial" ? (() => {
       }).join("")}
     </div>
     ${trialEligible ? `<div style="margin-top:14px;background:var(--wf-blue-l);border-radius:12px;padding:12px 16px;font-size:12.5px;color:var(--wf-blue-d);display:flex;gap:9px;align-items:flex-start;">
-      <span style="font-size:15px;">🎁</span>
+      <span style="font-size:15px;"></span>
       <span><strong>14 dagen gratis</strong> op elk plan. Je kaartgegevens zijn vereist om te starten (via onze beveiligde betaalpartner Stripe), maar je wordt <strong>pas na 14 dagen</strong> gefactureerd — en je kan altijd opzeggen vóór het einde van de proefperiode.</span>
     </div>` : ""}
     <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="billPortal">⚙️ Abonnement &amp; betaalmethode beheren</button>
+      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="billPortal">Abonnement &amp; betaalmethode beheren</button>
       <span style="font-size:12px;color:var(--gray-400);">Veilig betalen — je betaalgegevens worden door onze betaalpartner (Stripe) verwerkt. Upgraden, downgraden, betaalmethode en opzeggen regel je in het beheerportaal.</span>
     </div>
   </div>
@@ -4522,7 +4522,7 @@ ${billing.status === "trial" ? (() => {
 <div class="adm-card" style="margin-top:16px;">
   <div class="adm-card-header"><h3 class="adm-card-title">Factuurgeschiedenis</h3></div>
   ${invoices.length === 0
-    ? `<div class="adm-empty"><div class="adm-empty-icon">🧾</div><div class="adm-empty-text">Nog geen facturen</div></div>`
+    ? `<div class="adm-empty"><div class="adm-empty-text">Nog geen facturen</div></div>`
     : `<div class="adm-table-wrap"><table class="adm-table">
         <thead><tr><th>Factuur #</th><th>Datum</th><th>Vervaldatum</th><th>Omschrijving</th><th>Bedrag</th><th>Status</th></tr></thead>
         <tbody>${invoices.map(i => `<tr>
@@ -4550,7 +4550,7 @@ ${billing.status === "trial" ? (() => {
           try {
             const r = await api("POST", "/billing/checkout", { plan });
             if (r.provider === "stripe" && r.url) { window.location.href = r.url; return; }
-            window.showToast && window.showToast(r.trial ? `Proefperiode van 14 dagen gestart (${label}) ✓` : `Abonnement geactiveerd (${label}) ✓`, "success");
+            window.showToast && window.showToast(r.trial ? `Proefperiode van 14 dagen gestart (${label})` : `Abonnement geactiveerd (${label})`, "success");
             renderBilling();
           } catch(e) { window.showToast && window.showToast(e.message, "error"); btn.disabled = false; btn.textContent = trialEligible ? "Start 14 dagen gratis" : "Kies"; }
         });
@@ -4630,11 +4630,11 @@ ${billing.status === "trial" ? (() => {
     ${conn ? `
       <div style="font-size:13px;color:var(--gray-600);margin-bottom:10px">
         Laatste sync: ${fmtDT(conn.lastSyncAt)}${ss.lastStatus ? ` · ${esc(ss.lastStatus)}` : ""}<br>
-        ${ss.total || 0} sync(s), ${ss.failed || 0} mislukt${conn.hasSecret ? "" : " · ⚠️ geen sleutel ingesteld"}
+        ${ss.total || 0} sync(s), ${ss.failed || 0} mislukt${conn.hasSecret ? "" : " · geen sleutel ingesteld"}
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="adm-btn adm-btn-primary adm-btn-sm" data-sync="${esc(conn.id)}">↻ Nu synchroniseren</button>
-        ${p.key === "robaws" ? `<button class="adm-btn adm-btn-secondary adm-btn-sm" data-syncdocs="${esc(conn.id)}">📁 Werf-documenten synchroniseren</button>` : ""}
+        ${p.key === "robaws" ? `<button class="adm-btn adm-btn-secondary adm-btn-sm" data-syncdocs="${esc(conn.id)}">Werf-documenten synchroniseren</button>` : ""}
         <button class="adm-btn adm-btn-secondary adm-btn-sm" data-reconnect="${esc(p.key)}">Sleutel bijwerken</button>
       </div>
     ` : `
@@ -4663,7 +4663,7 @@ ${categories.map(cat => `
         const fd = Object.fromEntries(new FormData(form).entries());
         const body = { provider, apiKey: fd.apiKey || "", baseUrl: fd.baseUrl || "", config: {} };
         (meta.fields || []).forEach(f => { if (!f.secret && f.key !== "apiKey" && f.key !== "baseUrl" && fd[f.key]) body.config[f.key] = fd[f.key]; });
-        try { await api("POST", "/integrations/connect", body); window.showToast && window.showToast(`${meta.label || provider} verbonden ✓`, "success"); renderIntegraties(); }
+        try { await api("POST", "/integrations/connect", body); window.showToast && window.showToast(`${meta.label || provider} verbonden`, "success"); renderIntegraties(); }
         catch (err) { window.showToast && window.showToast(err.message, "error"); }
       });
     });
@@ -4672,7 +4672,7 @@ ${categories.map(cat => `
       try {
         const r = await api("POST", `/integrations/${btn.dataset.sync}/sync`, {});
         const ok = r.result && r.result.log && r.result.log.status === "success";
-        window.showToast && window.showToast(ok ? "Synchronisatie voltooid ✓" : "Sync mislukt — controleer sleutel/mapping", ok ? "success" : "error");
+        window.showToast && window.showToast(ok ? "Synchronisatie voltooid" : "Sync mislukt — controleer sleutel/mapping", ok ? "success" : "error");
         renderIntegraties();
       } catch (e) { window.showToast && window.showToast(e.message, "error"); btn.disabled = false; btn.textContent = "↻ Nu synchroniseren"; }
     }));
@@ -4681,7 +4681,7 @@ ${categories.map(cat => `
       try {
         const r = await api("POST", `/integrations/${btn.dataset.syncdocs}/sync-documents`, {});
         const t = r.result && r.result.manifest && r.result.manifest.totals;
-        window.showToast && window.showToast(t ? `Werf-documenten gesynchroniseerd ✓ (${t.projects} projecten, ${t.documents} docs)` : "Document-sync voltooid ✓", "success");
+        window.showToast && window.showToast(t ? `Werf-documenten gesynchroniseerd ✓ (${t.projects} projecten, ${t.documents} docs)` : "Document-sync voltooid", "success");
         renderIntegraties();
       } catch (e) { window.showToast && window.showToast(e.message, "error"); btn.disabled = false; btn.textContent = orig; }
     }));
@@ -4689,7 +4689,7 @@ ${categories.map(cat => `
       const p = providers.find(x => x.key === btn.dataset.reconnect) || {};
       const key = window.prompt(`Nieuwe ${p.label || "API"}-sleutel/token:`);
       if (key == null || !key.trim()) return;
-      try { await api("POST", "/integrations/connect", { provider: p.key, apiKey: key.trim() }); window.showToast && window.showToast("Sleutel bijgewerkt ✓", "success"); renderIntegraties(); }
+      try { await api("POST", "/integrations/connect", { provider: p.key, apiKey: key.trim() }); window.showToast && window.showToast("Sleutel bijgewerkt", "success"); renderIntegraties(); }
       catch (e) { window.showToast && window.showToast(e.message, "error"); }
     }));
   }
@@ -4735,7 +4735,7 @@ ${categories.map(cat => `
           E-mailnotificaties versturen (belangrijke meldingen naar betrokkenen)
         </label>
         <div style="display:flex;align-items:center;gap:10px;margin:0 0 12px;flex-wrap:wrap;">
-          <button type="button" class="adm-btn adm-btn-secondary adm-btn-sm" id="admPushToggle">🔔 Pushmeldingen op dit toestel</button>
+          <button type="button" class="adm-btn adm-btn-secondary adm-btn-sm" id="admPushToggle">Pushmeldingen op dit toestel</button>
           <span id="admPushStatus" style="font-size:12px;color:var(--gray-400);"></span>
         </div>
         <div class="adm-form-actions"><button type="submit" class="adm-btn adm-btn-primary">Opslaan</button></div>
@@ -4768,8 +4768,8 @@ ${categories.map(cat => `
     <div class="adm-card-body">
       <div id="admMfaStatus" style="margin-bottom:12px;font-size:13px;color:var(--gray-500);">Status laden…</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="adm-btn adm-btn-primary" id="admMfaSetup">🔐 MFA instellen</button>
-        <button class="adm-btn adm-btn-secondary" id="admMfaEnforce">🛡️ MFA verplichten voor beheerders</button>
+        <button class="adm-btn adm-btn-primary" id="admMfaSetup">MFA instellen</button>
+        <button class="adm-btn adm-btn-secondary" id="admMfaEnforce">MFA verplichten voor beheerders</button>
         <button class="adm-btn adm-btn-secondary" id="admMfaDisable" style="display:none;">MFA uitschakelen</button>
       </div>
       <div style="font-size:11.5px;color:var(--gray-400);margin-top:8px;">MFA verplichten schakelt 2FA in voor álle beheerders. Bij de volgende login is een authenticator-code vereist. Bewaar de getoonde codes goed.</div>
@@ -4786,8 +4786,8 @@ ${categories.map(cat => `
       </div>
 
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="adm-btn adm-btn-secondary" id="admBackupCreate">📦 Nu een backup maken</button>
-        <button class="adm-btn adm-btn-secondary" id="admBackupList">📋 Bestaande backups</button>
+        <button class="adm-btn adm-btn-secondary" id="admBackupCreate">Nu een backup maken</button>
+        <button class="adm-btn adm-btn-secondary" id="admBackupList">Bestaande backups</button>
       </div>
       <div id="admBackupResult" style="margin-top:12px;"></div>
     </div>
@@ -4825,8 +4825,8 @@ ${categories.map(cat => `
         </label>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="adm-btn adm-btn-primary" id="admSupportAllow">✅ Support-toegang toestaan</button>
-        <button class="adm-btn adm-btn-secondary" id="admSupportRevoke" style="display:none;">⛔ Toestemming intrekken</button>
+        <button class="adm-btn adm-btn-primary" id="admSupportAllow">Support-toegang toestaan</button>
+        <button class="adm-btn adm-btn-secondary" id="admSupportRevoke" style="display:none;">Toestemming intrekken</button>
       </div>
       <div id="admSupportMsg" style="display:none;padding:8px 12px;border-radius:8px;font-size:13px;margin-top:10px;"></div>
     </div>
@@ -4850,7 +4850,7 @@ ${categories.map(cat => `
         const review = sa.reviewDueAt ? new Date(sa.reviewDueAt).toLocaleDateString("nl-BE") : null;
         statusEl.innerHTML = `<span style="display:inline-block;padding:3px 10px;border-radius:999px;background:var(--wf-green-l);color:var(--wf-green);font-weight:600;">Toegestaan</span>`
           + (sa.allowedBy ? ` <span style="color:var(--gray-500);">door ${esc(sa.allowedBy)}${sa.allowedAt ? " · " + new Date(sa.allowedAt).toLocaleString("nl-BE") : ""}</span>` : "")
-          + `<div style="color:var(--gray-500);margin-top:6px;">${renew ? "🔁 Verlengt jaarlijks automatisch" : "Geen automatische verlenging"}${renew && review ? ` · volgende mededeling ${review}` : ""}</div>`;
+          + `<div style="color:var(--gray-500);margin-top:6px;">${renew ? "Verlengt jaarlijks automatisch" : "Geen automatische verlenging"}${renew && review ? ` · volgende mededeling ${review}` : ""}</div>`;
         allowBtn.style.display = "none";
         revokeBtn.style.display = "";
         reasonWrap.style.display = "none";
@@ -5035,11 +5035,11 @@ ${categories.map(cat => `
         const disableBtn = document.getElementById("admMfaDisable");
         const setupBtn = document.getElementById("admMfaSetup");
         if (u.mfaEnabled) {
-          if (statusEl) statusEl.innerHTML = `<span style="color:var(--wf-green);font-weight:600;">✅ MFA actief</span> — uw account is beveiligd met 2FA.`;
+          if (statusEl) statusEl.innerHTML = `<span style="color:var(--wf-green);font-weight:600;">MFA actief</span> — uw account is beveiligd met 2FA.`;
           if (disableBtn) disableBtn.style.display = "";
-          if (setupBtn) setupBtn.textContent = "🔄 MFA opnieuw instellen";
+          if (setupBtn) setupBtn.textContent = "MFA opnieuw instellen";
         } else {
-          if (statusEl) statusEl.innerHTML = `<span style="color:var(--wf-yellow);font-weight:600;">⚠️ MFA niet actief</span> — wij raden sterk aan om MFA in te schakelen.`;
+          if (statusEl) statusEl.innerHTML = `<span style="color:var(--wf-yellow);font-weight:600;">MFA niet actief</span> — wij raden sterk aan om MFA in te schakelen.`;
         }
       } catch(_){}
     })();
@@ -5073,9 +5073,9 @@ ${categories.map(cat => `
           if (!code || code.length !== 6) { if(errEl){errEl.textContent="Vul een 6-cijferige code in.";errEl.style.display="";} return; }
           try {
             await api("POST", "/me/mfa/verify", { token: code });
-            wizard.innerHTML = `<div style="color:var(--wf-green);font-weight:600;font-size:14px;">✅ MFA is nu actief! Uw account is beveiligd met 2FA.</div>`;
+            wizard.innerHTML = `<div style="color:var(--wf-green);font-weight:600;font-size:14px;">MFA is nu actief! Uw account is beveiligd met 2FA.</div>`;
             const statusEl = document.getElementById("admMfaStatus");
-            if (statusEl) statusEl.innerHTML = `<span style="color:var(--wf-green);font-weight:600;">✅ MFA actief</span>`;
+            if (statusEl) statusEl.innerHTML = `<span style="color:var(--wf-green);font-weight:600;">MFA actief</span>`;
             const disableBtn = document.getElementById("admMfaDisable");
             if (disableBtn) disableBtn.style.display = "";
           } catch(err) {
@@ -5096,13 +5096,13 @@ ${categories.map(cat => `
         const d = await api("POST", "/admin/mfa/enforce");
         const enrolled = d.enrolled || [];
         if (!enrolled.length) {
-          wizard.innerHTML = `<div style="color:var(--wf-green);font-weight:600;font-size:14px;">✅ Alle beheerders hebben al MFA actief.</div>`;
+          wizard.innerHTML = `<div style="color:var(--wf-green);font-weight:600;font-size:14px;">Alle beheerders hebben al MFA actief.</div>`;
           return;
         }
         wizard.innerHTML = `
-<div style="font-size:14px;font-weight:600;margin-bottom:4px;color:var(--gray-900);">🛡️ MFA verplicht — ${enrolled.length} beheerder(s) ingeschreven</div>
+<div style="font-size:14px;font-weight:600;margin-bottom:4px;color:var(--gray-900);">MFA verplicht — ${enrolled.length} beheerder(s) ingeschreven</div>
 <div style="font-size:12px;color:var(--wf-yellow);background:var(--wf-yellow-l);border:1px solid var(--wf-yellow-l);border-radius:8px;padding:10px 12px;margin:10px 0;">
-  ⚠️ Bewaar onderstaande gegevens nu. Ze worden niet opnieuw getoond. Voeg de sleutel toe aan een authenticator-app (Google Authenticator, Authy…).
+  Bewaar onderstaande gegevens nu. Ze worden niet opnieuw getoond. Voeg de sleutel toe aan een authenticator-app (Google Authenticator, Authy…).
 </div>
 ${enrolled.map(e => `
   <div style="border:1px solid var(--gray-200);border-radius:10px;padding:12px;margin-bottom:10px;">
@@ -5120,8 +5120,8 @@ ${enrolled.map(e => `
         document.getElementById("admMfaEnforceDone")?.addEventListener("click", () => {
           wizard.style.display = "none";
           const statusEl = document.getElementById("admMfaStatus");
-          if (statusEl) statusEl.innerHTML = `<span style="color:var(--wf-green);font-weight:600;">✅ MFA verplicht voor beheerders</span>`;
-          window.showToast && window.showToast("MFA verplicht ingesteld voor beheerders ✓", "success");
+          if (statusEl) statusEl.innerHTML = `<span style="color:var(--wf-green);font-weight:600;">MFA verplicht voor beheerders</span>`;
+          window.showToast && window.showToast("MFA verplicht ingesteld voor beheerders", "success");
         });
       } catch(e) { wizard.innerHTML = `<div style="color:var(--wf-red);font-size:13px;">Fout: ${e.message}</div>`; }
     });
@@ -5138,9 +5138,9 @@ ${enrolled.map(e => `
         const backup = d.backup || {};
         if (resultEl) resultEl.innerHTML = `
 <div style="background:var(--wf-green-l);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--wf-green);">
-  ✅ Backup aangemaakt: <strong>${esc(backup.id||"")}</strong><br>
+  Backup aangemaakt: <strong>${esc(backup.id||"")}</strong><br>
   <span style="font-size:11px;">${new Date(backup.createdAt||Date.now()).toLocaleString("nl-BE")}</span>
-  <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admBackupDownload" style="margin-top:8px;display:block;" data-id="${esc(backup.id||"")}">📥 Download JSON</button>
+  <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admBackupDownload" style="margin-top:8px;display:block;" data-id="${esc(backup.id||"")}">Download JSON</button>
 </div>`;
         document.getElementById("admBackupDownload")?.addEventListener("click", async () => {
           try {
@@ -5194,7 +5194,7 @@ ${enrolled.map(e => `
   ${item("Legal hold", p.legalHold ? '<span style="color:var(--wf-yellow);">Actief</span>' : "Uit")}
 </div>
 <div style="margin-top:12px;font-size:11.5px;color:var(--gray-400);display:flex;align-items:center;gap:6px;">
-  <span style="display:inline-flex;width:15px;height:15px;">🔒</span>
+  <span style="display:inline-flex;width:15px;height:15px;"></span>
   Dit beleid wordt centraal beheerd door Monargo. Wil je het aanpassen, neem contact op met support.
 </div>
 <details style="margin-top:14px;">
@@ -5290,7 +5290,7 @@ ${enrolled.map(e => `
         btn.disabled = true;
         try {
           await api("POST", active ? "/me/clock/out" : "/me/clock/in", {});
-          window.showToast && window.showToast(active ? "Uitgeklokt ✓" : "Ingeklokt ✓", "success");
+          window.showToast && window.showToast(active ? "Uitgeklokt" : "Ingeklokt", "success");
           await refresh();
           if (_currentView === "clocking") renderClocking();
         } catch(e){ window.showToast && window.showToast(e.message, "error"); }
@@ -5358,7 +5358,7 @@ ${enrolled.map(e => `
 
     function renderNotifList() {
       if (!_notifCache.length) {
-        notifList.innerHTML = `<div class="adm-notif-empty">🔔 Geen notificaties</div>`;
+        notifList.innerHTML = `<div class="adm-notif-empty">Geen notificaties</div>`;
         return;
       }
       notifList.innerHTML = _notifCache.slice(0, 20).map(n => {
@@ -5460,7 +5460,7 @@ ${typeKeys.map(tk => {
         ${t.isDefault ? "" : `<button class="adm-btn adm-btn-secondary adm-btn-sm tpl-default" data-id="${esc(t.id)}">Maak standaard</button>`}
         <button class="adm-btn adm-btn-secondary adm-btn-sm tpl-edit" data-id="${esc(t.id)}">Bewerken</button>
         <button class="adm-btn adm-btn-secondary adm-btn-sm tpl-prev" data-id="${esc(t.id)}">Voorbeeld</button>
-        <button class="adm-btn adm-btn-danger adm-btn-sm tpl-del" data-id="${esc(t.id)}">🗑</button>
+        <button class="adm-btn adm-btn-danger adm-btn-sm tpl-del" data-id="${esc(t.id)}"><svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>
       </td></tr>`).join("")}</tbody></table>`
     : `<div style="padding:16px;color:var(--gray-400);font-size:13px">Nog geen sjabloon — er wordt een nette standaard gebruikt tot je er één maakt.</div>`}
     </div></div>`;
@@ -5498,7 +5498,7 @@ ${typeKeys.map(tk => {
       <div class="adm-form-group"><label>Accentkleur</label><input type="color" class="adm-input" id="t_accent" value="${esc(d.accentColor || "var(--wf-blue)")}" style="height:40px;padding:4px"></div>
       <div class="adm-form-group"><label>Taal</label><select class="adm-input" id="t_lang"><option value="nl" ${d.language === "nl" ? "selected" : ""}>Nederlands</option><option value="fr" ${d.language === "fr" ? "selected" : ""}>Frans</option></select></div>
     </div>
-    <div class="adm-form-group"><label>Logo (optioneel)</label><input type="file" id="t_logo" accept="image/*" class="adm-input" style="padding:6px">${d.logo ? '<div style="font-size:12px;color:var(--wf-green);margin-top:4px">✓ logo ingesteld <a href="#" id="t_logo_clear">verwijderen</a></div>' : ""}</div>
+    <div class="adm-form-group"><label>Logo (optioneel)</label><input type="file" id="t_logo" accept="image/*" class="adm-input" style="padding:6px">${d.logo ? '<div style="font-size:12px;color:var(--wf-green);margin-top:4px">logo ingesteld <a href="#" id="t_logo_clear">verwijderen</a></div>' : ""}</div>
     <div class="adm-form-group"><label>Eigen koptekst (leeg = bedrijfsblok)</label><textarea class="adm-input" id="t_header" rows="2" placeholder="Bv. {{bedrijf.naam}} — uw partner">${esc(d.headerText || "")}</textarea>${fieldPicker("t_header")}</div>
     <div class="adm-form-group"><label>Inleidingstekst</label><textarea class="adm-input" id="t_intro" rows="2">${esc(d.introText || "")}</textarea>${fieldPicker("t_intro")}</div>
     ${isFinancial ? `<div class="adm-form-group"><label>Kolommen</label><div style="display:flex;flex-wrap:wrap;gap:10px">${Object.keys(colDefs).map(k => `<label style="font-weight:400;font-size:12.5px;display:inline-flex;gap:5px;align-items:center"><input type="checkbox" class="t_col" value="${k}" ${(d.columns || []).includes(k) ? "checked" : ""}>${esc(colDefs[k])}</label>`).join("")}</div></div>
@@ -5546,7 +5546,7 @@ ${typeKeys.map(tk => {
       try {
         if (d.id) await api("PUT", `/templates/${d.id}`, draft());
         else await api("POST", "/templates", draft());
-        _tplEditing = null; renderTemplates(); window.showToast && window.showToast("Sjabloon opgeslagen ✓", "success");
+        _tplEditing = null; renderTemplates(); window.showToast && window.showToast("Sjabloon opgeslagen", "success");
       } catch (e) { msg.textContent = e.message; }
     });
     refresh();
@@ -5569,7 +5569,7 @@ ${typeKeys.map(tk => {
       const [bg, fg, label] = map[s] || ["var(--gray-100)", "var(--gray-600)", s || "—"];
       return `<span style="background:${bg};color:${fg};padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600">${esc(label)}</span>`;
     };
-    const geoBadge = d => d.geoVerified ? `<span title="binnen geofence" style="color:var(--wf-green)">📍 ✓${d.geoDistanceM != null ? ` ${d.geoDistanceM}m` : ""}</span>` : (d.geoDistanceM != null ? `<span title="buiten geofence" style="color:var(--wf-yellow)">📍 ${d.geoDistanceM}m</span>` : `<span style="color:var(--gray-400)">—</span>`);
+    const geoBadge = d => d.geoVerified ? `<span title="binnen geofence" style="color:var(--wf-green)">✓${d.geoDistanceM != null ? ` ${d.geoDistanceM}m` : ""}</span>` : (d.geoDistanceM != null ? `<span title="buiten geofence" style="color:var(--wf-yellow)">${d.geoDistanceM}m</span>` : `<span style="color:var(--gray-400)">—</span>`);
     const rsz = data.rszEmployerId || "";
     c.innerHTML = `
 <div class="adm-card" style="padding:14px 16px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
@@ -5588,13 +5588,13 @@ ${typeKeys.map(tk => {
 <div class="adm-card" style="margin-bottom:14px">
   <div class="adm-card-header" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
     <div style="font-weight:600;font-size:13px">Aanwezigheidsregister (werfcontrole) <span style="font-weight:400;color:var(--gray-500)">— ${presence.present} aanwezig${presence.issues ? `, <span style="color:var(--wf-red)">${presence.issues} zonder bevestigde aangifte</span>` : ""}</span></div>
-    <button class="adm-btn adm-btn-secondary adm-btn-sm" id="ciawPresenceCsv">⬇ Export voor controle (CSV)</button>
+    <button class="adm-btn adm-btn-secondary adm-btn-sm" id="ciawPresenceCsv">Export voor controle (CSV)</button>
   </div>
   <div class="adm-table-wrap"><table class="adm-table"><thead><tr><th>Werf</th><th>Medewerker</th><th>INSZ</th><th>Sinds</th><th>CIAW</th></tr></thead><tbody>
     ${(presence.rows || []).map(r => `<tr>
       <td>${esc(r.venue)}</td>
       <td>${esc(r.name)}</td>
-      <td style="font-family:monospace;font-size:12px">${r.insz ? esc(r.insz) : '<span style="color:var(--wf-red)">ontbreekt</span>'}${r.insz && !r.inszValid ? ' <span title="ongeldig controlegetal" style="color:var(--wf-red)">⚠</span>' : ""}</td>
+      <td style="font-family:monospace;font-size:12px">${r.insz ? esc(r.insz) : '<span style="color:var(--wf-red)">ontbreekt</span>'}${r.insz && !r.inszValid ? ' <span title="ongeldig controlegetal" style="color:var(--wf-red)"></span>' : ""}</td>
       <td style="font-size:12px;color:var(--gray-500)">${esc((r.since || "").replace("T", " "))}</td>
       <td>${statusBadge(r.ciawStatus === "none" ? "—" : r.ciawStatus)}</td>
     </tr>`).join("") || `<tr><td colspan="5" style="padding:18px;text-align:center;color:var(--gray-400)">Niemand momenteel ingeklokt.</td></tr>`}
@@ -5634,7 +5634,7 @@ ${typeKeys.map(tk => {
       b.disabled = true; b.textContent = "Bezig…";
       try {
         const r = await api("POST", "/ciaw/checkin", { clockId: b.dataset.clock, action: b.dataset.action });
-        window.showToast && window.showToast(r.ok ? "Aangifte opnieuw ingediend ✓" : ("Nog steeds geweigerd: " + (r.error || "")), r.ok ? "success" : "error");
+        window.showToast && window.showToast(r.ok ? "Aangifte opnieuw ingediend" : ("Nog steeds geweigerd: " + (r.error || "")), r.ok ? "success" : "error");
         renderCiaw();
       } catch (e) { window.showToast && window.showToast(e.message, "error"); b.disabled = false; b.textContent = "↻ Opnieuw"; }
     }));
@@ -5658,8 +5658,8 @@ ${typeKeys.map(tk => {
   <div style="font-size:12px;margin-bottom:6px">Limosa-provider: ${data.limosaMode === "live" ? '<span style="color:var(--wf-green);font-weight:600">● actief (live)</span>' : '<span style="color:var(--wf-yellow);font-weight:600">● testmodus (mock)</span> — meldingen worden gesimuleerd tot de provider live staat'}</div>
   <div style="display:flex;gap:14px;font-size:12px;color:var(--gray-500)">
     <span>${data.total || 0} dossiers</span>
-    ${data.expired ? `<span style="color:var(--wf-red)">⛔ ${data.expired} verlopen</span>` : ""}
-    ${data.expiring ? `<span style="color:var(--wf-yellow)">⚠️ ${data.expiring} verloopt binnenkort</span>` : ""}
+    ${data.expired ? `<span style="color:var(--wf-red)">${data.expired} verlopen</span>` : ""}
+    ${data.expiring ? `<span style="color:var(--wf-yellow)">${data.expiring} verloopt binnenkort</span>` : ""}
     ${data.missing ? `<span style="color:var(--gray-500)">${data.missing} zonder A1</span>` : ""}
   </div>
 </div>
@@ -5683,10 +5683,10 @@ ${typeKeys.map(tk => {
       <td>${esc(r.workerName)}</td>
       <td>${esc(r.subcontractor || "—")}</td>
       <td>${esc(r.country || "—")}</td>
-      <td>${a1Badge(r.a1Status)}${r.documentRef ? `<div style="font-size:11px;color:var(--gray-500);font-family:monospace">${esc(r.documentRef)}</div>` : ""}${r.hasFile ? ` <a class="pw-file" data-id="${esc(r.id)}" href="#" style="font-size:11px">📎 attest</a>` : ""}</td>
+      <td>${a1Badge(r.a1Status)}${r.documentRef ? `<div style="font-size:11px;color:var(--gray-500);font-family:monospace">${esc(r.documentRef)}</div>` : ""}${r.hasFile ? ` <a class="pw-file" data-id="${esc(r.id)}" href="#" style="font-size:11px">attest</a>` : ""}</td>
       <td style="font-size:12px;color:var(--gray-600)">${esc(r.validFrom || "?")} → ${esc(r.validTo || "?")}</td>
-      <td>${r.limosa && r.limosa.reference ? `<span style="font-size:12px;color:var(--wf-green)">✓ ${esc(r.limosa.reference)}</span>` : `<button class="adm-btn-secondary pw-limosa" data-id="${esc(r.id)}" style="padding:4px 10px;font-size:12px">Indienen</button>`}</td>
-      <td><button class="pw-del" data-id="${esc(r.id)}" title="Verwijderen" style="border:none;background:none;cursor:pointer;color:var(--wf-red);font-size:16px">🗑</button></td>
+      <td>${r.limosa && r.limosa.reference ? `<span style="font-size:12px;color:var(--wf-green)">${esc(r.limosa.reference)}</span>` : `<button class="adm-btn-secondary pw-limosa" data-id="${esc(r.id)}" style="padding:4px 10px;font-size:12px">Indienen</button>`}</td>
+      <td><button class="pw-del" data-id="${esc(r.id)}" title="Verwijderen" style="border:none;background:none;cursor:pointer;color:var(--wf-red);font-size:16px"><svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button></td>
     </tr>`).join("") || `<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--gray-400)">Nog geen detacheringsdossiers.</td></tr>`}
   </tbody></table>
 </div>`;
@@ -5708,7 +5708,7 @@ ${typeKeys.map(tk => {
         payload.documentFile = await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(file); });
         payload.documentFileName = file.name;
       }
-      try { await api("POST", "/posted_workers", payload); renderPostedWorkers(); window.showToast && window.showToast("Dossier toegevoegd ✓", "success"); }
+      try { await api("POST", "/posted_workers", payload); renderPostedWorkers(); window.showToast && window.showToast("Dossier toegevoegd", "success"); }
       catch (e) { msg.style.color = "var(--wf-red)"; msg.textContent = e.message; }
     });
     c.querySelectorAll(".pw-file").forEach(a => a.addEventListener("click", async e => {
@@ -5722,7 +5722,7 @@ ${typeKeys.map(tk => {
     }));
     c.querySelectorAll(".pw-limosa").forEach(b => b.addEventListener("click", async () => {
       b.disabled = true; b.textContent = "Bezig…";
-      try { await api("POST", `/posted_workers/${b.dataset.id}/limosa`, {}); renderPostedWorkers(); window.showToast && window.showToast("Limosa-melding ingediend ✓", "success"); }
+      try { await api("POST", `/posted_workers/${b.dataset.id}/limosa`, {}); renderPostedWorkers(); window.showToast && window.showToast("Limosa-melding ingediend", "success"); }
       catch (e) { window.showToast && window.showToast(e.message, "error"); b.disabled = false; b.textContent = "Indienen"; }
     }));
     c.querySelectorAll(".pw-del").forEach(b => b.addEventListener("click", async () => {

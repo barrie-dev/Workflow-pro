@@ -75,7 +75,7 @@
     <tbody>${(d.rows || []).map(r => `<tr style="border-top:1px solid var(--gray-50)">
       <td style="padding:10px 20px;font-weight:600;color:var(--gray-900)">${esc(r.name)}</td>
       <td style="padding:10px;text-transform:capitalize">${esc(r.plan)}</td>
-      <td style="padding:10px">${r.status === "active" ? "🟢 actief" : "🟡 " + esc(r.status)}</td>
+      <td style="padding:10px">${r.status === "active" ? '<span class="adm-dot" style="background:var(--wf-green)"></span> actief' : '<span class="adm-dot" style="background:var(--wf-yellow)"></span> ' + esc(r.status)}</td>
       <td style="padding:10px">${eur(r.mrr)}</td>
       <td style="padding:10px">${r.commissionPct}%</td>
       <td style="padding:10px 20px;font-weight:600;color:var(--wf-green)">${eur(r.commission)}</td>

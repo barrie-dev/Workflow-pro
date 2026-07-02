@@ -59,7 +59,7 @@
   function buildShell() {
     if (document.getElementById("bodenFab")) return;
     const fab = document.createElement("button");
-    fab.id = "bodenFab"; fab.title = "Boden — AI-assistent"; fab.textContent = "💬";
+    fab.id = "bodenFab"; fab.title = "Boden — AI-assistent"; fab.innerHTML = '<svg viewBox="0 0 24 24" style="width:26px;height:26px;fill:currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>';
     fab.addEventListener("click", toggle);
     document.body.appendChild(fab);
 
@@ -74,7 +74,7 @@
       <div class="boden-body" id="bodenBody"></div>
       <div class="boden-foot">
         <input id="bodenInput" type="text" placeholder="Stel een vraag…" autocomplete="off">
-        <button id="bodenSend" title="Versturen">➤</button>
+        <button id="bodenSend" title="Versturen"><svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
       </div>`;
     document.body.appendChild(panel);
     document.getElementById("bodenClose").addEventListener("click", toggle);
@@ -137,7 +137,7 @@
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || "Mislukt");
       btn.remove();
-      status.className = "done"; status.textContent = "✓ Uitgevoerd";
+      status.className = "done"; status.textContent = "Uitgevoerd";
     } catch (e) {
       btn.disabled = false; btn.textContent = "Opnieuw";
       status.style.color = "var(--wf-red)"; status.textContent = " " + e.message;

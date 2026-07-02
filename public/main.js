@@ -100,7 +100,7 @@ function showToast(message, type = "success") {
     document.body.appendChild(host);
   }
 
-  const icons = { success: "✓", error: "✕", warning: "⚠", info: "ℹ" };
+  const icons = { success: "✓", error: "✕", warning: "!", info: "ℹ" };
   const toast = document.createElement("div");
   toast.className = `app-toast2 app-toast2-${type}`;
   toast.innerHTML = `<span class="app-toast2-icon">${icons[type]}</span><span class="app-toast2-msg"></span><button class="app-toast2-x" aria-label="Sluiten">×</button>`;
