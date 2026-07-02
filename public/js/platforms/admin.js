@@ -1163,7 +1163,7 @@ ${emp ? `
   // Persoonlijke kleuren per medewerker (cyclisch)
   const PLAN_COLORS = [
     ["var(--wf-blue-l)","var(--wf-blue)"],["var(--wf-green-l)","var(--wf-green)"],["var(--wf-yellow-l)","var(--wf-yellow)"],
-    ["var(--wf-purple-l)","var(--wf-purple)"],["var(--wf-purple-l)","var(--wf-purple)"],["var(--wf-blue-l)","#0e7490"],
+    ["var(--wf-purple-l)","var(--wf-purple)"],["var(--wf-purple-l)","var(--wf-purple)"],["var(--wf-blue-l)","var(--wf-blue-d)"],
     ["var(--wf-red-l)","var(--wf-red)"],["var(--wf-blue-l)","var(--wf-blue)"]
   ];
   const _planColorMap = {};
@@ -1801,7 +1801,7 @@ ${emp ? `
   <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--gray-100);">
     <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Verloven deze maand</div>
     <div style="display:flex;flex-wrap:wrap;gap:6px;">
-    ${leaves.map(l=>`<div style="font-size:12px;background:var(--wf-green-l);border:1px solid var(--wf-green-l);border-radius:6px;padding:4px 8px;color:#166534;">
+    ${leaves.map(l=>`<div style="font-size:12px;background:var(--wf-green-l);border:1px solid var(--wf-green-l);border-radius:6px;padding:4px 8px;color:var(--wf-green);">
       <strong>${esc(empMap[l.userId]||uName(l))}</strong> · ${esc(l.type)} · ${l.startDate}→${l.endDate} (${l.days}d)
     </div>`).join("")}
     </div>
@@ -1968,7 +1968,7 @@ ${emp ? `
 </div>
 <div class="adm-card">
   <div class="adm-card-header">
-    <h3 class="adm-card-title">Onkostennota's <span style="background:var(--wf-blue-l);color:#0284c7;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${expenses.length}</span></h3>
+    <h3 class="adm-card-title">Onkostennota's <span style="background:var(--wf-blue-l);color:var(--wf-blue);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${expenses.length}</span></h3>
     <select id="admExpFilter" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:8px;font-size:13px;">
       <option value="">Alle statussen</option>
       <option value="ingediend">In behandeling</option>
@@ -2106,7 +2106,7 @@ ${emp ? `
 <div class="adm-card">
   <div class="adm-card-header">
     <h3 class="adm-card-title">Werkbonnen
-      <span style="background:var(--wf-blue-l);color:#0284c7;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${workorders.length}/${allWorkorders.length}</span>
+      <span style="background:var(--wf-blue-l);color:var(--wf-blue);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${workorders.length}/${allWorkorders.length}</span>
     </h3>
     <button class="adm-btn adm-btn-primary adm-btn-sm" id="admNewWO">+ Werkbon</button>
   </div>
@@ -2257,7 +2257,7 @@ ${emp ? `
     ${workorder ? `<button type="button" class="adm-btn adm-btn-danger" id="woDelete">🗑</button>` : ""}
     ${workorder ? `<button type="button" class="adm-btn adm-btn-secondary" id="woReport" title="Werkbon-rapport afdrukken">📄 Rapport</button>` : ""}
     ${workorder && ["Voltooid","Afgewerkt"].includes(workorder.status) && !workorder.invoiceId
-      ? `<button type="button" class="adm-btn adm-btn-secondary" id="woMakeInvoice" style="color:var(--wf-purple);border-color:#c7d2fe;">🧾 Factuur aanmaken</button>`
+      ? `<button type="button" class="adm-btn adm-btn-secondary" id="woMakeInvoice" style="color:var(--wf-purple);border-color:var(--wf-purple-l);">🧾 Factuur aanmaken</button>`
       : ""}
     <button type="submit" class="adm-btn adm-btn-primary">${workorder ? "Opslaan" : "Aanmaken"}</button>
   </div>
@@ -2346,7 +2346,7 @@ ${emp ? `
     content.innerHTML = `
 <div class="adm-card">
   <div class="adm-card-header" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-    <h3 class="adm-card-title">Berichten <span style="background:var(--wf-blue-l);color:#0284c7;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${messages.length}</span></h3>
+    <h3 class="adm-card-title">Berichten <span style="background:var(--wf-blue-l);color:var(--wf-blue);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${messages.length}</span></h3>
     <label style="font-size:12px;color:var(--gray-600);display:flex;align-items:center;gap:6px">Werf-chat:
       <select id="admMsgVenueFilter" class="adm-input" style="max-width:200px">
         <option value="">Alle berichten</option>
@@ -3201,10 +3201,10 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
     <div class="adm-form-group"><label>Contactpersoon</label><input name="contactName" value="${esc(customer?.contactName||"")}" placeholder="Jan Janssen"></div>
     <div class="adm-form-group">
       <label>BTW-nummer
-        <button type="button" id="kboLookupBtn" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--wf-purple);font-weight:600;margin-left:6px;padding:1px 6px;border:1px solid #c7d2fe;border-radius:4px;">🔍 KBO opzoeken</button>
+        <button type="button" id="kboLookupBtn" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--wf-purple);font-weight:600;margin-left:6px;padding:1px 6px;border:1px solid var(--wf-purple-l);border-radius:4px;">🔍 KBO opzoeken</button>
       </label>
       <input name="vatNumber" id="custVatInput" value="${esc(customer?.vatNumber||"")}" placeholder="BE0000.000.000">
-      <div id="kboResult" style="display:none;margin-top:6px;background:var(--wf-green-l);border-radius:6px;padding:8px;font-size:12px;color:#166534;"></div>
+      <div id="kboResult" style="display:none;margin-top:6px;background:var(--wf-green-l);border-radius:6px;padding:8px;font-size:12px;color:var(--wf-green);"></div>
     </div>
   </div>
   <div class="adm-form-row">
@@ -4649,7 +4649,7 @@ ${billing.status === "trial" ? (() => {
     const categories = [...new Set(providers.map(p => p.category))];
     content.innerHTML = `
 <div style="font-size:13px;color:var(--gray-500);margin-bottom:14px">Koppel je boekhouding en werfsoftware. Sleutels worden versleuteld bewaard; zonder geldige sleutel draait een sync in testmodus.</div>
-<div class="adm-card" style="margin-bottom:16px;background:var(--wf-blue-l);border:1px solid var(--wf-blue-l)"><div class="adm-card-body" style="font-size:13px;color:#075985">ℹ️ <strong>Compliance-aangiftes</strong> (Checkin@Work / CIAW en Limosa) verlopen <strong>automatisch</strong> bij in-/uitklokken — die beheer je niet hier maar onder <strong>Compliance → Checkin@Work</strong> en <strong>A1 / Limosa</strong>.</div></div>
+<div class="adm-card" style="margin-bottom:16px;background:var(--wf-blue-l);border:1px solid var(--wf-blue-l)"><div class="adm-card-body" style="font-size:13px;color:var(--wf-blue-d)">ℹ️ <strong>Compliance-aangiftes</strong> (Checkin@Work / CIAW en Limosa) verlopen <strong>automatisch</strong> bij in-/uitklokken — die beheer je niet hier maar onder <strong>Compliance → Checkin@Work</strong> en <strong>A1 / Limosa</strong>.</div></div>
 ${categories.map(cat => `
   <div class="adm-nav-label" style="margin:18px 0 8px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--gray-500)">${esc(cat)}</div>
   <div class="adm-grid-2">${providers.filter(p => p.category === cat).map(providerCard).join("")}</div>
@@ -4832,7 +4832,7 @@ ${categories.map(cat => `
     </div>
   </div>
   <div class="adm-card" id="admSsoCard" style="display:none;grid-column:1/-1;">
-    <div class="adm-card-header"><h3 class="adm-card-title">Single Sign-On (SAML) <span style="font-size:11px;background:#eef2ff;color:#4338ca;border-radius:999px;padding:2px 8px;vertical-align:middle;">Add-on</span></h3></div>
+    <div class="adm-card-header"><h3 class="adm-card-title">Single Sign-On (SAML) <span style="font-size:11px;background:var(--wf-purple-l);color:var(--wf-purple);border-radius:999px;padding:2px 8px;vertical-align:middle;">Add-on</span></h3></div>
     <div class="adm-card-body" id="admSsoBody"><div class="adm-loading">Laden…</div></div>
   </div>
 </div>`;

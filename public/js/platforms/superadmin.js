@@ -93,7 +93,7 @@
 .kpi-purple{--kpi-color:var(--wf-purple)}
 .kpi-orange{--kpi-color:var(--wf-yellow)}
 .kpi-red{--kpi-color:var(--wf-red)}
-.kpi-teal{--kpi-color:#14b8a6}
+.kpi-teal{--kpi-color:var(--wf-green)}
 
 /* Cards */
 .sa-card{background:#fff;border-radius:16px;border:1px solid var(--line);overflow:hidden;margin-bottom:18px;box-shadow:var(--shadow-xs)}
@@ -120,10 +120,10 @@
 .sa-badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;white-space:nowrap}
 .badge-green{background:var(--wf-green-l);color:var(--wf-green)}
 .badge-blue{background:var(--wf-blue-l);color:var(--wf-blue)}
-.badge-purple{background:var(--wf-purple-l);color:#6d28d9}
-.badge-teal{background:var(--wf-green-l);color:#0f766e}
+.badge-purple{background:var(--wf-purple-l);color:var(--wf-purple)}
+.badge-teal{background:var(--wf-green-l);color:var(--wf-green)}
 .badge-yellow{background:var(--wf-yellow-l);color:var(--wf-yellow)}
-.badge-orange{background:var(--wf-orange-l);color:#c2410c}
+.badge-orange{background:var(--wf-orange-l);color:var(--wf-orange)}
 .badge-red{background:var(--wf-red-l);color:var(--wf-red)}
 .badge-gray{background:var(--gray-100);color:var(--gray-600)}
 .badge-dark{background:var(--gray-800);color:var(--gray-200)}
