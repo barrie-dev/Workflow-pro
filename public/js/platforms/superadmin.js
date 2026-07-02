@@ -168,7 +168,8 @@
 /* Form fields */
 .sa-field{display:flex;flex-direction:column;gap:5px}
 .sa-field label{font-size:11.5px;font-weight:700;color:var(--gray-700);text-transform:uppercase;letter-spacing:.4px}
-.sa-field input,.sa-field select,.sa-field textarea{padding:8px 11px;border:1px solid var(--line);border-radius:10px;font-size:13px;color:var(--gray-900);background:#fff;width:100%}
+.sa-field input,.sa-field select,.sa-field textarea{padding:8px 11px;border:1px solid var(--line);border-radius:10px;font-size:13px;color:var(--gray-900);background-color:#fff;width:100%}
+.sa-field select{padding-right:32px}
 .sa-field input:focus,.sa-field select:focus,.sa-field textarea:focus{outline:none;border-color:var(--wf-blue);box-shadow:var(--ring)}
 .sa-field .hint{font-size:11px;color:var(--gray-400)}
 .sa-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}

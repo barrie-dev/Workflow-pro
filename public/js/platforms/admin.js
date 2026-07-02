@@ -110,7 +110,7 @@
               <option value="">Aantal medewerkers…</option>
               ${teamSizes.map(s => `<option value="${esc(s)}" ${t.teamSize===s?"selected":""}>${esc(s)} medewerkers</option>`).join("")}
             </select></div>
-          <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-top:4px">Facturatiegegevens ${ip.vat ? "(via KBO opgehaald)" : ""}</div>
+          <div class="adm-form-section">Facturatiegegevens ${ip.vat ? "(via KBO opgehaald)" : ""}</div>
           <div class="adm-form-row" style="display:flex;gap:10px">
             <div class="adm-form-group" style="flex:1"><label>BTW-nummer</label><input name="vat" value="${esc(ip.vat||"")}" placeholder="BE0123.456.789"></div>
             <div class="adm-form-group" style="flex:1"><label>Ondernemingsnr.</label><input name="companyNumber" value="${esc(ip.companyNumber||"")}" placeholder="0123.456.789"></div>
@@ -121,7 +121,7 @@
             <div class="adm-form-group" style="flex:1"><label>Gemeente</label><input name="city" value="${esc(ip.city||"")}" placeholder="Gent"></div>
           </div>
           <div class="adm-form-group"><label>Facturatie-e-mail</label><input name="billingEmail" type="email" value="${esc(t.billingEmail||"")}" placeholder="facturatie@bedrijf.be"></div>
-          <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-top:4px">Contactpersoon</div>
+          <div class="adm-form-section">Contactpersoon</div>
           <div class="adm-form-row" style="display:flex;gap:10px">
             <div class="adm-form-group" style="flex:1"><label>Naam</label><input name="contactName" value="${esc(ct.contactName||"")}" placeholder="Voornaam Naam"></div>
             <div class="adm-form-group" style="flex:1"><label>Functie</label><input name="contactRole" value="${esc(ct.contactRole||"")}" placeholder="Zaakvoerder"></div>
@@ -923,7 +923,7 @@ ${(() => {
     title.textContent = emp ? "Medewerker bewerken" : "Medewerker toevoegen";
     body.innerHTML = `
 <form id="admEmpForm">
-  <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Persoonsgegevens</div>
+  <div class="adm-form-section">Persoonsgegevens</div>
   <div class="adm-form-row">
     <div class="adm-form-group"><label>Voornaam *</label><input name="firstName" value="${esc(emp?.firstName||(emp?.name?.split(" ")[0])||"")}" required placeholder="Jan"></div>
     <div class="adm-form-group"><label>Achternaam *</label><input name="lastName" value="${esc(emp?.lastName||(emp?.name?.split(" ").slice(1).join(" "))||"")}" required placeholder="Janssen"></div>
@@ -944,14 +944,14 @@ ${(() => {
     </div>
   </div>
 
-  <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 10px;">Adres & IBAN</div>
+  <div class="adm-form-section">Adres & IBAN</div>
   <div class="adm-form-group"><label>Adres</label><input name="address" value="${esc(emp?.address||"")}" placeholder="Straat 1, 1000 Brussel"></div>
   <div class="adm-form-row">
     <div class="adm-form-group"><label>IBAN</label><input name="iban" value="${esc(emp?.iban||"")}" placeholder="BE68 5390 0754 7034"></div>
     <div class="adm-form-group"><label>Rijksregisternr.</label><input name="nationalId" value="${esc(emp?.nationalId||"")}" placeholder="00.00.00-000.00"></div>
   </div>
 
-  <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 10px;">Verlof</div>
+  <div class="adm-form-section">Verlof</div>
   <div class="adm-form-row">
     <div class="adm-form-group"><label>Vakantiedagen / jaar</label>
       <input name="leaveQuota" type="number" min="0" max="365" value="${esc(emp?.leaveQuota ?? 20)}" placeholder="20">
@@ -961,7 +961,7 @@ ${(() => {
     </div>
   </div>
 
-  <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 6px;">Toegang &amp; rechten</div>
+  <div class="adm-form-section">Toegang &amp; rechten</div>
   ${isAdminUser ? `<div style="font-size:12px;color:var(--gray-500);">Beheerders hebben volledige toegang. Rechten beheer je hier alleen voor medewerkers en managers.</div>` : `
   <div style="font-size:12px;color:var(--gray-500);margin-bottom:8px;">Bepaal welke modules deze gebruiker mag gebruiken. Enkel modules uit jullie pakket worden getoond. In- en uitprikken (prikklok) kan iedereen altijd, ongeacht functie.</div>
   ${_grantable.length ? `<div id="admEmpPerms" style="display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;">
@@ -977,7 +977,7 @@ ${(() => {
   `}
 
   ${!emp ? `
-  <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 10px;">Toegang</div>
+  <div class="adm-form-section">Toegang</div>
   <div class="adm-form-group" style="font-size:12px;color:var(--gray-500);background:var(--gray-50);border-radius:8px;padding:10px 12px;">De medewerker ontvangt een activatiemail om binnen 7 dagen zelf een wachtwoord in te stellen. Je kiest hier dus geen wachtwoord.</div>` : ""}
 
   <div id="admEmpFormErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:8px;font-size:12px;margin-top:8px;"></div>
@@ -989,7 +989,7 @@ ${(() => {
 </form>
 ${emp ? `
 <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--gray-100);">
-  <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Accountbeheer</div>
+  <div class="adm-form-section">Accountbeheer</div>
   <div style="display:flex;gap:8px;flex-wrap:wrap">
     <button class="adm-btn adm-btn-sm ${emp.active!==false?"adm-btn-warning":"adm-btn-success"}" id="admEmpToggle">${emp.active!==false?"⏸ Deactiveer account":"▶ Activeer account"}</button>
   </div>
@@ -1799,7 +1799,7 @@ ${emp ? `
   <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;">${cells}</div>
   ${leaves.length ? `
   <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--gray-100);">
-    <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Verloven deze maand</div>
+    <div class="adm-form-section">Verloven deze maand</div>
     <div style="display:flex;flex-wrap:wrap;gap:6px;">
     ${leaves.map(l=>`<div style="font-size:12px;background:var(--wf-green-l);border:1px solid var(--wf-green-l);border-radius:6px;padding:4px 8px;color:var(--wf-green);">
       <strong>${esc(empMap[l.userId]||uName(l))}</strong> · ${esc(l.type)} · ${l.startDate}→${l.endDate} (${l.days}d)
@@ -3883,7 +3883,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
     <div class="adm-form-group"><label>Offertedatum</label><input type="date" name="quoteDate" value="${quote?.quoteDate||today}" ${isEdit?"disabled":""}></div>
     <div class="adm-form-group"><label>Geldig tot</label><input type="date" name="validUntil" value="${quote?.validUntil||valid30}" ${isEdit?"disabled":""}></div>
   </div>
-  <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px;">Offerteregels</div>
+  <div class="adm-form-section">Offerteregels</div>
   <div id="qLines">${lines0.map(lineRow).join("")}</div>
   ${!isEdit?`<button type="button" class="adm-btn adm-btn-secondary adm-btn-sm" id="qAddLine" style="margin-bottom:16px;">+ Regel toevoegen</button>`:""}
   <div style="background:var(--gray-50);border-radius:10px;padding:12px;margin-bottom:16px;">
@@ -4172,7 +4172,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
     ${invoice.vatNote ? `<div style="color:var(--wf-yellow);margin-top:4px;"><${esc(invoice.vatNote)}</div>` : ""}
   </div>` : ""}
 
-  <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px;">Factuurregels</div>
+  <div class="adm-form-section">Factuurregels</div>
   <div id="invLines">
     ${existingLines.map((l, i) => renderInvLine(l, i)).join("")}
   </div>
