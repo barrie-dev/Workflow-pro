@@ -168,9 +168,17 @@
             <input class="login-input" id="regName" name="name" placeholder="Voornaam Naam"></div>
           <div class="login-field"><label class="login-label" for="regEmail" data-i18n="login.email">E-mail</label>
             <input class="login-input" id="regEmail" name="email" type="email" required autocomplete="email" placeholder="naam@bedrijf.be"></div>
-          <div class="login-field"><label class="login-label" data-i18n="reg.plan">Pakket</label>
+          <div class="login-field">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:2px">
+              <label class="login-label" style="margin:0" data-i18n="reg.plan">Pakket</label>
+              <div class="reg-period" role="group" aria-label="Facturatieperiode">
+                <button type="button" class="reg-period-btn sel" data-period="year" id="regPeriodYear">Jaarlijks <span class="reg-period-disc">−17%</span></button>
+                <button type="button" class="reg-period-btn" data-period="month" id="regPeriodMonth">Maandelijks</button>
+              </div>
+            </div>
             <div id="registerPlanCards" class="reg-plans"><div class="reg-plans-loading" data-i18n="reg.plansLoading">Pakketten laden…</div></div>
             <input type="hidden" name="plan" id="registerPlan">
+            <input type="hidden" name="billingPeriod" id="registerBillingPeriod" value="year">
           </div>
           <div id="registerAddons" style="display:none"></div>
           <p id="registerPwHint" class="login-welcome-sub" style="font-size:0.75rem;margin:0 0 4px" data-i18n="reg.pwHint">Je ontvangt een e-mail om je wachtwoord veilig in te stellen.</p>

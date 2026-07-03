@@ -701,6 +701,9 @@ http.createServer(async (req, res) => {
       const tenant = store.insert("tenants", {
         id: `tenant_${Date.now()}_${Math.random().toString(16).slice(2)}`,
         name: companyName, plan: bundle.key, status: "trial", billingEmail: email,
+        // Voorkeur uit de registratie (jaarlijks = standaard, ~17% voordeliger);
+        // gebruikt bij het opzetten van het abonnement na de proefperiode.
+        billingPeriod: body.billingPeriod === "month" ? "month" : "year",
         invoiceProfile, onboarding: { completed: false }, billingOps: { invoiceHistory: [] },
         supportAccess: { allowed: false }, selfSignup: true, createdAt: now,
         kboSyncedAt: kbo ? now : null

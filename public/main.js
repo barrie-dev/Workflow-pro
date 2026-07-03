@@ -2639,21 +2639,12 @@ async function loadRegisterPlans() {
     const r = await api("/api/plans");
     const cardsBox = document.getElementById("registerPlanCards");
     const hidden = document.getElementById("registerPlan");
+    const periodHidden = document.getElementById("registerBillingPeriod");
     const plans = (r.plans || []).filter(p => !p.custom);
     if (!cardsBox || !hidden) return;
     if (!plans.length) { cardsBox.innerHTML = `<div class="reg-plans-loading">Geen pakketten beschikbaar</div>`; return; }
 
     const escP = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
-    cardsBox.innerHTML = plans.map(p => `
-      <div class="reg-plan-card" data-plan="${escP(p.key)}" role="radio" aria-checked="false" tabindex="0">
-        <span class="reg-plan-radio"></span>
-        <span class="reg-plan-info">
-          <span class="reg-plan-name">${escP(p.label)}${p.popular ? `<span class="reg-plan-badge">Meest gekozen</span>` : ""}</span>
-          ${p.description ? `<span class="reg-plan-desc">${escP(p.description)}</span>` : ""}
-        </span>
-        <span class="reg-plan-price">€${p.baseMonthly}<small>/maand</small></span>
-      </div>`).join("");
-
     const selectPlan = key => {
       hidden.value = key;
       cardsBox.querySelectorAll(".reg-plan-card").forEach(c => {
@@ -2662,10 +2653,37 @@ async function loadRegisterPlans() {
         c.setAttribute("aria-checked", on ? "true" : "false");
       });
     };
-    selectPlan((plans.find(p => p.popular) || plans[0]).key);
-    cardsBox.querySelectorAll(".reg-plan-card").forEach(c => {
-      c.addEventListener("click", () => selectPlan(c.dataset.plan));
-      c.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectPlan(c.dataset.plan); } });
+    // Jaarlijks = baseAnnual/12 per maand (2 maanden gratis); maandelijks = baseAnnual/10.
+    const renderCards = () => {
+      const period = (periodHidden && periodHidden.value) === "month" ? "month" : "year";
+      cardsBox.innerHTML = plans.map(p => {
+        const annual = p.baseAnnual || (p.baseMonthly ? p.baseMonthly * 12 : 0);
+        const perMonth = period === "year" ? Math.round(annual / 12) : Math.round(annual / 10);
+        const sub = period === "year" ? `€${annual} per jaar, jaarlijks gefactureerd` : `maandelijks gefactureerd, altijd opzegbaar`;
+        return `
+      <div class="reg-plan-card" data-plan="${escP(p.key)}" role="radio" aria-checked="false" tabindex="0">
+        <span class="reg-plan-radio"></span>
+        <span class="reg-plan-info">
+          <span class="reg-plan-name">${escP(p.label)}${p.popular ? `<span class="reg-plan-badge">Meest gekozen</span>` : ""}</span>
+          <span class="reg-plan-desc">${escP(p.description || "")}${p.description ? " · " : ""}${sub}</span>
+        </span>
+        <span class="reg-plan-price">€${perMonth}<small>/maand</small></span>
+      </div>`;
+      }).join("");
+      selectPlan(hidden.value || (plans.find(p => p.popular) || plans[0]).key);
+      cardsBox.querySelectorAll(".reg-plan-card").forEach(c => {
+        c.addEventListener("click", () => selectPlan(c.dataset.plan));
+        c.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectPlan(c.dataset.plan); } });
+      });
+    };
+    renderCards();
+    // Periode-toggle (Jaarlijks −17% / Maandelijks)
+    document.querySelectorAll(".reg-period-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        if (periodHidden) periodHidden.value = btn.dataset.period;
+        document.querySelectorAll(".reg-period-btn").forEach(b => b.classList.toggle("sel", b === btn));
+        renderCards();
+      });
     });
 
     // Optionele betaalde add-ons (activeren kan later in het account).
@@ -2719,9 +2737,10 @@ regForm?.addEventListener("submit", async event => {
       return;
     }
     const plan = f.elements.plan.value;
+    const billingPeriod = (f.elements.billingPeriod && f.elements.billingPeriod.value) === "month" ? "month" : "year";
     // Geen wachtwoord meer bij registratie: de klant verifieert zijn e-mail en
     // stelt zelf zijn wachtwoord in via de activatielink. BTW-nummer → KBO-autofill.
-    await api("/api/auth/register", { method: "POST", body: JSON.stringify({ companyName, name, email, plan, vatNumber }) });
+    await api("/api/auth/register", { method: "POST", body: JSON.stringify({ companyName, name, email, plan, vatNumber, billingPeriod }) });
     showLoginForm();
     showToast("Account aangemaakt — open de activatiemail om je wachtwoord in te stellen.", "success");
   } catch (error) {

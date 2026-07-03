@@ -522,6 +522,19 @@ body.authenticated #loginPage {
 .login-btn svg { width: 16px; height: 16px; }
 
 /* ── Registratie: plan-kaarten (SaaS-stijl i.p.v. dropdown) ── */
+.reg-period {
+  display: inline-flex; gap: 2px;
+  background: var(--gray-100); border-radius: 980px; padding: 3px;
+}
+.reg-period-btn {
+  border: none; cursor: pointer; font-family: inherit;
+  font-size: 11.5px; font-weight: 600; padding: 5px 12px; border-radius: 980px;
+  background: transparent; color: var(--muted); white-space: nowrap;
+  transition: background .15s, color .15s;
+  width: auto;
+}
+.reg-period-btn.sel { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.reg-period-disc { color: var(--wf-green); font-weight: 700; }
 .reg-plans { display: flex; flex-direction: column; gap: 8px; }
 .reg-plans-loading { font-size: 12.5px; color: var(--muted); padding: 6px 2px; }
 .reg-plan-card {
