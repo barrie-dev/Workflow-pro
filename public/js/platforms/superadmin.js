@@ -1764,10 +1764,26 @@ ${canManage ? `
 <form id="saIntegrationsForm">
   <div class="sa-int-sec">Betalingen</div>
   <div class="sa-card">
-    <div class="sa-card-head"><div class="sa-card-title">Stripe — betalingen</div><div class="sa-card-sub">${statusPill(cfg.stripe?.configured)} ${cfg.stripe?.mode?badge(cfg.stripe.mode, cfg.stripe.mode==="live"?"badge-green":"badge-blue"):""}</div></div>
+    <div class="sa-card-head"><div class="sa-card-title">Stripe — betalingen</div><div class="sa-card-sub">${statusPill(cfg.stripe?.keyConfigured)} ${cfg.stripe?.mode?badge(cfg.stripe.mode==="live"?"LIVE":"SANDBOX", cfg.stripe.mode==="live"?"badge-green":"badge-blue"):""}</div></div>
     <div style="padding:16px;display:grid;gap:12px">
-      <label class="sa-fld"><span>Secret key</span><input name="stripe.secretKey" value="${esc(cfg.stripe?.secretKey||"")}" placeholder="sk_live_..."></label>
-      <label class="sa-fld"><span>Webhook secret</span><input name="stripe.webhookSecret" value="${esc(cfg.stripe?.webhookSecret||"")}" placeholder="whsec_..."></label>
+      <label class="sa-fld"><span>Actieve omgeving</span>
+        <select name="stripe.mode" id="saStripeMode">
+          <option value="test" ${cfg.stripe?.mode!=="live"?"selected":""}>Sandbox (testsleutels — geen echte betalingen)</option>
+          <option value="live" ${cfg.stripe?.mode==="live"?"selected":""}>Live (echte betalingen)</option>
+        </select>
+      </label>
+      <div style="font-size:11.5px;color:var(--gray-500);margin-top:-4px">Wissel hier tussen sandbox en live. Beide sleutelsets blijven bewaard — omschakelen is één klik, geen sleutels opnieuw invoeren.</div>
+
+      <div style="font-size:11px;font-weight:600;color:var(--gray-500);border-bottom:1px solid var(--line);padding-bottom:5px;margin-top:2px">Sandbox-sleutels (test)</div>
+      <label class="sa-fld"><span>Secret key (sk_test_…)</span><input name="stripe.testSecretKey" value="${esc(cfg.stripe?.testSecretKey||"")}" placeholder="sk_test_..." autocomplete="off"></label>
+      <label class="sa-fld"><span>Publishable key (pk_test_…)</span><input name="stripe.testPublishableKey" value="${esc(cfg.stripe?.testPublishableKey||"")}" placeholder="pk_test_..." autocomplete="off"></label>
+      <label class="sa-fld"><span>Webhook secret (test)</span><input name="stripe.testWebhookSecret" value="${esc(cfg.stripe?.testWebhookSecret||"")}" placeholder="whsec_..." autocomplete="off"></label>
+
+      <div style="font-size:11px;font-weight:600;color:var(--gray-500);border-bottom:1px solid var(--line);padding-bottom:5px;margin-top:2px">Live-sleutels</div>
+      <label class="sa-fld"><span>Secret key (sk_live_…)</span><input name="stripe.liveSecretKey" value="${esc(cfg.stripe?.liveSecretKey||"")}" placeholder="sk_live_..." autocomplete="off"></label>
+      <label class="sa-fld"><span>Publishable key (pk_live_…)</span><input name="stripe.livePublishableKey" value="${esc(cfg.stripe?.livePublishableKey||"")}" placeholder="pk_live_..." autocomplete="off"></label>
+      <label class="sa-fld"><span>Webhook secret (live)</span><input name="stripe.liveWebhookSecret" value="${esc(cfg.stripe?.liveWebhookSecret||"")}" placeholder="whsec_..." autocomplete="off"></label>
+      <div style="font-size:11px;color:var(--gray-400)">Gemaskeerde waarden (••••) laten staan = sleutel behouden. Zie <a href="https://docs.stripe.com/keys" target="_blank" rel="noopener" style="color:var(--wf-blue)">docs.stripe.com/keys</a>.</div>
     </div>
   </div>
 

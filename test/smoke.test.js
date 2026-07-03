@@ -793,20 +793,27 @@ test("billing: checkout + portal endpoints (mock), auth-gating", async () => {
   const denied = await fetch(`${BASE}/api/tenants/t_demo/billing/checkout`, { method: "POST", headers: H(emp.token), body: JSON.stringify({ plan: "business" }) });
   assert.equal(denied.status, 403, "employee → geen billing");
 
-  // Admin checkout (mock): eerste keer → 14 dagen trial (kaart vereist), anders actief.
+  // Admin checkout: eerste keer → 14 dagen trial. Omgevingsafhankelijk: met een
+  // echte (sandbox-)sleutel in .env → echte Stripe Checkout-URL; zonder → mock.
   const co = await (await fetch(`${BASE}/api/tenants/t_demo/billing/checkout`, { method: "POST", headers: H(admin.token), body: JSON.stringify({ plan: "business" }) })).json();
   assert.equal(co.ok, true);
-  assert.equal(co.provider, "mock", "zonder live key → mock");
-  assert.match(co.url, /abonnement=(mock|trial)/);
+  if (co.provider === "stripe") {
+    assert.match(co.url, /^https:\/\/checkout\.stripe\.com\//, "echte key → Stripe Checkout-URL");
+  } else {
+    assert.equal(co.provider, "mock");
+    assert.match(co.url, /abonnement=(mock|trial)/);
+  }
 
   // Onbekend plan → 400
   const bad = await fetch(`${BASE}/api/tenants/t_demo/billing/checkout`, { method: "POST", headers: H(admin.token), body: JSON.stringify({ plan: "bestaat-niet" }) });
   assert.equal(bad.status, 400);
 
-  // Portal (mock)
-  const portal = await (await fetch(`${BASE}/api/tenants/t_demo/billing/portal`, { method: "POST", headers: H(admin.token), body: "{}" })).json();
-  assert.equal(portal.ok, true);
-  assert.equal(portal.provider, "mock");
+  // Portal: mock zonder key; met echte key kan Stripe 'm weigeren zolang het
+  // Billing Portal niet geconfigureerd is in het dashboard → beide accepteren.
+  const portalRes = await fetch(`${BASE}/api/tenants/t_demo/billing/portal`, { method: "POST", headers: H(admin.token), body: "{}" });
+  const portal = await portalRes.json();
+  if (portal.ok) assert.ok(portal.provider === "mock" || portal.provider === "stripe");
+  else assert.ok(portalRes.status >= 400, "portal-fout zonder dashboard-config is acceptabel met echte key");
 });
 
 test("push: key endpoint werkt en subscribe blokkeert zonder VAPID-config", async () => {

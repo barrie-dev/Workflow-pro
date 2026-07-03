@@ -15,8 +15,17 @@ const CONFIG_ID = "platform";
 // Duidelijk neppe placeholder-sleutels zodat niets crasht vóór echte config.
 const DUMMY = {
   stripe: {
+    // LET OP: deepMerge kent alleen velden die hier in de template staan —
+    // nieuwe stripe-velden ALTIJD ook hier toevoegen.
+    mode: "",                          // "" = auto (test, tenzij legacy sk_live)
     secretKey: "sk_test_DUMMY000000000000000000",
     webhookSecret: "whsec_DUMMY00000000000000000000",
+    testSecretKey: "",
+    testPublishableKey: "",
+    testWebhookSecret: "",
+    liveSecretKey: "",
+    livePublishableKey: "",
+    liveWebhookSecret: "",
   },
   peppol: {
     provider: "mock",                 // mock | billit | digiteal | unifiedpost
@@ -45,8 +54,15 @@ const DUMMY = {
 function envOverlay() {
   return {
     stripe: {
-      secretKey: process.env.STRIPE_SECRET_KEY || undefined,
+      mode: process.env.STRIPE_MODE || undefined,                      // "test" | "live"
+      secretKey: process.env.STRIPE_SECRET_KEY || undefined,           // legacy/enkelvoudig
       webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || undefined,
+      testSecretKey: process.env.STRIPE_TEST_SECRET_KEY || undefined,
+      testPublishableKey: process.env.STRIPE_TEST_PUBLISHABLE_KEY || undefined,
+      testWebhookSecret: process.env.STRIPE_TEST_WEBHOOK_SECRET || undefined,
+      liveSecretKey: process.env.STRIPE_LIVE_SECRET_KEY || undefined,
+      livePublishableKey: process.env.STRIPE_LIVE_PUBLISHABLE_KEY || undefined,
+      liveWebhookSecret: process.env.STRIPE_LIVE_WEBHOOK_SECRET || undefined,
     },
     peppol: {
       provider: process.env.PEPPOL_PROVIDER || undefined,
@@ -103,6 +119,25 @@ function loadPlatformConfig(store) {
   merged.planPrices = stored.planPrices || {};
   // Platform-aankondiging / onderhoudsbanner (getoond aan alle gebruikers).
   merged.announcement = stored.announcement || { active: false, level: "info", message: "" };
+
+  // ── Stripe: mode-resolutie (Sandbox/Live) ─────────────────────────────────
+  // Superadmin kiest de modus; per modus zijn er eigen sleutels. De EFFECTIEVE
+  // secretKey/publishableKey/webhookSecret worden hier gezet zodat alle
+  // consumers (checkout, portal, webhook, readiness) automatisch de juiste
+  // sleutel gebruiken. Legacy enkelvoudige velden blijven als fallback werken.
+  const s = merged.stripe || {};
+  const legacyLive = String(s.secretKey || "").startsWith("sk_live_");
+  const mode = s.mode === "live" ? "live" : s.mode === "test" ? "test" : (legacyLive ? "live" : "test");
+  const pick = (specific, legacy, legacyMatches) => (isReal(specific) ? specific : (legacyMatches ? legacy : specific || legacy));
+  merged.stripe = {
+    ...s,
+    mode,
+    secretKey: mode === "live"
+      ? pick(s.liveSecretKey, s.secretKey, legacyLive)
+      : pick(s.testSecretKey, s.secretKey, !legacyLive),
+    publishableKey: (mode === "live" ? s.livePublishableKey : s.testPublishableKey) || s.publishableKey || "",
+    webhookSecret: (mode === "live" ? s.liveWebhookSecret : s.testWebhookSecret) || s.webhookSecret || "",
+  };
   return merged;
 }
 
@@ -126,10 +161,17 @@ function publicPlatformConfig(store) {
   const cfg = loadPlatformConfig(store);
   return {
     stripe: {
-      secretKey: mask(cfg.stripe.secretKey),
+      mode: cfg.stripe.mode,                                   // actieve modus (test|live)
+      secretKey: mask(cfg.stripe.secretKey),                   // effectieve sleutel (gemaskeerd)
       webhookSecret: mask(cfg.stripe.webhookSecret),
-      mode: isReal(cfg.stripe.secretKey) ? (String(cfg.stripe.secretKey).startsWith("sk_live_") ? "live" : "test") : "dummy",
+      testSecretKey: mask(cfg.stripe.testSecretKey),
+      testPublishableKey: cfg.stripe.testPublishableKey || "", // pk_ is publiek — niet maskeren
+      testWebhookSecret: mask(cfg.stripe.testWebhookSecret),
+      liveSecretKey: mask(cfg.stripe.liveSecretKey),
+      livePublishableKey: cfg.stripe.livePublishableKey || "",
+      liveWebhookSecret: mask(cfg.stripe.liveWebhookSecret),
       configured: isReal(cfg.stripe.secretKey) && isReal(cfg.stripe.webhookSecret),
+      keyConfigured: isReal(cfg.stripe.secretKey),
     },
     peppol: {
       provider: cfg.peppol.provider,
@@ -223,12 +265,17 @@ function savePlatformConfig(store, patch, actor) {
     if (!patch[section]) return;
     for (const k of keys) {
       const v = patch[section][k];
-      // 'provider'/'from'/'model' altijd toepasbaar (geen secret); secrets enkel als niet-gemaskeerd
-      if (["provider", "from", "model"].includes(k)) { if (v !== undefined && v !== null && v !== "") next[section][k] = v; }
+      // Niet-geheime velden altijd toepasbaar; secrets enkel als niet-gemaskeerd
+      if (["provider", "from", "model", "mode", "testPublishableKey", "livePublishableKey"].includes(k)) {
+        if (v !== undefined && v !== null && v !== "") next[section][k] = v;
+      }
       else if (!isMaskedOrEmpty(v)) next[section][k] = v;
     }
   };
-  apply("stripe", ["secretKey", "webhookSecret"]);
+  apply("stripe", ["mode", "secretKey", "webhookSecret",
+    "testSecretKey", "testPublishableKey", "testWebhookSecret",
+    "liveSecretKey", "livePublishableKey", "liveWebhookSecret"]);
+  if (next.stripe.mode && !["test", "live"].includes(next.stripe.mode)) delete next.stripe.mode;
   apply("peppol", ["provider", "apiKey"]);
   apply("email", ["provider", "apiKey", "from"]);
   apply("kbo", ["provider", "apiKey"]);

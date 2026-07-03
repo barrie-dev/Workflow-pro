@@ -111,7 +111,7 @@
           <button class="lpv-lang-btn" type="button" id="langFR" data-lang-btn="fr" aria-label="Frans" lang="fr">FR</button>
         </div>
 
-        <div class="login-form-header">
+        <div class="login-form-header" id="loginFormHeader">
           <h2 class="login-welcome" data-i18n="login.welcome">Welkom terug!</h2>
           <p class="login-welcome-sub" data-i18n="login.subtitle">Log in bij Monargo One</p>
         </div>
@@ -153,7 +153,7 @@
         <form id="registerForm" class="login-card" style="display:none">
           <div class="login-form-header" style="margin-bottom:8px">
             <h2 class="login-welcome" data-i18n="reg.title">Account aanmaken</h2>
-            <p class="login-welcome-sub" data-i18n="reg.subtitle">Start je eigen Monargo One — kies je pakket</p>
+            <p class="login-welcome-sub" data-i18n="reg.subtitle">Probeer Monargo One 14 dagen gratis — kies je pakket</p>
           </div>
           <div class="login-field"><label class="login-label" for="registerVat" data-i18n="reg.vat">BTW-/ondernemingsnummer</label>
             <div style="display:flex;gap:8px">
@@ -168,13 +168,15 @@
             <input class="login-input" id="regName" name="name" placeholder="Voornaam Naam"></div>
           <div class="login-field"><label class="login-label" for="regEmail" data-i18n="login.email">E-mail</label>
             <input class="login-input" id="regEmail" name="email" type="email" required autocomplete="email" placeholder="naam@bedrijf.be"></div>
-          <div class="login-field"><label class="login-label" for="registerPlan" data-i18n="reg.plan">Pakket</label>
-            <select class="login-input" name="plan" id="registerPlan"><option value="">Pakketten laden…</option></select>
+          <div class="login-field"><label class="login-label" data-i18n="reg.plan">Pakket</label>
+            <div id="registerPlanCards" class="reg-plans"><div class="reg-plans-loading" data-i18n="reg.plansLoading">Pakketten laden…</div></div>
+            <input type="hidden" name="plan" id="registerPlan">
           </div>
-          <div id="registerAddons" style="display:none;font-size:0.78rem;color:var(--text);background:var(--gray-50);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:4px"></div>
+          <div id="registerAddons" style="display:none"></div>
           <p id="registerPwHint" class="login-welcome-sub" style="font-size:0.75rem;margin:0 0 4px" data-i18n="reg.pwHint">Je ontvangt een e-mail om je wachtwoord veilig in te stellen.</p>
           <div id="registerNotice" class="login-notice" role="alert" aria-live="assertive"></div>
-          <button class="login-btn" type="submit" data-i18n="reg.submit">Account aanmaken</button>
+          <button class="login-btn" type="submit" data-i18n="reg.submit">Start gratis proefperiode</button>
+          <div class="reg-trial-note" data-i18n="reg.trialNote">14 dagen gratis · geen betaalgegevens nodig · maandelijks opzegbaar</div>
           <div style="text-align:center;margin-top:12px;font-size:0.8125rem;color:var(--muted)">
             <span data-i18n="reg.haveAccount">Al een account?</span> <a href="#" id="showLogin" style="color:var(--wf-blue);font-weight:600" data-i18n="reg.login">Inloggen</a>
             · <a href="#" id="showResellerApply" style="color:var(--muted)" data-i18n="reg.becomeReseller">Reseller worden</a>

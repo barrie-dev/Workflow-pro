@@ -521,6 +521,36 @@ body.authenticated #loginPage {
 .login-btn:hover { background: var(--wf-blue-d); }
 .login-btn svg { width: 16px; height: 16px; }
 
+/* ── Registratie: plan-kaarten (SaaS-stijl i.p.v. dropdown) ── */
+.reg-plans { display: flex; flex-direction: column; gap: 8px; }
+.reg-plans-loading { font-size: 12.5px; color: var(--muted); padding: 6px 2px; }
+.reg-plan-card {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px;
+  border: 1.5px solid var(--line); border-radius: 12px;
+  background: var(--surface); cursor: pointer;
+  transition: border-color .15s, box-shadow .15s;
+}
+.reg-plan-card:hover { border-color: var(--gray-300); }
+.reg-plan-card.sel { border-color: var(--wf-blue); box-shadow: var(--ring); }
+.reg-plan-radio {
+  width: 16px; height: 16px; border: 1.5px solid var(--gray-300); border-radius: 50%;
+  flex-shrink: 0; display: grid; place-items: center; transition: border-color .15s;
+}
+.reg-plan-card.sel .reg-plan-radio { border-color: var(--wf-blue); }
+.reg-plan-card.sel .reg-plan-radio::after { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--wf-blue); }
+.reg-plan-info { flex: 1; min-width: 0; }
+.reg-plan-name { font-size: 13.5px; font-weight: 600; color: var(--ink); display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
+.reg-plan-badge { font-size: 9.5px; font-weight: 600; color: var(--wf-blue); background: var(--wf-blue-l); padding: 2px 8px; border-radius: 999px; }
+.reg-plan-desc { font-size: 11.5px; color: var(--muted); margin-top: 2px; line-height: 1.4; }
+.reg-plan-price { font-size: 14px; font-weight: 600; color: var(--ink); white-space: nowrap; }
+.reg-plan-price small { font-size: 11px; color: var(--muted); font-weight: 500; }
+.reg-addons { font-size: 12px; color: var(--text); background: var(--gray-50); border: 1px solid var(--line); border-radius: 12px; padding: 11px 13px; }
+.reg-addons-title { font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
+.reg-addons-row { display: flex; justify-content: space-between; gap: 10px; padding: 2px 0; }
+.reg-addons-row small { color: var(--muted); white-space: nowrap; }
+.reg-trial-note { text-align: center; font-size: 11.5px; color: var(--muted); margin-top: 10px; }
+
 .login-demo-section {
   width: 100%;
   max-width: 360px;

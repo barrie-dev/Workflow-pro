@@ -2587,6 +2587,9 @@ function showRegisterForm(mode) {
   document.getElementById("loginForm").style.display = "none";
   document.getElementById("loginToRegister").style.display = "none";
   const demo = document.getElementById("loginDemoSection"); if (demo) demo.style.display = "none";
+  // Login-kop en SSO horen niet boven het registratieformulier (heeft eigen kop)
+  const lfh = document.getElementById("loginFormHeader"); if (lfh) lfh.style.display = "none";
+  const sso = document.getElementById("ssoLoginRow"); if (sso) sso.style.display = "none";
   regForm.style.display = "";
   const planField = document.getElementById("registerPlan")?.closest(".login-field");
   const title = regForm.querySelector(".login-welcome");
@@ -2627,23 +2630,52 @@ function showLoginForm() {
   document.getElementById("loginForm").style.display = "";
   document.getElementById("loginToRegister").style.display = "";
   const demo = document.getElementById("loginDemoSection"); if (demo) demo.style.display = "";
+  const lfh = document.getElementById("loginFormHeader"); if (lfh) lfh.style.display = "";
+  const sso = document.getElementById("ssoLoginRow"); if (sso) sso.style.display = "";
 }
 async function loadRegisterPlans() {
   if (_plansLoaded) return;
   try {
     const r = await api("/api/plans");
-    const sel = document.getElementById("registerPlan");
+    const cardsBox = document.getElementById("registerPlanCards");
+    const hidden = document.getElementById("registerPlan");
     const plans = (r.plans || []).filter(p => !p.custom);
-    sel.innerHTML = plans.map(p => `<option value="${p.key}"${p.popular ? " selected" : ""}>${p.label}${p.baseMonthly != null ? ` — €${p.baseMonthly}/maand` : ""}${p.popular ? " · meest gekozen" : ""}</option>`).join("")
-      || `<option value="">Geen pakketten beschikbaar</option>`;
-    // Optionele betaalde add-ons tonen (activeren via de beheerder na go-live).
+    if (!cardsBox || !hidden) return;
+    if (!plans.length) { cardsBox.innerHTML = `<div class="reg-plans-loading">Geen pakketten beschikbaar</div>`; return; }
+
+    const escP = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+    cardsBox.innerHTML = plans.map(p => `
+      <div class="reg-plan-card" data-plan="${escP(p.key)}" role="radio" aria-checked="false" tabindex="0">
+        <span class="reg-plan-radio"></span>
+        <span class="reg-plan-info">
+          <span class="reg-plan-name">${escP(p.label)}${p.popular ? `<span class="reg-plan-badge">Meest gekozen</span>` : ""}</span>
+          ${p.description ? `<span class="reg-plan-desc">${escP(p.description)}</span>` : ""}
+        </span>
+        <span class="reg-plan-price">€${p.baseMonthly}<small>/maand</small></span>
+      </div>`).join("");
+
+    const selectPlan = key => {
+      hidden.value = key;
+      cardsBox.querySelectorAll(".reg-plan-card").forEach(c => {
+        const on = c.dataset.plan === key;
+        c.classList.toggle("sel", on);
+        c.setAttribute("aria-checked", on ? "true" : "false");
+      });
+    };
+    selectPlan((plans.find(p => p.popular) || plans[0]).key);
+    cardsBox.querySelectorAll(".reg-plan-card").forEach(c => {
+      c.addEventListener("click", () => selectPlan(c.dataset.plan));
+      c.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectPlan(c.dataset.plan); } });
+    });
+
+    // Optionele betaalde add-ons (activeren kan later in het account).
     const addonBox = document.getElementById("registerAddons");
     const addons = (r.addons || []).filter(a => a.monthly != null);
     if (addonBox && addons.length) {
       addonBox.style.display = "";
-      addonBox.innerHTML = `<strong>Optionele add-ons</strong><br>`
-        + addons.map(a => `+ €${a.monthly}/mnd — ${a.label}`).join("<br>")
-        + `<br><span style="color:var(--gray-400)">Activeer je later in je account.</span>`;
+      addonBox.className = "reg-addons";
+      addonBox.innerHTML = `<div class="reg-addons-title">Later uit te breiden met add-ons</div>`
+        + addons.map(a => `<div class="reg-addons-row"><span>${escP(a.label)}</span><small>+ €${a.monthly}/mnd</small></div>`).join("");
     }
     _plansLoaded = true;
   } catch (_) { /* laat placeholder staan */ }
