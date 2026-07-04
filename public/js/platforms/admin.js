@@ -2074,7 +2074,8 @@ ${emp ? `
     if (w.invoiceId) return false;
     const fixed = w.billableAmount ?? w.fixedPrice;
     if (fixed != null && Number(fixed) > 0) return true;
-    return Number(w.billableHours ?? w.clockedHours ?? w.hours ?? 0) > 0;
+    if (Number(w.billableHours ?? w.clockedHours ?? w.hours ?? 0) > 0) return true;
+    return Array.isArray(w.materials) && w.materials.some(m => Number(m.qty) > 0 && Number(m.unitPrice) > 0);
   }
 
   async function renderWorkorders() {
@@ -2273,6 +2274,14 @@ ${emp ? `
     <div class="adm-form-group"><label>Vaste prijs (€) — overschrijft uren×tarief</label>
       <input name="fixedPrice" type="number" step="0.01" min="0" value="${workorder?.fixedPrice ?? ""}" placeholder="leeg = op uren factureren">
     </div>
+    <div class="adm-form-group" style="margin-top:4px;">
+      <label style="display:flex;justify-content:space-between;align-items:center;">
+        <span>Materiaal / extra factuurlijnen</span>
+        <button type="button" class="adm-btn adm-btn-secondary adm-btn-sm" id="woAddMat">+ Toevoegen</button>
+      </label>
+      <div id="woMaterials" style="display:flex;flex-direction:column;gap:6px;"></div>
+      <div style="font-size:11px;color:var(--gray-400);margin-top:4px;">Verbruikt materiaal komt als aparte lijnen op de factuur, naast de uren.</div>
+    </div>
     <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
       <input type="checkbox" name="billable" ${workorder?.billable === false ? "" : "checked"} style="width:16px;height:16px;"> Factureerbaar
     </label>
@@ -2297,6 +2306,32 @@ ${emp ? `
         const nameInp = document.getElementById("woClientName");
         if (cust && nameInp) nameInp.value = cust.name;
       });
+
+      // Materiaal-editor: herbruikbare lijnen op de werkbon (stromen mee in de factuur).
+      const mats = Array.isArray(workorder?.materials) ? workorder.materials.slice() : [];
+      const matBox = document.getElementById("woMaterials");
+      const collectMats = () => {
+        if (!matBox) return;
+        const rows = [...matBox.querySelectorAll(".wo-mat-row")];
+        mats.length = 0;
+        rows.forEach(r => mats.push({
+          description: r.querySelector(".wo-mat-desc").value,
+          qty: r.querySelector(".wo-mat-qty").value,
+          unitPrice: r.querySelector(".wo-mat-price").value,
+        }));
+      };
+      const renderMats = () => {
+        if (!matBox) return;
+        matBox.innerHTML = mats.map(m => `<div class="wo-mat-row" style="display:flex;gap:6px;align-items:center;">
+          <input class="wo-mat-desc" placeholder="Omschrijving" value="${esc(m.description || "")}" style="flex:1;">
+          <input class="wo-mat-qty" type="number" step="0.01" min="0" placeholder="aantal" value="${m.qty ?? ""}" style="width:64px;">
+          <input class="wo-mat-price" type="number" step="0.01" min="0" placeholder="€/st" value="${m.unitPrice ?? ""}" style="width:74px;">
+          <button type="button" class="adm-btn adm-btn-secondary adm-btn-sm wo-mat-del" title="Verwijderen">✕</button>
+        </div>`).join("");
+        matBox.querySelectorAll(".wo-mat-del").forEach((b, i) => b.addEventListener("click", () => { collectMats(); mats.splice(i, 1); renderMats(); }));
+      };
+      document.getElementById("woAddMat")?.addEventListener("click", () => { collectMats(); mats.push({ description: "", qty: 1, unitPrice: "" }); renderMats(); });
+      renderMats();
 
       document.getElementById("woCancel").addEventListener("click", closeDrawer);
       document.getElementById("woMakeInvoice")?.addEventListener("click", () => {
@@ -2337,6 +2372,11 @@ ${emp ? `
         ["billableHours", "hourlyRate", "fixedPrice"].forEach(k => {
           body[k] = body[k] === "" || body[k] == null ? null : Number(body[k]);
         });
+        // Materiaal-lijnen meenemen (enkel volledige rijen); stromen mee in de factuur.
+        collectMats();
+        body.materials = mats
+          .filter(m => String(m.description || "").trim() && Number(m.qty) > 0 && Number(m.unitPrice) > 0)
+          .map(m => ({ description: String(m.description).trim(), qty: Number(m.qty), unitPrice: Number(m.unitPrice) }));
         try {
           if (workorder) await api("PATCH", `/workorders/${workorder.id}`, body);
           else await api("POST", "/workorders", body);

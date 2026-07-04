@@ -87,8 +87,12 @@ function workorderInvoicePayload(store, tenant, workorder, extraLines = []) {
     const rate = Number(workorder.hourlyRate || defaultRate || 0);
     if (hours > 0 && rate > 0) lines.push({ description: `${label} — uren`, qty: hours, unitPrice: rate, vatRate: 21 });
   }
-  for (const extra of (Array.isArray(extraLines) ? extraLines : [])) {
-    const qty = Number(extra.qty || 1), unitPrice = Number(extra.unitPrice || 0);
+  // Materiaal/extra lijnen die op de werkbon zelf zijn geregistreerd (het
+  // natuurlijke punt: verbruikt materiaal hoort bij de job) + eventuele ad-hoc
+  // lijnen uit het request — stromen als aparte factuurregels mee naast de uren.
+  const materials = Array.isArray(workorder.materials) ? workorder.materials : [];
+  for (const extra of [...materials, ...(Array.isArray(extraLines) ? extraLines : [])]) {
+    const qty = Number(extra.qty ?? 1), unitPrice = Number(extra.unitPrice ?? 0);
     if (qty > 0 && unitPrice > 0 && String(extra.description || "").trim()) {
       lines.push({ description: String(extra.description).trim(), qty, unitPrice, vatRate: 21 });
     }

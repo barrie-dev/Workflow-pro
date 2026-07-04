@@ -170,6 +170,29 @@ test("workorderInvoicePayload: niets factureerbaar → 422", () => {
     e => e.status === 422);
 });
 
+test("workorderInvoicePayload: uren + materiaal → uren-lijn + materiaallijnen", () => {
+  const payload = workorderInvoicePayload({}, { id: "t1", defaultHourlyRate: 50 }, {
+    id: "wo4", number: "WO-2026-010", title: "Badkamer", clientName: "Klant Y", billableHours: 3,
+    materials: [
+      { description: "Tegels", qty: 20, unitPrice: 4.5 },
+      { description: "Voegsel", qty: 2, unitPrice: 12 },
+      { description: "Ongeldig", qty: 0, unitPrice: 5 },   // wordt genegeerd
+    ],
+  });
+  assert.equal(payload.lines.length, 3, "1 uren + 2 geldige materiaallijnen");
+  assert.equal(payload.lines[0].qty, 3);
+  assert.equal(payload.lines[1].description, "Tegels");
+  assert.equal(payload.lines[2].unitPrice, 12);
+});
+
+test("workorderInvoicePayload: enkel materiaal (geen uren) blijft factureerbaar", () => {
+  const payload = workorderInvoicePayload({}, { id: "t1" }, {
+    id: "wo5", title: "Levering", materials: [{ description: "Kraan", qty: 1, unitPrice: 89 }],
+  });
+  assert.equal(payload.lines.length, 1);
+  assert.equal(payload.lines[0].description, "Kraan");
+});
+
 test("createCustomerInvoice + werkbon-payload werken samen (uren-flow)", () => {
   const store = fakeInvoiceStore();
   const payload = workorderInvoicePayload(store, { id: "t1", defaultHourlyRate: 45 },
