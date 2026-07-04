@@ -2633,6 +2633,16 @@ function showLoginForm() {
   const lfh = document.getElementById("loginFormHeader"); if (lfh) lfh.style.display = "";
   const sso = document.getElementById("ssoLoginRow"); if (sso) sso.style.display = "";
 }
+// Deep-link vanaf de marketingsite (monargo.com): ?plan=<key>&period=<year|month>
+// en/of #register. Geeft de bundel + facturatieperiode terug om voor te selecteren.
+function registerIntent() {
+  const q = new URLSearchParams(location.search || "");
+  let plan = (q.get("plan") || "").toLowerCase().trim();
+  let period = (q.get("period") || "").toLowerCase().trim();
+  if (period !== "month" && period !== "year") period = "";
+  const wantRegister = q.has("plan") || q.has("period") || q.get("register") === "1" || /register/i.test(location.hash || "");
+  return { plan, period, wantRegister };
+}
 async function loadRegisterPlans() {
   if (_plansLoaded) return;
   try {
@@ -2676,6 +2686,13 @@ async function loadRegisterPlans() {
         c.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectPlan(c.dataset.plan); } });
       });
     };
+    // Deep-link voorselectie vanaf monargo.com (?plan=&period=), vóór de 1e render.
+    const intent = registerIntent();
+    if (intent.period && periodHidden) {
+      periodHidden.value = intent.period;
+      document.querySelectorAll(".reg-period-btn").forEach(b => b.classList.toggle("sel", b.dataset.period === intent.period));
+    }
+    if (intent.plan && plans.some(p => p.key === intent.plan)) hidden.value = intent.plan;
     renderCards();
     // Periode-toggle (Jaarlijks −17% / Maandelijks)
     document.querySelectorAll(".reg-period-btn").forEach(btn => {
@@ -3214,6 +3231,23 @@ document.addEventListener("DOMContentLoaded", supportEnterBootstrap);
 window.addEventListener("load", supportEnterBootstrap);
 setTimeout(supportEnterBootstrap, 0);
 setTimeout(supportEnterBootstrap, 400);
+
+// ── Deep-link registratie vanaf monargo.com (?plan=&period=#register) ─────────
+// De marketing-CTA linkt naar monargo.one/?plan=business&period=year#register.
+// We openen dan meteen het registratieformulier met de juiste bundel voorgevuld —
+// maar alleen voor een uitgelogde bezoeker (nooit een ingelogde gebruiker storen).
+let _registerDeepLinkDone = false;
+function registerDeepLinkBootstrap() {
+  if (_registerDeepLinkDone) return;
+  if (localStorage.getItem("wfp_token")) return;               // bestaande sessie → niet storen
+  if (/support_token=|sso_token=/.test(location.hash)) return; // support/SSO gaat voor
+  if (!registerIntent().wantRegister) return;
+  _registerDeepLinkDone = true;
+  showRegisterForm("tenant");
+}
+document.addEventListener("DOMContentLoaded", registerDeepLinkBootstrap);
+window.addEventListener("load", registerDeepLinkBootstrap);
+setTimeout(registerDeepLinkBootstrap, 300);
 
 // ── Account-activatie: persoon opent de e-mailink ?activate=<token> en stelt ──
 // zelf zijn wachtwoord in. Bij succes meteen ingelogd. De aanmaker kent dus nooit
