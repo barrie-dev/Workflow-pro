@@ -53,7 +53,7 @@ const { MODULE_CATALOG, CORE_MODULES, moduleByKey, listAddons } = require("./mod
 const { listBundles, getBundle, saveBundle, deleteBundle } = require("./modules/bundles");
 const { resolveTenantModules, isModuleEnabled, assertModuleEnabled, assertSubmoduleEnabled, grantablePermissions, OPERATIONAL_KEYS, ALWAYS_PERMISSIONS } = require("./modules/entitlements");
 const { bodenChat } = require("./modules/boden");
-const { workingDaysBetween, round2, isValidBelgianVat, structuredCommunication } = require("./modules/be-locale");
+const { workingDaysBetween, round2, isValidBelgianVat } = require("./modules/be-locale");
 
 /**
  * Maak een veilige permissions-array voor een medewerker op basis van wat de
@@ -115,6 +115,7 @@ function provisionPendingUser(fields) {
 }
 const { listModule, createModuleRow, updateModuleRow } = require("./modules/crud");
 const { lookupKboResolve } = require("./modules/kbo");
+const { createCustomerInvoice, workorderInvoicePayload } = require("./modules/customer-invoicing");
 const {
   createSetupIntent,
   billingQuote,
@@ -3283,59 +3284,9 @@ http.createServer(async (req, res) => {
         const body = await readBody(req);
         if (!body.customerName && !body.customerId) return sendJson(res, 400, { ok: false, error: "Klant is verplicht" });
         if (!Array.isArray(body.lines) || !body.lines.length) return sendJson(res, 400, { ok: false, error: "Minimaal 1 factuurregel vereist" });
-        // Auto-generate invoice number
-        const existing = store.list("invoices", tenantId);
-        const year = new Date().getFullYear();
-        const seq = existing.filter(i => String(i.number||"").startsWith(String(year))).length + 1;
-        const number = `${year}-${String(seq).padStart(3, "0")}`;
-        // BTW-regime: 'intracom' (EU-B2B) of 'medecontractant' (BE binnenlandse
-        // bouw, KB nr. 1 art. 20) → btw verlegd (0%). Anders binnenland.
-        const REGIME_NOTES = {
-          intracom: "Btw verlegd — intracommunautaire handeling (art. 21 §2 / art. 39bis W.Btw).",
-          medecontractant: "Btw verlegd — medecontractant (KB nr. 1, art. 20 W.Btw).",
-        };
-        const regime = ["intracom", "medecontractant"].includes(body.vatRegime) ? body.vatRegime : "binnen";
-        const reverseCharge = regime !== "binnen";
-        const vatNote = reverseCharge ? REGIME_NOTES[regime] : "";
-        // Calculate totals from lines
-        const lines = body.lines.map(l => {
-          const qty = Number(l.qty || 1);
-          const unitPrice = Number(l.unitPrice || 0);
-          const vatRate = reverseCharge ? 0 : Number(l.vatRate ?? 21);
-          const lineSubtotal = round2(qty * unitPrice);
-          const lineVat = round2(lineSubtotal * vatRate / 100);
-          return { description: l.description || "", qty, unitPrice, vatRate, lineSubtotal, lineVat, lineTotal: round2(lineSubtotal + lineVat) };
-        });
-        const subtotal = round2(lines.reduce((s, l) => s + l.lineSubtotal, 0));
-        const vatAmount = round2(lines.reduce((s, l) => s + l.lineVat, 0));
-        const total = round2(subtotal + vatAmount);
-        const invoice = store.insert("invoices", {
-          id: `inv_${Date.now()}_${Math.random().toString(16).slice(2)}`,
-          tenantId,
-          number,
-          customerId: body.customerId || null,
-          customerName: body.customerName || "",
-          customerAddress: body.customerAddress || "",
-          customerVatNumber: body.customerVatNumber || "",
-          status: "open",
-          invoiceDate: body.invoiceDate || new Date().toISOString().slice(0, 10),
-          dueDate: body.dueDate || new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
-          lines,
-          subtotal,
-          vatAmount,
-          total,
-          vatRegime: regime,
-          vatNote,
-          structuredComm: structuredCommunication(number),  // Belgische gestructureerde mededeling
-          notes: body.notes || "",
-          workorderId: body.workorderId || null,
-          paidAt: null,
-          sentAt: null,
-          createdBy: user.email,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        });
-        store.audit({ actor: user.email, tenantId, action: "invoice_created", area: "facturen", detail: `${number} — €${total.toFixed(2)}` });
+        // Gedeelde factuurlogica (nummering, btw-regime, afronding, gestructureerde
+        // mededeling) — identiek voor handmatig, offerte→factuur en werkbon→factuur.
+        const invoice = createCustomerInvoice(store, tenant, user, body);
         sendJson(res, 201, { ok: true, invoice });
         return;
       }
@@ -4074,6 +4025,28 @@ http.createServer(async (req, res) => {
         });
         store.audit({ actor: user.email, tenantId, action: "workorder_created", area: "workorders", detail: body.title });
         sendJson(res, 201, { ok: true, workorder: row });
+        return;
+      }
+
+      // ── Werkbon → Factuur (1-klik): sluit de veld→cash-lus ────────────────────
+      // Neemt geklokte/factureerbare uren × tarief (of vast bedrag) over in een
+      // klantfactuur, koppelt beide, en markeert de werkbon als gefactureerd.
+      const workorderInvoiceMatch = action.match(/^workorders\/([^/]+)\/invoice$/);
+      if (workorderInvoiceMatch && req.method === "POST") {
+        assertCan(user, "billing");
+        assertApiKeyWriteAllowed(user, req);
+        const wo = store.get("workorders", workorderInvoiceMatch[1]);
+        if (!wo || wo.tenantId !== tenantId) return sendJson(res, 404, { ok: false, error: "Werkbon niet gevonden" });
+        if (wo.invoiceId) return sendJson(res, 409, { ok: false, error: "Deze werkbon is al gefactureerd" });
+        const body = await readBody(req).catch(() => ({}));
+        const payload = workorderInvoicePayload(store, tenant, wo, body.extraLines);
+        const invoice = createCustomerInvoice(store, tenant, user, payload);
+        const workorder = store.update("workorders", wo.id, {
+          invoiceId: invoice.id, billableStatus: "invoiced",
+          invoicedAt: new Date().toISOString(), updatedAt: new Date().toISOString()
+        });
+        store.audit({ actor: user.email, tenantId, action: "workorder_invoiced", area: "facturen", detail: `${wo.number || wo.id} → ${invoice.number}` });
+        sendJson(res, 201, { ok: true, invoice, workorder });
         return;
       }
 

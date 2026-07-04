@@ -115,6 +115,71 @@ test("lookupKboResolve: fixture sluit kort vóór het netwerk", async () => {
   assert.equal(touched, false);
 });
 
+// ── Klantfacturatie: gedeelde logica + werkbon→factuur ──────────────────────────
+const { createCustomerInvoice, workorderInvoicePayload } = require("../src/modules/customer-invoicing");
+function fakeInvoiceStore() {
+  const data = { invoices: [] };
+  return {
+    _data: data,
+    list: (coll, tid) => (data[coll] || []).filter(r => r.tenantId === tid),
+    insert: (coll, row) => { (data[coll] = data[coll] || []).push(row); return row; },
+    audit: () => {},
+  };
+}
+
+test("createCustomerInvoice: cent-afronding + gestructureerde mededeling", () => {
+  const store = fakeInvoiceStore();
+  const inv = createCustomerInvoice(store, { id: "t1" }, { email: "a@b.be" },
+    { customerName: "Klant A", lines: [{ description: "Uren", qty: 3, unitPrice: 33.33, vatRate: 21 }] });
+  assert.equal(inv.subtotal, 99.99);
+  assert.equal(inv.vatAmount, 21);
+  assert.equal(inv.total, 120.99);
+  assert.match(inv.structuredComm, /^\+\+\+\d{3}\/\d{4}\/\d{5}\+\+\+$/);
+  assert.match(inv.number, /^\d{4}-001$/);
+});
+
+test("createCustomerInvoice: medecontractant → btw verlegd (0%)", () => {
+  const store = fakeInvoiceStore();
+  const inv = createCustomerInvoice(store, { id: "t1" }, { email: "a@b.be" },
+    { customerName: "BE Aannemer", vatRegime: "medecontractant", lines: [{ description: "Ruwbouw", qty: 1, unitPrice: 5000, vatRate: 21 }] });
+  assert.equal(inv.vatAmount, 0);
+  assert.equal(inv.total, 5000);
+  assert.match(inv.vatNote, /medecontractant/i);
+});
+
+test("workorderInvoicePayload: uren × standaardtarief → één lijn", () => {
+  const payload = workorderInvoicePayload({}, { id: "t1", defaultHourlyRate: 50 },
+    { id: "wo1", number: "WO-2026-007", title: "Dakwerk", clientName: "Klant X", billableHours: 4 });
+  assert.equal(payload.lines.length, 1);
+  assert.equal(payload.lines[0].qty, 4);
+  assert.equal(payload.lines[0].unitPrice, 50);
+  assert.equal(payload.customerName, "Klant X");
+  assert.equal(payload.workorderId, "wo1");
+});
+
+test("workorderInvoicePayload: vast bedrag → één lijn qty 1", () => {
+  const payload = workorderInvoicePayload({}, { id: "t1" },
+    { id: "wo2", number: "WO-2026-008", title: "Forfait", billableAmount: 1500 });
+  assert.equal(payload.lines.length, 1);
+  assert.equal(payload.lines[0].qty, 1);
+  assert.equal(payload.lines[0].unitPrice, 1500);
+});
+
+test("workorderInvoicePayload: niets factureerbaar → 422", () => {
+  assert.throws(() => workorderInvoicePayload({}, { id: "t1" }, { id: "wo3", title: "Leeg" }),
+    e => e.status === 422);
+});
+
+test("createCustomerInvoice + werkbon-payload werken samen (uren-flow)", () => {
+  const store = fakeInvoiceStore();
+  const payload = workorderInvoicePayload(store, { id: "t1", defaultHourlyRate: 45 },
+    { id: "wo9", number: "WO-2026-009", title: "Onderhoud", clientName: "Klant Z", clockedHours: 2 });
+  const inv = createCustomerInvoice(store, { id: "t1" }, { email: "a@b.be" }, payload);
+  assert.equal(inv.subtotal, 90);
+  assert.equal(inv.total, 108.9);          // 90 + 21%
+  assert.equal(inv.workorderId, "wo9");
+});
+
 // ── GDPR support-impersonatie: grant-levenscyclus (pure logica) ──
 test("support-grant: vorm + scope-normalisatie + token-exp = harde limiet", () => {
   const now = Date.UTC(2026, 5, 1, 9, 0, 0);

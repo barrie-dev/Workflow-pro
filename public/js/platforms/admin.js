@@ -2068,6 +2068,15 @@ ${emp ? `
   let _woFilterUser   = "";
   let _woFilterSearch = "";
 
+  // Toont de "→ Factuur"-knop enkel als er iets factureerbaars is (uren of vast
+  // bedrag) en de werkbon nog niet gefactureerd is. De server valideert het tarief.
+  function woBillable(w) {
+    if (w.invoiceId) return false;
+    const fixed = w.billableAmount ?? w.fixedPrice;
+    if (fixed != null && Number(fixed) > 0) return true;
+    return Number(w.billableHours ?? w.clockedHours ?? w.hours ?? 0) > 0;
+  }
+
   async function renderWorkorders() {
     const content = document.getElementById("admContent");
 
@@ -2142,7 +2151,12 @@ ${emp ? `
           <td><span class="adm-status adm-status-${(w.status||"").toLowerCase().replace(/\s/g,"-")}">${esc(w.status||"—")}</span></td>
           <td><span style="font-size:12px;">${w.priority==="hoog"?'<span class="adm-dot" style="background:var(--wf-red)"></span>':w.priority==="laag"?'<span class="adm-dot" style="background:var(--wf-green)"></span>':'<span class="adm-dot" style="background:var(--wf-yellow)"></span>'} ${esc(w.priority||"normaal")}</span></td>
           <td>${w.scheduledDate || w.createdAt?.slice(0,10) || "—"}</td>
-          <td><button class="adm-btn adm-btn-secondary adm-btn-sm adm-wo-edit" data-id="${w.id}"></button></td>
+          <td style="white-space:nowrap;">
+            ${w.invoiceId
+              ? `<span style="font-size:11px;color:var(--wf-green);font-weight:600;">✓ gefactureerd</span>`
+              : (woBillable(w) ? `<button class="adm-btn adm-btn-success adm-btn-sm adm-wo-invoice" data-id="${w.id}" title="Maak factuur van deze werkbon">→ Factuur</button>` : "")}
+            <button class="adm-btn adm-btn-secondary adm-btn-sm adm-wo-edit" data-id="${w.id}">Bewerken</button>
+          </td>
         </tr>`).join("") || `<tr><td colspan="8" class="adm-empty">${_woFilterStatus||_woFilterUser||_woFilterSearch ? "Geen resultaten voor deze filters" : `Nog geen werkbonnen.<br><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewWO" style="margin-top:10px">+ Eerste werkbon aanmaken</button>`}</td></tr>`}
       </tbody>
     </table>
@@ -2167,6 +2181,19 @@ ${emp ? `
     document.getElementById("admEmptyNewWO")?.addEventListener("click", () => openWorkorderDrawer(null, allWorkorders));
     document.querySelectorAll(".adm-wo-edit").forEach(btn => {
       btn.addEventListener("click", e => { e.stopPropagation(); openWorkorderDrawer(allWorkorders.find(w => w.id === btn.dataset.id), allWorkorders); });
+    });
+    document.querySelectorAll(".adm-wo-invoice").forEach(btn => {
+      btn.addEventListener("click", async e => {
+        e.stopPropagation();
+        if (!confirm("Factuur maken van deze werkbon?\n\nDe geklokte/factureerbare uren (of het vaste bedrag) worden overgenomen in een nieuwe klantfactuur.")) return;
+        try {
+          const d = await api("POST", `/workorders/${btn.dataset.id}/invoice`, {});
+          window.showToast && window.showToast(`Factuur ${d.invoice?.number || ""} aangemaakt`, "success");
+          renderWorkorders();
+        } catch (err) {
+          window.showToast && window.showToast(err.message || "Factureren mislukt", "error");
+        }
+      });
     });
     document.querySelectorAll(".adm-wo-row").forEach(row => {
       row.addEventListener("click", () => openWorkorderDrawer(allWorkorders.find(w => w.id === row.dataset.id), allWorkorders));
