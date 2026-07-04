@@ -3,12 +3,18 @@
     return document.getElementById(id);
   }
 
+  // Null-veilig: veel views delen dezelfde helper terwijl hun doel-element niet
+  // in elke shell/route bestaat (bv. queueCount op de loginpagina). Zonder deze
+  // guard gooit één ontbrekend element een top-level TypeError die de rest van
+  // main.js afbreekt — dat brak stil o.a. de reset-/activatie-/support-deeplinks.
   function setText(id, value) {
-    el(id).textContent = value;
+    const node = el(id);
+    if (node) node.textContent = value;
   }
 
   function showJson(id, data) {
-    el(id).textContent = JSON.stringify(data, null, 2);
+    const node = el(id);
+    if (node) node.textContent = JSON.stringify(data, null, 2);
   }
 
   function escapeHtml(value) {
