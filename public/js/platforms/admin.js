@@ -3115,16 +3115,18 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
     const content = document.getElementById("admContent");
     content.innerHTML = `<div class="adm-loading">Laden…</div>`;
     try {
-      const [custData, woData, invData] = await Promise.all([
+      const [custData, woData, invData, qData] = await Promise.all([
         api("GET", "/customers"),
         api("GET", "/workorders").catch(() => ({ workorders: [] })),
-        api("GET", "/facturen").catch(() => ({ invoices: [] }))
+        api("GET", "/facturen").catch(() => ({ invoices: [] })),
+        api("GET", "/offertes").catch(() => ({ quotes: [] }))
       ]);
       const customer  = (custData.customers || []).find(c => c.id === customerId);
       if (!customer) { content.innerHTML = `<div class="adm-empty">Klant niet gevonden</div>`; return; }
 
-      const custWOs   = (woData.workorders || []).filter(w => w.customerId === customerId || w.clientName === customer.name);
-      const custInvs  = (invData.invoices || []).filter(i => i.customerId === customerId || i.customerName === customer.name);
+      const custWOs    = (woData.workorders || []).filter(w => w.customerId === customerId || w.clientName === customer.name);
+      const custInvs   = (invData.invoices || []).filter(i => i.customerId === customerId || i.customerName === customer.name);
+      const custQuotes = (qData.quotes || []).filter(q => q.customerId === customerId || q.customerName === customer.name);
       const fmtEurCD  = n => new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR"}).format(Number(n||0));
       const openInvAmt = custInvs.filter(i => ["open","overdue"].includes(i.status)).reduce((s,i) => s+Number(i.total||0),0);
       const paidInvAmt = custInvs.filter(i => i.status === "paid").reduce((s,i) => s+Number(i.total||0),0);
@@ -3138,6 +3140,38 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
         });
         const body = content.querySelector("#custDetailBody");
         if (!body) return;
+        if (_custTab === "offertes") {
+          body.innerHTML = custQuotes.length ? `<table class="adm-table">
+            <thead><tr><th>Nr.</th><th>Datum</th><th>Bedrag</th><th>Status</th><th>Vervolg</th></tr></thead>
+            <tbody>${custQuotes.map(q => {
+              const st = QUOTE_STATUS[q.status] || { label: q.status, css: "adm-status-pending" };
+              const accepted = q.status === "aanvaard";
+              return `<tr>
+                <td style="font-family:monospace;font-weight:600">${esc(q.number || "—")}</td>
+                <td>${q.createdAt ? new Date(q.createdAt).toLocaleDateString("nl-BE") : "—"}</td>
+                <td style="font-weight:600">${fmtEurCD(q.total)}</td>
+                <td><span class="adm-status ${st.css}">${st.label}</span></td>
+                <td style="display:flex;gap:4px;white-space:nowrap;">
+                  ${q.workorderId ? `<span style="font-size:11px;color:var(--gray-400)">→ werkbon</span>`
+                    : accepted ? `<button class="adm-btn adm-btn-secondary adm-btn-sm q-cust-towo" data-id="${q.id}">→ Werkbon</button>` : ""}
+                  ${q.invoiceId ? `<span style="font-size:11px;color:var(--gray-400)">→ gefactureerd</span>`
+                    : accepted ? `<button class="adm-btn adm-btn-success adm-btn-sm q-cust-toinv" data-id="${q.id}">→ Factuur</button>` : ""}
+                </td>
+              </tr>`;
+            }).join("")}</tbody>
+          </table>` : `<div class="adm-empty"><div class="adm-empty-text">Geen offertes voor deze klant</div></div>`;
+          const convert = async (id, target, label) => {
+            if (!confirm(`Offerte omzetten naar ${label}?`)) return;
+            try {
+              const d = await api("POST", `/offertes/${id}/convert`, { target });
+              window.showToast && window.showToast(`${label} ${(d.workorder?.number || d.invoice?.number || "")} aangemaakt`, "success");
+              renderCustomerDetail(customerId);
+            } catch (err) { window.showToast && window.showToast(err.message || "Omzetten mislukt", "error"); }
+          };
+          body.querySelectorAll(".q-cust-towo").forEach(b => b.addEventListener("click", () => convert(b.dataset.id, "workorder", "werkbon")));
+          body.querySelectorAll(".q-cust-toinv").forEach(b => b.addEventListener("click", () => convert(b.dataset.id, "invoice", "factuur")));
+          return;
+        }
         if (_custTab === "werkbonnen") {
           body.innerHTML = custWOs.length ? `<table class="adm-table">
             <thead><tr><th>#</th><th>Titel</th><th>Medewerker</th><th>Status</th><th>Datum</th><th>Acties</th></tr></thead>
@@ -3222,6 +3256,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
   <div class="adm-card">
     <div class="adm-card-header" style="flex-direction:column;gap:0;padding-bottom:0;" id="custDetailTabs">
       <div style="display:flex;gap:0;border-bottom:1px solid var(--gray-100);width:100%;">
+        <button class="cdt-tab" data-tab="offertes" style="background:none;border:none;cursor:pointer;padding:10px 16px;font-size:13px;color:var(--gray-700);border-bottom:2px solid transparent;">Offertes (${custQuotes.length})</button>
         <button class="cdt-tab" data-tab="werkbonnen" style="background:none;border:none;cursor:pointer;padding:10px 16px;font-size:13px;color:var(--gray-700);border-bottom:2px solid var(--wf-purple);font-weight:600;">Werkbonnen (${custWOs.length})</button>
         <button class="cdt-tab" data-tab="facturen" style="background:none;border:none;cursor:pointer;padding:10px 16px;font-size:13px;color:var(--gray-700);border-bottom:2px solid transparent;">Facturen (${custInvs.length})</button>
       </div>
