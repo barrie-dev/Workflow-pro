@@ -18,7 +18,7 @@
   --wf-green-l:     #dcfce7;
   --wf-red:         #dc2626;
   --wf-red-l:       #fee2e2;
-  --wf-yellow:      #d97706;
+  --wf-yellow:      #f59e0b;   /* Monargo warning */
   --wf-yellow-l:    #fef3c7;
   --wf-purple:      #7c3aed;
   --wf-purple-l:    #f3e8ff;
@@ -37,8 +37,8 @@
   --surface:  #ffffff;
   --bg:       #f5f5f7;   /* Monargo Soft White — app-achtergrond */
   --ink:      #0b1320;   /* Monargo Ink — kern-donker */
-  --text:     #3a3a3c;
-  --muted:    #6b7280;   /* Monargo Text Grey */
+  --text:     #4b5563;   /* Monargo secondary text */
+  --muted:    #8a94a6;   /* Monargo muted text */
   --line:     #e5e7eb;   /* Monargo Line Grey */
   --wf-blue-d:      #0058b9;
   --radius-sm: 0.625rem; /* 10px */
@@ -48,6 +48,39 @@
   --shadow:   0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.05);
   --shadow-m: 0 12px 40px rgba(0,0,0,.10);
   --ring:     0 0 0 4px rgba(0,113,227,.18);
+
+  /* ── Monargo One UI System v1 — canonieke tokens (bron van waarheid) ──────── */
+  /* Kleur: primair blauw + interacties */
+  --blue-hover:   #0066cc;   /* button hover */
+  --blue-active:  #005bb8;   /* button active */
+  --blue-soft:    #f4f8ff;   /* geselecteerde kaart / radio-card achtergrond */
+  /* Oppervlakken + randen */
+  --surface-subtle: #fafafb;
+  --line-strong:  #d1d5db;   /* sterke rand: inputs, secondary button */
+  /* Tekst-hiërarchie */
+  --text-secondary: #4b5563;
+  --text-muted:     #8a94a6;
+  --text-disabled:  #b8c0cc;
+  --placeholder:    #9ca3af;
+  /* Radius-schaal */
+  --radius-xs:    8px;    /* kleine controls */
+  --radius-card:  16px;   /* kaarten, radio-cards */
+  --radius-modal: 20px;
+  --radius-xl:    24px;   /* grote marketingkaarten */
+  /* Schaduwen (Ink-getint, zeer subtiel) */
+  --shadow-card:     0 1px 2px rgba(11,19,32,.04);
+  --shadow-elevated: 0 12px 30px rgba(11,19,32,.08);
+  --shadow-modal:    0 24px 80px rgba(11,19,32,.18);
+  /* Focus-rings per controltype */
+  --ring-input:   0 0 0 3px rgba(0,113,227,.14);
+  --ring-control: 0 0 0 3px rgba(0,113,227,.16);
+  --ring-danger:  0 0 0 3px rgba(220,38,38,.12);
+  /* Motion */
+  --ease:     cubic-bezier(.2,0,0,1);
+  --dur-fast: 150ms;
+  /* Controlhoogtes */
+  --control-h:   40px;   /* desktop */
+  --control-h-m: 44px;   /* mobiel */
 
   /* Legacy aliases kept for main.js compat */
   --navy:      var(--wf-navy);
@@ -83,9 +116,16 @@ body {
 input[type="checkbox"],
 input[type="radio"] {
   accent-color: var(--wf-blue);
-  width: 15px;
-  height: 15px;
+  width: 18px;
+  height: 18px;
+  min-height: 0;          /* niet de 40px control-hoogte overnemen */
+  padding: 0;
   cursor: pointer;
+}
+input[type="checkbox"]:focus-visible,
+input[type="radio"]:focus-visible {
+  outline: none;
+  box-shadow: var(--ring-control);
 }
 
 /* Basis-formulierstijl: één globale bron in de FORMS-sectie verderop
@@ -755,7 +795,7 @@ details[open] .login-demo-summary::before { content: "▾ "; }
    (admin/manager/employee/superadmin), die hun eigen knopstijl meebrengen.
    Anders overschreef deze high-specificity reset elke gekleurde shell-knop
    (bv. primaire knoppen werden wit). */
-button:not(.wfp-nav-btn):not(.wfp-tab):not(.view-switch button):not(.login-btn):not(.login-role-btn):not(.lpv-lang-btn):not(.wfp-primary-btn):not(.wfp-icon-btn):not([class*="adm-"]):not([class*="mgr-"]):not([class*="emp-"]):not([class*="sa-"]) {
+button:not(.wfp-nav-btn):not(.wfp-tab):not(.view-switch button):not(.login-btn):not(.login-role-btn):not(.lpv-lang-btn):not(.wfp-primary-btn):not(.wfp-icon-btn):not([class*="adm-"]):not([class*="mgr-"]):not([class*="emp-"]):not([class*="sa-"]):not([class*="mon-"]) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -773,7 +813,7 @@ button:not(.wfp-nav-btn):not(.wfp-tab):not(.view-switch button):not(.login-btn):
   white-space: nowrap;
 }
 
-button:not(.wfp-nav-btn):not(.wfp-tab):not(.view-switch button):not(.login-btn):not(.login-role-btn):not(.lpv-lang-btn):not(.wfp-primary-btn):not(.wfp-icon-btn):not([class*="adm-"]):not([class*="mgr-"]):not([class*="emp-"]):not([class*="sa-"]):hover {
+button:not(.wfp-nav-btn):not(.wfp-tab):not(.view-switch button):not(.login-btn):not(.login-role-btn):not(.lpv-lang-btn):not(.wfp-primary-btn):not(.wfp-icon-btn):not([class*="adm-"]):not([class*="mgr-"]):not([class*="emp-"]):not([class*="sa-"]):not([class*="mon-"]):hover {
   background: var(--gray-50);
 }
 
@@ -816,35 +856,42 @@ input,
 select,
 textarea {
   width: 100%;
-  border: 1px solid var(--line);
-  border-radius: 10px;
+  min-height: var(--control-h);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
   padding: 9px 12px;
   font-size: 13px;
   color: var(--ink);
   font-family: inherit;
   outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
   background: var(--surface);
 }
+textarea { min-height: 72px; }
 
 input:hover:not(:focus):not([readonly]):not([disabled]),
 select:hover:not(:focus):not([disabled]),
 textarea:hover:not(:focus):not([readonly]) {
-  border-color: var(--gray-300);
+  border-color: var(--placeholder);
 }
 
 input:focus,
 select:focus,
 textarea:focus {
   border-color: var(--wf-blue);
-  box-shadow: var(--ring);
+  box-shadow: var(--ring-input);
 }
+
+/* Validatie-states (voeg .is-error / .is-success toe op het veld) */
+input.is-error, select.is-error, textarea.is-error { border-color: var(--wf-red); }
+input.is-error:focus, select.is-error:focus, textarea.is-error:focus { box-shadow: var(--ring-danger); }
+input.is-success, select.is-success, textarea.is-success { border-color: var(--wf-green); }
 
 /* Selects: eigen chevron i.p.v. het browser-pijltje */
 select {
   appearance: none;
   -webkit-appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%236e6e73'%3E%3Cpath d='M5.8 7.5l4.2 4.2 4.2-4.2 1.3 1.3-5.5 5.4-5.5-5.4z'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%236b7280'%3E%3Cpath d='M5.8 7.5l4.2 4.2 4.2-4.2 1.3 1.3-5.5 5.4-5.5-5.4z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 10px center;
   background-size: 14px;
@@ -864,7 +911,7 @@ textarea[readonly] {
 
 input::placeholder,
 textarea::placeholder {
-  color: var(--gray-400);
+  color: var(--placeholder);
 }
 
 label {
@@ -872,9 +919,54 @@ label {
   flex-direction: column;
   gap: 0.375rem;
   font-size: 0.75rem;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text);
 }
+
+/* ═══════════════════════════════════════════════════
+   Monargo One UI System v1 — canonieke componenten
+   Herbruikbare .mon-* klassen die de spec 1-op-1 encoderen.
+   Nieuwe UI (en de marketingsite) gebruikt deze; bestaande
+   shell-componenten migreren hier gefaseerd naartoe.
+═══════════════════════════════════════════════════ */
+/* Buttons */
+.mon-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:var(--control-h);padding:0 18px;border-radius:var(--radius-sm);border:1px solid transparent;font-size:14px;font-weight:600;font-family:inherit;line-height:1;cursor:pointer;white-space:nowrap;transition:background var(--dur-fast) var(--ease),border-color var(--dur-fast) var(--ease),color var(--dur-fast) var(--ease);}
+.mon-btn:focus-visible{outline:none;box-shadow:0 0 0 2px rgba(0,113,227,.20);}
+.mon-btn-primary{background:var(--wf-blue);color:#fff;}
+.mon-btn-primary:hover{background:var(--blue-hover);}
+.mon-btn-primary:active{background:var(--blue-active);}
+.mon-btn-primary:disabled{background:#c9ddf7;color:#fff;cursor:not-allowed;}
+.mon-btn-secondary{background:var(--surface);border-color:var(--line-strong);color:var(--ink);}
+.mon-btn-secondary:hover{background:var(--bg);border-color:#bfc7d3;}
+.mon-btn-ghost{background:transparent;color:var(--ink);}
+.mon-btn-ghost:hover{background:#f3f4f6;}
+.mon-btn-danger{background:var(--wf-red);color:#fff;}
+.mon-btn-danger:hover{background:#b91c1c;}
+@media (max-width:640px){.mon-btn{height:var(--control-h-m);}}
+
+/* Toggle: <label class="mon-toggle"><input type="checkbox"><span class="mon-toggle-track"></span></label> */
+.mon-toggle{position:relative;display:inline-block;width:44px;height:24px;flex:0 0 auto;}
+.mon-toggle input{position:absolute;inset:0;opacity:0;width:100%;height:100%;min-height:0;margin:0;padding:0;cursor:pointer;}
+.mon-toggle-track{position:absolute;inset:0;background:var(--line-strong);border-radius:999px;transition:background var(--dur-fast) var(--ease);pointer-events:none;}
+.mon-toggle-track::after{content:"";position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(11,19,32,.2);transition:transform var(--dur-fast) var(--ease);}
+.mon-toggle input:checked + .mon-toggle-track{background:var(--wf-blue);}
+.mon-toggle input:checked:hover + .mon-toggle-track{background:var(--blue-hover);}
+.mon-toggle input:checked + .mon-toggle-track::after{transform:translateX(20px);}
+.mon-toggle input:disabled + .mon-toggle-track{background:var(--line);}
+
+/* Badges (status) */
+.mon-badge{display:inline-flex;align-items:center;height:24px;padding:0 9px;border-radius:999px;font-size:12px;font-weight:600;background:var(--gray-100);color:var(--text-secondary);}
+.mon-badge-success{background:var(--wf-green-l);color:#15803d;}
+.mon-badge-warning{background:var(--wf-yellow-l);color:#b45309;}
+.mon-badge-danger{background:var(--wf-red-l);color:#b91c1c;}
+.mon-badge-info{background:var(--wf-blue-l);color:var(--wf-blue-d);}
+
+/* Radio-card: belangrijke keuzes (bundel, periode, rol) */
+.mon-radio-card{position:relative;display:flex;gap:12px;min-height:92px;padding:18px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-card);cursor:pointer;transition:border-color var(--dur-fast) var(--ease),background var(--dur-fast) var(--ease),box-shadow var(--dur-fast) var(--ease);}
+.mon-radio-card:hover{border-color:#9bcbff;background:#fafcff;}
+.mon-radio-card.selected{border:1.5px solid var(--wf-blue);background:var(--blue-soft);box-shadow:0 8px 24px rgba(0,113,227,.10);}
+.mon-radio-card .mon-radio-check{position:absolute;top:14px;right:14px;width:22px;height:22px;border-radius:50%;background:var(--wf-blue);display:none;align-items:center;justify-content:center;color:#fff;font-size:13px;}
+.mon-radio-card.selected .mon-radio-check{display:flex;}
 
 .ops-form,
 .ops-tool {
