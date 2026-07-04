@@ -260,8 +260,8 @@ function wrapHtml(title, bodyHtml) {
 <style>
   body{margin:0;padding:0;background:#f1f5f9;font-family:system-ui,-apple-system,sans-serif;color:#0f172a}
   .wrap{max-width:560px;margin:32px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08)}
-  .header{background:#4f46e5;padding:24px 28px;display:flex;align-items:center;gap:12px}
-  .header-logo{width:36px;height:36px;background:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#4f46e5}
+  .header{background:#0071e3;padding:24px 28px;display:flex;align-items:center;gap:12px}
+  .header-logo{width:36px;height:36px;background:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#0071e3}
   .header-title{color:#fff;font-size:17px;font-weight:600;margin:0}
   .body{padding:28px}
   .body h2{font-size:16px;font-weight:600;margin:0 0 12px}
@@ -275,7 +275,7 @@ function wrapHtml(title, bodyHtml) {
   .detail-row:last-child{margin-bottom:0}
   .detail-label{color:#64748b}
   .detail-value{font-weight:500;color:#0f172a;text-align:right;max-width:55%}
-  .cta{display:inline-block;margin-top:16px;padding:10px 20px;background:#4f46e5;color:#fff;text-decoration:none;border-radius:8px;font-size:13px;font-weight:600}
+  .cta{display:inline-block;margin-top:16px;padding:10px 20px;background:#0071e3;color:#fff;text-decoration:none;border-radius:8px;font-size:13px;font-weight:600}
   .footer{padding:16px 28px;border-top:1px solid #f1f5f9;font-size:11px;color:#94a3b8}
 </style>
 </head>

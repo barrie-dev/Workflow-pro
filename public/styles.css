@@ -12,7 +12,7 @@
   --wf-sidebar-dim: #8fa3bf;
   --wf-orange:      #f47c1b;
   --wf-orange-l:    #fef3e8;
-  --wf-blue:        #0071e3;   /* Apple system blue */
+  --wf-blue:        #0071e3;   /* Monargo Blue — enige primaire merkkleur */
   --wf-blue-l:      #e9f1fd;
   --wf-green:       #16a34a;
   --wf-green-l:     #dcfce7;
@@ -35,11 +35,11 @@
   --gray-900: #0f172a;
 
   --surface:  #ffffff;
-  --bg:       #f5f5f7;   /* Apple warm-neutral app background */
-  --ink:      #1d1d1f;   /* Apple near-black */
+  --bg:       #f5f5f7;   /* Monargo Soft White — app-achtergrond */
+  --ink:      #0b1320;   /* Monargo Ink — kern-donker */
   --text:     #3a3a3c;
-  --muted:    #6e6e73;
-  --line:     #e5e5ea;   /* iOS separator */
+  --muted:    #6b7280;   /* Monargo Text Grey */
+  --line:     #e5e7eb;   /* Monargo Line Grey */
   --wf-blue-d:      #0058b9;
   --radius-sm: 0.625rem; /* 10px */
   --radius:   0.875rem;  /* 14px */

@@ -2903,8 +2903,8 @@ ${emp ? `
     win.document.write(`<!DOCTYPE html><html lang="nl"><head><meta charset="UTF-8"><title>Beslissersrapport</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#1e293b;background:#fff;padding:32px 40px}
-.page{max-width:800px;margin:0 auto}.header{border-bottom:3px solid #4f46e5;padding-bottom:16px;margin-bottom:28px;display:flex;justify-content:space-between;align-items:flex-end}
-.title{font-size:24px;font-weight:600;color:#4f46e5}.subtitle{font-size:13px;color:#64748b;margin-top:4px}.period{font-size:13px;color:#64748b}
+.page{max-width:800px;margin:0 auto}.header{border-bottom:3px solid #0071e3;padding-bottom:16px;margin-bottom:28px;display:flex;justify-content:space-between;align-items:flex-end}
+.title{font-size:24px;font-weight:600;color:#0071e3}.subtitle{font-size:13px;color:#64748b;margin-top:4px}.period{font-size:13px;color:#64748b}
 .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px}
 .kpi{background:#f8fafc;border-radius:10px;padding:16px;text-align:center;border:1px solid #e2e8f0}
 .kpi-val{font-size:26px;font-weight:700;color:#0f172a;margin-bottom:4px}.kpi-lbl{font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px}
@@ -3750,7 +3750,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
   body{font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#1e293b;background:#fff;padding:32px 40px}
   .page{max-width:750px;margin:0 auto}
   .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px}
-  .brand{font-size:22px;font-weight:600;color:#4f46e5}
+  .brand{font-size:22px;font-weight:600;color:#0071e3}
   .brand-sub{font-size:12px;color:#64748b;margin-top:2px}
   .invoice-meta{text-align:right}
   .invoice-nr{font-size:20px;font-weight:600;color:#0f172a}

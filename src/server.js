@@ -80,7 +80,7 @@ function sanitizeEmployeePermissions(store, tenant, role, requested) {
 function sendActivationMail(user, link) {
   const html = `<p>Hallo ${user.name || ""},</p>
     <p>Er is een Monargo One-account voor je aangemaakt. Stel binnen 7 dagen je wachtwoord in via de knop hieronder:</p>
-    <p><a href="${link}" style="display:inline-block;background:#0ea5e9;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:600">Wachtwoord instellen</a></p>
+    <p><a href="${link}" style="display:inline-block;background:#0071e3;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:600">Wachtwoord instellen</a></p>
     <p style="font-size:12px;color:#64748b">Werkt de knop niet? Open deze link: ${link}</p>`;
   // Niet awaiten: mailer logt bij fout en valt terug op console.
   Promise.resolve(sendMail({ to: user.email, subject: "Activeer je Monargo One-account", html, text: `Stel je wachtwoord in (7 dagen geldig): ${link}` })).catch(() => {});
@@ -90,7 +90,7 @@ function sendActivationMail(user, link) {
 function sendPasswordResetMail(user, link) {
   const html = `<p>Hallo ${user.name || ""},</p>
     <p>Er is een wachtwoord-reset aangevraagd voor je Monargo One-account. Stel binnen 1 uur een nieuw wachtwoord in:</p>
-    <p><a href="${link}" style="display:inline-block;background:#0ea5e9;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:600">Nieuw wachtwoord instellen</a></p>
+    <p><a href="${link}" style="display:inline-block;background:#0071e3;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:600">Nieuw wachtwoord instellen</a></p>
     <p style="font-size:12px;color:#64748b">Heb je dit niet aangevraagd? Negeer deze mail — je wachtwoord blijft ongewijzigd.<br>Werkt de knop niet? Open deze link: ${link}</p>`;
   Promise.resolve(sendMail({ to: user.email, subject: "Reset je Monargo One-wachtwoord", html, text: `Stel een nieuw wachtwoord in (1 uur geldig): ${link}` })).catch(() => {});
 }

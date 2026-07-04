@@ -9,7 +9,7 @@
  *  - Navigatieverzoeken:    index.html als offline-fallback.
  */
 
-const CACHE_VERSION = "wfp-v35";
+const CACHE_VERSION = "wfp-v36";
 const SHELL_CACHE   = `${CACHE_VERSION}-shell`;
 const API_CACHE     = `${CACHE_VERSION}-api`;
 
