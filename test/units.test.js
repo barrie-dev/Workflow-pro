@@ -3,7 +3,7 @@
 const { test } = require("node:test");
 const assert = require("node:assert");
 
-const { lookupKbo, normalizeVat } = require("../src/modules/kbo");
+const { lookupKbo, lookupKboResolve, parseViesAddress, normalizeVat } = require("../src/modules/kbo");
 const {
   buildSupportGrant, issueSupportToken, supportGrantStatus, slideSupportGrant,
   assertSupportWrite, SUPPORT_IDLE_MS, SUPPORT_HARD_MS
@@ -52,6 +52,67 @@ test("lookupKbo fallback: companyNumber afgeleid, adres leeg", () => {
   assert.equal(r.street, "");
   assert.equal(r.city, "");
   // bevestigt waarom de golden-path KBO-stap (street||city vereist) faalt op fallback
+});
+
+// Nep-transport dat één VIES-antwoord teruggeeft (geen echt netwerk).
+function fakeViesTransport(responseJson, { fail = false } = {}) {
+  const { EventEmitter } = require("node:events");
+  return {
+    request(_options, cb) {
+      const req = new EventEmitter();
+      req.setTimeout = () => {};
+      req.write = () => {};
+      req.destroy = () => {};
+      req.end = () => {
+        process.nextTick(() => {
+          if (fail) return req.emit("error", new Error("netwerk stuk"));
+          const res = new EventEmitter();
+          cb(res);
+          res.emit("data", JSON.stringify(responseJson));
+          res.emit("end");
+        });
+      };
+      return req;
+    }
+  };
+}
+
+test("parseViesAddress: BE-adres → straat/postcode/gemeente", () => {
+  assert.deepEqual(parseViesAddress("STATIONSSTRAAT 44\n2800 MECHELEN"),
+    { street: "STATIONSSTRAAT 44", zip: "2800", city: "MECHELEN" });
+});
+
+test("lookupKboResolve: geldige VIES-hit geeft echte naam + adres", async () => {
+  const t = fakeViesTransport({ valid: true, name: "ACME BOUW", address: "NIJVERHEIDSLAAN 5\n3600 GENK" });
+  const c = await lookupKboResolve("BE0417497106", { transport: t });
+  assert.equal(c.source, "vies");
+  assert.equal(c.name, "ACME BOUW");
+  assert.equal(c.street, "NIJVERHEIDSLAAN 5");
+  assert.equal(c.zip, "3600");
+  assert.equal(c.city, "GENK");
+  assert.equal(c.companyNumber, "0417497106");
+});
+
+test("lookupKboResolve: ongeldig VIES-antwoord → mock-fallback zonder throw", async () => {
+  const t = fakeViesTransport({ valid: false });
+  const c = await lookupKboResolve("BE0417497106", { transport: t });
+  assert.equal(c.companyNumber, "0417497106");
+  assert.equal(c.street, "");
+});
+
+test("lookupKboResolve: VIES onbereikbaar → mock-fallback zonder throw", async () => {
+  const t = fakeViesTransport(null, { fail: true });
+  const c = await lookupKboResolve("BE0417497106", { transport: t });
+  assert.equal(c.source, "mock-kbo-fallback");
+});
+
+test("lookupKboResolve: fixture sluit kort vóór het netwerk", async () => {
+  let touched = false;
+  const t = { request() { touched = true; throw new Error("netwerk mag niet geraakt worden"); } };
+  const c = await lookupKboResolve("BE0123456789", { transport: t });
+  assert.equal(c.name, "Demo Bouwgroep NV");
+  assert.equal(c.zip, "9000");
+  assert.equal(touched, false);
 });
 
 // ── GDPR support-impersonatie: grant-levenscyclus (pure logica) ──

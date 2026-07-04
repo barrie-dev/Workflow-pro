@@ -114,7 +114,7 @@ function provisionPendingUser(fields) {
   return { user, activationLink: (config.isProduction || isMailLive()) ? null : link };
 }
 const { listModule, createModuleRow, updateModuleRow } = require("./modules/crud");
-const { lookupKbo } = require("./modules/kbo");
+const { lookupKboResolve } = require("./modules/kbo");
 const {
   createSetupIntent,
   billingQuote,
@@ -683,7 +683,7 @@ http.createServer(async (req, res) => {
     if (url.pathname === "/api/public/kbo" && req.method === "GET") {
       const vat = String(url.searchParams.get("vat") || "").trim();
       if (vat.length < 8) return sendJson(res, 400, { ok: false, error: "Geef een geldig BTW-/ondernemingsnummer" });
-      const company = lookupKbo(vat);
+      const company = await lookupKboResolve(vat);
       sendJson(res, 200, { ok: true, company });
       return;
     }
@@ -693,8 +693,8 @@ http.createServer(async (req, res) => {
       const body = await readBody(req);
       const vatNumber = String(body.vatNumber || "").trim();
       const email = String(body.email || "").trim().toLowerCase();
-      // BTW-nummer ingevuld? Vul bedrijfsgegevens automatisch aan via KBO.
-      const kbo = vatNumber ? lookupKbo(vatNumber) : null;
+      // BTW-nummer ingevuld? Vul bedrijfsgegevens automatisch aan via KBO/VIES.
+      const kbo = vatNumber ? await lookupKboResolve(vatNumber) : null;
       const companyName = String(body.companyName || (kbo && kbo.name) || "").trim();
       const name = String(body.name || "").trim();
       if (!companyName) return sendJson(res, 400, { ok: false, error: "Bedrijfsnaam is verplicht" });
@@ -1862,7 +1862,7 @@ http.createServer(async (req, res) => {
       if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
       assertCan(user, "tenants");
       const body = await readBody(req);
-      sendJson(res, 200, { ok: true, company: lookupKbo(body.vat) });
+      sendJson(res, 200, { ok: true, company: await lookupKboResolve(body.vat) });
       return;
     }
 
@@ -2339,7 +2339,7 @@ http.createServer(async (req, res) => {
       if (action === "kbo/lookup" && req.method === "POST") {
         assertCan(user, "customers");
         const body = await readBody(req);
-        sendJson(res, 200, { ok: true, company: lookupKbo(body.vat || body.name) });
+        sendJson(res, 200, { ok: true, company: await lookupKboResolve(body.vat || body.name) });
         return;
       }
       if (action === "kbo/apply" && req.method === "POST") {
