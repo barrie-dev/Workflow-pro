@@ -3,7 +3,7 @@ const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 const { config } = require("./lib/config");
-const { sendJson, readBody, readRawBody, securityHeaders } = require("./lib/http");
+const { sendJson, readBody, readRawBody, securityHeaders, corsHeaders } = require("./lib/http");
 const { checkRateLimit } = require("./lib/rate-limit");
 const { Store, BUSINESS_ADMIN_PERMISSIONS, MANAGER_PERMISSIONS, EMPLOYEE_PERMISSIONS } = require("./lib/store");
 const { hashPassword, assertStrongPassword, verifyPassword } = require("./lib/security");
@@ -162,7 +162,7 @@ const { eventLog, backupSummary, lifecycle, resellerPayouts, securityCenter, gdp
 const { setPlanPriceOverrides, planPricing } = require("./modules/billing");
 const { loadPlatformConfig, publicPlatformConfig, savePlatformConfig } = require("./modules/platform-config");
 const { createPaymentLink, markInvoicePaidById } = require("./modules/payments");
-const { createSubscriptionCheckout, createBillingPortalSession, applySubscriptionEvent } = require("./modules/subscriptions");
+const { createSubscriptionCheckout, createBillingPortalSession, applySubscriptionEvent, TRIAL_DAYS } = require("./modules/subscriptions");
 const { pushConfigured, publicKey: pushPublicKey, saveSubscription: savePushSubscription, removeSubscription: removePushSubscription } = require("./modules/push");
 const { verifyStripeSignature } = require("./modules/stripe-webhook");
 const { seedDemoData, clearDemoData } = require("./modules/demo-seed");
@@ -646,11 +646,19 @@ http.createServer(async (req, res) => {
       return;
     }
 
-    // ── Publieke plannen (voor de zelf-registratiepagina) ─────────────────────
+    // ── CORS-preflight voor de publieke marketing-endpoints ───────────────────
+    // Zodat monargo.com de canonieke prijzen/plannen cross-origin mag ophalen.
+    if (req.method === "OPTIONS" && (url.pathname === "/api/plans" || url.pathname === "/api/sectors")) {
+      res.writeHead(204, corsHeaders(req));
+      res.end();
+      return;
+    }
+
+    // ── Publieke plannen (registratiepagina én marketingsite monargo.com) ─────
     if (url.pathname === "/api/plans" && req.method === "GET") {
       // Eén bron van waarheid: dezelfde catalogus als in-app (prijzen, features,
-      // 'meest gekozen'), zodat publiek/registratie en het abonnementsscherm
-      // exact overeenkomen. Geen tenant-PII.
+      // 'meest gekozen', proefperiode), zodat monargo.com, de registratie en het
+      // abonnementsscherm nooit uit elkaar lopen. Geen tenant-PII → CORS-baar.
       const plans = planCatalog(store).map(p => ({
         key: p.key, label: p.label, description: p.description || "",
         baseMonthly: p.baseMonthly ?? null, baseAnnual: p.baseAnnual ?? null,
@@ -658,13 +666,16 @@ http.createServer(async (req, res) => {
         features: p.features || [], custom: !!p.custom, popular: !!p.popular,
         modules: Array.isArray(p.modules) ? p.modules.length : 0,
       }));
-      sendJson(res, 200, { ok: true, plans, addons: listAddons(loadPlatformConfig(store).addons) });
+      sendJson(res, 200, {
+        ok: true, plans, trialDays: TRIAL_DAYS,
+        addons: listAddons(loadPlatformConfig(store).addons)
+      }, corsHeaders(req));
       return;
     }
 
     // ── Publieke sectorlijst (onboarding-wizard + signup) ─────────────────────
     if (url.pathname === "/api/sectors" && req.method === "GET") {
-      sendJson(res, 200, { ok: true, sectors: publicSectors() });
+      sendJson(res, 200, { ok: true, sectors: publicSectors() }, corsHeaders(req));
       return;
     }
 

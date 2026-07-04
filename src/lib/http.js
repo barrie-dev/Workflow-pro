@@ -46,6 +46,26 @@ function securityHeaders(extraHeaders = {}) {
   };
 }
 
+// ── CORS voor publieke, niet-gevoelige endpoints ──────────────────────────────
+// De marketingsite (monargo.com) leest de canonieke prijzen/plannen van deze app
+// (monargo.one) zodat beide domeinen nooit uit elkaar lopen. Alleen een strikte
+// allowlist van marketing-origins mag cross-origin lezen; standaard monargo.com.
+const MARKETING_ORIGINS = String(process.env.MARKETING_ORIGIN || "https://monargo.com,https://www.monargo.com")
+  .split(",").map(s => s.trim()).filter(Boolean);
+
+function corsHeaders(req) {
+  const origin = req.headers && req.headers.origin;
+  if (!origin || !MARKETING_ORIGINS.includes(origin)) return {};
+  return {
+    "Access-Control-Allow-Origin": origin,
+    "Vary": "Origin",
+    "Access-Control-Allow-Methods": "GET, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Max-Age": "86400",
+    "Cross-Origin-Resource-Policy": "cross-origin"
+  };
+}
+
 function sendJson(res, status, payload, extraHeaders = {}) {
   res.writeHead(status, {
     ...securityHeaders(),
@@ -89,4 +109,4 @@ function routeKey(req) {
   return `${req.method} ${url.pathname}`;
 }
 
-module.exports = { sendJson, readBody, readRawBody, routeKey, securityHeaders };
+module.exports = { sendJson, readBody, readRawBody, routeKey, securityHeaders, corsHeaders };
