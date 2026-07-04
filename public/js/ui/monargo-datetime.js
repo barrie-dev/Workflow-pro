@@ -50,22 +50,36 @@
     + '.mdt-day.today{font-weight:600;color:var(--wf-blue)}'
     + '.mdt-day.sel{background:var(--wf-blue);color:#fff;font-weight:600}'
     + '.mdt-day:disabled{color:var(--gray-300);cursor:not-allowed;background:none}'
-    + '.mdt-time{display:flex;gap:8px;align-items:stretch}'
-    + '.mdt-col{display:flex;flex-direction:column}'
-    + '.mdt-col-lbl{font-size:10.5px;color:var(--muted,#6e6e73);text-align:center;margin-bottom:4px;font-weight:500}'
-    + '.mdt-scroll{height:198px;overflow-y:auto;width:56px;scrollbar-width:thin;display:flex;flex-direction:column;gap:2px;padding-right:2px}'
-    + '.mdt-scroll::-webkit-scrollbar{width:5px}.mdt-scroll::-webkit-scrollbar-thumb{background:var(--gray-300);border-radius:3px}'
-    + '.mdt-t{padding:7px 0;border:none;background:none;border-radius:8px;cursor:pointer;font-size:13px;'
-    + 'color:var(--ink,#1d1d1f);font-variant-numeric:tabular-nums;transition:background .1s}'
-    + '.mdt-t:hover{background:rgba(0,0,0,.05)}'
-    + '.mdt-t.sel{background:var(--wf-blue);color:#fff;font-weight:600}'
+    + '.mdt-time{display:flex;flex-direction:column;align-items:center}'
+    /* Analoge klok-picker (Material-stijl) */
+    + '.mdt-clock{width:232px;user-select:none}'
+    + '.mdt-tlbl{font-size:10.5px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--muted,#6e6e73);margin-bottom:8px;text-align:left}'
+    + '.mdt-tdisp{display:flex;align-items:center;justify-content:center;gap:4px;margin-bottom:12px}'
+    + '.mdt-tseg{border:none;cursor:pointer;font-family:inherit;font-variant-numeric:tabular-nums;'
+    + 'font-size:34px;font-weight:600;letter-spacing:-1px;padding:2px 10px;border-radius:10px;'
+    + 'background:var(--gray-100);color:var(--ink,#1d1d1f);transition:background .12s,color .12s}'
+    + '.mdt-tseg.on{background:var(--wf-blue-l);color:var(--wf-blue)}'
+    + '.mdt-tcolon{font-size:30px;font-weight:600;color:var(--muted,#6e6e73)}'
+    + '.mdt-face{position:relative;width:216px;height:216px;margin:0 auto;border-radius:50%;'
+    + 'background:var(--gray-100);cursor:pointer;touch-action:none}'
+    + '.mdt-num{position:absolute;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;'
+    + 'display:grid;place-items:center;font-size:12.5px;font-variant-numeric:tabular-nums;'
+    + 'color:var(--ink,#1d1d1f);pointer-events:none}'
+    + '.mdt-num.inner{font-size:10.5px;color:var(--muted,#6e6e73)}'
+    + '.mdt-num.on{background:var(--wf-blue);color:#fff;font-weight:600;z-index:2}'
+    + '.mdt-hand{position:absolute;left:50%;bottom:50%;width:2px;margin-left:-1px;background:var(--wf-blue);'
+    + 'transform-origin:50% 100%;pointer-events:none}'
+    + '.mdt-hand.anim{transition:height .18s ease,transform .2s cubic-bezier(.2,.7,.2,1)}'
+    + '.mdt-hand::after{content:"";position:absolute;top:-4px;left:50%;transform:translateX(-50%);'
+    + 'width:8px;height:8px;border-radius:50%;background:var(--wf-blue)}'
+    + '.mdt-cdot{position:absolute;left:50%;top:50%;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;'
+    + 'border-radius:50%;background:var(--wf-blue);pointer-events:none;z-index:3}'
     + '.mdt-foot{display:flex;gap:8px;justify-content:space-between;align-items:center;margin-top:12px;padding-top:10px;border-top:1px solid var(--line,#e5e5ea)}'
     + '.mdt-now{background:none;border:none;color:var(--wf-blue);font-size:12.5px;font-weight:600;cursor:pointer;padding:6px 4px}'
     + '.mdt-btns{display:flex;gap:6px}'
     + '.mdt-btn{padding:7px 16px;border-radius:980px;font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:inherit}'
     + '.mdt-btn-clear{background:none;color:var(--muted,#6e6e73)}'
-    + '.mdt-btn-ok{background:var(--wf-blue);color:#fff}'
-    + '.mdt-foot-time{justify-content:flex-end}';
+    + '.mdt-btn-ok{background:var(--wf-blue);color:#fff}';
   var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
 
   // ── Helpers ───────────────────────────────────────────────────────────────
@@ -76,7 +90,14 @@
 
   var current = null; // {input, type, pop, view(Date), date(Date|null), time({h,min}|null)}
 
-  function close(){ if(current){ current.pop.remove(); current=null; document.removeEventListener('mousedown',onDoc,true); window.removeEventListener('resize',close); window.removeEventListener('scroll',close,true); } }
+  function close(){
+    if(!current) return;
+    current.pop.remove(); current=null;
+    document.removeEventListener('mousedown',onDoc,true);
+    window.removeEventListener('resize',close);
+    window.removeEventListener('scroll',close,true);
+    if(drag){ document.removeEventListener('pointermove',onFaceMove,true); document.removeEventListener('pointerup',onFaceUp,true); document.removeEventListener('pointercancel',onFaceUp,true); drag=null; }
+  }
 
   function onDoc(e){ if(current && !current.pop.contains(e.target) && e.target!==current.input) close(); }
 
@@ -114,16 +135,103 @@
       +'<div class="mdt-grid">'+grid+'</div>';
   }
 
-  function renderTime(){
+  // ── Analoge klok-picker ─────────────────────────────────────────────────────
+  // 24-uurs wijzerplaat (Material-stijl): buitenring 00 + 13..23, binnenring
+  // 12 + 01..11; minuten in stappen van 5 op één ring, vrij sleepbaar (1-min).
+  var R_OUT=90, R_IN=58, CX=108, CY=108;
+  function polar(r,deg){ var t=deg*Math.PI/180; return {x:CX+r*Math.sin(t), y:CY-r*Math.cos(t)}; }
+  function hourAt(p,inner){ return inner ? (p===0?12:p) : (p===0?0:p+12); }
+
+  // Volledige opbouw (bij openen). Wijzer + middelpunt blijven daarna staan,
+  // enkel de cijferlaag wordt herbouwd bij wissel uur/minuut.
+  function buildTime(){
     var c=current, host=c.pop.querySelector('.mdt-time'); if(!host) return;
-    var h=c.time?c.time.h:-1, mn=c.time?c.time.min:-1;
-    var hours=''; for(var i=0;i<24;i++) hours+='<button type="button" class="mdt-t'+(i===h?' sel':'')+'" data-h="'+i+'">'+pad(i)+'</button>';
-    var mins=''; for(var m=0;m<60;m+=5) mins+='<button type="button" class="mdt-t'+(m===mn?' sel':'')+'" data-min="'+m+'">'+pad(m)+'</button>';
+    if(!c.time){ var n=new Date(); c.time={h:n.getHours(),min:n.getMinutes()}; }
+    if(!c.tmode) c.tmode='h';
     host.innerHTML=''
-      +'<div class="mdt-col"><div class="mdt-col-lbl">uur</div><div class="mdt-scroll" data-c="h">'+hours+'</div></div>'
-      +'<div class="mdt-col"><div class="mdt-col-lbl">min</div><div class="mdt-scroll" data-c="min">'+mins+'</div></div>';
-    // scroll geselecteerde in beeld
-    host.querySelectorAll('.mdt-t.sel').forEach(function(b){ b.scrollIntoView({block:'center'}); });
+      +'<div class="mdt-clock">'
+      +'<div class="mdt-tlbl">Tijd selecteren</div>'
+      +'<div class="mdt-tdisp">'
+      +'<button type="button" class="mdt-tseg mdt-seg-h" data-seg="h"></button>'
+      +'<span class="mdt-tcolon">:</span>'
+      +'<button type="button" class="mdt-tseg mdt-seg-m" data-seg="min"></button>'
+      +'</div>'
+      +'<div class="mdt-face"><div class="mdt-hand"></div><div class="mdt-cdot"></div><div class="mdt-nums"></div></div>'
+      +'</div>';
+    renderNums();
+    paintTime(false);
+  }
+
+  function renderNums(){
+    var c=current, wrap=c.pop.querySelector('.mdt-nums'); if(!wrap) return;
+    var html='';
+    if(c.tmode==='h'){
+      for(var p=0;p<12;p++){
+        var deg=p*30;
+        var vo=hourAt(p,false), po=polar(R_OUT,deg);
+        html+='<div class="mdt-num" data-v="'+vo+'" style="left:'+po.x+'px;top:'+po.y+'px">'+pad(vo)+'</div>';
+        var vi=hourAt(p,true), pi=polar(R_IN,deg);
+        html+='<div class="mdt-num inner" data-v="'+vi+'" style="left:'+pi.x+'px;top:'+pi.y+'px">'+pad(vi)+'</div>';
+      }
+    } else {
+      for(var q=0;q<12;q++){
+        var mv=q*5, pm=polar(R_OUT,q*30);
+        html+='<div class="mdt-num" data-v="'+mv+'" style="left:'+pm.x+'px;top:'+pm.y+'px">'+pad(mv)+'</div>';
+      }
+    }
+    wrap.innerHTML=html;
+  }
+
+  // In-place bijwerken: leesvenster, wijzerhoek/lengte, actief cijfer.
+  function paintTime(animate){
+    var c=current, host=c.pop.querySelector('.mdt-time'); if(!host||!c.time) return;
+    var h=c.time.h, mn=c.time.min, mode=c.tmode;
+    var segH=host.querySelector('.mdt-seg-h'), segM=host.querySelector('.mdt-seg-m');
+    if(segH){ segH.textContent=pad(h); segH.classList.toggle('on',mode==='h'); }
+    if(segM){ segM.textContent=pad(mn); segM.classList.toggle('on',mode==='min'); }
+    var hand=host.querySelector('.mdt-hand'), deg, len;
+    if(mode==='h'){ var inner=(h>=1&&h<=12); len=inner?R_IN:R_OUT; deg=(h%12)*30; }
+    else { len=R_OUT; deg=mn*6; }
+    if(hand){ hand.classList.toggle('anim',!!animate); hand.style.height=len+'px'; hand.style.transform='rotate('+deg+'deg)'; }
+    var cur = mode==='h'?h:mn;
+    host.querySelectorAll('.mdt-num').forEach(function(el){ el.classList.toggle('on', +el.getAttribute('data-v')===cur); });
+  }
+
+  // ── Sleep-/tikinteractie op de wijzerplaat ──────────────────────────────────
+  var drag=null; // {rect} — face-rect vastgelegd bij pointerdown (popover beweegt niet)
+  function faceValue(clientX,clientY){
+    if(!drag||!current) return;
+    var r=drag.rect, cx=r.left+r.width/2, cy=r.top+r.height/2;
+    var dx=clientX-cx, dy=clientY-cy;
+    var deg=Math.atan2(dx,-dy)*180/Math.PI; if(deg<0) deg+=360;
+    var dist=Math.sqrt(dx*dx+dy*dy), c=current;
+    if(c.tmode==='h'){
+      var p=Math.round(deg/30)%12, inner=dist < r.width*0.34;
+      c.time.h = inner ? (p===0?12:p) : (p===0?0:p+12);
+    } else {
+      c.time.min = Math.round(deg/6)%60;
+    }
+  }
+  function onFaceDown(e){
+    if(!current) return;
+    var face=e.target.closest('.mdt-face'); if(!face) return;
+    e.preventDefault();
+    drag={rect:face.getBoundingClientRect()};
+    faceValue(e.clientX,e.clientY); paintTime(false);
+    document.addEventListener('pointermove',onFaceMove,true);
+    document.addEventListener('pointerup',onFaceUp,true);
+    document.addEventListener('pointercancel',onFaceUp,true);
+  }
+  function onFaceMove(e){ if(!drag) return; e.preventDefault(); faceValue(e.clientX,e.clientY); paintTime(false); }
+  function onFaceUp(){
+    if(!drag) return;
+    document.removeEventListener('pointermove',onFaceMove,true);
+    document.removeEventListener('pointerup',onFaceUp,true);
+    document.removeEventListener('pointercancel',onFaceUp,true);
+    drag=null;
+    var c=current; if(!c) return;
+    if(c.type==='time') commit();               // input live in sync houden
+    if(c.tmode==='h'){ c.tmode='min'; renderNums(); paintTime(true); } // auto-door naar minuten
   }
 
   function open(input){
@@ -131,32 +239,33 @@
     var type=input.type;
     var pop=document.createElement('div'); pop.className='mdt-pop';
     var dv=parseDate(input.value), tv=parseTime(input.value);
-    current={input:input,type:type,pop:pop,view:dv||new Date(),date:dv,time:tv};
+    current={input:input,type:type,pop:pop,view:dv||new Date(),date:dv,time:tv,tmode:'h'};
 
-    var parts='';
-    if(type!=='time') parts+='<div class="mdt-cal"></div>';
-    if(type!=='date') parts+='<div class="mdt-time"></div>';
-    var footCls='mdt-foot'+(type==='time'?' mdt-foot-time':'');
-    var foot='<div class="'+footCls+'">';
-    if(type!=='time') foot+='<button type="button" class="mdt-now">Vandaag</button>';
-    else foot+='<button type="button" class="mdt-now">Nu</button>';
+    var foot='<div class="mdt-foot">';
+    foot+= (type!=='time') ? '<button type="button" class="mdt-now">Vandaag</button>'
+                           : '<button type="button" class="mdt-now">Nu</button>';
     foot+='<div class="mdt-btns"><button type="button" class="mdt-btn mdt-btn-clear">Wissen</button>'
         +'<button type="button" class="mdt-btn mdt-btn-ok">Klaar</button></div></div>';
 
-    // datetime: kalender + tijd naast elkaar, met gedeelde voet eronder
     if(type==='datetime-local'){
+      // op smalle schermen kalender boven klok stapelen i.p.v. naast elkaar
+      var stacked=window.innerWidth<560;
       pop.style.flexDirection='column';
-      pop.innerHTML='<div style="display:flex;gap:14px"><div class="mdt-cal"></div><div class="mdt-time"></div></div>'+foot;
+      pop.innerHTML='<div style="display:flex;gap:14px;'+(stacked?'flex-direction:column;align-items:center':'')+'">'
+        +'<div class="mdt-cal"></div><div class="mdt-time"></div></div>'+foot;
+    } else if(type==='time'){
+      pop.innerHTML='<div style="display:flex;flex-direction:column"><div class="mdt-time"></div>'+foot+'</div>';
     } else {
-      pop.innerHTML='<div style="display:flex;flex-direction:column">'+parts+foot+'</div>';
+      pop.innerHTML='<div style="display:flex;flex-direction:column"><div class="mdt-cal"></div>'+foot+'</div>';
     }
 
     document.body.appendChild(pop);
     if(type!=='time') renderCal();
-    if(type!=='date') renderTime();
+    if(type!=='date') buildTime();
     position(input,pop);
 
     pop.addEventListener('click', onPop);
+    pop.addEventListener('pointerdown', onFaceDown);
     document.addEventListener('mousedown', onDoc, true);
     window.addEventListener('resize', close);
     window.addEventListener('scroll', close, true);
@@ -175,12 +284,11 @@
     var c=current;
     if(t.dataset.mv){ c.view=new Date(c.view.getFullYear(), c.view.getMonth()+ (+t.dataset.mv), 1); renderCal(); return; }
     if(t.dataset.d){ c.date=parseDate(t.dataset.d); renderCal(); if(c.type==='date'){ commit(); close(); } return; }
-    if(t.dataset.h!=null){ c.time=c.time||{h:0,min:0}; c.time.h=+t.dataset.h; renderTime(); if(c.type==='time') commit(); return; }
-    if(t.dataset.min!=null){ c.time=c.time||{h:0,min:0}; c.time.min=+t.dataset.min; renderTime(); if(c.type==='time') commit(); return; }
+    if(t.dataset.seg){ c.tmode=t.dataset.seg; renderNums(); paintTime(true); return; }
     if(t.classList.contains('mdt-now')){
       var n=new Date();
       if(c.type!=='time'){ c.date=n; c.view=n; renderCal(); }
-      if(c.type!=='date'){ c.time={h:n.getHours(),min:Math.round(n.getMinutes()/5)*5%60}; renderTime(); }
+      if(c.type!=='date'){ c.time={h:n.getHours(),min:n.getMinutes()}; renderNums(); paintTime(true); }
       if(c.type==='date'||c.type==='time'){ commit(); close(); }
       return;
     }
