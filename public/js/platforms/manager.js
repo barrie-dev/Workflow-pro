@@ -199,14 +199,17 @@
 .mgr-menu-toggle svg { width:20px; height:20px; fill:currentColor; display:block; }
 .mgr-page-title { font-size:21px; font-weight:600; flex:1; color:var(--ink); margin:0; letter-spacing:-.4px; }
 .mgr-content { flex:1; overflow-y:auto; padding:22px 24px; }
-.mgr-btn { padding:9px 18px; border-radius:980px; font-size:13px; font-weight:600; cursor:pointer; border:none; transition:background .14s, transform .08s; }
-.mgr-btn:active { transform:translateY(1px); }
+.mgr-btn { min-height:40px; padding:0 18px; border-radius:var(--radius-sm); font-size:14px; font-weight:600; cursor:pointer; border:1px solid transparent; font-family:inherit; line-height:1; white-space:nowrap; display:inline-flex; align-items:center; justify-content:center; gap:6px; transition:background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
+.mgr-btn:focus-visible { outline:none; box-shadow:0 0 0 2px rgba(0,113,227,.20); }
 .mgr-btn-primary { background:var(--wf-blue); color:#fff; }
-.mgr-btn-primary:hover { background:var(--wf-blue-d); }
+.mgr-btn-primary:hover { background:var(--blue-hover); }
+.mgr-btn-primary:active { background:var(--blue-active); }
 .mgr-btn-success { background:var(--wf-green); color:#fff; }
 .mgr-btn-danger { background:var(--wf-red); color:#fff; }
-.mgr-btn-secondary { background:var(--surface); color:var(--text); border:1px solid var(--line); }
-.mgr-btn-sm { padding:6px 14px; font-size:12px; }
+.mgr-btn-danger:hover { background:#b91c1c; }
+.mgr-btn-secondary { background:var(--surface); color:var(--ink); border-color:var(--line-strong); }
+.mgr-btn-secondary:hover { background:var(--bg); border-color:#bfc7d3; }
+.mgr-btn-sm { min-height:32px; padding:0 12px; font-size:13px; border-radius:var(--radius-xs); }
 .mgr-kpis { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:14px; margin-bottom:20px; }
 .mgr-kpi { background:var(--surface); border-radius:16px; padding:18px; border:1px solid var(--line); }
 .mgr-kpi-link { cursor:pointer; transition:border-color .12s, transform .12s; }
@@ -214,17 +217,17 @@
 .mgr-kpi-label { font-size:12px; color:var(--muted); margin-bottom:6px; }
 .mgr-kpi-value { font-size:28px; font-weight:600; color:var(--ink); letter-spacing:-.5px; }
 .mgr-kpi-sub { font-size:11.5px; color:var(--gray-400); margin-top:2px; }
-.mgr-card { background:var(--surface); border-radius:16px; border:1px solid var(--line); margin-bottom:18px; overflow:hidden; }
+.mgr-card { background:var(--surface); border-radius:var(--radius-card); border:1px solid var(--line); box-shadow:var(--shadow-card); margin-bottom:18px; overflow:hidden; }
 .mgr-card-header { display:flex; align-items:center; justify-content:space-between; padding:15px 18px; border-bottom:1px solid var(--line); }
 .mgr-card-title { font-size:15px; font-weight:600; color:var(--ink); margin:0; letter-spacing:-.2px; }
 .mgr-card-body { padding:16px; }
 .mgr-table-wrap { overflow-x:auto; }
 table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
-.mgr-table th { text-align:left; padding:8px 12px; color:var(--gray-500); font-weight:500; border-bottom:2px solid var(--gray-100); }
-.mgr-table td { padding:10px 12px; border-bottom:1px solid var(--bg); color:var(--gray-700); vertical-align:middle; }
+.mgr-table th { text-align:left; padding:12px; color:var(--muted); font-size:12px; font-weight:600; border-bottom:1px solid var(--line); background:var(--surface-subtle); }
+.mgr-table td { padding:14px 12px; border-bottom:1px solid var(--gray-100); color:var(--text); vertical-align:middle; }
 .mgr-table tr:last-child td { border-bottom:none; }
-.mgr-table tr:hover td { background:var(--bg); }
-.mgr-status { display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:999px; font-size:11px; font-weight:500; }
+.mgr-table tr:hover td { background:var(--gray-50); }
+.mgr-status { display:inline-flex; align-items:center; gap:5px; height:24px; padding:0 9px; border-radius:999px; font-size:12px; font-weight:600; }
 .mgr-status::before { content:''; width:6px; height:6px; border-radius:50%; background:currentColor; }
 .mgr-status-active,.mgr-status-goedgekeurd { background:var(--wf-green-l); color:var(--wf-green); }
 .mgr-status-pending,.mgr-status-aangevraagd,.mgr-status-ingediend { background:var(--wf-yellow-l); color:var(--wf-yellow); }

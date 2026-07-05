@@ -96,7 +96,7 @@
 .kpi-teal{--kpi-color:var(--wf-green)}
 
 /* Cards */
-.sa-card{background:#fff;border-radius:16px;border:1px solid var(--line);overflow:hidden;margin-bottom:18px;box-shadow:var(--shadow-xs)}
+.sa-card{background:#fff;border-radius:var(--radius-card);border:1px solid var(--line);overflow:hidden;margin-bottom:18px;box-shadow:var(--shadow-card)}
 .sa-card-head{padding:13px 18px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;gap:8px}
 .sa-card-title{font-size:13.5px;font-weight:600;color:var(--gray-900);flex:1}
 .sa-card-sub{font-size:11px;color:var(--gray-400)}
@@ -108,7 +108,7 @@
 /* Tables */
 .sa-tbl-wrap{overflow-x:auto}
 .sa-tbl{width:100%;border-collapse:collapse;font-size:13px}
-.sa-tbl th{padding:9px 14px;text-align:left;font-size:10.5px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px;background:var(--gray-50);border-bottom:1px solid var(--gray-200);white-space:nowrap}
+.sa-tbl th{padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:var(--surface-subtle);border-bottom:1px solid var(--line);white-space:nowrap}
 .sa-tbl td{padding:11px 14px;border-bottom:1px solid var(--gray-50);color:var(--gray-700);vertical-align:middle}
 .sa-tbl tr:last-child td{border-bottom:none}
 .sa-tbl tr:hover td{background:var(--gray-50)}
@@ -132,9 +132,10 @@
 .sa-btn{padding:8px 15px;border-radius:10px;font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid transparent;display:inline-flex;align-items:center;gap:6px;transition:all .14s;white-space:nowrap}
 .sa-btn svg{width:14px;height:14px;fill:currentColor}
 .btn-primary{background:var(--wf-blue);color:#fff;border-color:var(--wf-blue)}
-.btn-primary:hover{background:var(--wf-blue);border-color:var(--wf-blue)}
-.btn-secondary{background:#fff;color:var(--gray-700);border-color:var(--gray-200)}
-.btn-secondary:hover{background:var(--gray-50);border-color:var(--gray-300)}
+.btn-primary:hover{background:var(--blue-hover);border-color:var(--blue-hover)}
+.btn-primary:active{background:var(--blue-active);border-color:var(--blue-active)}
+.btn-secondary{background:#fff;color:var(--ink);border-color:var(--line-strong)}
+.btn-secondary:hover{background:var(--bg);border-color:#bfc7d3}
 .btn-danger{background:#fff;color:var(--wf-red);border-color:var(--wf-red-l)}
 .btn-danger:hover{background:var(--wf-red-l)}
 .btn-success{background:#fff;color:var(--wf-green);border-color:var(--wf-green-l)}

@@ -28,7 +28,7 @@
       <span style="background:var(--wf-blue);color:#fff;width:36px;height:36px;border-radius:11px;display:grid;place-items:center;font-weight:600;box-shadow:0 4px 12px rgba(0,113,227,.30)">M</span>
       <div><div style="font-weight:600;letter-spacing:-.2px">Monargo One · Reseller</div><div id="rspName" style="font-size:12px;color:var(--muted)">Partnerportaal</div></div>
     </div>
-    <button id="rspLogout" style="background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:980px;padding:8px 16px;font-size:13px;cursor:pointer">Uitloggen</button>
+    <button id="rspLogout" style="background:var(--surface);color:var(--ink);border:1px solid var(--line-strong);border-radius:10px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer">Uitloggen</button>
   </header>
   <main style="max-width:1040px;margin:0 auto;padding:24px 20px" id="rspMain"><div style="color:var(--gray-400);padding:40px;text-align:center">Laden…</div></main>
 </div>`;

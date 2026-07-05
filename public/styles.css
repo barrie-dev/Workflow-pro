@@ -506,18 +506,18 @@ body.authenticated #loginPage {
 
 .login-input {
   width: 100%;
-  border: 1.5px solid var(--gray-200);
-  border-radius: 0.5rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
   padding: 0.625rem 0.875rem;
   font-size: 0.875rem;
-  color: var(--gray-800);
+  color: var(--ink);
   font-family: inherit;
   outline: none;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s;
   background: white;
 }
 
-.login-input:focus { border-color: var(--wf-blue); box-shadow: var(--ring); }
+.login-input:focus { border-color: var(--wf-blue); box-shadow: var(--ring-input); }
 .login-input-mono { font-family: "SF Mono", Consolas, monospace; letter-spacing: 0.05em; }
 
 .login-forgot {
@@ -544,7 +544,7 @@ body.authenticated #loginPage {
   background: var(--wf-blue);
   color: white;
   border: none;
-  border-radius: 980px;
+  border-radius: var(--radius-sm);
   padding: 0.75rem 1.25rem;
   font-size: 0.875rem;
   font-weight: 600;
@@ -554,11 +554,11 @@ body.authenticated #loginPage {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  transition: background 0.15s;
-  box-shadow: 0 4px 14px rgba(0,113,227,.25);
+  transition: background var(--dur-fast) var(--ease);
 }
 
-.login-btn:hover { background: var(--wf-blue-d); }
+.login-btn:hover { background: var(--blue-hover); }
+.login-btn:active { background: var(--blue-active); }
 .login-btn svg { width: 16px; height: 16px; }
 
 /* ── Registratie: plan-kaarten (SaaS-stijl i.p.v. dropdown) ── */
@@ -579,13 +579,13 @@ body.authenticated #loginPage {
 .reg-plans-loading { font-size: 12.5px; color: var(--muted); padding: 6px 2px; }
 .reg-plan-card {
   display: flex; align-items: center; gap: 12px;
-  padding: 12px 14px;
-  border: 1.5px solid var(--line); border-radius: 12px;
+  padding: 14px;
+  border: 1px solid var(--line); border-radius: var(--radius-card);
   background: var(--surface); cursor: pointer;
-  transition: border-color .15s, box-shadow .15s;
+  transition: border-color .15s, box-shadow .15s, background .15s;
 }
-.reg-plan-card:hover { border-color: var(--gray-300); }
-.reg-plan-card.sel { border-color: var(--wf-blue); box-shadow: var(--ring); }
+.reg-plan-card:hover { border-color: #9bcbff; background: #fafcff; }
+.reg-plan-card.sel { border-color: var(--wf-blue); background: var(--blue-soft); box-shadow: 0 8px 24px rgba(0,113,227,.10); }
 .reg-plan-radio {
   width: 16px; height: 16px; border: 1.5px solid var(--gray-300); border-radius: 50%;
   flex-shrink: 0; display: grid; place-items: center; transition: border-color .15s;

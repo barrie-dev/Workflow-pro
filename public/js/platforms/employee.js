@@ -369,10 +369,11 @@
 /* ── Cards ──────────────────────────────────── */
 .emp-card {
   background: var(--surface);
-  border-radius: 16px;
+  border-radius: var(--radius-card);
   padding: 16px;
   margin-bottom: 14px;
   border: 1px solid var(--line);
+  box-shadow: var(--shadow-card);
 }
 .emp-card-title {
   font-size: 13px;
@@ -503,18 +504,25 @@
 
 /* ── Buttons ────────────────────────────────── */
 .emp-btn {
-  padding: 10px 18px;
-  border-radius: 10px;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: var(--radius-sm);
   font-size: 14px;
   font-weight: 600;
+  font-family: inherit;
   cursor: pointer;
-  border: none;
+  border: 1px solid transparent;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  line-height: 1; white-space: nowrap;
+  transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
 }
+.emp-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(0,113,227,.20); }
 .emp-btn-primary { background: var(--wf-blue); color: #fff; }
-.emp-btn-primary:hover { background: var(--wf-blue-d); }
+.emp-btn-primary:hover { background: var(--blue-hover); }
+.emp-btn-primary:active { background: var(--blue-active); }
 .emp-btn-outline { background: transparent; color: var(--wf-blue); border: 1.5px solid var(--wf-blue); }
 .emp-btn-full { width: 100%; margin-top: 8px; }
-.emp-btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
+.emp-btn-sm { min-height: 36px; padding: 0 12px; font-size: 13px; border-radius: var(--radius-xs); }
 
 /* ── Form ───────────────────────────────────── */
 .emp-form-group { margin-bottom: 14px; }
