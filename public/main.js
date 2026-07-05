@@ -3249,6 +3249,20 @@ document.addEventListener("DOMContentLoaded", registerDeepLinkBootstrap);
 window.addEventListener("load", registerDeepLinkBootstrap);
 setTimeout(registerDeepLinkBootstrap, 300);
 
+// ── Omgevings-banner (dev/test/staging) ──────────────────────────────────────
+// Onmiskenbaar tonen op welke omgeving je zit; nooit in production. Klik-neutraal.
+(function envBanner() {
+  fetch("/api/health").then(r => r.json()).then(h => {
+    const env = h && h.appEnv;
+    if (!env || env === "production" || document.querySelector(".env-banner")) return;
+    const labels = { dev: "Dev · ontwikkelomgeving", test: "Test · QA", staging: "Staging · klant-preview" };
+    const bar = document.createElement("div");
+    bar.className = "env-banner env-banner-" + env;
+    bar.textContent = labels[env] || env;
+    document.body.appendChild(bar);
+  }).catch(() => {});
+})();
+
 // ── Account-activatie: persoon opent de e-mailink ?activate=<token> en stelt ──
 // zelf zijn wachtwoord in. Bij succes meteen ingelogd. De aanmaker kent dus nooit
 // een wachtwoord en het e-mailadres is geverifieerd.

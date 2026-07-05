@@ -10,6 +10,8 @@
  * publicPlatformConfig() voor de UI (gemaskeerd + 'configured'-status).
  */
 
+const { config } = require("../lib/config");
+
 const CONFIG_ID = "platform";
 
 // Duidelijk neppe placeholder-sleutels zodat niets crasht vóór echte config.
@@ -127,7 +129,9 @@ function loadPlatformConfig(store) {
   // sleutel gebruiken. Legacy enkelvoudige velden blijven als fallback werken.
   const s = merged.stripe || {};
   const legacyLive = String(s.secretKey || "").startsWith("sk_live_");
-  const mode = s.mode === "live" ? "live" : s.mode === "test" ? "test" : (legacyLive ? "live" : "test");
+  let mode = s.mode === "live" ? "live" : s.mode === "test" ? "test" : (legacyLive ? "live" : "test");
+  // Guardrail: buiten production NOOIT Stripe-LIVE — forceer sandbox (geen echte betalingen op dev/test/staging).
+  if (mode === "live" && !config.guards.allowStripeLive) mode = "test";
   const pick = (specific, legacy, legacyMatches) => (isReal(specific) ? specific : (legacyMatches ? legacy : specific || legacy));
   merged.stripe = {
     ...s,

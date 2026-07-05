@@ -486,6 +486,7 @@ http.createServer(async (req, res) => {
       sendJson(res, 200, {
         ok: true,
         app: "Monargo One Fullstack",
+        appEnv: config.appEnv,
         version: config.appVersion,
         releaseChannel: config.releaseChannel,
         commitSha: config.commitSha,

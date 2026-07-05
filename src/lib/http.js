@@ -37,11 +37,13 @@ const SECURITY_HEADERS = {
 };
 
 function securityHeaders(extraHeaders = {}) {
-  const csp = config.isProduction ? CSP_DIRECTIVES : CSP_DIRECTIVES_DEV;
+  // Prod-like (staging + production) = strikte CSP + HSTS; dev/test = losser voor tooling.
+  const strict = config.isProdLike;
+  const csp = strict ? CSP_DIRECTIVES : CSP_DIRECTIVES_DEV;
   return {
     ...SECURITY_HEADERS,
     "Content-Security-Policy": csp,
-    ...(config.isProduction ? { "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload" } : {}),
+    ...(strict ? { "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload" } : {}),
     ...extraHeaders
   };
 }

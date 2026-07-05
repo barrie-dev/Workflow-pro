@@ -5,10 +5,31 @@ const { loadEnvFile } = require("./env");
 const root = path.join(__dirname, "..", "..");
 const envStatus = loadEnvFile(path.join(root, ".env"));
 
+// ── Omgeving (dev | test | staging | production) ──────────────────────────────
+// Eén canonieke omgeving per deploy, gezet via APP_ENV (fallback RELEASE_CHANNEL/
+// NODE_ENV). Bepaalt guardrails (echte mails/Stripe-live enkel waar toegestaan)
+// en de zichtbare env-banner. Elke Render-service zet zijn eigen APP_ENV.
+const APP_ENV = (() => {
+  const raw = String(process.env.APP_ENV || process.env.RELEASE_CHANNEL || "").toLowerCase().trim();
+  if (["dev", "development", "local"].includes(raw)) return "dev";
+  if (["test", "qa"].includes(raw)) return "test";
+  if (["staging", "stage", "uat"].includes(raw)) return "staging";
+  if (["production", "prod", "live"].includes(raw)) return "production";
+  return process.env.NODE_ENV === "production" ? "production" : "dev";
+})();
+
 const config = {
   root,
   port: Number(process.env.PORT || 4280),
-  isProduction: process.env.NODE_ENV === "production" || process.env.RELEASE_CHANNEL === "production",
+  appEnv: APP_ENV,
+  isProduction: APP_ENV === "production",
+  // Prod-like = echte klantomgevingen (staging + production): strengere CSP,
+  // echte e-mail toegestaan. Stripe-LIVE blijft exclusief voor production.
+  isProdLike: APP_ENV === "production" || APP_ENV === "staging",
+  guards: {
+    allowStripeLive: APP_ENV === "production",
+    allowRealEmail: APP_ENV === "production" || APP_ENV === "staging",
+  },
   allowDemoData: process.env.WORKFLOWPRO_ALLOW_DEMO_DATA === "true",
   appUrl: process.env.APP_URL || "http://localhost:4280",
   appVersion: process.env.APP_VERSION || pkg.version,

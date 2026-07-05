@@ -968,6 +968,12 @@ label {
 .mon-radio-card .mon-radio-check{position:absolute;top:14px;right:14px;width:22px;height:22px;border-radius:50%;background:var(--wf-blue);display:none;align-items:center;justify-content:center;color:#fff;font-size:13px;}
 .mon-radio-card.selected .mon-radio-check{display:flex;}
 
+/* Omgevings-banner (dev/test/staging) — nooit in production. Klik-neutraal. */
+.env-banner{position:fixed;left:0;right:0;bottom:0;height:22px;z-index:99998;display:flex;align-items:center;justify-content:center;gap:8px;font:600 11px/1 var(--font-sans);letter-spacing:.06em;text-transform:uppercase;color:#fff;pointer-events:none;box-shadow:0 -1px 4px rgba(11,19,32,.14)}
+.env-banner-dev{background:#475569}
+.env-banner-test{background:#f59e0b}
+.env-banner-staging{background:#7c3aed}
+
 .ops-form,
 .ops-tool {
   background: white;

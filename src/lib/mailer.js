@@ -18,6 +18,7 @@
 const https = require("https");
 const net = require("net");
 const tls = require("tls");
+const { config } = require("./config");
 
 const EMAIL_PROVIDER = (process.env.EMAIL_PROVIDER || "log").toLowerCase();
 const EMAIL_FROM     = process.env.EMAIL_FROM || "Monargo One <noreply@monargo.com>";
@@ -33,7 +34,12 @@ function setRuntimeConfig(emailCfg) {
     from: emailCfg.from || null,
   };
 }
-function activeProvider() { return (RUNTIME && RUNTIME.provider) || EMAIL_PROVIDER; }
+function activeProvider() {
+  const p = (RUNTIME && RUNTIME.provider) || EMAIL_PROVIDER;
+  // Guardrail: dev/test mogen NOOIT echt mailen → forceer console-log.
+  if (!config.guards.allowRealEmail && p !== "log") return "log";
+  return p;
+}
 function activeFrom() { return (RUNTIME && RUNTIME.from) || EMAIL_FROM; }
 function activeKey() { return (RUNTIME && RUNTIME.apiKey) || null; }
 function realKey(envName) {
