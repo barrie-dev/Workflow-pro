@@ -142,6 +142,9 @@
       </div>
     </div>
     <div class="emp-header-right">
+      <button id="empBackToMgmt" title="Terug naar je beheer-weergave" style="display:none;align-items:center;gap:6px;height:34px;padding:0 12px;border-radius:10px;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);font-size:12.5px;font-weight:600;font-family:inherit;cursor:pointer;white-space:nowrap;">
+        ← Teambeheer
+      </button>
       <button class="emp-icon-btn" id="empMsgBtn" title="Berichten">
         <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
         <span class="emp-notif-dot hidden" id="empMsgDot"></span>
@@ -649,6 +652,18 @@
       localStorage.removeItem("wfp_token");
       location.reload();
     });
+
+    // Manager/admin die via "Mijn portaal" binnenkwam: toon de terugknop naar
+    // de beheer-weergave (zelfde login — enkel de weergave wisselt).
+    const backBtn = document.getElementById("empBackToMgmt");
+    if (backBtn && window.__wfpReturnRole) {
+      backBtn.style.display = "inline-flex";
+      backBtn.addEventListener("click", () => {
+        const role = window.__wfpReturnRole;
+        window.__wfpReturnRole = null;
+        window.WorkFlowProPlatformRouter && window.WorkFlowProPlatformRouter.showPlatform(role);
+      });
+    }
 
     // msg btn
     document.getElementById("empMsgBtn")?.addEventListener("click", () => switchView("messages"));

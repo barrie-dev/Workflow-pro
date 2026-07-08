@@ -41,7 +41,8 @@ const {
   issueSupportToken,
   isEmployee,
   isManager,
-  isAdmin
+  isAdmin,
+  canWrite
 } = require("./lib/auth");
 const {
   getMyProfile, getMyPlanning, getMyClock, getMyExpenses,
@@ -65,15 +66,58 @@ function sanitizeEmployeePermissions(store, tenant, role, requested) {
   const grantable = new Set(grantablePermissions(store, tenant).map(g => g.key));
   const baseDefault = role === "manager" ? MANAGER_PERMISSIONS : EMPLOYEE_PERMISSIONS;
   // Behoud niet-operationele rol-rechten (bv. manager: employees, alerts).
-  const keptBase = baseDefault.filter(p => !OPERATIONAL_KEYS.has(String(p).replace(/^own:/, "")));
-  // Door admin gekozen operationele rechten, beperkt tot wat de tenant heeft.
-  const chosen = (Array.isArray(requested) ? requested : [])
-    .map(p => String(p).replace(/^own:/, ""))
-    .filter(k => grantable.has(k));
-  const scoped = chosen.map(k => (role === "employee" ? `own:${k}` : k));
+  const keptBase = baseDefault.filter(p => !OPERATIONAL_KEYS.has(String(p).replace(/^own:/, "").replace(/^read:/, "")));
+  // Door admin gekozen operationele rechten met niveau: "X" = schrijven,
+  // "read:X" = alleen-lezen. Beperkt tot wat de tenant heeft (grantable);
+  // schrijven wordt voor employees gescopet naar eigen data (own:).
+  const scoped = [];
+  for (const raw of (Array.isArray(requested) ? requested : [])) {
+    const p = String(raw);
+    const readOnly = p.startsWith("read:");
+    const key = p.replace(/^read:/, "").replace(/^own:/, "");
+    if (!grantable.has(key)) continue;
+    if (readOnly) scoped.push(`read:${key}`);
+    else scoped.push(role === "employee" ? `own:${key}` : key);
+  }
   // Altijd-rechten (bv. prikklok) forceren — iedereen kan in-/uitprikken ongeacht functie.
   const always = ALWAYS_PERMISSIONS.map(k => (role === "employee" ? `own:${k}` : k));
   return [...new Set([...keptBase, ...scoped, ...always])];
+}
+
+// ── Centrale lees/schrijf-gate ────────────────────────────────────────────────
+// Mutaties op operationele onderdelen worden hier tenant-breed geblokkeerd voor
+// gebruikers met enkel leesrechten (read:X). GET blijft werken via can();
+// me/*-flows (eigen klok, eigen verlof/onkosten indienen) blijven persoonlijke
+// basisfunctionaliteit en vallen buiten deze gate.
+const WRITE_GATE_MAP = {
+  workorders: ["workorders"], shifts: ["planning"], planning: ["planning"],
+  expenses: ["expenses"], leaves: ["leaves"], messages: ["messages"],
+  customers: ["customers"], venues: ["venues"], stock: ["stock"], vehicles: ["vehicles"],
+  facturen: ["invoicing", "billing"], offertes: ["invoicing", "billing"],
+};
+function assertNotReadOnly(user, action, method) {
+  if (["GET", "HEAD", "OPTIONS"].includes(method)) return;
+  if (!user || user.role === "super_admin") return;
+  const keys = WRITE_GATE_MAP[String(action).split("/")[0]];
+  if (!keys) return;                                   // niet-operationeel → eigen asserts
+  if (keys.some(k => canWrite(user, k))) return;       // schrijfrecht aanwezig
+  if (keys.some(k => can(user, k))) {                  // wel zien, niet wijzigen
+    const e = new Error("Je hebt alleen leesrechten voor dit onderdeel");
+    e.status = 403;
+    throw e;
+  }
+  // geen enkel recht → laat het endpoint zelf de juiste 403 geven
+}
+
+// Klant-facturatie (offertes/facturen): toegankelijk met het admin-brede
+// "billing" óf het toekenbare "invoicing"-recht (finance-profiel zonder
+// toegang tot abonnementsbeheer).
+function assertInvoicing(user) {
+  assertAdminMfa(user);
+  if (can(user, "billing") || can(user, "invoicing")) return;
+  const e = new Error("Missing permission");
+  e.status = 403;
+  throw e;
 }
 
 // Verstuur (of log) een activatiemail met de wachtwoord-instellink.
@@ -1882,6 +1926,8 @@ http.createServer(async (req, res) => {
       assertApiKeyWriteAllowed(user, req);
       // Entitlement-handhaving: gated modules die niet in het pakket zitten → 403.
       assertModuleEnabled(store, user, tenant, action);
+      // Alleen-lezen-handhaving: read:X-gebruikers kunnen niets muteren.
+      assertNotReadOnly(user, action, req.method);
 
       // ── Boden AI-assistent (beschikbaar voor elke ingelogde tenant-gebruiker;
       //    de tools binnen Boden bewaken zelf de data-rechten) ──
@@ -3266,7 +3312,7 @@ http.createServer(async (req, res) => {
 
       // ── Facturen (klantfacturen) ──────────────────────────────────────────────
       if (action === "facturen" && req.method === "GET") {
-        assertCan(user, "billing");
+        assertInvoicing(user);
         const rows = store.list("invoices", tenantId);
         // Mark overdue: open invoices past due date
         const today = new Date().toISOString().slice(0, 10);
@@ -3280,7 +3326,7 @@ http.createServer(async (req, res) => {
         return;
       }
       if (action === "facturen" && req.method === "POST") {
-        assertCan(user, "billing");
+        assertInvoicing(user);
         assertApiKeyWriteAllowed(user, req);
         const body = await readBody(req);
         if (!body.customerName && !body.customerId) return sendJson(res, 400, { ok: false, error: "Klant is verplicht" });
@@ -3463,7 +3509,7 @@ http.createServer(async (req, res) => {
       // Peppol e-facturatie verzenden
       const invoicePeppolMatch = action.match(/^facturen\/([^/]+)\/peppol$/);
       if (invoicePeppolMatch && req.method === "POST") {
-        assertCan(user, "billing");
+        assertInvoicing(user);
         assertSubmoduleEnabled(store, user, tenant, "invoices", "peppol");
         const inv = store.get("invoices", invoicePeppolMatch[1]);
         if (!inv || inv.tenantId !== tenantId) return sendJson(res, 404, { ok: false, error: "Factuur niet gevonden" });
@@ -3478,7 +3524,7 @@ http.createServer(async (req, res) => {
       // UBL-XML downloaden / bekijken
       const invoiceUblMatch = action.match(/^facturen\/([^/]+)\/ubl$/);
       if (invoiceUblMatch && req.method === "GET") {
-        assertCan(user, "billing");
+        assertInvoicing(user);
         const inv = store.get("invoices", invoiceUblMatch[1]);
         if (!inv || inv.tenantId !== tenantId) return sendJson(res, 404, { ok: false, error: "Factuur niet gevonden" });
         const xml = inv.ublXml || buildUbl(inv, tenant);
@@ -3489,7 +3535,7 @@ http.createServer(async (req, res) => {
       // Betaallink genereren (Stripe Checkout of mock-fallback)
       const invoicePayMatch = action.match(/^facturen\/([^/]+)\/payment-link$/);
       if (invoicePayMatch && req.method === "POST") {
-        assertCan(user, "billing");
+        assertInvoicing(user);
         assertSubmoduleEnabled(store, user, tenant, "invoices", "online-payment");
         const inv = store.get("invoices", invoicePayMatch[1]);
         if (!inv || inv.tenantId !== tenantId) return sendJson(res, 404, { ok: false, error: "Factuur niet gevonden" });
@@ -3500,7 +3546,7 @@ http.createServer(async (req, res) => {
       }
       const invoiceItemMatch = action.match(/^facturen\/([^/]+)$/);
       if (invoiceItemMatch && req.method === "PATCH") {
-        assertCan(user, "billing");
+        assertInvoicing(user);
         assertApiKeyWriteAllowed(user, req);
         const body = await readBody(req);
         const inv = store.get("invoices", invoiceItemMatch[1]);
@@ -3515,7 +3561,7 @@ http.createServer(async (req, res) => {
         return;
       }
       if (invoiceItemMatch && req.method === "DELETE") {
-        assertCan(user, "billing");
+        assertInvoicing(user);
         assertInteractiveUser(user);
         const inv = store.get("invoices", invoiceItemMatch[1]);
         if (!inv || inv.tenantId !== tenantId) return sendJson(res, 404, { ok: false, error: "Factuur niet gevonden" });
@@ -3528,7 +3574,7 @@ http.createServer(async (req, res) => {
 
       // ── Offertes (quotes) ─────────────────────────────────────────────────────
       if (action === "offertes" && req.method === "GET") {
-        assertCan(user, "billing");
+        assertInvoicing(user);
         const today = new Date().toISOString().slice(0, 10);
         const rows = store.list("quotes", tenantId).map(q => {
           if (q.status === "verzonden" && q.validUntil && q.validUntil < today) return { ...q, status: "verlopen" };
@@ -3538,7 +3584,7 @@ http.createServer(async (req, res) => {
         return;
       }
       if (action === "offertes" && req.method === "POST") {
-        assertCan(user, "billing");
+        assertInvoicing(user);
         assertApiKeyWriteAllowed(user, req);
         const body = await readBody(req);
         if (!body.customerName && !body.customerId) return sendJson(res, 400, { ok: false, error: "Klant is verplicht" });
@@ -3584,7 +3630,7 @@ http.createServer(async (req, res) => {
       }
       const quoteSendMatch = action.match(/^offertes\/([^/]+)\/send$/);
       if (quoteSendMatch && req.method === "POST") {
-        assertCan(user, "billing");
+        assertInvoicing(user);
         const q = store.get("quotes", quoteSendMatch[1]);
         if (!q || q.tenantId !== tenantId) return sendJson(res, 404, { ok: false, error: "Offerte niet gevonden" });
         const updated = store.update("quotes", q.id, { status: q.status === "concept" ? "verzonden" : q.status, sentAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
@@ -3601,7 +3647,7 @@ http.createServer(async (req, res) => {
       }
       const quoteConvertMatch = action.match(/^offertes\/([^/]+)\/convert$/);
       if (quoteConvertMatch && req.method === "POST") {
-        assertCan(user, "billing");
+        assertInvoicing(user);
         const body = await readBody(req);
         const q = store.get("quotes", quoteConvertMatch[1]);
         if (!q || q.tenantId !== tenantId) return sendJson(res, 404, { ok: false, error: "Offerte niet gevonden" });
@@ -3647,7 +3693,7 @@ http.createServer(async (req, res) => {
       }
       const quoteItemMatch = action.match(/^offertes\/([^/]+)$/);
       if (quoteItemMatch && req.method === "PATCH") {
-        assertCan(user, "billing");
+        assertInvoicing(user);
         const body = await readBody(req);
         const q = store.get("quotes", quoteItemMatch[1]);
         if (!q || q.tenantId !== tenantId) return sendJson(res, 404, { ok: false, error: "Offerte niet gevonden" });
@@ -3661,7 +3707,7 @@ http.createServer(async (req, res) => {
         return;
       }
       if (quoteItemMatch && req.method === "DELETE") {
-        assertCan(user, "billing");
+        assertInvoicing(user);
         assertInteractiveUser(user);
         const q = store.get("quotes", quoteItemMatch[1]);
         if (!q || q.tenantId !== tenantId) return sendJson(res, 404, { ok: false, error: "Offerte niet gevonden" });
@@ -4034,7 +4080,7 @@ http.createServer(async (req, res) => {
       // klantfactuur, koppelt beide, en markeert de werkbon als gefactureerd.
       const workorderInvoiceMatch = action.match(/^workorders\/([^/]+)\/invoice$/);
       if (workorderInvoiceMatch && req.method === "POST") {
-        assertCan(user, "billing");
+        assertInvoicing(user);
         assertApiKeyWriteAllowed(user, req);
         const wo = store.get("workorders", workorderInvoiceMatch[1]);
         if (!wo || wo.tenantId !== tenantId) return sendJson(res, 404, { ok: false, error: "Werkbon niet gevonden" });

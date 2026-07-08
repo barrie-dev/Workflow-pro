@@ -963,14 +963,21 @@ ${(() => {
 
   <div class="adm-form-section">Toegang &amp; rechten</div>
   ${isAdminUser ? `<div style="font-size:12px;color:var(--gray-500);">Beheerders hebben volledige toegang. Rechten beheer je hier alleen voor medewerkers en managers.</div>` : `
-  <div style="font-size:12px;color:var(--gray-500);margin-bottom:8px;">Bepaal welke modules deze gebruiker mag gebruiken. Enkel modules uit jullie pakket worden getoond. In- en uitprikken (prikklok) kan iedereen altijd, ongeacht functie.</div>
-  ${_grantable.length ? `<div id="admEmpPerms" style="display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;">
+  <div style="font-size:12px;color:var(--gray-500);margin-bottom:8px;">Bepaal per onderdeel wat deze gebruiker mag: <strong>Geen</strong> (niet zichtbaar), <strong>Lezen</strong> (bekijken, niets wijzigen) of <strong>Schrijven</strong> (volledig gebruiken). Zo maak je profielen op maat — bv. een finance-medewerker met enkel Facturatie. In- en uitprikken (prikklok) kan iedereen altijd.</div>
+  ${_grantable.length ? `<div id="admEmpPerms" style="display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;">
     ${_grantable.map(p => {
-      const on = emp
-        ? (emp.permissions || []).some(x => x === p.key || x === `own:${p.key}`)
-        : ROLE_DEFAULT_PERMS[emp?.role || "employee"].includes(p.key);
-      return `<label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--gray-700);cursor:pointer;">
-        <input type="checkbox" class="adm-perm" data-key="${p.key}" ${on ? "checked" : ""}> ${esc(p.label)}
+      const perms = emp ? (emp.permissions || []) : null;
+      const level = perms
+        ? (perms.includes(p.key) || perms.includes(`own:${p.key}`) ? "write"
+          : perms.includes(`read:${p.key}`) ? "read" : "none")
+        : (ROLE_DEFAULT_PERMS[emp?.role || "employee"].includes(p.key) ? "write" : "none");
+      return `<label style="display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:8px;font-size:13px;color:var(--gray-700);">
+        <span>${esc(p.label)}</span>
+        <select class="adm-perm" data-key="${p.key}" style="width:120px;min-height:32px;padding:4px 28px 4px 10px;font-size:12.5px;">
+          <option value="none" ${level === "none" ? "selected" : ""}>Geen</option>
+          <option value="read" ${level === "read" ? "selected" : ""}>Lezen</option>
+          <option value="write" ${level === "write" ? "selected" : ""}>Schrijven</option>
+        </select>
       </label>`;
     }).join("")}
   </div>` : `<div style="font-size:12px;color:var(--gray-400);">Geen toewijsbare modules in het huidige pakket.</div>`}
@@ -1001,7 +1008,7 @@ ${emp ? `
     if (!emp) {
       document.querySelector("#admEmpForm select[name=role]")?.addEventListener("change", ev => {
         const defs = ROLE_DEFAULT_PERMS[ev.target.value] || [];
-        document.querySelectorAll("#admEmpForm .adm-perm").forEach(cb => { cb.checked = defs.includes(cb.dataset.key); });
+        document.querySelectorAll("#admEmpForm .adm-perm").forEach(sel => { sel.value = defs.includes(sel.dataset.key) ? "write" : "none"; });
       });
     }
 
@@ -1032,10 +1039,13 @@ ${emp ? `
       data.name = `${data.firstName} ${data.lastName}`.trim();
       delete data.firstName; delete data.lastName;
       if (data.leaveQuota !== undefined) data.leaveQuota = Number(data.leaveQuota) || 20;
-      // Geselecteerde rechten meesturen (server saneert en scoped per rol).
+      // Geselecteerde rechten met niveau meesturen: "X" = schrijven, "read:X" =
+      // alleen-lezen, weggelaten = geen. Server saneert en scoped per rol.
       // Niet voor beheerders — die behouden hun volledige toegang.
       if (!isAdminUser) {
-        data.permissions = [...document.querySelectorAll("#admEmpForm .adm-perm:checked")].map(cb => cb.dataset.key);
+        data.permissions = [...document.querySelectorAll("#admEmpForm .adm-perm")]
+          .filter(sel => sel.value !== "none")
+          .map(sel => (sel.value === "read" ? `read:${sel.dataset.key}` : sel.dataset.key));
       }
       try {
         if (emp) {

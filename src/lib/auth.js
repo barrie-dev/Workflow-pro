@@ -383,6 +383,14 @@ function verifyMfaSetup(store, user, code) {
   return { user: safeUser(row), recoveryCodes };
 }
 
+/**
+ * Permissieniveaus per module (door de tenant-admin instelbaar per gebruiker):
+ *   "X"       → schrijven (volledige scope)
+ *   "own:X"   → schrijven, beperkt tot eigen data (employees)
+ *   "read:X"  → alleen-lezen (ziet de module, kan niets wijzigen)
+ *   afwezig   → geen toegang
+ * can() = mag zien (alle niveaus); canWrite() = mag wijzigen (niet bij read:).
+ */
 function can(user, permission) {
   if (!user) return false;
   if (user.role === "super_admin") return true;
@@ -391,7 +399,29 @@ function can(user, permission) {
   // employee kan via "own:X" ook de basis X-scope claimen voor eigen data
   if (permissions.includes(permission)) return true;
   if (permissions.includes(`own:${permission}`)) return true;
+  if (permissions.includes(`read:${permission}`)) return true;
   return false;
+}
+
+function canWrite(user, permission) {
+  if (!user) return false;
+  if (user.role === "super_admin") return true;
+  const permissions = user.permissions || [];
+  if (permissions.includes("*")) return true;
+  if (permissions.includes(permission)) return true;
+  if (permissions.includes(`own:${permission}`)) return true;
+  return false; // enkel read:X → niet schrijven
+}
+
+function assertCanWrite(user, permission) {
+  assertAdminMfa(user);
+  if (!canWrite(user, permission)) {
+    const error = new Error(can(user, permission)
+      ? "Je hebt alleen leesrechten voor dit onderdeel"
+      : "Missing permission");
+    error.status = 403;
+    throw error;
+  }
 }
 
 // Controleer of employee alleen zijn eigen resource mag lezen/wijzigen
@@ -535,8 +565,10 @@ module.exports = {
   enforceMfa,
   resetLoginFailures,
   can,
+  canWrite,
   assertTenant,
   assertCan,
+  assertCanWrite,
   assertOwn,
   assertSuperAdmin,
   isPlatformGod,

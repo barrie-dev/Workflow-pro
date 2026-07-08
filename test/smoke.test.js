@@ -832,6 +832,52 @@ test("push: key endpoint werkt en subscribe blokkeert zonder VAPID-config", asyn
   assert.equal(subscribe.status, 503);
 });
 
+// ── Lees/schrijf-rechten per profiel (klant-instelbaar) ─────────────────────────
+test("rechten: finance-profiel — lezen werkbonnen, schrijven facturatie, geen abonnement", async () => {
+  const admin = await login("admin@demobouw.be", "Demo2026!");
+  const HA = { "Content-Type": "application/json", Authorization: `Bearer ${admin.token}` };
+
+  // invoicing is een toekenbaar recht (los van abonnement/billing)
+  const empData = await (await fetch(`${BASE}/api/tenants/t_demo/employees`, { headers: HA })).json();
+  assert.ok((empData.grantable || []).some(g => g.key === "invoicing"), "invoicing toekenbaar");
+  const sara = (empData.employees || []).find(u => u.email === "sara@demobouw.be");
+  assert.ok(sara, "demo-medewerker gevonden");
+
+  // Admin stelt het profiel in: werkbonnen = lezen, facturatie = schrijven
+  const patched = await (await fetch(`${BASE}/api/tenants/t_demo/employees/${sara.id}`, {
+    method: "PATCH", headers: HA,
+    body: JSON.stringify({ permissions: ["read:workorders", "invoicing"] }),
+  })).json();
+  assert.ok(patched.user.permissions.includes("read:workorders"), "leesniveau bewaard");
+  assert.ok(patched.user.permissions.includes("own:invoicing"), "schrijfniveau employee → own-scope");
+
+  const saraTok = (await login("sara@demobouw.be", "Demo2026!")).token;
+  const HS = { "Content-Type": "application/json", Authorization: `Bearer ${saraTok}` };
+
+  // Lezen mag, muteren niet (centrale alleen-lezen-gate)
+  assert.equal((await fetch(`${BASE}/api/tenants/t_demo/workorders`, { headers: HS })).status, 200, "werkbonnen lezen");
+  const woPost = await fetch(`${BASE}/api/tenants/t_demo/workorders`, { method: "POST", headers: HS, body: JSON.stringify({ title: "Mag niet" }) });
+  assert.equal(woPost.status, 403, "werkbon aanmaken geblokkeerd");
+  assert.match((await woPost.json()).error || "", /leesrechten/i, "duidelijke alleen-lezen-fout");
+
+  // Facturatie mag wél (invoicing), abonnementsbeheer blijft dicht (billing)
+  const inv = await fetch(`${BASE}/api/tenants/t_demo/facturen`, {
+    method: "POST", headers: HS,
+    body: JSON.stringify({ customerName: "Finance Klant", lines: [{ description: "Dienst", qty: 1, unitPrice: 100, vatRate: 21 }] }),
+  });
+  assert.equal(inv.status, 201, "finance-profiel kan factureren");
+  assert.equal((await fetch(`${BASE}/api/tenants/t_demo/billing/summary`, { headers: HS })).status, 403, "abonnement blijft admin-only");
+
+  // Zonder enig recht: geen toegang tot verlof (module-fout, niet de lees-fout)
+  assert.equal((await fetch(`${BASE}/api/tenants/t_demo/leaves`, { headers: HS })).status, 403, "geen recht → 403");
+
+  // Herstel het demo-profiel
+  await fetch(`${BASE}/api/tenants/t_demo/employees/${sara.id}`, {
+    method: "PATCH", headers: HA,
+    body: JSON.stringify({ permissions: ["planning", "workorders", "expenses", "leaves", "messages"] }),
+  });
+});
+
 test("mfa: verify accepteert token-alias uit frontend contract", async () => {
   const sara = await login("sara@demobouw.be", "Demo2026!");
   const headers = { "Content-Type": "application/json", Authorization: `Bearer ${sara.token}` };

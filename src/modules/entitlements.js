@@ -126,6 +126,10 @@ const OPERATIONAL_PERMISSIONS = [
   { key: "venues", label: "Locaties / werven" },
   { key: "stock", label: "Stock" },
   { key: "vehicles", label: "Wagenpark" },
+  // Klant-facturatie (offertes + facturen) als apart toekenbaar recht, LOS van
+  // "billing" (abonnement/checkout/portal blijft admin-only). Zo kan de klant
+  // een finance-profiel maken zonder toegang tot het abonnementsbeheer.
+  { key: "invoicing", label: "Facturatie & offertes", modules: ["invoices", "offertes"] },
 ];
 
 // Rechten die iedereen altijd heeft (kunnen niet per gebruiker worden afgenomen).
@@ -135,7 +139,11 @@ const OPERATIONAL_KEYS = new Set(OPERATIONAL_PERMISSIONS.map(p => p.key));
 /** Rechten die de tenant-admin per gebruiker mag toekennen = operationeel ∩ tenant-entitlements. */
 function grantablePermissions(store, tenant) {
   const enabled = new Set(resolveTenantModules(store, tenant).modules);
-  return OPERATIONAL_PERMISSIONS.filter(p => enabled.has(p.key));
+  // Een recht is toekenbaar als zijn module aanstaat; rechten die meerdere
+  // modules bundelen (bv. invoicing) zodra er minstens één aanstaat.
+  return OPERATIONAL_PERMISSIONS.filter(p =>
+    Array.isArray(p.modules) ? p.modules.some(m => enabled.has(m)) : enabled.has(p.key)
+  );
 }
 
 module.exports = {

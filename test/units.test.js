@@ -6,7 +6,7 @@ const assert = require("node:assert");
 const { lookupKbo, lookupKboResolve, parseViesAddress, normalizeVat } = require("../src/modules/kbo");
 const {
   buildSupportGrant, issueSupportToken, supportGrantStatus, slideSupportGrant,
-  assertSupportWrite, SUPPORT_IDLE_MS, SUPPORT_HARD_MS
+  assertSupportWrite, SUPPORT_IDLE_MS, SUPPORT_HARD_MS, can, canWrite
 } = require("../src/lib/auth");
 const { Store } = require("../src/lib/store");
 const { runSupportAccessReview } = require("../src/modules/support-access");
@@ -104,6 +104,18 @@ test("lookupKboResolve: VIES onbereikbaar → mock-fallback zonder throw", async
   const t = fakeViesTransport(null, { fail: true });
   const c = await lookupKboResolve("BE0417497106", { transport: t });
   assert.equal(c.source, "mock-kbo-fallback");
+});
+
+// ── Lees/schrijf-permissieniveaus ───────────────────────────────────────────────
+test("rechten: read:X geeft lezen maar niet schrijven; own:/vol = schrijven", () => {
+  const u = { role: "employee", permissions: ["read:workorders", "own:expenses", "invoicing"] };
+  assert.equal(can(u, "workorders"), true, "read:X → mag zien");
+  assert.equal(canWrite(u, "workorders"), false, "read:X → mag niet wijzigen");
+  assert.equal(can(u, "expenses"), true);
+  assert.equal(canWrite(u, "expenses"), true, "own:X → mag (eigen) schrijven");
+  assert.equal(canWrite(u, "invoicing"), true, "vol recht → schrijven");
+  assert.equal(can(u, "leaves"), false, "geen recht → geen toegang");
+  assert.equal(canWrite({ role: "super_admin", permissions: [] }, "workorders"), true);
 });
 
 test("lookupKboResolve: fixture sluit kort vóór het netwerk", async () => {
