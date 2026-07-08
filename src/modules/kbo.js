@@ -3,7 +3,7 @@
  * KBO-/BTW-opzoeking.
  *
  * Bron van waarheid voor de échte opzoeking is VIES (VAT Information Exchange
- * System) van de Europese Commissie — gratis en officieel, en geeft voor
+ * System) van de Europese Commissie · gratis en officieel, en geeft voor
  * Belgische nummers de bij de KBO geregistreerde naam + adres terug. Er is geen
  * API-sleutel nodig.
  *
@@ -56,7 +56,7 @@ function lookupKbo(vat) {
 }
 
 // VIES geeft het adres als één string ("STRAAT NR\nPOSTCODE GEMEENTE"); splits dit
-// naar losse velden. Best-effort — bij een onverwacht formaat blijven velden leeg.
+// naar losse velden. Best-effort · bij een onverwacht formaat blijven velden leeg.
 function parseViesAddress(address) {
   const lines = String(address || "").split(/\r?\n/).map(s => s.trim()).filter(Boolean);
   let street = "", zip = "", city = "";

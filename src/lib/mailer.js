@@ -218,7 +218,7 @@ async function sendViaSmtp(mail) {
  * @param {object} mail  - { to, subject, html, text, from? }
  * @returns {Promise<{ok:boolean, provider:string}>}
  */
-// Lichte in-memory ring-buffer van recente verzendpogingen — geeft de superadmin
+// Lichte in-memory ring-buffer van recente verzendpogingen · geeft de superadmin
 // zicht op deliverability (laatste 100). Best-effort: per server-instance, reset
 // bij herstart. (Voor audit-grade logging → externe provider-dashboards.)
 const MAIL_LOG = [];
@@ -245,7 +245,7 @@ async function sendMail(mail) {
     return res;
   } catch (err) {
     // E-mail-fouten loggen maar NOOIT de request laten crashen; val terug op log
-    console.error(`[mailer] Verzenden mislukt (${provider}): ${err.message} — fallback naar log`);
+    console.error(`[mailer] Verzenden mislukt (${provider}): ${err.message} · fallback naar log`);
     recordMail({ ...base, ok: false, error: err.message });
     await sendViaLog(mail).catch(() => {});
     return { ok: false, provider, error: err.message };

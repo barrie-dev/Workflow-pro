@@ -2,7 +2,7 @@
 /**
  * Gedeelde, geharde HTTPS-client voor uitgaande provider-calls (Stripe, Peppol,
  * CIAW, Limosa, Robaws …). Vóór dit had elke module zijn eigen https.request
- * zónder timeout — een hangende provider liet zo de hele API-request vasthangen.
+ * zónder timeout · een hangende provider liet zo de hele API-request vasthangen.
  *
  * - Altijd een timeout (default 15s) met nette afbreek-fout.
  * - Eén plek voor netwerkfout-afhandeling en statuscode-interpretatie.

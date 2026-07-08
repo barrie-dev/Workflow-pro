@@ -13,7 +13,7 @@
 const ESC = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
 function esc(v) { return String(v == null ? "" : v).replace(/[&<>"']/g, c => ESC[c]); }
 function eur(n) { return new Intl.NumberFormat("nl-BE", { style: "currency", currency: "EUR" }).format(Number(n || 0)); }
-function dmy(iso) { return iso ? new Date(iso).toLocaleDateString("nl-BE", { day: "2-digit", month: "2-digit", year: "numeric" }) : "—"; }
+function dmy(iso) { return iso ? new Date(iso).toLocaleDateString("nl-BE", { day: "2-digit", month: "2-digit", year: "numeric" }) : "-"; }
 
 // Kolommen die in een regel-tabel (factuur/offerte) getoond kunnen worden.
 const LINE_COLUMNS = {
@@ -157,14 +157,14 @@ function reportBody(ctx) {
   return `
     ${d.description ? `<div class="block"><div class="block-h">Omschrijving</div><div>${esc(d.description)}</div></div>` : ""}
     <div class="block"><div class="block-h">Gegevens</div>
-      <div class="kv"><span>Uitvoerder</span><span>${esc(ctx.fields["uitvoerder.naam"] || "—")}</span></div>
-      <div class="kv"><span>Geklokte uren</span><span>${esc(ctx.fields["uren.geklokt"] || "—")}</span></div>
+      <div class="kv"><span>Uitvoerder</span><span>${esc(ctx.fields["uitvoerder.naam"] || "-")}</span></div>
+      <div class="kv"><span>Geklokte uren</span><span>${esc(ctx.fields["uren.geklokt"] || "-")}</span></div>
       <div class="kv"><span>Datum</span><span>${esc(ctx.fields["document.datum"])}</span></div>
     </div>
-    ${checklist.length ? `<div class="block"><div class="block-h">Checklist</div>${checklist.map(c => `<div class="kv"><span>${esc(c.label || c.text || "")}</span><span>${c.done ? "✓" : "—"}</span></div>`).join("")}</div>` : ""}
+    ${checklist.length ? `<div class="block"><div class="block-h">Checklist</div>${checklist.map(c => `<div class="kv"><span>${esc(c.label || c.text || "")}</span><span>${c.done ? "✓" : "-"}</span></div>`).join("")}</div>` : ""}
     <div class="block"><div class="block-h">Bewijs</div>
       <div class="kv"><span>Foto's</span><span>${photos}</span></div>
-      <div class="kv"><span>Handtekening klant</span><span>${d.signed ? "✓ aanwezig" : "—"}</span></div>
+      <div class="kv"><span>Handtekening klant</span><span>${d.signed ? "✓ aanwezig" : "-"}</span></div>
     </div>`;
 }
 
@@ -237,7 +237,7 @@ function renderDocument(template, type, doc = {}, tenant = {}) {
   <div class="parties">
     <div>
       <div class="party-label">${type === "workorder" ? "Klant" : (type === "quote" ? "Voor" : "Factuuradres")}</div>
-      <div class="party-name">${esc(f["klant.naam"] || "—")}</div>
+      <div class="party-name">${esc(f["klant.naam"] || "-")}</div>
       ${f["klant.btw"] ? `<div class="party-detail">Btw: ${esc(f["klant.btw"])}</div>` : ""}
       ${f["klant.adres"] ? `<div class="party-detail">${esc(f["klant.adres"])}</div>` : ""}
     </div>

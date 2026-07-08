@@ -8,7 +8,7 @@
  * - Geen/dummy sleutel → mock-URL's zodat de hele flow lokaal blijft werken.
  *
  * Abonnementsprijs = bundelprijs (baseMonthly, per gebruiker) × actieve gebruikers,
- * via inline price_data (recurring/maand) — geen vooraf aangemaakte Stripe Prices nodig.
+ * via inline price_data (recurring/maand) · geen vooraf aangemaakte Stripe Prices nodig.
  * Status-sync gebeurt via de webhook met de pure mapper applySubscriptionEvent().
  */
 const { config } = require("../lib/config");
@@ -59,9 +59,9 @@ async function ensureStripeCustomer(store, tenant, key) {
 async function createSubscriptionCheckout(store, tenant, planKey, actor) {
   const bundle = getBundle(store, planKey);
   if (!bundle || bundle.active === false) throw Object.assign(new Error("Onbekend of inactief pakket"), { status: 400 });
-  if (bundle.custom) throw Object.assign(new Error("Dit pakket is op aanvraag — neem contact op."), { status: 400 });
+  if (bundle.custom) throw Object.assign(new Error("Dit pakket is op aanvraag · neem contact op."), { status: 400 });
   const monthly = monthlyAmount(store, tenant, planKey);
-  if (monthly == null) throw Object.assign(new Error("Dit pakket verloopt via een offerte op maat — neem contact op."), { status: 400 });
+  if (monthly == null) throw Object.assign(new Error("Dit pakket verloopt via een offerte op maat · neem contact op."), { status: 400 });
   const key = stripeKey(store);
 
   if (isRealStripeKey(key)) {
@@ -83,7 +83,7 @@ async function createSubscriptionCheckout(store, tenant, planKey, actor) {
           currency: "eur",
           unit_amount: Math.round(monthly * 100),
           recurring: { interval: "month" },
-          product_data: { name: `Monargo One — ${bundle.label} (incl. ${activeSeats(store, tenant)} gebruikers)` },
+          product_data: { name: `Monargo One · ${bundle.label} (incl. ${activeSeats(store, tenant)} gebruikers)` },
         },
       }],
       subscription_data: {

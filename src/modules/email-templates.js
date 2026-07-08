@@ -9,19 +9,19 @@ const { wrapHtml } = require("../lib/mailer");
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-function fmt(val, fallback = "—") {
+function fmt(val, fallback = "-") {
   return val != null && val !== "" ? String(val) : fallback;
 }
 
 function fmtDate(iso) {
-  if (!iso) return "—";
+  if (!iso) return "-";
   try {
     return new Date(iso).toLocaleDateString("nl-BE", { day: "2-digit", month: "long", year: "numeric" });
   } catch { return iso; }
 }
 
 function fmtMoney(amount, currency = "EUR") {
-  if (amount == null) return "—";
+  if (amount == null) return "-";
   try {
     return new Intl.NumberFormat("nl-BE", { style: "currency", currency }).format(Number(amount));
   } catch { return `${currency} ${amount}`; }
@@ -50,7 +50,7 @@ function leaveSubmittedToAdmin({ employee, leave, appUrl }) {
     </p>
     <div class="detail-box">
       ${detailRow("Medewerker", fmt(employee?.name))}
-      ${detailRow("Type verlof", fmt(leave?.type, "—"))}
+      ${detailRow("Type verlof", fmt(leave?.type, "-"))}
       ${detailRow("Van", fmtDate(leave?.startDate || leave?.from))}
       ${detailRow("Tot", fmtDate(leave?.endDate || leave?.to))}
       ${detailRow("Reden", fmt(leave?.reason))}

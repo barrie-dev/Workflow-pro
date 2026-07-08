@@ -91,7 +91,7 @@ function publicUser(user) {
 
 // `provision` (optioneel) maakt een gebruiker zonder wachtwoord aan + stuurt een
 // activatiemail (door server.js geïnjecteerd). Zo kiest de importeerder nooit een
-// (gedeeld) wachtwoord — iedere medewerker activeert zelf via e-mail.
+// (gedeeld) wachtwoord · iedere medewerker activeert zelf via e-mail.
 function importEmployees(store, tenant, body, user, provision) {
   const csv = body.csv || body.text || "";
   const rows = parseEmployeesCsv(csv);
@@ -134,7 +134,7 @@ function importEmployees(store, tenant, body, user, provision) {
       ...patch
     };
     // Pending + activatiemail (geen gedeeld wachtwoord). Fallback (geen provision):
-    // inactief account zonder wachtwoord — kan pas in na activatie/reset.
+    // inactief account zonder wachtwoord · kan pas in na activatie/reset.
     const created = provision
       ? provision(base).user
       : store.insert("users", { ...base, passwordHash: "", active: false });

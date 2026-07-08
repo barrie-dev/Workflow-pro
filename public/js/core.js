@@ -6,7 +6,7 @@
  *
  * - wfpCore.token()        → bearer-token uit localStorage
  * - wfpCore.tenantId()     → tenant-id uit het token-payload
- * - wfpCore.esc(v)         → HTML-escape (incl. ' — strikt veiliger)
+ * - wfpCore.esc(v)         → HTML-escape (incl. ' · strikt veiliger)
  * - wfpCore.request(p,opt) → fetch met auth-header, 401→login, JSON terug, gooit bij !ok
  */
 (function () {
@@ -46,7 +46,7 @@
         // Sessie verlopen → terug naar login (behalve op /auth/-paden zelf).
         if (r.status === 401 && !/\/api\/auth\//.test(fullPath)) {
           localStorage.removeItem("wfp_token");
-          window.showToast && window.showToast("Je sessie is verlopen — log opnieuw in.", "warning");
+          window.showToast && window.showToast("Je sessie is verlopen · log opnieuw in.", "warning");
           setTimeout(() => location.reload(), 1200);
         }
         throw Object.assign(new Error(data.error || ("API fout " + r.status)), { status: r.status, data });
@@ -55,7 +55,7 @@
     });
   }
 
-  // Platform-aankondiging / onderhoudsbanner — getoond bovenaan elke shell.
+  // Platform-aankondiging / onderhoudsbanner · getoond bovenaan elke shell.
   // Best-effort: faalt stil als het endpoint niet bereikbaar is.
   function showAnnouncementBanner() {
     fetch("/api/announcement").then(r => r.json()).then(d => {

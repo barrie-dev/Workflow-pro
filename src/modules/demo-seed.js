@@ -60,7 +60,7 @@ function seedDemoData(store, tenant, actor) {
     { name: "Sportcomplex De Meander", contactName: "Dirk Peeters", email: "dirk@meander.be", phone: "+32 11 87 65 43", vatNumber: "BE0777.345.678", address: "Sportlaan 1, 3500 Hasselt" },
   ].map(c => ins("customers", { id: id("cust"), ...c, notes: "" }));
 
-  // Offertes — alle statussen
+  // Offertes · alle statussen
   const mkQuote = (n, cust, st, items, extra = {}) => ins("quotes", {
     id: id("quote"), number: `OFF-2026-${String(n).padStart(3, "0")}`,
     customerId: cust.id, customerName: cust.name, customerVatNumber: cust.vatNumber, customerAddress: cust.address,
@@ -77,7 +77,7 @@ function seedDemoData(store, tenant, actor) {
   mkQuote(904, customers[3], "geweigerd", [["Schilderwerken gangen", 1, 4300]], { d: -25, notes: "Prijs te hoog volgens klant" });
   mkQuote(905, customers[4], "verzonden", [["Vervanging verlichting sporthal", 36, 95]], { d: -4 });
 
-  // Facturen — betaald / open / vervallen / Peppol
+  // Facturen · betaald / open / vervallen / Peppol
   const mkInv = (n, cust, st, items, extra = {}) => ins("invoices", {
     id: id("inv"), number: `2026-${String(n).padStart(3, "0")}`,
     customerId: cust.id, customerName: cust.name, customerVatNumber: cust.vatNumber, customerAddress: cust.address,
@@ -89,19 +89,19 @@ function seedDemoData(store, tenant, actor) {
     peppolReference: extra.peppol ? `PEPPOL-${crypto.randomBytes(4).toString("hex").toUpperCase()}` : null,
     createdBy: actor.email, updatedAt: new Date().toISOString(),
   });
-  mkInv(901, customers[0], "paid", [["Renovatie sanitair blok A — voorschot", 1, 4200]], { d: -45, peppol: "delivered" });
-  mkInv(902, customers[1], "paid", [["Dakwerken — eindafrekening", 1, 9120, 6]], { d: -38 });
+  mkInv(901, customers[0], "paid", [["Renovatie sanitair blok A · voorschot", 1, 4200]], { d: -45, peppol: "delivered" });
+  mkInv(902, customers[1], "paid", [["Dakwerken · eindafrekening", 1, 9120, 6]], { d: -38 });
   mkInv(903, customers[2], "open", [["Onderhoudscontract Q2", 1, 1850]], { d: -12, peppol: "delivered" });
   mkInv(904, customers[3], "open", [["Schilderwerken receptie", 1, 3675]], { d: -8 });
   mkInv(905, customers[4], "open", [["Herstelling sportvloer", 1, 2980]], { d: -55, notes: "2e herinnering verstuurd" }); // vervallen (dueDate < vandaag)
 
-  // Werkbonnen — week rond vandaag, alle statussen
+  // Werkbonnen · week rond vandaag, alle statussen
   const wos = [
-    ["Sanitair blok A — afwerking", customers[0], "Voltooid", "hoog", -3, 0, "Alles geplaatst en getest. Klant tekende af."],
-    ["Dakisolatie plaatsen — zone 1", customers[1], "Voltooid", "normaal", -2, 0, "Zone 1 klaar, zone 2 volgt."],
+    ["Sanitair blok A · afwerking", customers[0], "Voltooid", "hoog", -3, 0, "Alles geplaatst en getest. Klant tekende af."],
+    ["Dakisolatie plaatsen · zone 1", customers[1], "Voltooid", "normaal", -2, 0, "Zone 1 klaar, zone 2 volgt."],
     ["Winkelrek montage", customers[2], "in_progress", "normaal", 0, 1, null],
     ["Lekkage opsporen kelder", customers[3], "in_progress", "hoog", 0, 0, null],
-    ["Verlichting sporthal — opmeting", customers[4], "open", "normaal", 1, 2, null],
+    ["Verlichting sporthal · opmeting", customers[4], "open", "normaal", 1, 2, null],
     ["Kraan vervangen keuken", customers[0], "open", "laag", 2, 1, null],
     ["Oplevering dakwerken", customers[1], "open", "hoog", 3, 0, null],
   ];
@@ -118,7 +118,7 @@ function seedDemoData(store, tenant, actor) {
     });
   });
 
-  // Planning — deze + volgende week (werkdagen), 3 medewerkers
+  // Planning · deze + volgende week (werkdagen), 3 medewerkers
   for (let d = -7; d <= 11; d++) {
     const dt = new Date(); dt.setDate(dt.getDate() + d);
     const dow = dt.getDay(); if (dow === 0 || dow === 6) continue;
@@ -133,7 +133,7 @@ function seedDemoData(store, tenant, actor) {
     });
   }
 
-  // Klokregistraties — afgelopen 10 werkdagen
+  // Klokregistraties · afgelopen 10 werkdagen
   for (let d = -14; d <= 0; d++) {
     const dt = new Date(); dt.setDate(dt.getDate() + d);
     const dow = dt.getDay(); if (dow === 0 || dow === 6) continue;

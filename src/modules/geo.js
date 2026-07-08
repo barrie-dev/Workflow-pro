@@ -1,7 +1,7 @@
 "use strict";
 /**
  * Geo-helpers voor locatie-geverifieerd in-/uitklokken ("coördinaten tegen
- * valsspelen"). Puur en testbaar — geen store/HTTP.
+ * valsspelen"). Puur en testbaar · geen store/HTTP.
  *
  * Een werf (venue) kan een `geo: { lat, lng, radiusM }` hebben. Bij het inklokken
  * stuurt het toestel zijn positie mee; we berekenen de afstand en markeren of de

@@ -67,7 +67,7 @@ function normalizeClockIn(store, tenantId, payload, actor, fallbackTime) {
   assertNoCompletedOverlap(store, tenantId, userId, date, instantWindow);
 
   // Locatie-verificatie ("coördinaten tegen valsspelen"): vergelijk de positie van
-  // het toestel met de geofence van de werf. Best-effort — zonder geo of werf-geo
+  // het toestel met de geofence van de werf. Best-effort · zonder geo of werf-geo
   // blokkeert het inklokken niet, maar het resultaat wordt wél vastgelegd.
   const venue = venueId ? store.get("venues", venueId) : null;
   const geoCheck = verifyClockGeo(payload.geo, venue);

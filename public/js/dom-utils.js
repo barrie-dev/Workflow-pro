@@ -6,7 +6,7 @@
   // Null-veilig: veel views delen dezelfde helper terwijl hun doel-element niet
   // in elke shell/route bestaat (bv. queueCount op de loginpagina). Zonder deze
   // guard gooit één ontbrekend element een top-level TypeError die de rest van
-  // main.js afbreekt — dat brak stil o.a. de reset-/activatie-/support-deeplinks.
+  // main.js afbreekt · dat brak stil o.a. de reset-/activatie-/support-deeplinks.
   function setText(id, value) {
     const node = el(id);
     if (node) node.textContent = value;

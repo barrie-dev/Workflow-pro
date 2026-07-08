@@ -9,7 +9,7 @@ function round2(n) {
   return Math.round((Number(n) + Number.EPSILON) * 100) / 100;
 }
 
-// Paaszondag (Computus, Gregoriaans) — basis voor de variabele feestdagen.
+// Paaszondag (Computus, Gregoriaans) · basis voor de variabele feestdagen.
 function easterSunday(year) {
   const a = year % 19, b = Math.floor(year / 100), c = year % 100;
   const d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25);
@@ -68,7 +68,7 @@ function workingDaysBetween(start, end) {
 
 /**
  * Valideer een Belgisch BTW-/ondernemingsnummer (mod 97). Niet-BE nummers
- * worden als 'onbekend' beschouwd (true) — intracommunautaire B2B kan een
+ * worden als 'onbekend' beschouwd (true) · intracommunautaire B2B kan een
  * buitenlands nummer hebben. Geeft false enkel bij een ongeldig BE-nummer.
  */
 function isValidBelgianVat(vat) {

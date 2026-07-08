@@ -3,7 +3,7 @@
 // Een reseller (platform-partner) brengt klanten (tenants) aan en verdient een
 // terugkerende commissie = % van het abonnement (MRR) van die klant. Resellers
 // zien enkel COMMERCIËLE gegevens van hun klanten (plan, status, abonnement,
-// commissie) — nooit operationele/persoonsgegevens (GDPR). Zie [[project-support-access]].
+// commissie) · nooit operationele/persoonsgegevens (GDPR). Zie [[project-support-access]].
 
 // Zelfde MRR-formule als /api/admin/billing (plan × actieve gebruikers).
 const MRR_PLAN = { starter: 9, business: 18, enterprise: 29 };

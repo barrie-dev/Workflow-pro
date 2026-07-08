@@ -2,7 +2,7 @@
 /**
  * Offline-schrijfqueue voor veldwerk (P1). Slaat acties (prikklok in/uit,
  * werkbon afronden) lokaal op in IndexedDB wanneer er geen netwerk is, en speelt
- * ze idempotent af zodra de verbinding terug is — de server dedupliceert op id
+ * ze idempotent af zodra de verbinding terug is · de server dedupliceert op id
  * (mobile/sync → mobileSync.processedIds). Zo verliest een monteur op een werf
  * zonder signaal nooit een actie.
  *
@@ -11,7 +11,7 @@
  *   await wfpOfflineQueue.run(() => api("POST", "/me/clock/in", {}),
  *                             { action: "clock_in", payload: {} });
  * `run` probeert eerst online; faalt dat door netwerk, dan komt de actie in de
- * queue en krijgt de gebruiker "opgeslagen — wordt gesynchroniseerd".
+ * queue en krijgt de gebruiker "opgeslagen · wordt gesynchroniseerd".
  */
 (function () {
   const DB_NAME = "wfp-offline";

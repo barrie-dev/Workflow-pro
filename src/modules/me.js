@@ -1,6 +1,6 @@
 // src/modules/me.js
-// Employee "me" endpoints — enkel eigen data ophalen/wijzigen
-// Manager "team" endpoints — team-gerichte views
+// Employee "me" endpoints · enkel eigen data ophalen/wijzigen
+// Manager "team" endpoints · team-gerichte views
 
 function apiError(message, status = 400) {
   const error = new Error(message);

@@ -46,7 +46,7 @@
     b.setAttribute("role", "status");
     b.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:9999;background:var(--wf-red);color:#fff;font:600 13px/1.4 system-ui,sans-serif;padding:6px 16px;display:flex;align-items:center;justify-content:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,.2)";
     const span = document.createElement("span");
-    span.textContent = `Support-sessie actief — ${s.agent || "supportmedewerker"} (${scope}). Deze sessie wordt geaudit.`;
+    span.textContent = `Support-sessie actief · ${s.agent || "supportmedewerker"} (${scope}). Deze sessie wordt geaudit.`;
     b.appendChild(span);
     const exit = document.createElement("button");
     exit.textContent = "Sessie verlaten";
@@ -271,7 +271,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     });
   }
 
-  // ── Persoonlijke prikklok (topbar) — manager kan zichzelf in-/uitklokken ──
+  // ── Persoonlijke prikklok (topbar) · manager kan zichzelf in-/uitklokken ──
   function wireMgrClock() {
     const btn = document.getElementById("mgrClockBtn");
     if (!btn) return;
@@ -345,39 +345,39 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
 <div class="mgr-kpis">
   <div class="mgr-kpi mgr-kpi-link" data-goto="team" title="Naar team">
     <div class="mgr-kpi-label">Team</div>
-    <div class="mgr-kpi-value">${dash.team ?? "—"}</div>
+    <div class="mgr-kpi-value">${dash.team ?? "-"}</div>
     <div class="mgr-kpi-sub">Medewerkers</div>
   </div>
   <div class="mgr-kpi mgr-kpi-link" data-goto="clocking" title="Naar prikklok">
     <div class="mgr-kpi-label">Ingeklokt</div>
-    <div class="mgr-kpi-value" style="color:var(--wf-green)">${dash.clockedIn ?? "—"}</div>
+    <div class="mgr-kpi-value" style="color:var(--wf-green)">${dash.clockedIn ?? "-"}</div>
     <div class="mgr-kpi-sub">Nu actief</div>
   </div>
   <div class="mgr-kpi mgr-kpi-link" data-goto="leaves" title="Naar verlof">
     <div class="mgr-kpi-label">Afwezig</div>
-    <div class="mgr-kpi-value" style="color:var(--wf-yellow)">${dash.absentToday ?? "—"}</div>
+    <div class="mgr-kpi-value" style="color:var(--wf-yellow)">${dash.absentToday ?? "-"}</div>
     <div class="mgr-kpi-sub">Vandaag</div>
   </div>
   <div class="mgr-kpi mgr-kpi-link" data-goto="leaves" title="Naar verlof">
     <div class="mgr-kpi-label">Verlof</div>
-    <div class="mgr-kpi-value" style="color:var(--wf-yellow)">${dash.pendingLeaves ?? "—"}</div>
+    <div class="mgr-kpi-value" style="color:var(--wf-yellow)">${dash.pendingLeaves ?? "-"}</div>
     <div class="mgr-kpi-sub">Te verwerken</div>
   </div>
   <div class="mgr-kpi mgr-kpi-link" data-goto="expenses" title="Naar onkosten">
     <div class="mgr-kpi-label">Onkosten</div>
-    <div class="mgr-kpi-value" style="color:var(--wf-red)">${dash.pendingExpenses ?? "—"}</div>
+    <div class="mgr-kpi-value" style="color:var(--wf-red)">${dash.pendingExpenses ?? "-"}</div>
     <div class="mgr-kpi-sub">Te verwerken</div>
   </div>
   <div class="mgr-kpi mgr-kpi-link" data-goto="workorders" title="Naar werkbonnen">
     <div class="mgr-kpi-label">Werkbonnen</div>
-    <div class="mgr-kpi-value" style="color:var(--wf-purple)">${dash.openWorkorders ?? "—"}</div>
+    <div class="mgr-kpi-value" style="color:var(--wf-purple)">${dash.openWorkorders ?? "-"}</div>
     <div class="mgr-kpi-sub">Open</div>
   </div>
 </div>
 
 <div class="mgr-card">
   <div class="mgr-card-header">
-    <h3 class="mgr-card-title">Team overzicht — vandaag</h3>
+    <h3 class="mgr-card-title">Team overzicht · vandaag</h3>
     <button class="mgr-btn mgr-btn-primary mgr-btn-sm" id="mgrViewTeam">Volledig team</button>
   </div>
   <div class="mgr-card-body">
@@ -389,7 +389,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
           ${u.clockedIn ? '<span class="mgr-status mgr-status-active" style="font-size:10px;">●&nbsp;Live</span>' : ""}
         </div>
         <div class="mgr-team-card-name">${esc(u.name||u.email)}</div>
-        <div class="mgr-team-card-role">${u.function||u.jobTitle||u.role||"—"}</div>
+        <div class="mgr-team-card-role">${u.function||u.jobTitle||u.role||"-"}</div>
         <div class="mgr-team-card-badges">
           ${u.absent ? '<span style="background:var(--wf-red-l);color:var(--wf-red);border-radius:4px;padding:2px 6px;font-size:10px;">Afwezig</span>' : ""}
           ${u.planned ? '<span style="background:var(--wf-blue-l);color:var(--wf-blue);border-radius:4px;padding:2px 6px;font-size:10px;">Ingepland</span>' : ""}
@@ -425,10 +425,10 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
         <tr>
           <td><span class="mgr-avatar">${(u.name||"?")[0].toUpperCase()}</span></td>
           <td>${esc(u.name||u.email)}</td>
-          <td>${u.function||u.jobTitle||"—"}</td>
+          <td>${u.function||u.jobTitle||"-"}</td>
           <td>${u.clockedIn ? '<span class="mgr-status mgr-status-active">Ingeklokt</span>' : '<span class="mgr-status mgr-status-pending">Niet geklokt</span>'}</td>
-          <td>${u.absent ? "✓" : "—"}</td>
-          <td>${u.planned ? "✓" : "—"}</td>
+          <td>${u.absent ? "✓" : "-"}</td>
+          <td>${u.planned ? "✓" : "-"}</td>
         </tr>`).join("") || '<tr><td colspan="6" class="mgr-empty">Geen teamleden</td></tr>'}
       </tbody>
     </table>
@@ -509,7 +509,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
               ${ds.map(s=>`<div class="mgr-shift-pill" data-id="${s.id}"
                 style="background:${bg};color:${fg};border:1px solid ${fg}30;border-radius:5px;padding:2px 7px;font-size:11px;font-weight:600;margin-bottom:2px;cursor:pointer;white-space:nowrap;">
                 ${esc(s.start||"")}${s.end?`–${esc(s.end)}`:""}
-              </div>`).join("")||`<span style="color:var(--gray-200);font-size:11px;">—</span>`}
+              </div>`).join("")||`<span style="color:var(--gray-200);font-size:11px;">-</span>`}
             </td>`;
           }).join("")}
         </tr>`;}).join("") || `<tr><td colspan="${days.length+1}" class="mgr-empty">Geen shifts</td></tr>`}
@@ -553,7 +553,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
       <div>
         <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Medewerker *</label>
         <select name="userId" required style="width:100%;10px">
-          <option value="">— Kies medewerker —</option>
+          <option value="">- Kies medewerker -</option>
           ${team.map(u => `<option value="${esc(u.id||u.userId||"")}" ${shift?.userId===(u.id||u.userId)?"selected":""}>${esc(u.name||u.email)}</option>`).join("")}
         </select>
       </div>
@@ -681,9 +681,9 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
         ${clocks.map(c => {
           const h = c.clockedIn && c.clockedOut
             ? ((new Date(c.clockedOut)-new Date(c.clockedIn))/3600000).toFixed(1)
-            : "—";
-          const inTime  = c.clockedIn  ? new Date(c.clockedIn).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}) : "—";
-          const outTime = c.clockedOut ? new Date(c.clockedOut).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}) : "—";
+            : "-";
+          const inTime  = c.clockedIn  ? new Date(c.clockedIn).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}) : "-";
+          const outTime = c.clockedOut ? new Date(c.clockedOut).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}) : "-";
           return `<tr>
             <td>${esc(c.userName||c.userId)}</td>
             <td>${inTime}</td>
@@ -822,6 +822,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
       <button class="mgr-btn mgr-btn-sm ${_mgrLeaveTab==="aanvragen"?"mgr-btn-primary":"mgr-btn-secondary"}" id="mgrLeaveTabReq">Aanvragen</button>
       <button class="mgr-btn mgr-btn-sm ${_mgrLeaveTab==="kalender"?"mgr-btn-primary":"mgr-btn-secondary"}" id="mgrLeaveTabCal">Kalender</button>
       <button class="mgr-btn mgr-btn-sm ${_mgrLeaveTab==="saldi"?"mgr-btn-primary":"mgr-btn-secondary"}" id="mgrLeaveTabBal">Saldi</button>
+      <button class="mgr-btn mgr-btn-primary mgr-btn-sm" id="mgrLeaveNew">+ Registreren</button>
     </div>
   </div>
   <div class="mgr-card-body" id="mgrLeaveBody" style="padding:0;"></div>
@@ -830,7 +831,92 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     document.getElementById("mgrLeaveTabReq").addEventListener("click", () => { _mgrLeaveTab = "aanvragen"; renderMgrLeaveBody(); });
     document.getElementById("mgrLeaveTabCal").addEventListener("click", () => { _mgrLeaveTab = "kalender"; renderMgrLeaveBody(); });
     document.getElementById("mgrLeaveTabBal").addEventListener("click", () => { _mgrLeaveTab = "saldi"; renderMgrLeaveBody(); });
+    document.getElementById("mgrLeaveNew").addEventListener("click", openLeaveModal);
     renderMgrLeaveBody();
+  }
+
+  // ── Verlof registreren voor een teamlid (bv. ziektemelding) ──
+  // Registreert de manager het voor iemand anders, dan is het meteen goedgekeurd
+  // (de manager is de goedkeurder); eigen verlof gaat als aanvraag naar de admin.
+  function openLeaveModal() {
+    api("GET", "/manager/dashboard").catch(() => ({ teamList: [] })).then(dash => {
+      const team = dash.teamList || [];
+      let modal = document.getElementById("mgrLeaveModal");
+      if (!modal) {
+        modal = document.createElement("div");
+        modal.id = "mgrLeaveModal";
+        modal.style.cssText = "position:fixed;inset:0;background:rgba(11,19,32,.42);z-index:500;display:flex;align-items:center;justify-content:center;padding:16px";
+        document.body.appendChild(modal);
+      }
+      const today = new Date().toISOString().slice(0, 10);
+      modal.innerHTML = `
+<div style="background:#fff;border-radius:14px;width:440px;max-width:100%;max-height:90vh;overflow-y:auto;padding:24px;box-shadow:0 20px 60px rgba(11,19,32,.2)">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+    <h2 style="font-size:17px;font-weight:600;margin:0;color:var(--gray-900)">Verlof registreren</h2>
+    <button id="lvClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--gray-400)">×</button>
+  </div>
+  <form id="lvForm" style="display:flex;flex-direction:column;gap:14px">
+    <div>
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Medewerker *</label>
+      <select name="userId" required style="width:100%;">
+        <option value="">Kies een teamlid</option>
+        ${team.map(u => `<option value="${esc(u.id)}">${esc(u.name || u.email)}</option>`).join("")}
+      </select>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div>
+        <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Type</label>
+        <select name="type" style="width:100%;">
+          <option value="ziekte">Ziekte</option>
+          <option value="vakantie">Vakantie</option>
+          <option value="overmacht">Overmacht</option>
+          <option value="educatie">Educatief</option>
+          <option value="onbetaald">Onbetaald</option>
+        </select>
+      </div>
+      <div>
+        <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Reden (optioneel)</label>
+        <input name="reason" placeholder="bv. griep" style="width:100%;">
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div>
+        <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Van *</label>
+        <input name="startDate" type="date" required value="${today}" style="width:100%;">
+      </div>
+      <div>
+        <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Tot en met *</label>
+        <input name="endDate" type="date" required value="${today}" style="width:100%;">
+      </div>
+    </div>
+    <div id="lvErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:10px;font-size:13px"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:4px">
+      <button type="button" id="lvCancel" style="padding:8px 16px;border:1px solid var(--line-strong);background:#fff;border-radius:10px;font-size:13px;cursor:pointer">Annuleren</button>
+      <button type="submit" style="padding:8px 20px;background:var(--wf-blue);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">Registreren</button>
+    </div>
+  </form>
+</div>`;
+      const close = () => modal.remove();
+      document.getElementById("lvClose").addEventListener("click", close);
+      document.getElementById("lvCancel").addEventListener("click", close);
+      modal.addEventListener("click", e => { if (e.target === modal) close(); });
+      document.getElementById("lvForm").addEventListener("submit", async e => {
+        e.preventDefault();
+        const body = Object.fromEntries(new FormData(e.target).entries());
+        const errEl = document.getElementById("lvErr");
+        const btn = e.target.querySelector("[type=submit]");
+        btn.disabled = true; btn.textContent = "Bezig…";
+        try {
+          await api("POST", "/leaves", body);
+          window.showToast && window.showToast("Verlof geregistreerd en goedgekeurd", "success");
+          close();
+          renderLeaves();
+        } catch (err) {
+          errEl.textContent = err.message; errEl.style.display = "";
+          btn.disabled = false; btn.textContent = "Registreren";
+        }
+      });
+    });
   }
 
   async function renderMgrLeaveBody() {
@@ -860,15 +946,15 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
             ${leaves.map(l => `
             <tr>
               <td>${esc(l.userName||l.userId)}</td>
-              <td>${esc(l.type||"—")}</td>
+              <td>${esc(l.type||"-")}</td>
               <td>${esc(l.startDate)}</td>
               <td>${esc(l.endDate)}</td>
-              <td style="font-size:12px;color:var(--gray-500);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(l.reason||"")}">${esc(l.reason||"—")}</td>
+              <td style="font-size:12px;color:var(--gray-500);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(l.reason||"")}">${esc(l.reason||"-")}</td>
               <td><span class="mgr-status mgr-status-${l.status}">${esc(l.status)}</span></td>
               <td>${l.status==="aangevraagd" ? `
                 <button class="mgr-btn mgr-btn-success mgr-btn-sm mgr-leave-approve" data-id="${esc(l.id)}" data-dec="goedgekeurd">Goed</button>
                 <button class="mgr-btn mgr-btn-danger mgr-btn-sm mgr-leave-approve" data-id="${esc(l.id)}" data-dec="geweigerd">Weigeren</button>
-              ` : `<span style="font-size:11px;color:var(--gray-400);">${l.reviewNote ? `${esc(l.reviewNote)}` : "—"}</span>`}</td>
+              ` : `<span style="font-size:11px;color:var(--gray-400);">${l.reviewNote ? `${esc(l.reviewNote)}` : "-"}</span>`}</td>
             </tr>`).join("") || '<tr><td colspan="7" class="mgr-empty">Geen aanvragen</td></tr>'}
           </tbody>
         </table>
@@ -1005,7 +1091,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     ${esc(leave.userName||leave.userId)} · ${esc(leave.type||"verlof")} · ${leave.startDate} t/m ${leave.endDate}
   </div>
   <div style="margin-bottom:16px;">
-    <label style="font-size:12px;font-weight:600;color:var(--gray-700);display:block;margin-bottom:4px;">Opmerking ${isApprove?"(optioneel)":"(optioneel — geeft feedback aan medewerker)"}</label>
+    <label style="font-size:12px;font-weight:600;color:var(--gray-700);display:block;margin-bottom:4px;">Opmerking ${isApprove?"(optioneel)":"(optioneel · geeft feedback aan medewerker)"}</label>
     <textarea id="mgrLeaveNote" rows="3" placeholder="Voeg een opmerking toe…"
       style="width:100%;resize:vertical;box-sizing:border-box"></textarea>
   </div>
@@ -1077,13 +1163,13 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
       return rows.map(e => `<tr>
         <td>${esc(e.userName||e.userId)}</td>
         <td>${esc(e.date)}</td>
-        <td>${esc(e.category||"—")}</td>
+        <td>${esc(e.category||"-")}</td>
         <td style="font-weight:600;">€ ${Number(e.amount||0).toFixed(2)}</td>
         <td><span class="mgr-status mgr-status-${e.status}">${esc(e.status)}</span>${e.reviewNote?`<div style="font-size:11px;color:var(--gray-500);margin-top:2px;">${esc(e.reviewNote.slice(0,30))}${e.reviewNote.length>30?"…":""}</div>`:""}</td>
         <td style="white-space:nowrap;">${["pending","ingediend"].includes(e.status)?`
           <button class="mgr-btn mgr-btn-success mgr-btn-sm mgr-exp-review" data-id="${e.id}" data-dec="goedgekeurd" data-name="${esc(e.userName||e.userId)}" data-amount="${e.amount}" data-cat="${esc(e.category||"")}">Goed</button>
           <button class="mgr-btn mgr-btn-danger  mgr-btn-sm mgr-exp-review" data-id="${e.id}" data-dec="geweigerd"  data-name="${esc(e.userName||e.userId)}" data-amount="${e.amount}" data-cat="${esc(e.category||"")}">Weigeren</button>
-        `:"—"}</td>
+        `:"-"}</td>
       </tr>`).join("") || '<tr><td colspan="6" class="mgr-empty">Geen onkosten</td></tr>';
     }
 
@@ -1201,11 +1287,11 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     if (!rows.length) return '<tr><td colspan="7" class="mgr-empty">Geen werkbonnen</td></tr>';
     return rows.map(w => `<tr class="mgr-wo-row" data-id="${esc(w.id)}" style="cursor:pointer;">
       <td style="font-family:monospace;font-weight:600">${w.number||w.id.slice(-4)}</td>
-      <td><strong>${esc(w.title||"—")}</strong>${w.clientName ? `<br><span style="font-size:11px;color:var(--gray-500)">${esc(w.clientName)}</span>` : ""}</td>
-      <td>${esc(w.userName||w.userId||"—")}</td>
-      <td><span class="mgr-status ${statusClass[w.status]||"mgr-status-pending"}">${esc(w.status||"—")}</span></td>
-      <td><span style="font-size:11px;font-weight:600;color:${prioColor[w.priority]||"var(--gray-400)"}">${esc(w.priority||"—")}</span></td>
-      <td>${w.scheduledDate||w.createdAt?.slice(0,10)||"—"}</td>
+      <td><strong>${esc(w.title||"-")}</strong>${w.clientName ? `<br><span style="font-size:11px;color:var(--gray-500)">${esc(w.clientName)}</span>` : ""}</td>
+      <td>${esc(w.userName||w.userId||"-")}</td>
+      <td><span class="mgr-status ${statusClass[w.status]||"mgr-status-pending"}">${esc(w.status||"-")}</span></td>
+      <td><span style="font-size:11px;font-weight:600;color:${prioColor[w.priority]||"var(--gray-400)"}">${esc(w.priority||"-")}</span></td>
+      <td>${w.scheduledDate||w.createdAt?.slice(0,10)||"-"}</td>
       <td style="white-space:nowrap">
         <button class="mgr-btn mgr-btn-secondary mgr-btn-sm wo-detail" data-id="${esc(w.id)}">Detail</button>
         ${w.status !== "done" ? `<button class="mgr-btn mgr-btn-success mgr-btn-sm wo-done" data-id="${esc(w.id)}">Voltooid</button>` : ""}
@@ -1251,34 +1337,34 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
   <div style="padding:20px 24px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;justify-content:space-between">
     <div>
       <div style="font-size:11px;color:var(--gray-400);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Werkbon #${esc(wo.number||wo.id.slice(-6))}</div>
-      <h2 style="font-size:17px;font-weight:600;margin:4px 0 0;color:var(--gray-900)">${esc(wo.title||"—")}</h2>
+      <h2 style="font-size:17px;font-weight:600;margin:4px 0 0;color:var(--gray-900)">${esc(wo.title||"-")}</h2>
     </div>
     <button id="woDetailClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--gray-400);padding:4px 8px">×</button>
   </div>
   <div style="padding:20px 24px;display:grid;grid-template-columns:1fr 1fr;gap:16px">
     <div>
       <div style="font-size:11px;color:var(--gray-400);font-weight:600;margin-bottom:4px">STATUS</div>
-      <span class="mgr-status ${statusClass[wo.status]||"mgr-status-pending"}">${esc(wo.status||"—")}</span>
+      <span class="mgr-status ${statusClass[wo.status]||"mgr-status-pending"}">${esc(wo.status||"-")}</span>
     </div>
     <div>
       <div style="font-size:11px;color:var(--gray-400);font-weight:600;margin-bottom:4px">PRIORITEIT</div>
-      <span style="font-size:13px;font-weight:600;color:${prioColor[wo.priority]||"var(--gray-400)"}">${esc(wo.priority||"—")}</span>
+      <span style="font-size:13px;font-weight:600;color:${prioColor[wo.priority]||"var(--gray-400)"}">${esc(wo.priority||"-")}</span>
     </div>
     <div>
       <div style="font-size:11px;color:var(--gray-400);font-weight:600;margin-bottom:4px">MEDEWERKER</div>
-      <span style="font-size:13px">${esc(wo.userName||wo.userId||"—")}</span>
+      <span style="font-size:13px">${esc(wo.userName||wo.userId||"-")}</span>
     </div>
     <div>
       <div style="font-size:11px;color:var(--gray-400);font-weight:600;margin-bottom:4px">KLANT</div>
-      <span style="font-size:13px">${esc(wo.clientName||"—")}</span>
+      <span style="font-size:13px">${esc(wo.clientName||"-")}</span>
     </div>
     <div>
       <div style="font-size:11px;color:var(--gray-400);font-weight:600;margin-bottom:4px">GEPLAND OP</div>
-      <span style="font-size:13px">${esc(wo.scheduledDate||"—")}</span>
+      <span style="font-size:13px">${esc(wo.scheduledDate||"-")}</span>
     </div>
     <div>
       <div style="font-size:11px;color:var(--gray-400);font-weight:600;margin-bottom:4px">AANGEMAAKT</div>
-      <span style="font-size:13px">${wo.createdAt ? new Date(wo.createdAt).toLocaleDateString("nl-BE") : "—"}</span>
+      <span style="font-size:13px">${wo.createdAt ? new Date(wo.createdAt).toLocaleDateString("nl-BE") : "-"}</span>
     </div>
     ${wo.location ? `<div style="grid-column:1/-1"><div style="font-size:11px;color:var(--gray-400);font-weight:600;margin-bottom:4px">LOCATIE</div><span style="font-size:13px">${esc(wo.location)}</span></div>` : ""}
     ${wo.description ? `<div style="grid-column:1/-1"><div style="font-size:11px;color:var(--gray-400);font-weight:600;margin-bottom:4px">BESCHRIJVING</div><p style="font-size:13px;color:var(--gray-700);margin:0;white-space:pre-wrap;background:var(--gray-50);border-radius:8px;padding:10px">${esc(wo.description)}</p></div>` : ""}
@@ -1318,7 +1404,10 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
 
   // ── Werkbon aanmaken (manager) ─────────────────────────────
   function openWoModal() {
-    api("GET", "/manager/dashboard").then(dash => {
+    // Modal opent ALTIJD meteen; het team laadt op de achtergrond in de
+    // dropdown. Zo blokkeert een trage/falende dashboard-fetch nooit het
+    // aanmaken zelf (werkbon zonder toewijzing kan altijd).
+    api("GET", "/manager/dashboard").catch(() => ({ teamList: [] })).then(dash => {
       const team = dash.teamList || [];
       let modal = document.getElementById("mgrWoModal");
       if (!modal) {
@@ -1342,7 +1431,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
       <div>
         <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Medewerker</label>
         <select name="userId" style="width:100%;10px">
-          <option value="">— Niet toegewezen —</option>
+          <option value="">- Niet toegewezen -</option>
           ${team.map(u => `<option value="${esc(u.id)}">${esc(u.name||u.email)}</option>`).join("")}
         </select>
       </div>
@@ -1501,17 +1590,17 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     <h3 class="mgr-card-title">Voertuigen <span style="background:var(--wf-blue-l);color:var(--wf-blue-d);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${vehicles.length}</span></h3>
     <button class="mgr-btn mgr-btn-primary mgr-btn-sm" id="mgrNewVehicle">+ Voertuig</button>
   </div>
-  ${vehicles.length === 0 ? `<div class="mgr-card-body"><div class="mgr-empty">Nog geen voertuigen — klik "+ Voertuig" om te starten</div></div>` : `
+  ${vehicles.length === 0 ? `<div class="mgr-card-body"><div class="mgr-empty">Nog geen voertuigen · klik "+ Voertuig" om te starten</div></div>` : `
   <div class="mgr-card-body mgr-table-wrap">
     <table class="mgr-table">
       <thead><tr><th>Naam / Kenteken</th><th>Merk / Model</th><th>KM-stand</th><th>Status</th><th>Volgende service</th><th>Acties</th></tr></thead>
       <tbody>
         ${vehicles.map(v => `<tr>
-          <td><strong>${esc(v.name||v.plate||"—")}</strong><br><span style="font-size:11px;color:var(--gray-400);font-family:monospace">${esc(v.plate||"")}</span></td>
+          <td><strong>${esc(v.name||v.plate||"-")}</strong><br><span style="font-size:11px;color:var(--gray-400);font-family:monospace">${esc(v.plate||"")}</span></td>
           <td>${esc(v.brand||"")} ${esc(v.model||"")}</td>
-          <td>${v.mileage ? Number(v.mileage).toLocaleString("nl-BE") + " km" : "—"}</td>
-          <td><span class="mgr-status ${statusCss[v.status]||"mgr-status-pending"}">${esc(v.status||"—")}</span></td>
-          <td>${v.nextService ? new Date(v.nextService).toLocaleDateString("nl-BE") : "—"}</td>
+          <td>${v.mileage ? Number(v.mileage).toLocaleString("nl-BE") + " km" : "-"}</td>
+          <td><span class="mgr-status ${statusCss[v.status]||"mgr-status-pending"}">${esc(v.status||"-")}</span></td>
+          <td>${v.nextService ? new Date(v.nextService).toLocaleDateString("nl-BE") : "-"}</td>
           <td style="white-space:nowrap;">
             <button class="mgr-btn mgr-btn-secondary mgr-btn-sm mgr-veh-edit" data-id="${v.id}" style="margin-right:4px;"></button>
             <button class="mgr-btn mgr-btn-secondary mgr-btn-sm mgr-veh-mileage" data-id="${v.id}" data-name="${esc(v.name||v.plate||"")}" data-mileage="${v.mileage||0}" title="KM loggen">KM</button>
@@ -1788,8 +1877,8 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
         .slice(0,5).map(w => `
       <div style="padding:7px 0;border-bottom:1px solid var(--gray-50);display:flex;align-items:center;gap:8px">
         <span style="font-size:10px;font-weight:700;color:${w.priority==="hoog"?"var(--wf-red)":"var(--gray-400)"};background:${w.priority==="hoog"?"var(--wf-red-l)":"var(--gray-50)"};padding:2px 6px;border-radius:4px">${esc(w.priority||"normaal")}</span>
-        <div style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px">${esc(w.title||"—")}</div>
-        <span style="font-size:11px;color:var(--gray-400);flex-shrink:0">${esc(w.userName||w.userId||"—")}</span>
+        <div style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px">${esc(w.title||"-")}</div>
+        <span style="font-size:11px;color:var(--gray-400);flex-shrink:0">${esc(w.userName||w.userId||"-")}</span>
       </div>`).join("") || '<div style="padding:12px 0;font-size:12px;color:var(--gray-400)">Geen open werkbonnen</div>'}
     </div>
   </div>
@@ -1799,7 +1888,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
       ${leaves.filter(l => l.status === "aangevraagd").slice(0,5).map(l => `
       <div style="padding:7px 0;border-bottom:1px solid var(--gray-50);display:flex;align-items:center;justify-content:space-between;gap:8px">
         <div style="flex:1;min-width:0">
-          <div style="font-size:12.5px;font-weight:600;color:var(--gray-900);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.userName||l.userId||"—")}</div>
+          <div style="font-size:12.5px;font-weight:600;color:var(--gray-900);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.userName||l.userId||"-")}</div>
           <div style="font-size:11px;color:var(--gray-400)">${esc(l.type||"Verlof")} · ${l.startDate||""}${l.endDate&&l.endDate!==l.startDate?" → "+l.endDate:""}</div>
         </div>
         <div style="display:flex;gap:5px">

@@ -133,7 +133,7 @@ function selectPlan(store, tenant, planKey, actor) {
   const bundle = getBundle(store, key);
   if (!bundle && !PLAN_PACKAGES[key]) { const e = new Error("Onbekend plan"); e.status = 400; throw e; }
   const onRequest = (bundle && bundle.custom) || key === "enterprise" || !pricingFor(key);
-  if (onRequest) { const e = new Error("Dit pakket verloopt via een offerte op maat — neem contact op."); e.status = 400; throw e; }
+  if (onRequest) { const e = new Error("Dit pakket verloopt via een offerte op maat · neem contact op."); e.status = 400; throw e; }
   const next = store.updateTenant(tenant.id, { plan: key });
   store.audit({ actor: actor.email, tenantId: tenant.id, action: "plan_selected", area: "billing", detail: key });
   return billingSummary(next);
@@ -160,7 +160,7 @@ function billingQuote(store, tenant) {
   return {
     tenantId: tenant.id,
     planKey,
-    planLabel: labelSource.label || tenant.plan || "—",
+    planLabel: labelSource.label || tenant.plan || "-",
     seats,
     includedSeats,
     extraSeats,

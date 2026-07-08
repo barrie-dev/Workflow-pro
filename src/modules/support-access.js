@@ -1,4 +1,4 @@
-// GDPR support-toegang — jaarlijkse mededeling + auto-renew.
+// GDPR support-toegang · jaarlijkse mededeling + auto-renew.
 //
 // Zolang een tenant support-toegang toestaat met autoRenew, blijft die staan,
 // maar de klant krijgt jaarlijks een informatieve mededeling ("staat nog steeds

@@ -1,6 +1,6 @@
 "use strict";
 /**
- * CIAW / Checkin@Work — verplichte aanwezigheidsregistratie op Belgische werven
+ * CIAW / Checkin@Work · verplichte aanwezigheidsregistratie op Belgische werven
  * (RSZ/ONSS). Werkt als guarded integratie naar het analoge patroon van Peppol:
  * zonder geconfigureerde provider valt alles terug op een mock zodat de flow
  * lokaal werkt; met echte credentials zou de aangifte naar de RSZ-webservice gaan.
@@ -118,7 +118,7 @@ async function submitCheckin({ config = {}, tenant, clock, user, venue, action }
 /**
  * Aanwezigheidsregister voor een werfcontrole: wie is er NU ingeklokt, met hun
  * CIAW-aangiftestatus en INSZ-geldigheid. Puur + testbaar. Toont enkel lopende
- * registraties (nog niet uitgeklokt) — het bewijs dat een inspecteur op de werf wil.
+ * registraties (nog niet uitgeklokt) · het bewijs dat een inspecteur op de werf wil.
  */
 function buildPresenceRegister({ clocks = [], users = [], venues = [], now = new Date() }) {
   const userById = new Map(users.map(u => [u.id, u]));
@@ -135,7 +135,7 @@ function buildPresenceRegister({ clocks = [], users = [], venues = [], now = new
         insz: insz || null,
         inszValid: validInsz(insz),
         venueId: c.venueId || null,
-        venue: c.venueId ? (venueById.get(c.venueId) || c.venueId) : "—",
+        venue: c.venueId ? (venueById.get(c.venueId) || c.venueId) : "-",
         since: c.date && c.clockIn ? `${c.date}T${c.clockIn}` : (c.date || null),
         ciawStatus: ciaw.status || "none",
         ciawReference: ciaw.reference || "",

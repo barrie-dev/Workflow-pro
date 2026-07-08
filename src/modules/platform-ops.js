@@ -93,7 +93,7 @@ function resellerPayouts(store, commissionOverview) {
 }
 
 // Security-center: MFA-status van admins, vergrendelde accounts, support-toegang.
-// Geen PII-inhoud — enkel security-metadata die de operator nodig heeft.
+// Geen PII-inhoud · enkel security-metadata die de operator nodig heeft.
 function securityCenter(store, mfaRisk, now = Date.now()) {
   const users = store.data.users || [];
   const mfa = mfaRisk(users);

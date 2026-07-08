@@ -1,6 +1,6 @@
 "use strict";
 /**
- * Bundels (pakketten) — door de superadmin samen te stellen sets van modules
+ * Bundels (pakketten) · door de superadmin samen te stellen sets van modules
  * en submodules. Opgeslagen in de 'bundles'-collectie (platform-niveau,
  * tenantId null). Een tenant verwijst via `tenant.plan` naar een bundle-key.
  *

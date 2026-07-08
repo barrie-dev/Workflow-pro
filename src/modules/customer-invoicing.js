@@ -1,6 +1,6 @@
 "use strict";
 /**
- * Klantfacturatie — één plek voor het opbouwen van een klantfactuur, zodat het
+ * Klantfacturatie · één plek voor het opbouwen van een klantfactuur, zodat het
  * handmatige facturatiescherm, de offerte→factuur-conversie en de nieuwe
  * werkbon→factuur-knop exact dezelfde logica delen (nummering, btw-regime,
  * cent-afronding, gestructureerde mededeling).
@@ -10,8 +10,8 @@ const { round2, structuredCommunication } = require("./be-locale");
 
 // Btw-regimes met verlegging (0% btw) + de wettelijk verplichte vermelding.
 const REGIME_NOTES = {
-  intracom: "Btw verlegd — intracommunautaire handeling (art. 21 §2 / art. 39bis W.Btw).",
-  medecontractant: "Btw verlegd — medecontractant (KB nr. 1, art. 20 W.Btw).",
+  intracom: "Btw verlegd · intracommunautaire handeling (art. 21 §2 / art. 39bis W.Btw).",
+  medecontractant: "Btw verlegd · medecontractant (KB nr. 1, art. 20 W.Btw).",
 };
 
 function nextInvoiceNumber(store, tenantId) {
@@ -67,7 +67,7 @@ function createCustomerInvoice(store, tenant, user, payload) {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   });
-  store.audit({ actor: user.email, tenantId: tenant.id, action: "invoice_created", area: "facturen", detail: `${number} — €${total.toFixed(2)}` });
+  store.audit({ actor: user.email, tenantId: tenant.id, action: "invoice_created", area: "facturen", detail: `${number} · €${total.toFixed(2)}` });
   return invoice;
 }
 
@@ -77,7 +77,7 @@ function createCustomerInvoice(store, tenant, user, payload) {
 function workorderInvoicePayload(store, tenant, workorder, extraLines = []) {
   const defaultRate = Number(tenant.defaultHourlyRate || (tenant.billingOps && tenant.billingOps.defaultHourlyRate) || 0);
   const title = workorder.title || `Werkbon ${workorder.number || workorder.id}`;
-  const label = `${workorder.number ? workorder.number + " — " : ""}${title}`;
+  const label = `${workorder.number ? workorder.number + " · " : ""}${title}`;
   const lines = [];
   const fixed = workorder.billableAmount ?? workorder.fixedPrice;
   if (fixed != null && Number(fixed) > 0) {
@@ -85,11 +85,11 @@ function workorderInvoicePayload(store, tenant, workorder, extraLines = []) {
   } else {
     const hours = Number(workorder.billableHours ?? workorder.clockedHours ?? workorder.hours ?? 0);
     const rate = Number(workorder.hourlyRate || defaultRate || 0);
-    if (hours > 0 && rate > 0) lines.push({ description: `${label} — uren`, qty: hours, unitPrice: rate, vatRate: 21 });
+    if (hours > 0 && rate > 0) lines.push({ description: `${label} · uren`, qty: hours, unitPrice: rate, vatRate: 21 });
   }
   // Materiaal/extra lijnen die op de werkbon zelf zijn geregistreerd (het
   // natuurlijke punt: verbruikt materiaal hoort bij de job) + eventuele ad-hoc
-  // lijnen uit het request — stromen als aparte factuurregels mee naast de uren.
+  // lijnen uit het request · stromen als aparte factuurregels mee naast de uren.
   const materials = Array.isArray(workorder.materials) ? workorder.materials : [];
   for (const extra of [...materials, ...(Array.isArray(extraLines) ? extraLines : [])]) {
     const qty = Number(extra.qty ?? 1), unitPrice = Number(extra.unitPrice ?? 0);

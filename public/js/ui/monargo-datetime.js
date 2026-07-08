@@ -1,6 +1,6 @@
 "use strict";
 /**
- * Monargo One — moderne datum/tijd-kiezer (Editorial 2026).
+ * Monargo One · moderne datum/tijd-kiezer (Editorial 2026).
  *
  * Progressive enhancement: vervangt de lelijke, browser-eigen popups van
  * <input type="date|time|datetime-local"> door één consistente, licht-getinte
@@ -14,7 +14,7 @@
  *   datetime-local  -> "YYYY-MM-DDTHH:MM"
  *
  * Werkt in alle shells: hangt via event-delegation aan document, dus ook aan
- * inputs die later dynamisch gerenderd worden — geen registratie per scherm nodig.
+ * inputs die later dynamisch gerenderd worden · geen registratie per scherm nodig.
  */
 (function () {
   if (window.__monargoDT) return;
@@ -198,7 +198,7 @@
   }
 
   // ── Sleep-/tikinteractie op de wijzerplaat ──────────────────────────────────
-  var drag=null; // {rect} — face-rect vastgelegd bij pointerdown (popover beweegt niet)
+  var drag=null; // {rect} · face-rect vastgelegd bij pointerdown (popover beweegt niet)
   function faceValue(clientX,clientY){
     if(!drag||!current) return;
     var r=drag.rect, cx=r.left+r.width/2, cy=r.top+r.height/2;

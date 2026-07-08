@@ -79,7 +79,7 @@
       <td style="padding:10px">${eur(r.mrr)}</td>
       <td style="padding:10px">${r.commissionPct}%</td>
       <td style="padding:10px 20px;font-weight:600;color:var(--wf-green)">${eur(r.commission)}</td>
-    </tr>`).join("") || `<tr><td colspan="6" style="padding:30px;text-align:center;color:var(--gray-400)">Nog geen klanten — maak je eerste klant aan hierboven.</td></tr>`}</tbody>
+    </tr>`).join("") || `<tr><td colspan="6" style="padding:30px;text-align:center;color:var(--gray-400)">Nog geen klanten · maak je eerste klant aan hierboven.</td></tr>`}</tbody>
   </table></div>
 </div>`;
 

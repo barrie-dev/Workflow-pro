@@ -79,7 +79,7 @@ function sanitizeEmployeePermissions(store, tenant, role, requested) {
     if (readOnly) scoped.push(`read:${key}`);
     else scoped.push(role === "employee" ? `own:${key}` : key);
   }
-  // Altijd-rechten (bv. prikklok) forceren — iedereen kan in-/uitprikken ongeacht functie.
+  // Altijd-rechten (bv. prikklok) forceren · iedereen kan in-/uitprikken ongeacht functie.
   const always = ALWAYS_PERMISSIONS.map(k => (role === "employee" ? `own:${k}` : k));
   return [...new Set([...keptBase, ...scoped, ...always])];
 }
@@ -135,7 +135,7 @@ function sendPasswordResetMail(user, link) {
   const html = `<p>Hallo ${user.name || ""},</p>
     <p>Er is een wachtwoord-reset aangevraagd voor je Monargo One-account. Stel binnen 1 uur een nieuw wachtwoord in:</p>
     <p><a href="${link}" style="display:inline-block;background:#0071e3;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:600">Nieuw wachtwoord instellen</a></p>
-    <p style="font-size:12px;color:#64748b">Heb je dit niet aangevraagd? Negeer deze mail — je wachtwoord blijft ongewijzigd.<br>Werkt de knop niet? Open deze link: ${link}</p>`;
+    <p style="font-size:12px;color:#64748b">Heb je dit niet aangevraagd? Negeer deze mail · je wachtwoord blijft ongewijzigd.<br>Werkt de knop niet? Open deze link: ${link}</p>`;
   Promise.resolve(sendMail({ to: user.email, subject: "Reset je Monargo One-wachtwoord", html, text: `Stel een nieuw wachtwoord in (1 uur geldig): ${link}` })).catch(() => {});
 }
 
@@ -326,7 +326,7 @@ function publicQuotePage() {
   // met /api/public/quote/:token. Geen login, geen externe assets.
   return `<!DOCTYPE html><html lang="nl"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Offerte — Monargo One</title>
+<title>Offerte · Monargo One</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Inter,system-ui,Arial,sans-serif;background:#F0F4F8;color:#0F172A;padding:24px;line-height:1.5}
@@ -366,13 +366,13 @@ async function load(){
     const done = q.status==="aanvaard"||q.status==="geweigerd";
     const expired = q.status==="verlopen";
     document.getElementById("body").innerHTML=
-      '<div class="meta"><span>Datum: '+esc(q.quoteDate||"—")+'</span><span>Geldig tot: '+esc(q.validUntil||"—")+'</span></div>'+
+      '<div class="meta"><span>Datum: '+esc(q.quoteDate||"-")+'</span><span>Geldig tot: '+esc(q.validUntil||"-")+'</span></div>'+
       '<table><thead><tr><th>Omschrijving</th><th class="num">Aantal</th><th class="num">Prijs</th><th class="num">Btw</th><th class="num">Totaal</th></tr></thead><tbody>'+
       (q.lines||[]).map(l=>'<tr><td>'+esc(l.description)+'</td><td class="num">'+esc(l.qty)+'</td><td class="num">'+eur(l.unitPrice)+'</td><td class="num">'+esc(l.vatRate)+'%</td><td class="num">'+eur(l.lineTotal)+'</td></tr>').join("")+
       '</tbody></table>'+
       '<div class="tot"><div class="row"><span>Subtotaal</span><span>'+eur(q.subtotal)+'</span></div><div class="row"><span>Btw</span><span>'+eur(q.vatAmount)+'</span></div><div class="row grand"><span>Totaal</span><span>'+eur(q.total)+'</span></div></div>'+
       (q.notes?'<p style="font-size:13px;color:#64748B;margin-top:14px">'+esc(q.notes)+'</p>':"")+
-      (done? '<div class="banner '+(q.status==="aanvaard"?"ok":"warn")+'">'+(q.status==="aanvaard"?"✅ Offerte aanvaard — bedankt!":"Offerte geweigerd")+'</div>'
+      (done? '<div class="banner '+(q.status==="aanvaard"?"ok":"warn")+'">'+(q.status==="aanvaard"?"✅ Offerte aanvaard · bedankt!":"Offerte geweigerd")+'</div>'
         : expired? '<div class="banner warn">Deze offerte is verlopen. Neem contact op voor een nieuwe.</div>'
         : '<div class="actions"><button class="accept" onclick="decide(\\'accept\\')">✓ Offerte aanvaarden</button><button class="reject" onclick="decide(\\'reject\\')">Weigeren</button></div>');
   }catch(e){ document.getElementById("body").innerHTML='<div class="muted">Er ging iets mis. Probeer later opnieuw.</div>'; }
@@ -390,7 +390,7 @@ load();
 function publicPayPage() {
   // Mock-betaalpagina (geen echte Stripe). Toont factuur + "Betaal nu (demo)".
   return `<!DOCTYPE html><html lang="nl"><head><meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1"><title>Betaling — Monargo One</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>Betaling · Monargo One</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}body{font-family:Inter,system-ui,Arial,sans-serif;background:#F0F4F8;color:#0F172A;padding:24px;line-height:1.5}
 .wrap{max-width:480px;margin:0 auto}.card{background:#fff;border:1px solid #E2E8F0;border-radius:14px;box-shadow:0 4px 16px rgba(0,0,0,.05);overflow:hidden}
@@ -416,10 +416,10 @@ async function load(){
     const inv=d.invoice;
     document.getElementById("coName").textContent=d.company.name||"Betaling";
     document.getElementById("coNr").textContent="Factuur "+esc(inv.number);
-    if(inv.status==="paid"){ document.getElementById("body").innerHTML='<div class="banner">✅ Deze factuur is reeds betaald — bedankt!</div>'; return; }
+    if(inv.status==="paid"){ document.getElementById("body").innerHTML='<div class="banner">✅ Deze factuur is reeds betaald · bedankt!</div>'; return; }
     document.getElementById("body").innerHTML=
       '<div class="amount">'+eur(inv.total)+'</div><div class="muted">Factuur '+esc(inv.number)+' · '+esc(inv.customerName||"")+'</div>'+
-      '<button onclick="pay()">Betaal nu</button><div class="demo">Demo-betaling — markeert de factuur als betaald.</div>';
+      '<button onclick="pay()">Betaal nu</button><div class="demo">Demo-betaling · markeert de factuur als betaald.</div>';
   }catch(e){ document.getElementById("body").innerHTML='<div class="muted">Er ging iets mis.</div>'; }
 }
 async function pay(){
@@ -566,7 +566,7 @@ http.createServer(async (req, res) => {
       return;
     }
 
-    // Publieke platform-aankondiging / onderhoudsbanner — getoond aan alle shells.
+    // Publieke platform-aankondiging / onderhoudsbanner · getoond aan alle shells.
     if (url.pathname === "/api/announcement" && req.method === "GET") {
       const a = loadPlatformConfig(store).announcement || {};
       sendJson(res, 200, { ok: true, announcement: a.active ? { active: true, level: a.level || "info", message: a.message || "" } : { active: false } });
@@ -749,7 +749,7 @@ http.createServer(async (req, res) => {
       // Bundel: gekozen plan moet bestaan en niet 'op aanvraag' (custom = prijs op aanvraag → contact).
       const bundle = getBundle(store, body.plan);
       if (!bundle || bundle.active === false) return sendJson(res, 400, { ok: false, error: "Kies een geldig pakket" });
-      if (bundle.custom) return sendJson(res, 400, { ok: false, error: "Dit pakket is op aanvraag — neem contact op." });
+      if (bundle.custom) return sendJson(res, 400, { ok: false, error: "Dit pakket is op aanvraag · neem contact op." });
       const now = new Date().toISOString();
       // KBO-gegevens meteen in het facturatieprofiel zetten (volledige onboarding-start).
       const invoiceProfile = kbo
@@ -774,7 +774,7 @@ http.createServer(async (req, res) => {
         mfaEnabled: false, mfaEnforced: false
       });
       store.audit({ actor: email, tenantId: tenant.id, action: "self_signup", area: "auth", detail: `${companyName} · ${bundle.key}` });
-      sendJson(res, 201, { ok: true, pending: true, message: "Account aangemaakt — check je e-mail om je wachtwoord in te stellen.", activationLink });
+      sendJson(res, 201, { ok: true, pending: true, message: "Account aangemaakt · check je e-mail om je wachtwoord in te stellen.", activationLink });
       return;
     }
 
@@ -801,7 +801,7 @@ http.createServer(async (req, res) => {
         mfaEnabled: false, mfaEnforced: false, active: false, createdAt: now
       });
       store.audit({ actor: email, tenantId: null, action: "reseller_applied", area: "resellers", detail: name });
-      sendJson(res, 201, { ok: true, message: "Aanvraag ontvangen — je account wordt na goedkeuring geactiveerd." });
+      sendJson(res, 201, { ok: true, message: "Aanvraag ontvangen · je account wordt na goedkeuring geactiveerd." });
       return;
     }
 
@@ -1062,7 +1062,7 @@ http.createServer(async (req, res) => {
       for (const t of store.data.tenants || []) tenantName[t.id] = t.name || t.id;
       const rows = (store.data.integrations || []).map(i => ({
         tenantId: i.tenantId, tenant: tenantName[i.tenantId] || i.tenantId,
-        provider: i.provider, status: i.status || "—",
+        provider: i.provider, status: i.status || "-",
         hasSecret: !!i.encryptedSecret, lastSyncAt: i.lastSyncAt || null,
       })).sort((a, b) => String(a.tenant).localeCompare(String(b.tenant)));
       sendJson(res, 200, { ok: true, rows, total: rows.length, connected: rows.filter(r => r.hasSecret).length });
@@ -1528,7 +1528,7 @@ http.createServer(async (req, res) => {
       return;
     }
 
-    // ── Support: tenant-gebruikers om over te nemen — ALLEEN met klant-consent ──
+    // ── Support: tenant-gebruikers om over te nemen · ALLEEN met klant-consent ──
     // Persoonsgegevens van medewerkers zijn enkel zichtbaar als de klant
     // support-toegang toestond (GDPR: toegang gekoppeld aan toestemming).
     const adminSupportUsersMatch = url.pathname.match(/^\/api\/admin\/support\/([^/]+)\/users$/);
@@ -1676,7 +1676,7 @@ http.createServer(async (req, res) => {
       const target = store.getUserById(adminUserMatch[1]);
       // De beschermde hoofd-superadmin (god) is onaantastbaar; platform-
       // medewerkers (super_admin) worden enkel via /api/admin/staff door de god
-      // beheerd — niet via dit generieke endpoint.
+      // beheerd · niet via dit generieke endpoint.
       if (target && target.protected === true) {
         return sendJson(res, 403, { ok: false, error: "De hoofd-superadmin kan niet gewijzigd of gedeactiveerd worden" });
       }
@@ -2098,7 +2098,7 @@ http.createServer(async (req, res) => {
         sendJson(res, 200, { ok: true, roadmap: roadmapStatus(store, tenant) });
         return;
       }
-      // GET /search?q= — globale zoek over klanten, werkbonnen, facturen, medewerkers
+      // GET /search?q= · globale zoek over klanten, werkbonnen, facturen, medewerkers
       if (action === "search" && req.method === "GET") {
         const q = String(url.searchParams.get("q") || "").trim().toLowerCase();
         if (q.length < 2) { sendJson(res, 200, { ok: true, results: [] }); return; }
@@ -2121,7 +2121,7 @@ http.createServer(async (req, res) => {
         if (can(user, "billing")) {
           for (const inv of store.list("invoices", tenantId)) {
             if (match(inv.number, inv.customerName, inv.customerVatNumber)) {
-              results.push({ type: "Factuur", view: "facturen", id: inv.id, label: `${inv.number || "Factuur"} · ${inv.customerName || ""}`, sub: `€ ${Number(inv.total || 0).toFixed(2)} — ${inv.status || ""}` });
+              results.push({ type: "Factuur", view: "facturen", id: inv.id, label: `${inv.number || "Factuur"} · ${inv.customerName || ""}`, sub: `€ ${Number(inv.total || 0).toFixed(2)} · ${inv.status || ""}` });
             }
           }
         }
@@ -2141,7 +2141,7 @@ http.createServer(async (req, res) => {
         sendJson(res, 200, { ok: true, ...listReports(tenant.id, { limit: url.searchParams.get("limit") }) });
         return;
       }
-      // POST /reports/log — registreert rapportgeneratie voor pilot-KPI tracking
+      // POST /reports/log · registreert rapportgeneratie voor pilot-KPI tracking
       if (action === "reports/log" && req.method === "POST") {
         assertCan(user, "leaves"); // accessible to tenant admin + manager
         const body = await readBody(req);
@@ -2294,7 +2294,7 @@ http.createServer(async (req, res) => {
         sendJson(res, 201, { ok: true, result: importEmployees(store, tenant, await readBody(req), user, provisionPendingUser) });
         return;
       }
-      // POST /admin/backfill — data quality fixes (nummers, notificaties, etc.)
+      // POST /admin/backfill · data quality fixes (nummers, notificaties, etc.)
       // MFA verplichten voor alle beheerders van deze tenant (self-service).
       // Retourneert per beheerder de secret/otpauth + recovery codes.
       if (action === "admin/mfa/enforce" && req.method === "POST") {
@@ -2342,7 +2342,7 @@ http.createServer(async (req, res) => {
         sendJson(res, 200, { ok: true, results });
         return;
       }
-      // POST /admin/backfill-wo-numbers — vult lege werkbon-nummers in
+      // POST /admin/backfill-wo-numbers · vult lege werkbon-nummers in
       if (action === "admin/backfill-wo-numbers" && req.method === "POST") {
         assertCan(user, "settings");
         const wos = store.list("workorders", tenantId).filter(w => !w.number);
@@ -2754,7 +2754,7 @@ http.createServer(async (req, res) => {
         return;
       }
 
-      // GET /leaves/balance — verlof saldo per medewerker voor dit jaar
+      // GET /leaves/balance · verlof saldo per medewerker voor dit jaar
       if (action === "leaves/balance" && req.method === "GET") {
         assertCan(user, "leaves");
         const year = Number(url.searchParams.get("year") || new Date().getFullYear());
@@ -2782,7 +2782,7 @@ http.createServer(async (req, res) => {
         return;
       }
 
-      // GET /me/leaves/balance — eigen verlof saldo
+      // GET /me/leaves/balance · eigen verlof saldo
       if (action === "me/leaves/balance" && req.method === "GET") {
         const year = Number(url.searchParams.get("year") || new Date().getFullYear());
         const yearStr = String(year);
@@ -2915,7 +2915,7 @@ http.createServer(async (req, res) => {
       if (action === "me" && req.method === "PATCH") {
         assertHumanUser(user);
         const body = await readBody(req);
-        // Alleen veilige velden bijwerken — geen rol, geen rechten, geen wachtwoord
+        // Alleen veilige velden bijwerken · geen rol, geen rechten, geen wachtwoord
         const allowed = ["name", "phone", "address", "iban", "language", "notificationPrefs"];
         const patch = {};
         allowed.forEach(k => { if (body[k] !== undefined) patch[k] = body[k]; });
@@ -2961,7 +2961,7 @@ http.createServer(async (req, res) => {
         sendJson(res, 200, { ok: true, personal: { widgets } });
         return;
       }
-      // Org-dashboard publiceren (admin) — niet aanpasbaar voor anderen.
+      // Org-dashboard publiceren (admin) · niet aanpasbaar voor anderen.
       if (action === "me/dashboard/publish" && req.method === "POST") {
         if (!(can(user, "settings") || user.role === "tenant_admin")) return sendJson(res, 403, { ok: false, error: "Alleen een beheerder kan publiceren" });
         assertInteractiveUser(user);
@@ -3040,7 +3040,7 @@ http.createServer(async (req, res) => {
         return;
       }
 
-      // GET /me/notifications — persoonlijke notificaties voor medewerker
+      // GET /me/notifications · persoonlijke notificaties voor medewerker
       if (action === "me/notifications" && req.method === "GET") {
         const all = listNotifications(store, tenantId);
         const mine = all.filter(n => n.userId === user.id || n.audience === user.id);
@@ -3060,7 +3060,7 @@ http.createServer(async (req, res) => {
         return;
       }
 
-      // PATCH /me/messages/:id/read — markeer als gelezen
+      // PATCH /me/messages/:id/read · markeer als gelezen
       const meMessageReadMatch = action.match(/^me\/messages\/([^/]+)\/read$/);
       if (meMessageReadMatch && req.method === "PATCH") {
         const msgId = meMessageReadMatch[1];
@@ -3091,7 +3091,7 @@ http.createServer(async (req, res) => {
         return;
       }
 
-      // me/clock/in en me/clock/out — medewerker klokt zichzelf in/uit
+      // me/clock/in en me/clock/out · medewerker klokt zichzelf in/uit
       // (geo wordt meegestuurd voor locatie-geverifieerd inklokken op de werf)
       if (action === "me/clock/in" && req.method === "POST") {
         const body = await readBody(req).catch(() => ({}));
@@ -3103,12 +3103,12 @@ http.createServer(async (req, res) => {
         return;
       }
 
-      // me/expenses POST — medewerker dient onkosten in
+      // me/expenses POST · medewerker dient onkosten in
       if (action === "me/expenses" && req.method === "POST") {
         const body = await readBody(req);
         const amount = Number(body.amount);
         if (!Number.isFinite(amount) || amount <= 0) return sendJson(res, 400, { ok: false, error: "Bedrag moet groter zijn dan €0" });
-        if (amount > 100000) return sendJson(res, 400, { ok: false, error: "Bedrag is onrealistisch hoog — controleer de invoer" });
+        if (amount > 100000) return sendJson(res, 400, { ok: false, error: "Bedrag is onrealistisch hoog · controleer de invoer" });
         const row = store.insert("expenses", {
           id: `exp_${Date.now()}_${require("crypto").randomBytes(4).toString("hex")}`,
           tenantId,
@@ -3133,7 +3133,7 @@ http.createServer(async (req, res) => {
         return;
       }
 
-      // me/leaves POST — medewerker vraagt verlof aan
+      // me/leaves POST · medewerker vraagt verlof aan
       if (action === "me/leaves" && req.method === "POST") {
         const body = await readBody(req);
         if (!body.startDate || !body.endDate) return sendJson(res, 400, { ok: false, error: "Start- en einddatum zijn verplicht" });
@@ -3174,7 +3174,7 @@ http.createServer(async (req, res) => {
         return;
       }
 
-      // me/leaves/:id DELETE — medewerker trekt eigen aanvraag in
+      // me/leaves/:id DELETE · medewerker trekt eigen aanvraag in
       const meLeaveItemMatch = action.match(/^me\/leaves\/([^/]+)$/);
       if (meLeaveItemMatch && req.method === "DELETE") {
         assertHumanUser(user);
@@ -3189,7 +3189,7 @@ http.createServer(async (req, res) => {
         return;
       }
 
-      // me/expenses/:id DELETE — medewerker verwijdert eigen openstaande declaratie
+      // me/expenses/:id DELETE · medewerker verwijdert eigen openstaande declaratie
       const meExpItemMatch = action.match(/^me\/expenses\/([^/]+)$/);
       if (meExpItemMatch && req.method === "DELETE") {
         assertHumanUser(user);
@@ -3332,7 +3332,7 @@ http.createServer(async (req, res) => {
         if (!body.customerName && !body.customerId) return sendJson(res, 400, { ok: false, error: "Klant is verplicht" });
         if (!Array.isArray(body.lines) || !body.lines.length) return sendJson(res, 400, { ok: false, error: "Minimaal 1 factuurregel vereist" });
         // Gedeelde factuurlogica (nummering, btw-regime, afronding, gestructureerde
-        // mededeling) — identiek voor handmatig, offerte→factuur en werkbon→factuur.
+        // mededeling) · identiek voor handmatig, offerte→factuur en werkbon→factuur.
         const invoice = createCustomerInvoice(store, tenant, user, body);
         sendJson(res, 201, { ok: true, invoice });
         return;
@@ -3381,7 +3381,7 @@ http.createServer(async (req, res) => {
         return;
       }
 
-      // ── A1 / Limosa — detachering van (onder)aannemers (compliance-add-on) ──
+      // ── A1 / Limosa · detachering van (onder)aannemers (compliance-add-on) ──
       if (action === "posted_workers" && req.method === "GET") {
         assertInteractiveUser(user);
         const ciawCfg = (loadPlatformConfig(store).ciaw) || {};
@@ -3624,7 +3624,7 @@ http.createServer(async (req, res) => {
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         });
-        store.audit({ actor: user.email, tenantId, action: "quote_created", area: "offertes", detail: `${number} — €${total.toFixed(2)}` });
+        store.audit({ actor: user.email, tenantId, action: "quote_created", area: "offertes", detail: `${number} · €${total.toFixed(2)}` });
         sendJson(res, 201, { ok: true, quote });
         return;
       }
@@ -3820,7 +3820,7 @@ http.createServer(async (req, res) => {
           mfaEnforced: false,
           function: body.function || null,
           phone: body.phone || null,
-          // Rijksregisternummer (INSZ) — nodig voor CIAW/Checkin@Work-aangiftes.
+          // Rijksregisternummer (INSZ) · nodig voor CIAW/Checkin@Work-aangiftes.
           nationalId: body.nationalId ? String(body.nationalId).replace(/[^0-9]/g, "").slice(0, 11) : null
         });
         store.audit({ actor: user.email, tenantId, action: "employee_created", area: "employees", detail: `${email} (${role})` });
@@ -3877,7 +3877,7 @@ http.createServer(async (req, res) => {
         return;
       }
 
-      // PATCH /expenses/:id — status bijwerken (goedgekeurd/geweigerd)
+      // PATCH /expenses/:id · status bijwerken (goedgekeurd/geweigerd)
       const expPatchMatch = action.match(/^expenses\/([^/]+)$/);
       if (expPatchMatch && req.method === "PATCH") {
         assertCan(user, "expenses");
@@ -3890,7 +3890,7 @@ http.createServer(async (req, res) => {
           patch.reviewedAt = new Date().toISOString();
         }
         const row = store.update("expenses", expPatchMatch[1], { ...patch, updatedAt: new Date().toISOString() });
-        store.audit({ actor: user.email, tenantId, action: `expense_${patch.status||"updated"}`, area: "expenses", detail: `€${row?.amount} — ${row?.category}` });
+        store.audit({ actor: user.email, tenantId, action: `expense_${patch.status||"updated"}`, area: "expenses", detail: `€${row?.amount} · ${row?.category}` });
         // E-mail + in-app notificatie naar medewerker bij statuswijziging naar goedgekeurd/geweigerd
         if (["goedgekeurd", "geweigerd"].includes(row?.status) && row?.userId) {
           const employee = store.getUserById(row.userId);
@@ -3998,7 +3998,7 @@ http.createServer(async (req, res) => {
         return;
       }
 
-      // POST /messages — nieuw bericht versturen
+      // POST /messages · nieuw bericht versturen
       if (action === "messages" && req.method === "POST") {
         assertCan(user, "messages");
         const body = await readBody(req);
@@ -4028,7 +4028,7 @@ http.createServer(async (req, res) => {
         return;
       }
 
-      // DELETE /messages/:id — bericht verwijderen (admin/manager)
+      // DELETE /messages/:id · bericht verwijderen (admin/manager)
       const msgDeleteMatch = action.match(/^messages\/([^/]+)$/);
       if (msgDeleteMatch && req.method === "DELETE") {
         assertCan(user, "messages");
@@ -4261,10 +4261,10 @@ http.createServer(async (req, res) => {
 // PaaS-platforms (Render, Railway, Heroku) sturen SIGTERM vóór een deploy/restart.
 // We geven lopende requests maximaal 10 s om af te ronden vóór we stoppen.
 function gracefulShutdown(signal) {
-  console.log(`[shutdown] ${signal} ontvangen — server sluit af…`);
+  console.log(`[shutdown] ${signal} ontvangen · server sluit af…`);
   // Geef lopende requests 10 s
   setTimeout(() => {
-    console.log("[shutdown] Timeout bereikt — forceer stop");
+    console.log("[shutdown] Timeout bereikt · forceer stop");
     process.exit(0);
   }, 10_000).unref();
 }

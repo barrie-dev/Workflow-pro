@@ -1,6 +1,6 @@
 "use strict";
 /**
- * Dunne client voor de OpenAI Chat Completions API (raw HTTPS, geen SDK-dependency —
+ * Dunne client voor de OpenAI Chat Completions API (raw HTTPS, geen SDK-dependency -
  * past bij de zero-dep huisstijl van deze app, net als payments/peppol).
  *
  * De super-admin zet de echte key + model in de Integraties-console

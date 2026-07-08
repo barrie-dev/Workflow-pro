@@ -1,6 +1,6 @@
 "use strict";
 /**
- * A1 / Limosa — detachering van (onder)aannemers en buitenlandse werknemers.
+ * A1 / Limosa · detachering van (onder)aannemers en buitenlandse werknemers.
  *
  * - A1-attest: bewijst dat een gedetacheerde werknemer sociaal verzekerd blijft
  *   in het thuisland. De hoofdaannemer moet geldige A1's van onderaannemers
@@ -99,7 +99,7 @@ function deletePostedWorker(store, tenant, id, actor) {
 
 // Overzicht met afgeleide A1-status + tellers (voor compliance-bewaking).
 function listPostedWorkers(store, tenant, now = Date.now()) {
-  // De base64-blob niet meesturen in de lijst (zwaar) — enkel of er een bestand is.
+  // De base64-blob niet meesturen in de lijst (zwaar) · enkel of er een bestand is.
   const rows = store.list("postedWorkers", tenant.id).map(r => {
     const { documentFile, ...rest } = r;
     return { ...rest, a1Status: a1Status(r, now), hasFile: !!documentFile };

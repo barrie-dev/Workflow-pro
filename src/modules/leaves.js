@@ -89,7 +89,8 @@ function getLeave(store, tenantId, leaveId) {
 // ─── aanmaken ─────────────────────────────────────────────────────────────────
 
 function createLeave(store, tenant, payload, actor) {
-  const userId = payload.userId || actor.id;
+  // Employees kunnen enkel voor zichzelf aanvragen; manager/admin ook voor teamleden.
+  const userId = actor.role === "employee" ? actor.id : (payload.userId || actor.id);
   const type = String(payload.type || "vakantie").toLowerCase();
   if (!LEAVE_TYPES.has(type)) throw apiError(`Ongeldig type. Kies uit: ${[...LEAVE_TYPES].join(", ")}`);
 
@@ -111,6 +112,9 @@ function createLeave(store, tenant, payload, actor) {
     );
   if (existing.length > 0) throw apiError("Medewerker heeft al een verlofaanvraag in deze periode");
 
+  const autoApproved = ["tenant_admin", "super_admin"].includes(actor.role)
+    || (actor.role === "manager" && userId !== actor.id);
+
   const leave = store.insert("leaves", {
     id: `leave_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`,
     tenantId: tenant.id,
@@ -120,9 +124,12 @@ function createLeave(store, tenant, payload, actor) {
     endDate,
     days,
     reason: String(payload.reason || "").trim() || null,
-    status: actor.role === "tenant_admin" || actor.role === "super_admin" ? "goedgekeurd" : "aangevraagd",
-    reviewedBy: actor.role === "tenant_admin" || actor.role === "super_admin" ? actor.email : null,
-    reviewedAt: actor.role === "tenant_admin" || actor.role === "super_admin" ? new Date().toISOString() : null,
+    // Auto-goedgekeurd wanneer een goedkeurder het zelf registreert: admin altijd;
+    // manager wanneer hij het voor een TEAMLID invoert (bv. ziektemelding) — zijn
+    // eigen verlof blijft "aangevraagd" (goedkeuring door de admin).
+    status: autoApproved ? "goedgekeurd" : "aangevraagd",
+    reviewedBy: autoApproved ? actor.email : null,
+    reviewedAt: autoApproved ? new Date().toISOString() : null,
     reviewNote: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()

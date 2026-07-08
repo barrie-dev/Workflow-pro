@@ -2539,12 +2539,12 @@ el("login").addEventListener("click", () => {
   setShellAuthenticated(false);
 });
 
-// Wachtwoord vergeten — vraag e-mail, stuur reset-link (geen account-enumeratie).
+// Wachtwoord vergeten · vraag e-mail, stuur reset-link (geen account-enumeratie).
 document.getElementById("loginForgot")?.addEventListener("click", async event => {
   event.preventDefault();
   const f = document.getElementById("loginForm");
   const prefill = (f && f.elements.email && f.elements.email.value.trim()) || "";
-  const email = prompt("Wachtwoord vergeten? Vul je e-mailadres in — we sturen je een reset-link.", prefill);
+  const email = prompt("Wachtwoord vergeten? Vul je e-mailadres in · we sturen je een reset-link.", prefill);
   if (!email) return;
   try {
     await api("/api/auth/forgot", { method: "POST", body: JSON.stringify({ email: email.trim() }) });
@@ -2552,7 +2552,7 @@ document.getElementById("loginForgot")?.addEventListener("click", async event =>
   showToast("Als er een account met dit e-mailadres bestaat, is er een reset-link verstuurd. Check je mailbox.", "success");
 });
 
-// Taalkeuze — EN is voorbereid maar nog niet beschikbaar (eerlijk i.p.v. dode knop)
+// Taalkeuze · EN is voorbereid maar nog niet beschikbaar (eerlijk i.p.v. dode knop)
 // Taalkeuze NL / FR (België is tweetalig). wfpI18n vertaalt de publieke flows.
 document.getElementById("langNL")?.addEventListener("click", () => window.wfpI18n && window.wfpI18n.setLang("nl"));
 document.getElementById("langFR")?.addEventListener("click", () => window.wfpI18n && window.wfpI18n.setLang("fr"));
@@ -2727,7 +2727,7 @@ document.getElementById("registerKboBtn")?.addEventListener("click", async () =>
     if (hint) {
       hint.style.display = ""; hint.style.color = "var(--wf-green)";
       const addr = [c.street, [c.zip, c.city].filter(Boolean).join(" ")].filter(Boolean).join(", ");
-      hint.textContent = c.name ? `✓ ${c.name}${addr ? " · " + addr : ""}` : "Geen gegevens gevonden — vul handmatig in.";
+      hint.textContent = c.name ? `✓ ${c.name}${addr ? " · " + addr : ""}` : "Geen gegevens gevonden · vul handmatig in.";
     }
   } catch (e) {
     if (hint) { hint.style.display = ""; hint.style.color = "var(--wf-red)"; hint.textContent = e.message || "Opzoeken mislukt."; }
@@ -2759,7 +2759,7 @@ regForm?.addEventListener("submit", async event => {
     // stelt zelf zijn wachtwoord in via de activatielink. BTW-nummer → KBO-autofill.
     await api("/api/auth/register", { method: "POST", body: JSON.stringify({ companyName, name, email, plan, vatNumber, billingPeriod }) });
     showLoginForm();
-    showToast("Account aangemaakt — open de activatiemail om je wachtwoord in te stellen.", "success");
+    showToast("Account aangemaakt · open de activatiemail om je wachtwoord in te stellen.", "success");
   } catch (error) {
     notice.textContent = error.message || "Registratie mislukt";
     notice.classList.add("bad");
@@ -3146,7 +3146,7 @@ el("planningForm").elements.date.value = todayValue();
 el("vehicleForm").elements.nextService.value = futureDateValue(14);
 el("apiKeyExpiresAt").value = futureDateValue(90);
 
-// ── Nieuwe domeinschermen — knoppen binden ──────────────────────────────────
+// ── Nieuwe domeinschermen · knoppen binden ──────────────────────────────────
 [
   ["refreshCustomers",  () => window.refreshCustomers?.()],
   ["refreshEmployees",  () => window.refreshEmployees?.()],
@@ -3186,7 +3186,7 @@ refresh();
 // ── Support-impersonatie: agent komt automatisch binnen via #support_token=… ──
 // De superadmin opent de support-sessie in een nieuw tabblad met het sessietoken
 // in de URL-hash (hash gaat niet naar de server/logs). We pikken het op, loggen
-// in als de overgenomen gebruiker en tonen meteen het juiste platform — de agent
+// in als de overgenomen gebruiker en tonen meteen het juiste platform · de agent
 // hoeft dus niet uit zijn eigen profiel te loggen en opnieuw in te loggen.
 //
 // Belangrijk: dit draait op `load`, NIET tijdens het uitvoeren van main.js zelf.
@@ -3234,7 +3234,7 @@ setTimeout(supportEnterBootstrap, 400);
 
 // ── Deep-link registratie vanaf monargo.com (?plan=&period=#register) ─────────
 // De marketing-CTA linkt naar monargo.one/?plan=business&period=year#register.
-// We openen dan meteen het registratieformulier met de juiste bundel voorgevuld —
+// We openen dan meteen het registratieformulier met de juiste bundel voorgevuld -
 // maar alleen voor een uitgelogde bezoeker (nooit een ingelogde gebruiker storen).
 let _registerDeepLinkDone = false;
 function registerDeepLinkBootstrap() {

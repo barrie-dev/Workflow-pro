@@ -3,7 +3,7 @@
  * Sectorprofielen (multi-markt). Eén horizontale codebasis; een sector bepaalt enkel
  * terminologie + welke modules standaard zinvol zijn. Gebruikt in de onboarding-wizard
  * om de klant zich te laten herkennen en passende suggesties te geven. Zie
- * docs/SECTORPROFIELEN.md. Het wijzigt NIET automatisch entitlements/plan — dat blijft
+ * docs/SECTORPROFIELEN.md. Het wijzigt NIET automatisch entitlements/plan · dat blijft
  * bij de superadmin/bundel; we bewaren de sector + tonen suggesties.
  */
 const SECTORS = [

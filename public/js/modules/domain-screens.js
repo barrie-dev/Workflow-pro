@@ -9,7 +9,7 @@
   const state = window.WorkFlowProState;
 
   function tenantId() {
-    // main.js hardcodes "t_demo" — follow same pattern for API calls
+    // main.js hardcodes "t_demo" · follow same pattern for API calls
     return state?.tenantId || state?.tenant?.id || state?.currentTenant?.id || "t_demo";
   }
 
@@ -61,20 +61,20 @@
   }
 
   function shortDate(v) {
-    if (!v) return '—';
+    if (!v) return '-';
     try { return new Date(v).toLocaleDateString('nl-BE', {day:'2-digit',month:'2-digit',year:'numeric'}); } catch { return v; }
   }
 
   function euro(v) {
     const n = parseFloat(v);
-    if (isNaN(n)) return '—';
+    if (isNaN(n)) return '-';
     return '€ ' + n.toFixed(2).replace('.', ',');
   }
 
   function populateSelect(selectEl, rows, valueKey, labelFn) {
     if (!selectEl) return;
     const cur = selectEl.value;
-    selectEl.innerHTML = '<option value="">— Kies —</option>';
+    selectEl.innerHTML = '<option value="">- Kies -</option>';
     (rows || []).forEach(r => {
       const opt = document.createElement('option');
       opt.value = r[valueKey] || r.id || '';
@@ -124,9 +124,9 @@
       {label:'Sector', w:'1fr'}, {label:'Status', w:'0.8fr'}
     ];
     rowsEl.innerHTML = tableHeader(cols) + rows.map(r => rowItem([
-      {w:'2fr', html:`<strong>${escHtml(r.name || '—')}</strong>`},
-      {w:'2fr', text: r.email || '—'},
-      {w:'1fr', text: r.phone || '—'},
+      {w:'2fr', html:`<strong>${escHtml(r.name || '-')}</strong>`},
+      {w:'2fr', text: r.email || '-'},
+      {w:'1fr', text: r.phone || '-'},
       {w:'1fr', html: badge(r.sector || 'Overig')},
       {w:'0.8fr', html: badge(r.status || 'Actief')}
     ])).join('');
@@ -187,10 +187,10 @@
       {label:'Functie', w:'1fr'}, {label:'Rol', w:'1fr'}
     ];
     rowsEl.innerHTML = tableHeader(cols) + rows.map(r => rowItem([
-      {w:'2fr', html:`<strong>${escHtml(r.name || r.email || '—')}</strong>`},
-      {w:'2fr', text: r.email || '—'},
-      {w:'1fr', text: r.phone || '—'},
-      {w:'1fr', text: r.jobTitle || '—'},
+      {w:'2fr', html:`<strong>${escHtml(r.name || r.email || '-')}</strong>`},
+      {w:'2fr', text: r.email || '-'},
+      {w:'1fr', text: r.phone || '-'},
+      {w:'1fr', text: r.jobTitle || '-'},
       {w:'1fr', html: badge(r.role === 'tenant_admin' ? 'Beheerder' : r.role === 'planner' ? 'Planner' : 'Veldwerker')}
     ])).join('');
 
@@ -266,7 +266,7 @@
       {label:'Start', w:'0.8fr'}, {label:'Einde', w:'0.8fr'}, {label:'Uren', w:'0.8fr'}, {label:'Status', w:'1fr'}
     ];
     rowsEl.innerHTML = tableHeader(cols) + [...rows].reverse().map(r => {
-      let uren = '—';
+      let uren = '-';
       if (r.startTime && r.endTime) {
         try {
           const [sh,sm] = r.startTime.split(':').map(Number);
@@ -276,10 +276,10 @@
         } catch {}
       }
       return rowItem([
-        {w:'2fr', html:`<strong>${escHtml(r.userId || r.user || '—')}</strong>`},
+        {w:'2fr', html:`<strong>${escHtml(r.userId || r.user || '-')}</strong>`},
         {w:'1fr', text: shortDate(r.date || r.startTime)},
-        {w:'2fr', text: r.project || r.venueId || '—'},
-        {w:'0.8fr', text: r.startTime ? r.startTime.slice(0,5) : '—'},
+        {w:'2fr', text: r.project || r.venueId || '-'},
+        {w:'0.8fr', text: r.startTime ? r.startTime.slice(0,5) : '-'},
         {w:'0.8fr', html: r.endTime ? escHtml(r.endTime.slice(0,5)) : '<span style="color:var(--wf-orange)">Open</span>'},
         {w:'0.8fr', html: `<span style="font-weight:600">${escHtml(uren)}</span>`},
         {w:'1fr', html: badge(r.endTime ? 'Voltooid' : 'Open')}
@@ -386,9 +386,9 @@
       {label:'Datum', w:'1fr'}, {label:'Bedrag', w:'0.8fr'}, {label:'Status', w:'1fr'}
     ];
     rowsEl.innerHTML = tableHeader(cols) + [...rows].reverse().map(r => rowItem([
-      {w:'1.5fr', html:`<strong>${escHtml(r.userId || r.user || '—')}</strong>`},
-      {w:'2fr', text: r.title || r.description || '—'},
-      {w:'1fr', html: `<span class="badge badge-gray">${escHtml(r.category || '—')}</span>`},
+      {w:'1.5fr', html:`<strong>${escHtml(r.userId || r.user || '-')}</strong>`},
+      {w:'2fr', text: r.title || r.description || '-'},
+      {w:'1fr', html: `<span class="badge badge-gray">${escHtml(r.category || '-')}</span>`},
       {w:'1fr', text: shortDate(r.date)},
       {w:'0.8fr', html: `<span style="font-weight:600;color:var(--wf-green)">${escHtml(euro(r.amount))}</span>`},
       {w:'1fr', html: badge(r.status || 'Wacht')}
@@ -397,7 +397,7 @@
     if (pendingEl) {
       pendingEl.innerHTML = pending.length
         ? pending.map(r => `<div style="display:flex;justify-content:space-between;align-items:center;padding:0.5rem 0.75rem;border-bottom:1px solid var(--gray-100);font-size:0.8125rem">
-            <div><strong>${escHtml(r.title||'—')}</strong><br><small style="color:var(--gray-400)">${escHtml(r.userId||'—')} · ${escHtml(euro(r.amount))}</small></div>
+            <div><strong>${escHtml(r.title||'-')}</strong><br><small style="color:var(--gray-400)">${escHtml(r.userId||'-')} · ${escHtml(euro(r.amount))}</small></div>
             <div style="display:flex;gap:0.5rem">
               <button onclick="WorkFlowProDomainScreens.approveExpense('${r.id}')" style="background:var(--wf-green);color:white;border-color:var(--wf-green);font-size:0.7rem;padding:0.25rem 0.625rem">✓</button>
               <button onclick="WorkFlowProDomainScreens.rejectExpense('${r.id}')" style="background:var(--wf-red);color:white;border-color:var(--wf-red);font-size:0.7rem;padding:0.25rem 0.625rem">✗</button>
@@ -475,8 +475,8 @@
       {label:'Vervaldatum', w:'1fr'}, {label:'Bedrag excl.', w:'1fr'}, {label:'Status', w:'1fr'}
     ];
     rowsEl.innerHTML = tableHeader(cols) + [...rows].reverse().map(r => rowItem([
-      {w:'2fr', html:`<strong>${escHtml(r.customerId || r.customer || '—')}</strong>`},
-      {w:'2fr', text: r.line || r.description || '—'},
+      {w:'2fr', html:`<strong>${escHtml(r.customerId || r.customer || '-')}</strong>`},
+      {w:'2fr', text: r.line || r.description || '-'},
       {w:'1fr', text: shortDate(r.createdAt || r.date)},
       {w:'1fr', text: shortDate(r.dueDate)},
       {w:'1fr', html: `<span style="font-weight:600;color:var(--wf-green)">${escHtml(euro(r.amount))}</span>`},
@@ -528,7 +528,7 @@
   }
 
   // ─────────────────────────────────────────────
-  // INITIALISATIE — bind alles bij elke schermwissel
+  // INITIALISATIE · bind alles bij elke schermwissel
   // ─────────────────────────────────────────────
   window.refreshCustomers  = refreshCustomers;
   window.refreshEmployees  = refreshEmployees;

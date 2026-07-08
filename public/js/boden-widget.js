@@ -1,5 +1,5 @@
 /* ============================================================
-   Boden — AI-assistent chat-widget (gedeeld over alle platforms)
+   Boden · AI-assistent chat-widget (gedeeld over alle platforms)
    CSP-veilig: alles via addEventListener, geen inline handlers.
    Mount per platform met: window.WfpBoden.mount({ navigate })
    ============================================================ */
@@ -59,7 +59,7 @@
   function buildShell() {
     if (document.getElementById("bodenFab")) return;
     const fab = document.createElement("button");
-    fab.id = "bodenFab"; fab.title = "Boden — AI-assistent"; fab.innerHTML = '<svg viewBox="0 0 24 24" style="width:26px;height:26px;fill:currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>';
+    fab.id = "bodenFab"; fab.title = "Boden · AI-assistent"; fab.innerHTML = '<svg viewBox="0 0 24 24" style="width:26px;height:26px;fill:currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>';
     fab.addEventListener("click", toggle);
     document.body.appendChild(fab);
 

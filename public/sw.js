@@ -2,14 +2,14 @@
  * Monargo One – Service Worker (PWA)
  *
  * Strategie:
- *  - Code (HTML/CSS/JS):    NETWORK-FIRST — elke deploy is direct zichtbaar;
+ *  - Code (HTML/CSS/JS):    NETWORK-FIRST · elke deploy is direct zichtbaar;
  *                           cache dient enkel als offline-fallback.
  *  - Overige assets:        Cache-first (iconen, fonts, afbeeldingen).
  *  - API-calls (/api/**):   Network-first + fallback naar cache.
  *  - Navigatieverzoeken:    index.html als offline-fallback.
  */
 
-const CACHE_VERSION = "wfp-v42";
+const CACHE_VERSION = "wfp-v43";
 const SHELL_CACHE   = `${CACHE_VERSION}-shell`;
 const API_CACHE     = `${CACHE_VERSION}-api`;
 
@@ -71,7 +71,7 @@ self.addEventListener("fetch", event => {
   if (url.pathname.startsWith("/api/")) {
     event.respondWith(networkFirstApi(request, url));
   } else if (isCode(url, request)) {
-    // HTML/CSS/JS: altijd vers van het netwerk — deploys direct zichtbaar.
+    // HTML/CSS/JS: altijd vers van het netwerk · deploys direct zichtbaar.
     event.respondWith(networkFirstShell(request));
   } else {
     event.respondWith(cacheFirstShell(request));

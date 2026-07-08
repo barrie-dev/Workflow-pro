@@ -113,9 +113,9 @@ function assertModuleEnabled(store, user, tenant, action) {
 
 // Operationele rechten die een tenant-admin per medewerker mag toekennen.
 // Bewust GEEN admin-rechten (settings, billing, audit, tenants, employees, integrations):
-// die blijven voorbehouden aan de tenant_admin-rol — geen escalatie via per-user rechten.
+// die blijven voorbehouden aan de tenant_admin-rol · geen escalatie via per-user rechten.
 // Ook GEEN 'clockings': in-/uitprikken is basisfunctionaliteit die ELKE gebruiker
-// altijd heeft, ongeacht functie — dus niet per-user uitschakelbaar (zie ALWAYS_PERMISSIONS).
+// altijd heeft, ongeacht functie · dus niet per-user uitschakelbaar (zie ALWAYS_PERMISSIONS).
 const OPERATIONAL_PERMISSIONS = [
   { key: "planning", label: "Planning" },
   { key: "workorders", label: "Werkbonnen" },

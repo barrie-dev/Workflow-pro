@@ -6,7 +6,7 @@
  * De super-admin beheert de echte sleutels via de Integraties-console; die worden
  * in de 'platformConfig'-collectie bewaard en overschrijven de env/dummy-waarden.
  *
- * Geheime waarden worden NOOIT volledig naar de browser gestuurd — gebruik
+ * Geheime waarden worden NOOIT volledig naar de browser gestuurd · gebruik
  * publicPlatformConfig() voor de UI (gemaskeerd + 'configured'-status).
  */
 
@@ -17,7 +17,7 @@ const CONFIG_ID = "platform";
 // Duidelijk neppe placeholder-sleutels zodat niets crasht vóór echte config.
 const DUMMY = {
   stripe: {
-    // LET OP: deepMerge kent alleen velden die hier in de template staan —
+    // LET OP: deepMerge kent alleen velden die hier in de template staan -
     // nieuwe stripe-velden ALTIJD ook hier toevoegen.
     mode: "",                          // "" = auto (test, tenzij legacy sk_live)
     secretKey: "sk_test_DUMMY000000000000000000",
@@ -109,13 +109,13 @@ function storedRow(store) {
   catch (_) { return null; }
 }
 
-/** Volledige config (met echte secrets) — uitsluitend server-side gebruiken. */
+/** Volledige config (met echte secrets) · uitsluitend server-side gebruiken. */
 function loadPlatformConfig(store) {
   const stored = storedRow(store) || {};
   // dummy ← env ← stored
   const withEnv = deepMerge(DUMMY, envOverlay());
   const merged = deepMerge(withEnv, { stripe: stored.stripe, peppol: stored.peppol, email: stored.email, kbo: stored.kbo, openai: stored.openai, ciaw: stored.ciaw });
-  // Add-on-overrides (naam/prijs/omschrijving/actief per add-on) — superadmin-bewerkbaar.
+  // Add-on-overrides (naam/prijs/omschrijving/actief per add-on) · superadmin-bewerkbaar.
   merged.addons = stored.addons || {};
   // Plan-prijs-overrides (baseAnnual/seatAnnual/includedSeats per bundel-key).
   merged.planPrices = stored.planPrices || {};
@@ -130,7 +130,7 @@ function loadPlatformConfig(store) {
   const s = merged.stripe || {};
   const legacyLive = String(s.secretKey || "").startsWith("sk_live_");
   let mode = s.mode === "live" ? "live" : s.mode === "test" ? "test" : (legacyLive ? "live" : "test");
-  // Guardrail: buiten production NOOIT Stripe-LIVE — forceer sandbox (geen echte betalingen op dev/test/staging).
+  // Guardrail: buiten production NOOIT Stripe-LIVE · forceer sandbox (geen echte betalingen op dev/test/staging).
   if (mode === "live" && !config.guards.allowStripeLive) mode = "test";
   const pick = (specific, legacy, legacyMatches) => (isReal(specific) ? specific : (legacyMatches ? legacy : specific || legacy));
   merged.stripe = {
@@ -150,7 +150,7 @@ const PLACEHOLDER = /DUMMY|replace[_-]?me|replace[_-]?this|changeme|xxxx/i;
 function mask(value) {
   const s = String(value || "");
   if (!s) return "";
-  if (PLACEHOLDER.test(s)) return "(dummy — nog niet ingesteld)";
+  if (PLACEHOLDER.test(s)) return "(dummy · nog niet ingesteld)";
   if (s.length <= 8) return "••••";
   return s.slice(0, 4) + "••••" + s.slice(-4);
 }
@@ -169,7 +169,7 @@ function publicPlatformConfig(store) {
       secretKey: mask(cfg.stripe.secretKey),                   // effectieve sleutel (gemaskeerd)
       webhookSecret: mask(cfg.stripe.webhookSecret),
       testSecretKey: mask(cfg.stripe.testSecretKey),
-      testPublishableKey: cfg.stripe.testPublishableKey || "", // pk_ is publiek — niet maskeren
+      testPublishableKey: cfg.stripe.testPublishableKey || "", // pk_ is publiek · niet maskeren
       testWebhookSecret: mask(cfg.stripe.testWebhookSecret),
       liveSecretKey: mask(cfg.stripe.liveSecretKey),
       livePublishableKey: cfg.stripe.livePublishableKey || "",
@@ -204,7 +204,7 @@ function publicPlatformConfig(store) {
       model: cfg.openai.model,
       configured: isReal(cfg.openai.apiKey),  // echte key → Boden AI actief (anders mock)
     },
-    addons: cfg.addons || {}, // overrides (naam/prijs/omschrijving/actief) — geen secrets
+    addons: cfg.addons || {}, // overrides (naam/prijs/omschrijving/actief) · geen secrets
     planPrices: cfg.planPrices || {},
   };
 }
@@ -264,7 +264,7 @@ function savePlatformConfig(store, patch, actor) {
       updatedAt: new Date().toISOString(),
     };
   }
-  const isMaskedOrEmpty = v => v === undefined || v === null || v === "" || /••••|dummy — nog niet/.test(String(v));
+  const isMaskedOrEmpty = v => v === undefined || v === null || v === "" || /••••|dummy · nog niet/.test(String(v));
   const apply = (section, keys) => {
     if (!patch[section]) return;
     for (const k of keys) {

@@ -2,7 +2,7 @@
 /**
  * Module- en submodule-catalogus voor de entitlement-laag.
  *
- * Dit is de marketeerbare boom (wat een tenant kan "krijgen") — los van de
+ * Dit is de marketeerbare boom (wat een tenant kan "krijgen") · los van de
  * rol-permissions in lib/auth.js. Superadmin stelt bundels samen uit deze
  * modules/submodules; per tenant kan worden afgeweken (overrides).
  *
@@ -79,12 +79,12 @@ const MODULE_CATALOG = [
     view: "venues", actions: ["venues"], submodules: [] },
 
   // ── Compliance (Belgische bouw) ───────────────────────────
-  // CIAW / Checkin@Work — verplichte aanwezigheidsregistratie naar RSZ/ONSS.
+  // CIAW / Checkin@Work · verplichte aanwezigheidsregistratie naar RSZ/ONSS.
   // À-la-carte add-on: superadmin zet 'm per tenant aan (moduleOverrides.add).
   { key: "ciaw", label: "Checkin@Work (CIAW)", group: "Compliance", core: false,
     addon: true, view: "ciaw", actions: ["ciaw"], submodules: [],
     addonMonthly: 39, addonDesc: "Registreer aanwezigheid op de werf automatisch bij de overheid (RSZ/ONSS), met geo-geverifieerd inklokken." },
-  // A1 / Limosa — detacheringsdocumenten van (onder)aannemers beheren + indienen.
+  // A1 / Limosa · detacheringsdocumenten van (onder)aannemers beheren + indienen.
   { key: "posted_workers", label: "A1 / Limosa detachering", group: "Compliance", core: false,
     addon: true, view: "posted_workers", actions: ["posted_workers"], submodules: [],
     addonMonthly: 29, addonDesc: "Beheer A1-attesten van onderaannemers en buitenlandse werknemers en dien Limosa-meldingen in." },
@@ -95,7 +95,7 @@ const MODULE_CATALOG = [
     submodules: [{ key: "datahub-export", label: "Datahub export" }] },
   { key: "integrations", label: "Integraties", group: "Systeem", core: false,
     view: "integrations", actions: ["integrations"], submodules: [] },
-  // Add-on: Single Sign-On via SAML 2.0. Geen eigen nav-view — de configuratie
+  // Add-on: Single Sign-On via SAML 2.0. Geen eigen nav-view · de configuratie
   // leeft in Instellingen. À-la-carte: superadmin zet 'm per tenant aan via
   // moduleOverrides.add (niet standaard in een bundel).
   { key: "sso", label: "Single Sign-On (SAML)", group: "Systeem", core: false,
@@ -129,7 +129,7 @@ const GATEABLE = MODULE_CATALOG.filter(m => !m.core);
 const gateableKeys = () => GATEABLE.map(m => m.key);
 const allModuleKeys = () => MODULE_CATALOG.map(m => m.key);
 
-// Betaalde add-ons (à-la-carte) met prijs — voor de prijzen-/facturatie-UI.
+// Betaalde add-ons (à-la-carte) met prijs · voor de prijzen-/facturatie-UI.
 // `overrides` (per add-on, door superadmin bewerkbaar) overschrijft naam/prijs/
 // omschrijving; `active:false` verbergt de add-on uit het aanbod. `includeInactive`
 // is voor de superadmin-editor zelf (die wil ook gedeactiveerde add-ons zien).

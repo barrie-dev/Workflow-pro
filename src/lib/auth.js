@@ -65,7 +65,7 @@ function parseActivationToken(token) {
 function checkActivation(user, secret, now = Date.now()) {
   const a = user && user.activation;
   if (!a || !a.tokenHash) return { ok: false, reason: "Geen openstaande activatie voor dit account" };
-  if (new Date(a.expiresAt).getTime() <= now) return { ok: false, reason: "Activatielink is verlopen — vraag een nieuwe aan" };
+  if (new Date(a.expiresAt).getTime() <= now) return { ok: false, reason: "Activatielink is verlopen · vraag een nieuwe aan" };
   if (hashActivation(secret) !== a.tokenHash) return { ok: false, reason: "Ongeldige activatielink" };
   return { ok: true };
 }
@@ -84,7 +84,7 @@ function startPasswordReset(now = Date.now()) {
 function checkPasswordReset(user, secret, now = Date.now()) {
   const a = user && user.passwordReset;
   if (!a || !a.tokenHash) return { ok: false, reason: "Geen openstaand reset-verzoek voor dit account" };
-  if (new Date(a.expiresAt).getTime() <= now) return { ok: false, reason: "Reset-link is verlopen — vraag een nieuwe aan" };
+  if (new Date(a.expiresAt).getTime() <= now) return { ok: false, reason: "Reset-link is verlopen · vraag een nieuwe aan" };
   if (hashActivation(secret) !== a.tokenHash) return { ok: false, reason: "Ongeldige reset-link" };
   return { ok: true };
 }

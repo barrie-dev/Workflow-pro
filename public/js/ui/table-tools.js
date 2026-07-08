@@ -1,6 +1,6 @@
 "use strict";
 /**
- * Monargo One — herbruikbare tabel-tools: sorteren + filteren.
+ * Monargo One · herbruikbare tabel-tools: sorteren + filteren.
  *
  * Progressive enhancement op álle hoofdtabellen (.adm-table / .mgr-table /
  * .sa-tbl) zonder de render-functies aan te passen:

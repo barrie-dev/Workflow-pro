@@ -16,7 +16,7 @@
       reports:       { pageId: "reportsPage",         tabId: "viewReports",       refresh: "refreshReportsDashboard" },
       integrations:  { pageId: "integrationsPage",   tabId: "viewIntegrations",  refresh: "refreshIntegrations" },
       admin:         { pageId: "adminPage",           tabId: "viewAdmin",         refresh: "refreshAdmin" },
-      // Legacy / intern — bewaard voor backwards compat met main.js
+      // Legacy / intern · bewaard voor backwards compat met main.js
       ops:           { pageId: "opsPage",             tabId: "viewOps" },
       billing:       { pageId: "billingPage",         tabId: "viewBilling" },
       mobile:        { pageId: "mobilePage",          tabId: "viewMobile",        refresh: "refreshMobile" },

@@ -49,7 +49,7 @@
     if (window.wfpOfflineQueue) {
       const r = await window.wfpOfflineQueue.run(() => api("POST", path, payload), { action, payload });
       if (r.queued) {
-        window.showToast && window.showToast(`${dir === "in" ? "Inklokken" : "Uitklokken"} offline opgeslagen — wordt gesynchroniseerd zodra je verbinding hebt.`, "info");
+        window.showToast && window.showToast(`${dir === "in" ? "Inklokken" : "Uitklokken"} offline opgeslagen · wordt gesynchroniseerd zodra je verbinding hebt.`, "info");
         return;
       }
     } else {
@@ -72,7 +72,7 @@
     const online = e.detail && e.detail.online;
     bar.textContent = online
       ? `${n} actie(s) worden gesynchroniseerd…`
-      : `Offline — ${n} actie(s) bewaard, sync zodra je verbinding hebt`;
+      : `Offline · ${n} actie(s) bewaard, sync zodra je verbinding hebt`;
   });
 
   // Verberg tabs voor modules die niet in het pakket van de tenant zitten.
@@ -106,7 +106,7 @@
     b.setAttribute("role", "status");
     b.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:9999;background:var(--wf-red);color:#fff;font:600 13px/1.4 system-ui,sans-serif;padding:6px 16px;display:flex;align-items:center;justify-content:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,.2)";
     const span = document.createElement("span");
-    span.textContent = `Support-sessie actief — ${s.agent || "supportmedewerker"} (${scope}). Deze sessie wordt geaudit.`;
+    span.textContent = `Support-sessie actief · ${s.agent || "supportmedewerker"} (${scope}). Deze sessie wordt geaudit.`;
     b.appendChild(span);
     const exit = document.createElement("button");
     exit.textContent = "Sessie verlaten";
@@ -654,7 +654,7 @@
     });
 
     // Manager/admin die via "Mijn portaal" binnenkwam: toon de terugknop naar
-    // de beheer-weergave (zelfde login — enkel de weergave wisselt).
+    // de beheer-weergave (zelfde login · enkel de weergave wisselt).
     const backBtn = document.getElementById("empBackToMgmt");
     if (backBtn && window.__wfpReturnRole) {
       backBtn.style.display = "inline-flex";
@@ -848,7 +848,7 @@
     <span style="width:8px;height:8px;background:var(--wf-green);border-radius:50%;flex-shrink:0;animation:pulse 2s infinite;"></span>
     <div style="flex:1;">
       <div style="font-size:13px;font-weight:600;color:var(--wf-green);">Je bent ingeklokt</div>
-      <div style="font-size:11px;color:var(--wf-green);">Sinds ${dash.activeClock?.clockedIn ? new Date(dash.activeClock.clockedIn).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}) : "—"}</div>
+      <div style="font-size:11px;color:var(--wf-green);">Sinds ${dash.activeClock?.clockedIn ? new Date(dash.activeClock.clockedIn).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}) : "-"}</div>
     </div>
     <div id="empClockDuration" style="font-size:18px;font-weight:600;color:var(--wf-green);font-family:monospace;"></div>
   </div>` : `
@@ -895,7 +895,7 @@ ${dash.urgentWorkorders > 0 ? `
   <span class="adm-dot" style="background:var(--wf-red);width:12px;height:12px"></span>
   <div style="flex:1">
     <div style="font-size:13px;font-weight:600;color:var(--wf-red);">${dash.urgentWorkorders} urgente werkbon${dash.urgentWorkorders > 1 ? "nen" : ""}</div>
-    <div style="font-size:12px;color:var(--wf-red);">Hoge prioriteit — actie vereist</div>
+    <div style="font-size:12px;color:var(--wf-red);">Hoge prioriteit · actie vereist</div>
   </div>
   <svg viewBox="0 0 24 24" style="width:16px;fill:var(--wf-red);flex-shrink:0"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
 </div>` : ""}
@@ -1048,14 +1048,14 @@ ${(() => {
   <div class="emp-list-item">
     <div class="emp-list-icon"><svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2z"/></svg></div>
     <div class="emp-list-info">
-      <div class="emp-list-title">${c.clockedIn?.slice(0,10)||"—"}</div>
-      <div class="emp-list-sub">${c.clockedIn ? new Date(c.clockedIn).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}) : "—"} – ${c.clockedOut ? new Date(c.clockedOut).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}) : "Lopend"}</div>
+      <div class="emp-list-title">${c.clockedIn?.slice(0,10)||"-"}</div>
+      <div class="emp-list-sub">${c.clockedIn ? new Date(c.clockedIn).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}) : "-"} – ${c.clockedOut ? new Date(c.clockedOut).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}) : "Lopend"}</div>
     </div>
     <span class="emp-pill ${c.status==="in"?"emp-pill-green":"emp-pill-gray"}">${c.status==="in"?"Actief":"Klaar"}</span>
   </div>`).join("") || '<div class="emp-empty"><div class="emp-empty-text">Geen registraties</div></div>'}
 </div>`;
 
-    // live clock tick — tijd, sessieduur en voortgangsring
+    // live clock tick · tijd, sessieduur en voortgangsring
     const tick = () => {
       const el = document.getElementById("empLiveClock");
       if (el) el.textContent = new Date().toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
@@ -1183,7 +1183,7 @@ ${bal.quota != null ? `
 <div class="emp-card" style="margin-bottom:10px;">
   <p class="emp-card-title" style="margin-bottom:8px;">Vakantiesaldo ${bal.year || ""}</p>
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-    <span style="font-size:13px;color:var(--gray-900);"><strong>${bal.remaining ?? "—"}</strong> resterende dagen</span>
+    <span style="font-size:13px;color:var(--gray-900);"><strong>${bal.remaining ?? "-"}</strong> resterende dagen</span>
     <span style="font-size:12px;color:var(--gray-500);">${bal.used ?? 0} / ${bal.quota ?? "?"} gebruikt</span>
   </div>
   <div style="background:var(--gray-100);border-radius:4px;height:6px;overflow:hidden;">
@@ -1201,7 +1201,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
       <svg viewBox="0 0 24 24" style="fill:var(--wf-yellow)"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
     </div>
     <div class="emp-list-info" style="flex:1;min-width:0;">
-      <div class="emp-list-title">${esc(l.type||"Verlof")} — ${l.startDate} t/m ${l.endDate}</div>
+      <div class="emp-list-title">${esc(l.type||"Verlof")} · ${l.startDate} t/m ${l.endDate}</div>
       <div class="emp-list-sub">${esc(l.reason||"")}${l.reviewNote?` · <em>${esc(l.reviewNote)}</em>`:""}</div>
     </div>
     <div style="display:flex;gap:6px;align-items:center;">
@@ -1258,7 +1258,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
       <svg viewBox="0 0 24 24" style="fill:var(--wf-yellow)"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
     </div>
     <div class="emp-list-info" style="flex:1;min-width:0;">
-      <div class="emp-list-title">€${Number(e.amount||0).toFixed(2)} — ${esc(e.category||"—")}</div>
+      <div class="emp-list-title">€${Number(e.amount||0).toFixed(2)} · ${esc(e.category||"-")}</div>
       <div class="emp-list-sub">${esc(e.date)} · ${esc(e.description||"")}${e.reviewNote?` · <em>${esc(e.reviewNote)}</em>`:""}</div>
     </div>
     <div style="display:flex;gap:6px;align-items:center;">
@@ -1313,7 +1313,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
       <div class="emp-list-title">${esc(w.title||"Werkbon")}</div>
       <div class="emp-list-sub">${esc(w.clientName||"")}${w.clientName&&(w.scheduledDate||w.createdAt)?" · ":""}${esc(w.scheduledDate||w.createdAt?.slice(0,10)||"")}</div>
     </div>
-    ${actionBtn || `<span class="emp-pill ${isDone?"emp-pill-green":"emp-pill-blue"}">${esc(w.status||"—")}</span>`}
+    ${actionBtn || `<span class="emp-pill ${isDone?"emp-pill-green":"emp-pill-blue"}">${esc(w.status||"-")}</span>`}
   </div>`;
   }).join("") : '<div class="emp-empty"><div class="emp-empty-text">Geen werkbonnen</div></div>'}
 </div>`;
@@ -1348,7 +1348,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
   function openWorkorderSheet(wo) {
     const done    = ["Voltooid","Afgewerkt","done"].includes(wo.status);
     const inProg  = wo.status === "in_progress";
-    const priorityLabel = { hoog:"Hoog", normaal:"Normaal", laag:"Laag" }[wo.priority] || wo.priority || "—";
+    const priorityLabel = { hoog:"Hoog", normaal:"Normaal", laag:"Laag" }[wo.priority] || wo.priority || "-";
 
     const sheet = document.createElement("div");
     sheet.style.cssText = "position:fixed;inset:0;z-index:1100;display:flex;flex-direction:column;justify-content:flex-end;";
@@ -1363,7 +1363,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
   <div style="padding:8px 20px 16px;border-bottom:1px solid var(--gray-100);">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
       <div style="font-size:16px;font-weight:600;color:var(--gray-900);line-height:1.3;">${esc(wo.title||"Werkbon")}</div>
-      <span class="emp-pill ${done?"emp-pill-green":inProg?"emp-pill-amber":"emp-pill-blue"}" style="white-space:nowrap;">${esc(wo.status||"—")}</span>
+      <span class="emp-pill ${done?"emp-pill-green":inProg?"emp-pill-amber":"emp-pill-blue"}" style="white-space:nowrap;">${esc(wo.status||"-")}</span>
     </div>
     ${wo.number ? `<div style="font-size:12px;color:var(--gray-400);font-family:monospace;margin-top:2px;">#${esc(wo.number)}</div>` : ""}
   </div>
@@ -1377,7 +1377,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
       <div>
         <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">Klant</div>
-        <div style="font-size:13px;color:var(--gray-900);">${esc(wo.clientName||"—")}</div>
+        <div style="font-size:13px;color:var(--gray-900);">${esc(wo.clientName||"-")}</div>
       </div>
       <div>
         <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">Prioriteit</div>
@@ -1385,7 +1385,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
       </div>
       <div>
         <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">Geplande datum</div>
-        <div style="font-size:13px;color:var(--gray-900);">${wo.scheduledDate || "—"}</div>
+        <div style="font-size:13px;color:var(--gray-900);">${wo.scheduledDate || "-"}</div>
       </div>
       ${wo.startedAt ? `<div>
         <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">Gestart op</div>
@@ -1508,7 +1508,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
         ${esc(m.senderName||m.senderId||"Systeem")}
         ${m.subject ? `<span style="font-size:11px;color:var(--gray-500);margin-left:4px">· ${esc(m.subject)}</span>` : ""}
       </div>
-      <div class="emp-list-sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(m.body||m.message||"—")}</div>
+      <div class="emp-list-sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(m.body||m.message||"-")}</div>
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;margin-left:8px;">
       <div style="font-size:10px;color:var(--gray-400);">${m.createdAt ? new Date(m.createdAt).toLocaleDateString("nl-BE",{day:"numeric",month:"short"}) : ""}</div>
@@ -1547,7 +1547,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
     <div style="margin-top:6px;font-size:12px;color:var(--gray-400);">Van: <strong>${esc(msg.senderName||msg.senderId||"Systeem")}</strong> · ${dateStr}</div>
   </div>
   <div style="padding:16px 20px;">
-    <p style="font-size:14px;color:var(--gray-700);line-height:1.7;white-space:pre-wrap;margin:0;">${esc(msg.body||msg.message||"—")}</p>
+    <p style="font-size:14px;color:var(--gray-700);line-height:1.7;white-space:pre-wrap;margin:0;">${esc(msg.body||msg.message||"-")}</p>
   </div>
 </div>`;
     document.body.appendChild(sheet);
@@ -1685,13 +1685,13 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
     <div style="font-size:11px;color:var(--gray-400);">Dagen aanwezig</div>
   </div>
   <div class="emp-card" style="margin:0;text-align:center;">
-    <div style="font-size:22px;font-weight:600;color:var(--gray-900);">${workedDays?((totalHours/workedDays).toFixed(1)):"—"}</div>
+    <div style="font-size:22px;font-weight:600;color:var(--gray-900);">${workedDays?((totalHours/workedDays).toFixed(1)):"-"}</div>
     <div style="font-size:11px;color:var(--gray-400);">Gem. uur/dag</div>
   </div>
 </div>
 
 <div class="emp-card">
-  <p class="emp-card-title">Dagdetail — ${monthLabel}</p>
+  <p class="emp-card-title">Dagdetail · ${monthLabel}</p>
   ${Object.keys(byDay).length ? Object.entries(byDay).sort((a,b)=>a[0].localeCompare(b[0])).map(([day, dc]) => {
     const dayHours = dc.reduce((s,c)=>s+(c.clockedOut?(new Date(c.clockedOut)-new Date(c.clockedIn))/3600000:0),0);
     const dayName = new Date(day).toLocaleDateString("nl-BE",{weekday:"short",day:"numeric",month:"short"});
@@ -1701,7 +1701,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
         <span style="font-size:12px;font-weight:600;color:var(--wf-green);">${dayHours.toFixed(1)} u</span>
       </div>
       ${dc.map(c=>`<div style="font-size:11.5px;color:var(--gray-500);display:flex;gap:8px;padding:1px 0;">
-        <span>${c.clockedIn?new Date(c.clockedIn).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}):"—"}</span>
+        <span>${c.clockedIn?new Date(c.clockedIn).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}):"-"}</span>
         <span>–</span>
         <span>${c.clockedOut?new Date(c.clockedOut).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}):`<span style="color:var(--wf-yellow)">Lopend</span>`}</span>
         <span style="margin-left:auto;">${c.clockedOut?((new Date(c.clockedOut)-new Date(c.clockedIn))/3600000).toFixed(1)+" u":""}</span>

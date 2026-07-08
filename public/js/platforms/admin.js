@@ -170,7 +170,7 @@
     b.id = "wfpSupportBanner";
     b.setAttribute("role", "status");
     b.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:9999;background:var(--wf-red);color:#fff;font:600 13px/1.4 system-ui,sans-serif;padding:6px 16px;display:flex;align-items:center;justify-content:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,.2)";
-    b.innerHTML = `<span>Support-sessie actief — ${esc(s.agent || "supportmedewerker")} (${scope}). Deze sessie wordt geaudit.</span>`;
+    b.innerHTML = `<span>Support-sessie actief · ${esc(s.agent || "supportmedewerker")} (${scope}). Deze sessie wordt geaudit.</span>`;
     const exit = document.createElement("button");
     exit.textContent = "Sessie verlaten";
     exit.style.cssText = "background:#fff;color:var(--wf-red);border:none;border-radius:6px;font:600 12px system-ui,sans-serif;padding:5px 12px;cursor:pointer;flex-shrink:0";
@@ -507,7 +507,7 @@
     if (reg[view]) reg[view]();
   }
 
-  // ── Dashboard — orkestrator met filter (standaard / mijn / organisatie) ────
+  // ── Dashboard · orkestrator met filter (standaard / mijn / organisatie) ────
   let _dashMode = "standaard"; // "standaard" | "personal" | "org"
   async function renderDashboard() {
     const content = document.getElementById("admContent");
@@ -543,7 +543,7 @@
     const kpiCard = w => `<div class="adm-kpi"><div class="adm-kpi-label">${esc(w.label)}</div><div class="adm-kpi-value">${esc(String(w.value))}</div><div class="adm-kpi-sub">${esc(w.sub || "")}</div></div>`;
     const grid = widgets => widgets.length
       ? `<div class="adm-kpis">${widgets.map(kpiCard).join("")}</div>`
-      : `<div class="adm-empty"><div class="adm-empty-text">${mode === "org" ? "Je organisatie heeft nog geen dashboard gepubliceerd." : "Nog geen widgets gekozen — klik Aanpassen."}</div></div>`;
+      : `<div class="adm-empty"><div class="adm-empty-text">${mode === "org" ? "Je organisatie heeft nog geen dashboard gepubliceerd." : "Nog geen widgets gekozen · klik Aanpassen."}</div></div>`;
     const r = await api("GET", `/me/dashboard/render?mode=${mode}`).catch(() => ({ widgets: [] }));
     if (mode === "org") {
       body.innerHTML = `<div style="background:var(--wf-blue-l);border:1px solid var(--wf-blue-l);border-radius:10px;padding:10px 14px;font-size:12.5px;color:var(--wf-blue);margin-bottom:14px">Dit dashboard is door je organisatie ingesteld; je ziet enkel widgets waar je rechten op hebt.</div>${grid(r.widgets || [])}`;
@@ -599,31 +599,31 @@
   <div class="adm-kpi adm-kpi-blue adm-kpi-link" data-goto="employees" title="Naar medewerkers">
     <div class="adm-kpi-icon"><svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg></div>
     <div class="adm-kpi-label">Team</div>
-    <div class="adm-kpi-value">${dash.team ?? "—"}</div>
+    <div class="adm-kpi-value">${dash.team ?? "-"}</div>
     <div class="adm-kpi-sub">Actieve medewerkers</div>
   </div>
   <div class="adm-kpi adm-kpi-green adm-kpi-link" data-goto="clocking" title="Naar prikklok">
     <div class="adm-kpi-icon"><svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg></div>
     <div class="adm-kpi-label">Ingeklokt</div>
-    <div class="adm-kpi-value">${dash.clockedIn ?? "—"}</div>
+    <div class="adm-kpi-value">${dash.clockedIn ?? "-"}</div>
     <div class="adm-kpi-sub">Van ${dash.team ?? "?"} medewerkers</div>
   </div>
   ${viewEnabled("leaves") ? `<div class="adm-kpi adm-kpi-amber adm-kpi-link" data-goto="leaves" title="Naar verlof">
     <div class="adm-kpi-icon"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg></div>
     <div class="adm-kpi-label">Verlof aanvragen</div>
-    <div class="adm-kpi-value">${dash.pendingLeaves ?? "—"}</div>
+    <div class="adm-kpi-value">${dash.pendingLeaves ?? "-"}</div>
     <div class="adm-kpi-sub">Wacht op goedkeuring</div>
   </div>` : ""}
   ${viewEnabled("expenses") ? `<div class="adm-kpi adm-kpi-red adm-kpi-link" data-goto="expenses" title="Naar onkosten">
     <div class="adm-kpi-icon"><svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg></div>
     <div class="adm-kpi-label">Onkosten</div>
-    <div class="adm-kpi-value">${dash.pendingExpenses ?? "—"}</div>
+    <div class="adm-kpi-value">${dash.pendingExpenses ?? "-"}</div>
     <div class="adm-kpi-sub">Te verwerken</div>
   </div>` : ""}
   ${viewEnabled("workorders") ? `<div class="adm-kpi adm-kpi-purple adm-kpi-link" data-goto="workorders" title="Naar werkbonnen">
     <div class="adm-kpi-icon"><svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg></div>
     <div class="adm-kpi-label">Werkbonnen</div>
-    <div class="adm-kpi-value">${dash.openWorkorders ?? "—"}</div>
+    <div class="adm-kpi-value">${dash.openWorkorders ?? "-"}</div>
     <div class="adm-kpi-sub">Openstaand</div>
   </div>` : ""}
 </div>
@@ -641,7 +641,7 @@
           <tr class="adm-row-link adm-dash-team" data-id="${esc(u.id||"")}" title="Open medewerker">
             <td><span class="adm-avatar">${esc((u.name||"?")[0])}</span> ${esc(u.name||u.email)}</td>
             <td>${u.absent ? '<span class="adm-status adm-status-inactive">Afwezig</span>' : u.clockedIn ? '<span class="adm-status adm-status-active">Ingeklokt</span>' : '<span class="adm-status adm-status-pending">Niet geklokt</span>'}</td>
-            <td>${u.planned ? "✓" : "—"}</td>
+            <td>${u.planned ? "✓" : "-"}</td>
           </tr>`).join("") || '<tr><td colspan="3" class="adm-empty">Geen teamleden</td></tr>'}
         </tbody>
       </table>
@@ -660,7 +660,7 @@
           ${((pending.leaves||pending)||[]).slice(0,5).map(l => `
           <tr>
             <td>${esc(uName(l))}</td>
-            <td>${esc(l.type||"—")}</td>
+            <td>${esc(l.type||"-")}</td>
             <td style="white-space:nowrap">${esc(l.startDate)} – ${esc(l.endDate)}</td>
             <td style="white-space:nowrap">
               <button class="adm-btn adm-btn-success adm-btn-sm adm-dash-lv-ok" data-id="${esc(l.id)}">Goed</button>
@@ -679,9 +679,9 @@ ${(() => {
   const openInv    = invoices.filter(i => i.status === "open");
   const expensesPending = (expData.expenses || []).filter(e => e.status === "pending" || !e.status);
   const items = [
-    ...overdueInv.map(i => ({ icon:"<span class=\"adm-dot\" style=\"background:var(--wf-red)\"></span>", text:`Factuur ${i.number} vervallen — ${new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR"}).format(i.total)}`, view:"facturen", urgent:true })),
+    ...overdueInv.map(i => ({ icon:"<span class=\"adm-dot\" style=\"background:var(--wf-red)\"></span>", text:`Factuur ${i.number} vervallen · ${new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR"}).format(i.total)}`, view:"facturen", urgent:true })),
     ...expensesPending.slice(0,3).map(e => ({ icon:"<span class=\"adm-dot\" style=\"background:var(--wf-yellow)\"></span>", text:`Onkostennota €${e.amount||0} van ${esc(uName(e)||"medewerker")} wacht op goedkeuring`, view:"expenses", urgent:false })),
-    ...openInv.slice(0,2).map(i => ({ icon:"<span class=\"adm-dot\" style=\"background:var(--wf-blue)\"></span>", text:`Factuur ${i.number} openstaand — ${new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR"}).format(i.total)}`, view:"facturen", urgent:false }))
+    ...openInv.slice(0,2).map(i => ({ icon:"<span class=\"adm-dot\" style=\"background:var(--wf-blue)\"></span>", text:`Factuur ${i.number} openstaand · ${new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR"}).format(i.total)}`, view:"facturen", urgent:false }))
   ];
   if (!items.length) return "";
   return `<div class="adm-card" style="margin-top:16px">
@@ -873,9 +873,9 @@ ${(() => {
       <tbody>${employees.map(u => `
         <tr class="adm-row-link adm-emp-row" data-id="${esc(u.id)}" title="Open medewerker">
           <td><span class="adm-avatar" style="background:${u.active===false?"var(--gray-100)":"var(--wf-purple-l)"};color:${u.active===false?"var(--gray-400)":"var(--wf-purple)"}">${(u.name||u.email||"?")[0].toUpperCase()}</span></td>
-          <td><div style="font-weight:600;color:${u.active===false?"var(--gray-400)":"var(--gray-900)"}">${esc(u.name||"—")}</div><div style="font-size:11px;color:var(--gray-400)">${esc(u.phone||"")}</div></td>
+          <td><div style="font-weight:600;color:${u.active===false?"var(--gray-400)":"var(--gray-900)"}">${esc(u.name||"-")}</div><div style="font-size:11px;color:var(--gray-400)">${esc(u.phone||"")}</div></td>
           <td style="font-size:12px">${esc(u.email)}</td>
-          <td style="font-size:12px;color:var(--gray-500)">${esc(u.function||u.jobTitle||"—")}</td>
+          <td style="font-size:12px;color:var(--gray-500)">${esc(u.function||u.jobTitle||"-")}</td>
           <td><span class="adm-status ${u.role==="manager"?"adm-status-pending":"adm-status-open"}">${u.role==="manager"?"Manager":u.role==="tenant_admin"?"Admin":"Medewerker"}</span></td>
           <td>${u.active!==false ? '<span class="adm-status adm-status-active">Actief</span>' : '<span class="adm-status adm-status-inactive">Inactief</span>'}</td>
           <td style="white-space:nowrap">
@@ -963,7 +963,7 @@ ${(() => {
 
   <div class="adm-form-section">Toegang &amp; rechten</div>
   ${isAdminUser ? `<div style="font-size:12px;color:var(--gray-500);">Beheerders hebben volledige toegang. Rechten beheer je hier alleen voor medewerkers en managers.</div>` : `
-  <div style="font-size:12px;color:var(--gray-500);margin-bottom:8px;">Bepaal per onderdeel wat deze gebruiker mag: <strong>Geen</strong> (niet zichtbaar), <strong>Lezen</strong> (bekijken, niets wijzigen) of <strong>Schrijven</strong> (volledig gebruiken). Zo maak je profielen op maat — bv. een finance-medewerker met enkel Facturatie. In- en uitprikken (prikklok) kan iedereen altijd.</div>
+  <div style="font-size:12px;color:var(--gray-500);margin-bottom:8px;">Bepaal per onderdeel wat deze gebruiker mag: <strong>Geen</strong> (niet zichtbaar), <strong>Lezen</strong> (bekijken, niets wijzigen) of <strong>Schrijven</strong> (volledig gebruiken). Zo maak je profielen op maat · bv. een finance-medewerker met enkel Facturatie. In- en uitprikken (prikklok) kan iedereen altijd.</div>
   ${_grantable.length ? `<div id="admEmpPerms" style="display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;">
     ${_grantable.map(p => {
       const perms = emp ? (emp.permissions || []) : null;
@@ -1041,7 +1041,7 @@ ${emp ? `
       if (data.leaveQuota !== undefined) data.leaveQuota = Number(data.leaveQuota) || 20;
       // Geselecteerde rechten met niveau meesturen: "X" = schrijven, "read:X" =
       // alleen-lezen, weggelaten = geen. Server saneert en scoped per rol.
-      // Niet voor beheerders — die behouden hun volledige toegang.
+      // Niet voor beheerders · die behouden hun volledige toegang.
       if (!isAdminUser) {
         data.permissions = [...document.querySelectorAll("#admEmpForm .adm-perm")]
           .filter(sel => sel.value !== "none")
@@ -1221,11 +1221,11 @@ ${emp ? `
           return `<td style="${cellBg?"background:"+cellBg+";":""}">
             ${onLeave && !dayShifts.length ? `<span style="background:var(--wf-yellow-l);color:var(--wf-yellow);border-radius:4px;padding:2px 6px;font-size:10px;font-weight:600;display:inline-block;"><span class="adm-dot" style="background:var(--wf-yellow)"></span> ${esc(onLeave)}</span>` : ""}
             ${dayShifts.map(s =>
-              `<span class="adm-shift-pill" data-id="${s.id}" title="${esc(s.note||s.location||"")} — klik om te bewerken"
+              `<span class="adm-shift-pill" data-id="${s.id}" title="${esc(s.note||s.location||"")} · klik om te bewerken"
                 style="background:${bg};color:${fg};border:1px solid ${fg}30;border-radius:5px;padding:2px 7px;font-size:11px;font-weight:600;cursor:pointer;display:inline-block;margin-bottom:2px;white-space:nowrap;">
                 ${esc(s.start||"")}${s.end?`–${esc(s.end)}`:""}${s.location?` <span style="opacity:.7;font-weight:400">${esc(s.location.slice(0,8))}</span>`:""}
               </span>`
-            ).join("<br>")||(!onLeave?`<span style="color:var(--gray-200);font-size:12px;">—</span>`:"")}
+            ).join("<br>")||(!onLeave?`<span style="color:var(--gray-200);font-size:12px;">-</span>`:"")}
           </td>`;
         }).join("")}
       </tr>`;
@@ -1244,7 +1244,7 @@ ${emp ? `
   <div class="adm-form-row">
     <div class="adm-form-group"><label>Medewerker *</label>
       <select name="userId" required>
-        <option value="">— Kies medewerker —</option>
+        <option value="">- Kies medewerker -</option>
         ${employees.map(u => `<option value="${esc(u.id)}" ${shift?.userId===u.id?"selected":""}>${esc(u.name || u.email)}</option>`).join("")}
       </select>
     </div>
@@ -1433,11 +1433,11 @@ ${emp ? `
   <thead><tr><th>Medewerker</th><th>Inkloktijd</th><th>Uitkloktijd</th><th>Uren</th><th>Status</th><th>Actie</th></tr></thead>
   <tbody>
     ${clocks.map(c => {
-      const hours = c.clockedOut ? ((new Date(c.clockedOut) - new Date(c.clockedIn)) / 3600000).toFixed(1) : "—";
+      const hours = c.clockedOut ? ((new Date(c.clockedOut) - new Date(c.clockedIn)) / 3600000).toFixed(1) : "-";
       const noOut = !c.clockedOut;
       return `<tr class="${noOut ? "" : "adm-row-link clk-row"}" data-id="${esc(c.id)}" ${noOut ? "" : 'title="Open correctie"'}>
         <td style="font-weight:500">${esc(uName(c))}</td>
-        <td>${c.clockedIn ? new Date(c.clockedIn).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}) : "—"}</td>
+        <td>${c.clockedIn ? new Date(c.clockedIn).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}) : "-"}</td>
         <td>${c.clockedOut ? new Date(c.clockedOut).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}) : '<span style="color:var(--wf-yellow)">Niet uitgeklokt</span>'}</td>
         <td>${hours}</td>
         <td>${c.status==="in"||noOut ? '<span class="adm-status adm-status-active">Ingeklokt</span>' : '<span class="adm-status adm-status-inactive">Uitgeklokt</span>'}</td>
@@ -1485,7 +1485,7 @@ ${emp ? `
 <form id="clkAddForm">
   <div class="adm-form-group"><label>Medewerker *</label>
     <select name="userId" required>
-      <option value="">— Kies medewerker —</option>
+      <option value="">- Kies medewerker -</option>
       ${employees.map(u => `<option value="${esc(u.id)}">${esc(u.name||u.email)}</option>`).join("")}
     </select>
   </div>
@@ -1540,7 +1540,7 @@ ${emp ? `
     if (!clk) return;
     const inTime = clk.clockedIn ? new Date(clk.clockedIn).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit",hour12:false}) : "";
     const outTime = clk.clockedOut ? new Date(clk.clockedOut).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit",hour12:false}) : "";
-    document.getElementById("admDrawerTitle").textContent = `Klok corrigeren — ${esc(uName(clk))}`;
+    document.getElementById("admDrawerTitle").textContent = `Klok corrigeren · ${esc(uName(clk))}`;
     document.getElementById("admDrawerBody").innerHTML = `
 <form id="clkEditForm">
   <div class="adm-form-group"><label>Medewerker</label>
@@ -1651,7 +1651,7 @@ ${emp ? `
   <div class="adm-form-group">
     <label>Medewerker *</label>
     <select name="userId" required>
-      <option value="">— Kies medewerker —</option>
+      <option value="">- Kies medewerker -</option>
       ${employees.map(u => `<option value="${esc(u.id)}" ${preselectedUserId===u.id?"selected":""}>${esc(u.name||u.email)}</option>`).join("")}
     </select>
   </div>
@@ -1767,7 +1767,7 @@ ${emp ? `
     }
     const { days = {}, leaves = [] } = calData;
 
-    // Build userId→name map — fetch employees if not yet loaded
+    // Build userId→name map · fetch employees if not yet loaded
     if (!_state.employees?.length) {
       try { const d = await api("GET", "/employees?includeInactive=true"); _state.employees = d.employees || d || []; } catch(_) {}
     }
@@ -1847,7 +1847,7 @@ ${emp ? `
 
     container.innerHTML = `
 <div style="padding:16px;">
-  <div style="font-size:13px;color:var(--gray-500);margin-bottom:12px;">Vakantiesaldo ${year} — op basis van goedgekeurde verlofaanvragen</div>
+  <div style="font-size:13px;color:var(--gray-500);margin-bottom:12px;">Vakantiesaldo ${year} · op basis van goedgekeurde verlofaanvragen</div>
   <table class="adm-table">
     <thead><tr><th>Medewerker</th><th>Quota</th><th>Gebruikt</th><th>Resterend</th><th>Voortgang</th></tr></thead>
     <tbody>${balance.map(b => {
@@ -1877,16 +1877,16 @@ ${emp ? `
       <tbody>${leaves.map(l => `
         <tr>
           <td>${esc(uName(l))}</td>
-          <td>${esc(l.type||"—")}</td>
+          <td>${esc(l.type||"-")}</td>
           <td>${esc(l.startDate||"")}</td>
           <td>${esc(l.endDate||"")}</td>
-          <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(l.reason||"")}">${esc(l.reason||"—")}</td>
+          <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(l.reason||"")}">${esc(l.reason||"-")}</td>
           <td><span class="adm-status adm-status-${l.status}">${esc(l.status||"")}</span></td>
-          <td style="font-size:12px;color:var(--gray-500);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(l.reviewNote||"")}">${esc(l.reviewNote||"—")}</td>
+          <td style="font-size:12px;color:var(--gray-500);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(l.reviewNote||"")}">${esc(l.reviewNote||"-")}</td>
           <td style="white-space:nowrap;">${l.status==="aangevraagd" ? `
             <button class="adm-btn adm-btn-success adm-btn-sm adm-leave-action" data-id="${esc(l.id)}" data-status="goedgekeurd">Goed</button>
             <button class="adm-btn adm-btn-danger adm-btn-sm adm-leave-action" data-id="${esc(l.id)}" data-status="geweigerd">Weigeren</button>
-          ` : "—"}</td>
+          ` : "-"}</td>
         </tr>`).join("")}
       </tbody>
     </table>`;
@@ -1996,9 +1996,9 @@ ${emp ? `
         <tbody>${rows.map(e => `<tr>
           <td>${esc(uName(e))}</td>
           <td>${esc(e.date)}</td>
-          <td>${esc(e.category||"—")}</td>
+          <td>${esc(e.category||"-")}</td>
           <td style="font-weight:600;">€ ${Number(e.amount||0).toFixed(2)}</td>
-          <td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(e.description||"")}">${esc(e.description||"—")}</td>
+          <td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(e.description||"")}">${esc(e.description||"-")}</td>
           <td>
             <span class="adm-status adm-status-${e.status}">${esc(e.status)}</span>
             ${e.reviewNote ? `<div style="font-size:11px;color:var(--gray-500);margin-top:2px;" title="${esc(e.reviewNote)}">${esc(e.reviewNote.slice(0,30))}${e.reviewNote.length>30?"…":""}</div>` : ""}
@@ -2006,7 +2006,7 @@ ${emp ? `
           <td style="white-space:nowrap;">${["pending","ingediend"].includes(e.status) ? `
             <button class="adm-btn adm-btn-success adm-btn-sm adm-exp-review" data-id="${e.id}" data-dec="goedgekeurd" data-name="${esc(uName(e))}" data-amount="${e.amount}" data-cat="${esc(e.category||"")}">Goed</button>
             <button class="adm-btn adm-btn-danger  adm-btn-sm adm-exp-review" data-id="${e.id}" data-dec="geweigerd"  data-name="${esc(uName(e))}" data-amount="${e.amount}" data-cat="${esc(e.category||"")}">Weigeren</button>
-          ` : "—"}</td>
+          ` : "-"}</td>
         </tr>`).join("")}</tbody>
       </table>`;
     }
@@ -2156,12 +2156,12 @@ ${emp ? `
         ${workorders.map(w => `
         <tr class="adm-row-link adm-wo-row" data-id="${w.id}" title="Open werkbon">
           <td style="font-family:monospace;font-size:12px;">${w.number || w.id.slice(-4)}</td>
-          <td>${esc(w.title || "—")}</td>
-          <td>${esc(uName(w) || "—")}</td>
-          <td>${esc(w.clientName || "—")}</td>
-          <td><span class="adm-status adm-status-${(w.status||"").toLowerCase().replace(/\s/g,"-")}">${esc(w.status||"—")}</span></td>
+          <td>${esc(w.title || "-")}</td>
+          <td>${esc(uName(w) || "-")}</td>
+          <td>${esc(w.clientName || "-")}</td>
+          <td><span class="adm-status adm-status-${(w.status||"").toLowerCase().replace(/\s/g,"-")}">${esc(w.status||"-")}</span></td>
           <td><span style="font-size:12px;">${w.priority==="hoog"?'<span class="adm-dot" style="background:var(--wf-red)"></span>':w.priority==="laag"?'<span class="adm-dot" style="background:var(--wf-green)"></span>':'<span class="adm-dot" style="background:var(--wf-yellow)"></span>'} ${esc(w.priority||"normaal")}</span></td>
-          <td>${w.scheduledDate || w.createdAt?.slice(0,10) || "—"}</td>
+          <td>${w.scheduledDate || w.createdAt?.slice(0,10) || "-"}</td>
           <td style="white-space:nowrap;">
             ${w.invoiceId
               ? `<span style="font-size:11px;color:var(--wf-green);font-weight:600;">✓ gefactureerd</span>`
@@ -2228,13 +2228,13 @@ ${emp ? `
   <div class="adm-form-row">
     <div class="adm-form-group"><label>Medewerker</label>
       <select name="userId">
-        <option value="">— Niet toegewezen —</option>
+        <option value="">- Niet toegewezen -</option>
         ${employees.map(u => `<option value="${esc(u.id)}" ${workorder?.userId === u.id ? "selected" : ""}>${esc(u.name || u.email)}</option>`).join("")}
       </select>
     </div>
     <div class="adm-form-group"><label>Klant</label>
       <select name="customerId" id="woCustSel">
-        <option value="">— Kies klant of typ vrij —</option>
+        <option value="">- Kies klant of typ vrij -</option>
         ${customers.map(c => `<option value="${c.id}" ${workorder?.customerId===c.id?"selected":""}>${esc(c.name)}</option>`).join("")}
       </select>
     </div>
@@ -2272,7 +2272,7 @@ ${emp ? `
   </div>
   <div style="background:var(--gray-50);border-radius:8px;padding:12px;margin-bottom:8px;">
     <div style="font-weight:600;font-size:12px;color:var(--gray-700);margin-bottom:8px;">Facturatie</div>
-    ${workorder?.clockedHours ? `<div style="font-size:12px;color:var(--wf-blue);margin-bottom:8px;">⏱ ${workorder.clockedHours} u geklokt op deze werkbon${workorder?.billableHours==null?" — wordt overgenomen als factureerbare uren bij afronden":""}.</div>` : ""}
+    ${workorder?.clockedHours ? `<div style="font-size:12px;color:var(--wf-blue);margin-bottom:8px;">⏱ ${workorder.clockedHours} u geklokt op deze werkbon${workorder?.billableHours==null?" · wordt overgenomen als factureerbare uren bij afronden":""}.</div>` : ""}
     <div class="adm-form-row">
       <div class="adm-form-group"><label>Factureerbare uren</label>
         <input name="billableHours" type="number" step="0.25" min="0" value="${workorder?.billableHours ?? ""}" placeholder="${workorder?.clockedHours ? workorder.clockedHours+" geklokt" : "bv. 8"}">
@@ -2281,7 +2281,7 @@ ${emp ? `
         <input name="hourlyRate" type="number" step="1" min="0" value="${workorder?.hourlyRate ?? ""}" placeholder="standaardtarief">
       </div>
     </div>
-    <div class="adm-form-group"><label>Vaste prijs (€) — overschrijft uren×tarief</label>
+    <div class="adm-form-group"><label>Vaste prijs (€) · overschrijft uren×tarief</label>
       <input name="fixedPrice" type="number" step="0.01" min="0" value="${workorder?.fixedPrice ?? ""}" placeholder="leeg = op uren factureren">
     </div>
     <div class="adm-form-group" style="margin-top:4px;">
@@ -2409,7 +2409,7 @@ ${emp ? `
     ]);
     const messages = data.messages || data || [];
     const venues = vdata.venues || vdata.rows || [];
-    const venueName = id => (venues.find(v => v.id === id) || {}).name || (id ? "Werf" : "—");
+    const venueName = id => (venues.find(v => v.id === id) || {}).name || (id ? "Werf" : "-");
 
     const toLabel = m => {
       if (m.recipientId) return `Persoonlijk`;
@@ -2439,9 +2439,9 @@ ${emp ? `
         <tr>
           <td>${esc(m.senderName||m.senderId||"Systeem")}</td>
           <td><span style="font-size:11px;background:var(--gray-100);border-radius:4px;padding:2px 6px;">${toLabel(m)}</span></td>
-          <td>${m.venueId ? `<span style="font-size:11px;background:var(--wf-yellow-l);color:var(--wf-yellow);border-radius:4px;padding:2px 6px;">${esc(venueName(m.venueId))}</span>` : '<span style="color:var(--gray-300)">—</span>'}</td>
-          <td style="font-weight:500;">${esc(m.subject||"—")}</td>
-          <td style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--gray-500);font-size:12px;" title="${esc(m.body||m.message||"")}">${esc(m.body||m.message||"—")}</td>
+          <td>${m.venueId ? `<span style="font-size:11px;background:var(--wf-yellow-l);color:var(--wf-yellow);border-radius:4px;padding:2px 6px;">${esc(venueName(m.venueId))}</span>` : '<span style="color:var(--gray-300)">-</span>'}</td>
+          <td style="font-weight:500;">${esc(m.subject||"-")}</td>
+          <td style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--gray-500);font-size:12px;" title="${esc(m.body||m.message||"")}">${esc(m.body||m.message||"-")}</td>
           <td style="white-space:nowrap;font-size:12px;color:var(--gray-400);">${m.createdAt?.slice(0,16)||""}</td>
           <td>
             <button class="adm-btn adm-btn-secondary adm-btn-sm adm-msg-view" data-id="${esc(m.id)}" title="Bekijk bericht">Bekijk</button>
@@ -2517,13 +2517,13 @@ ${emp ? `
       <option value="person">Specifieke persoon</option>
     </select>
     <select name="recipientId" id="admMsgRecipient" style="display:none;">
-      <option value="">— Kies persoon —</option>
+      <option value="">- Kies persoon -</option>
       ${employees.map(u => `<option value="${esc(u.id)}">${esc(u.name || u.email)} (${esc(u.role||"")})</option>`).join("")}
     </select>
   </div>
-  <div class="adm-form-group"><label>Werf (optioneel — voor werf-chat)</label>
+  <div class="adm-form-group"><label>Werf (optioneel · voor werf-chat)</label>
     <select name="venueId" id="admMsgVenue">
-      <option value="">— Algemeen (geen werf) —</option>
+      <option value="">- Algemeen (geen werf) -</option>
       ${venues.map(v => `<option value="${esc(v.id)}">${esc(v.name || v.id)}</option>`).join("")}
     </select>
   </div>
@@ -2609,10 +2609,10 @@ ${emp ? `
 </div>
 
 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;" id="repKpis">
-  <div class="adm-kpi adm-kpi-blue"><div class="adm-kpi-label">Totaal uren</div><div class="adm-kpi-value" id="repKpiHours">—</div><div class="adm-kpi-sub">Geregistreerd</div></div>
-  <div class="adm-kpi adm-kpi-green"><div class="adm-kpi-label">Goedgekeurde onkosten</div><div class="adm-kpi-value" id="repKpiExpenses">—</div><div class="adm-kpi-sub">Totaal bedrag</div></div>
-  <div class="adm-kpi adm-kpi-amber"><div class="adm-kpi-label">Verlofdagen</div><div class="adm-kpi-value" id="repKpiLeaves">—</div><div class="adm-kpi-sub">Goedgekeurd</div></div>
-  <div class="adm-kpi adm-kpi-purple"><div class="adm-kpi-label">Werkbonnen voltooid</div><div class="adm-kpi-value" id="repKpiWO">—</div><div class="adm-kpi-sub">In periode</div></div>
+  <div class="adm-kpi adm-kpi-blue"><div class="adm-kpi-label">Totaal uren</div><div class="adm-kpi-value" id="repKpiHours">-</div><div class="adm-kpi-sub">Geregistreerd</div></div>
+  <div class="adm-kpi adm-kpi-green"><div class="adm-kpi-label">Goedgekeurde onkosten</div><div class="adm-kpi-value" id="repKpiExpenses">-</div><div class="adm-kpi-sub">Totaal bedrag</div></div>
+  <div class="adm-kpi adm-kpi-amber"><div class="adm-kpi-label">Verlofdagen</div><div class="adm-kpi-value" id="repKpiLeaves">-</div><div class="adm-kpi-sub">Goedgekeurd</div></div>
+  <div class="adm-kpi adm-kpi-purple"><div class="adm-kpi-label">Werkbonnen voltooid</div><div class="adm-kpi-value" id="repKpiWO">-</div><div class="adm-kpi-sub">In periode</div></div>
 </div>
 
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
@@ -2748,14 +2748,14 @@ ${emp ? `
         // ── Onkosten ──────────────────────────────────────────
         document.getElementById("repExpensesTable").innerHTML = expenses.length
           ? `<table class="adm-table"><thead><tr><th>Medewerker</th><th>Datum</th><th>Categorie</th><th>Bedrag</th><th>Status</th></tr></thead><tbody>
-             ${expenses.map(e => `<tr><td>${esc(uName(e))}</td><td>${esc(e.date)}</td><td>${esc(e.category||"—")}</td><td>€${Number(e.amount||0).toFixed(2)}</td><td><span class="adm-status adm-status-${esc(e.status)}">${esc(e.status)}</span></td></tr>`).join("")}
+             ${expenses.map(e => `<tr><td>${esc(uName(e))}</td><td>${esc(e.date)}</td><td>${esc(e.category||"-")}</td><td>€${Number(e.amount||0).toFixed(2)}</td><td><span class="adm-status adm-status-${esc(e.status)}">${esc(e.status)}</span></td></tr>`).join("")}
              </tbody></table>`
           : '<div class="adm-empty">Geen onkosten in deze periode</div>';
 
         // ── Verlof ────────────────────────────────────────────
         document.getElementById("repLeavesTable").innerHTML = leaves.length
           ? `<table class="adm-table"><thead><tr><th>Medewerker</th><th>Type</th><th>Van</th><th>Tot</th><th>Status</th></tr></thead><tbody>
-             ${leaves.map(l => `<tr><td>${esc(uName(l))}</td><td>${esc(l.type||"—")}</td><td>${esc(l.startDate)}</td><td>${esc(l.endDate)}</td><td><span class="adm-status adm-status-${esc(l.status)}">${esc(l.status)}</span></td></tr>`).join("")}
+             ${leaves.map(l => `<tr><td>${esc(uName(l))}</td><td>${esc(l.type||"-")}</td><td>${esc(l.startDate)}</td><td>${esc(l.endDate)}</td><td><span class="adm-status adm-status-${esc(l.status)}">${esc(l.status)}</span></td></tr>`).join("")}
              </tbody></table>`
           : '<div class="adm-empty">Geen verlof in deze periode</div>';
 
@@ -2825,17 +2825,17 @@ ${emp ? `
       <td><strong>${esc(r.name)}</strong></td>
       <td style="text-align:right;font-variant-numeric:tabular-nums;">${r.days.size}</td>
       <td style="text-align:right;font-weight:600;font-variant-numeric:tabular-nums;">${r.hours.toFixed(2)}</td>
-      <td style="text-align:right;color:var(--gray-500);">${r.days.size ? (r.hours/r.days.size).toFixed(2) : "—"}</td>
-      <td style="text-align:right;">${r.leaveDays||"—"}</td>
+      <td style="text-align:right;color:var(--gray-500);">${r.days.size ? (r.hours/r.days.size).toFixed(2) : "-"}</td>
+      <td style="text-align:right;">${r.leaveDays||"-"}</td>
       <td style="text-align:right;font-weight:600;">€${r.expAmt.toFixed(2)}</td>
     </tr>`).join("")}
   </tbody>
   <tfoot>
     <tr style="background:var(--gray-100);font-weight:600;border-top:2px solid var(--gray-200);">
       <td>Totaal (${payrollRows.length} medewerkers)</td>
-      <td style="text-align:right;">—</td>
+      <td style="text-align:right;">-</td>
       <td style="text-align:right;">${totH.toFixed(2)} u</td>
-      <td style="text-align:right;">—</td>
+      <td style="text-align:right;">-</td>
       <td style="text-align:right;">${totL} d</td>
       <td style="text-align:right;">€${totE.toFixed(2)}</td>
     </tr>
@@ -2940,8 +2940,8 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
 </div>
 <div class="section-title">Personeelsinzet</div>
 <table><thead><tr><th>Medewerker</th><th>Gewerkte dagen</th><th>Totaal uren</th><th>Gem. uur/dag</th><th>Verlof (d)</th><th>Onkosten</th></tr></thead>
-<tbody>${payroll.map(r=>`<tr><td>${esc(r.name)}</td><td>${r.days.size}</td><td class="${r.hours>0?"green":"red"}">${r.hours.toFixed(1)} u</td><td>${r.days.size?(r.hours/r.days.size).toFixed(1):"—"}</td><td>${r.leaveDays||0}</td><td>${fE(r.expAmt)}</td></tr>`).join("")||"<tr><td colspan='6'>Geen data</td></tr>"}</tbody>
-<tfoot><tr style="font-weight:600;background:#f8fafc"><td>Totaal</td><td>—</td><td>${totalH.toFixed(1)} u</td><td>—</td><td>${payroll.reduce((s,r)=>s+r.leaveDays,0)}</td><td>${fE(totalExp)}</td></tr></tfoot>
+<tbody>${payroll.map(r=>`<tr><td>${esc(r.name)}</td><td>${r.days.size}</td><td class="${r.hours>0?"green":"red"}">${r.hours.toFixed(1)} u</td><td>${r.days.size?(r.hours/r.days.size).toFixed(1):"-"}</td><td>${r.leaveDays||0}</td><td>${fE(r.expAmt)}</td></tr>`).join("")||"<tr><td colspan='6'>Geen data</td></tr>"}</tbody>
+<tfoot><tr style="font-weight:600;background:#f8fafc"><td>Totaal</td><td>-</td><td>${totalH.toFixed(1)} u</td><td>-</td><td>${payroll.reduce((s,r)=>s+r.leaveDays,0)}</td><td>${fE(totalExp)}</td></tr></tfoot>
 </table>
 <div class="section-title">Werkbonnenstatus</div>
 <table><thead><tr><th>Status</th><th>Aantal</th><th>%</th></tr></thead>
@@ -3048,11 +3048,11 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
         <tbody>
           ${rows.map(r => `
           <tr>
-            <td style="white-space:nowrap;font-size:12px;">${r.at ? new Date(r.at).toLocaleString("nl-BE",{dateStyle:"short",timeStyle:"short"}) : "—"}</td>
+            <td style="white-space:nowrap;font-size:12px;">${r.at ? new Date(r.at).toLocaleString("nl-BE",{dateStyle:"short",timeStyle:"short"}) : "-"}</td>
             <td style="font-size:12px;">${r.actor||"systeem"}</td>
-            <td><span class="adm-status ${r.action?.includes("fail")||r.action?.includes("lock")||r.action?.includes("denied") ? "adm-status-inactive" : "adm-status-active"}">${r.action||"—"}</span></td>
-            <td style="font-size:12px;">${r.area||"—"}</td>
-            <td style="font-size:12px;color:var(--gray-500);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.detail||""}">${r.detail||"—"}</td>
+            <td><span class="adm-status ${r.action?.includes("fail")||r.action?.includes("lock")||r.action?.includes("denied") ? "adm-status-inactive" : "adm-status-active"}">${r.action||"-"}</span></td>
+            <td style="font-size:12px;">${r.area||"-"}</td>
+            <td style="font-size:12px;color:var(--gray-500);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.detail||""}">${r.detail||"-"}</td>
           </tr>`).join("")}
         </tbody>
       </table>`;
@@ -3110,10 +3110,10 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
   function buildCustRows(rows) {
     return rows.map(c => `<tr style="cursor:pointer;" class="cust-detail-row" data-id="${c.id}">
       <td><strong>${esc(c.name)}</strong></td>
-      <td>${esc(c.contactName||"—")}</td>
-      <td><a href="mailto:${esc(c.email||"")}" style="color:var(--wf-purple)">${esc(c.email||"—")}</a></td>
-      <td>${esc(c.phone||"—")}</td>
-      <td style="font-family:monospace;font-size:12px">${esc(c.vatNumber||"—")}</td>
+      <td>${esc(c.contactName||"-")}</td>
+      <td><a href="mailto:${esc(c.email||"")}" style="color:var(--wf-purple)">${esc(c.email||"-")}</a></td>
+      <td>${esc(c.phone||"-")}</td>
+      <td style="font-family:monospace;font-size:12px">${esc(c.vatNumber||"-")}</td>
       <td style="white-space:nowrap">
         <button class="adm-btn adm-btn-primary adm-btn-sm cust-view" data-id="${c.id}">Detail</button>
         <button class="adm-btn adm-btn-secondary adm-btn-sm cust-edit" data-id="${c.id}"></button>
@@ -3157,8 +3157,8 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
               const st = QUOTE_STATUS[q.status] || { label: q.status, css: "adm-status-pending" };
               const accepted = q.status === "aanvaard";
               return `<tr>
-                <td style="font-family:monospace;font-weight:600">${esc(q.number || "—")}</td>
-                <td>${q.createdAt ? new Date(q.createdAt).toLocaleDateString("nl-BE") : "—"}</td>
+                <td style="font-family:monospace;font-weight:600">${esc(q.number || "-")}</td>
+                <td>${q.createdAt ? new Date(q.createdAt).toLocaleDateString("nl-BE") : "-"}</td>
                 <td style="font-weight:600">${fmtEurCD(q.total)}</td>
                 <td><span class="adm-status ${st.css}">${st.label}</span></td>
                 <td style="display:flex;gap:4px;white-space:nowrap;">
@@ -3187,10 +3187,10 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
             <thead><tr><th>#</th><th>Titel</th><th>Medewerker</th><th>Status</th><th>Datum</th><th>Acties</th></tr></thead>
             <tbody>${custWOs.map(w => `<tr>
               <td style="font-family:monospace">${w.number||w.id.slice(-4)}</td>
-              <td>${esc(w.title||"—")}</td>
-              <td>${esc(uName(w)||"—")}</td>
-              <td><span class="adm-status adm-status-${(w.status||"").toLowerCase().replace(/\s/g,"-")}">${esc(w.status||"—")}</span></td>
-              <td>${w.scheduledDate||w.createdAt?.slice(0,10)||"—"}</td>
+              <td>${esc(w.title||"-")}</td>
+              <td>${esc(uName(w)||"-")}</td>
+              <td><span class="adm-status adm-status-${(w.status||"").toLowerCase().replace(/\s/g,"-")}">${esc(w.status||"-")}</span></td>
+              <td>${w.scheduledDate||w.createdAt?.slice(0,10)||"-"}</td>
               <td><button class="adm-btn adm-btn-secondary adm-btn-sm wo-from-cust" data-id="${w.id}">Bewerk</button></td>
             </tr>`).join("")}</tbody>
           </table>` : `<div class="adm-empty"><div class="adm-empty-text">Geen werkbonnen voor deze klant</div></div>`;
@@ -3203,9 +3203,9 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
             <tbody>${custInvs.map(inv => {
               const st = INV_STATUS[inv.status]||{label:inv.status,css:"adm-status-pending"};
               return `<tr>
-                <td style="font-family:monospace;font-weight:600">${esc(inv.number||"—")}</td>
-                <td>${inv.invoiceDate?new Date(inv.invoiceDate).toLocaleDateString("nl-BE"):"—"}</td>
-                <td>${inv.dueDate?new Date(inv.dueDate).toLocaleDateString("nl-BE"):"—"}</td>
+                <td style="font-family:monospace;font-weight:600">${esc(inv.number||"-")}</td>
+                <td>${inv.invoiceDate?new Date(inv.invoiceDate).toLocaleDateString("nl-BE"):"-"}</td>
+                <td>${inv.dueDate?new Date(inv.dueDate).toLocaleDateString("nl-BE"):"-"}</td>
                 <td style="font-weight:600">${fmtEurCD(inv.total)}</td>
                 <td><span class="adm-status ${st.css}">${st.label}</span></td>
                 <td style="display:flex;gap:4px;">
@@ -3428,9 +3428,9 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
   function buildVenRows(rows) {
     return rows.map(v => `<tr class="adm-row-link ven-row" data-id="${v.id}" title="Open locatie">
       <td><strong>${esc(v.name)}</strong></td>
-      <td>${esc(v.address||"—")}</td>
-      <td>${esc(v.contactName||"—")}</td>
-      <td>${esc(v.phone||"—")}</td>
+      <td>${esc(v.address||"-")}</td>
+      <td>${esc(v.contactName||"-")}</td>
+      <td>${esc(v.phone||"-")}</td>
       <td>${v.active !== false ? '<span class="adm-status adm-status-active">Actief</span>' : '<span class="adm-status adm-status-inactive">Inactief</span>'}</td>
       <td><button class="adm-btn adm-btn-secondary adm-btn-sm ven-edit" data-id="${v.id}">Bewerk</button></td>
     </tr>`).join("");
@@ -3503,12 +3503,12 @@ ${alerts.length ? `<div style="background:var(--wf-yellow-l);border:1px solid va
     : `<div class="adm-table-wrap"><table class="adm-table">
         <thead><tr><th>Naam / Kenteken</th><th>Merk / Model</th><th>Chauffeur</th><th>KM-stand</th><th>Status</th><th>Volgende service</th><th>Acties</th></tr></thead>
         <tbody>${vehicles.map(v => `<tr class="adm-row-link veh-row" data-id="${v.id}" title="Open voertuig">
-          <td><strong>${esc(v.name||v.plate||"—")}</strong><br><span style="font-size:11px;color:var(--gray-400);font-family:monospace">${esc(v.plate||"")}</span></td>
+          <td><strong>${esc(v.name||v.plate||"-")}</strong><br><span style="font-size:11px;color:var(--gray-400);font-family:monospace">${esc(v.plate||"")}</span></td>
           <td>${esc(v.brand||"")} ${esc(v.model||"")}</td>
-          <td>${esc(v.driverName||v.driverId||"—")}</td>
-          <td>${v.mileage ? Number(v.mileage).toLocaleString("nl-BE") + " km" : "—"}</td>
+          <td>${esc(v.driverName||v.driverId||"-")}</td>
+          <td>${v.mileage ? Number(v.mileage).toLocaleString("nl-BE") + " km" : "-"}</td>
           <td><span class="adm-status adm-status-${v.status||"active"}">${esc(v.status||"actief")}</span></td>
-          <td>${v.nextService ? new Date(v.nextService).toLocaleDateString("nl-BE") : "—"}</td>
+          <td>${v.nextService ? new Date(v.nextService).toLocaleDateString("nl-BE") : "-"}</td>
           <td>
             <button class="adm-btn adm-btn-secondary adm-btn-sm veh-edit" data-id="${v.id}"></button>
             <button class="adm-btn adm-btn-secondary adm-btn-sm veh-km" data-id="${v.id}">KM log</button>
@@ -3588,7 +3588,7 @@ ${alerts.length ? `<div style="background:var(--wf-yellow-l);border:1px solid va
     <div class="adm-form-group"><label>KM bij vertrek</label><input name="startKm" type="number" placeholder="50000" required></div>
     <div class="adm-form-group"><label>KM bij aankomst</label><input name="endKm" type="number" placeholder="50250"></div>
   </div>
-  <div class="adm-form-group"><label>Doel / Notitie</label><input name="note" placeholder="Werf Brussel — materiaal levering"></div>
+  <div class="adm-form-group"><label>Doel / Notitie</label><input name="note" placeholder="Werf Brussel · materiaal levering"></div>
   <div class="adm-form-actions">
     <button type="button" class="adm-btn adm-btn-secondary" id="kmCancel">Annuleren</button>
     <button type="submit" class="adm-btn adm-btn-primary">Opslaan</button>
@@ -3651,12 +3651,12 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
       const low = i.minQuantity && Number(i.quantity||0) <= Number(i.minQuantity||0);
       return `<tr class="adm-row-link st-row" data-id="${i.id}" title="Open artikel" style="${low?"background:var(--wf-red-l)":""}">
         <td><strong>${esc(i.name)}</strong>${low?` <span style="background:var(--wf-red-l);color:var(--wf-red);border-radius:4px;padding:1px 5px;font-size:10px">LAAG</span>`:""}</td>
-        <td style="font-family:monospace;font-size:12px">${esc(i.sku||"—")}</td>
-        <td>${esc(i.category||"—")}</td>
+        <td style="font-family:monospace;font-size:12px">${esc(i.sku||"-")}</td>
+        <td>${esc(i.category||"-")}</td>
         <td style="font-weight:600;color:${low?"var(--wf-red)":"var(--gray-900)"}">${esc(i.quantity??0)}</td>
         <td>${esc(i.unit||"st")}</td>
-        <td>${esc(i.minQuantity||"—")}</td>
-        <td>${i.unitPrice ? new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR"}).format(i.unitPrice) : "—"}</td>
+        <td>${esc(i.minQuantity||"-")}</td>
+        <td>${i.unitPrice ? new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR"}).format(i.unitPrice) : "-"}</td>
         <td>
           <button class="adm-btn adm-btn-secondary adm-btn-sm st-edit" data-id="${i.id}"></button>
           <button class="adm-btn adm-btn-secondary adm-btn-sm st-mut" data-id="${i.id}">± Mutatie</button>
@@ -3748,7 +3748,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
   // ── Factuur PDF afdrukken ──────────────────────────────────
   function printInvoicePDF(inv, tenant = {}) {
     const fE = n => new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR"}).format(Number(n||0));
-    const fD = iso => iso ? new Date(iso).toLocaleDateString("nl-BE",{day:"2-digit",month:"2-digit",year:"numeric"}) : "—";
+    const fD = iso => iso ? new Date(iso).toLocaleDateString("nl-BE",{day:"2-digit",month:"2-digit",year:"numeric"}) : "-";
     const stLabel = { open:"Openstaand", paid:"Betaald", overdue:"Vervallen", draft:"Concept", sent:"Verstuurd" };
     const stColor = { open:"var(--wf-yellow)", paid:"var(--wf-green)", overdue:"var(--wf-red)", draft:"var(--gray-400)", sent:"var(--wf-blue)" };
     const lines = inv.lines || [];
@@ -3803,7 +3803,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
   <div class="parties">
     <div>
       <div class="party-label">Factuuradres</div>
-      <div class="party-name">${esc(inv.customerName||"—")}</div>
+      <div class="party-name">${esc(inv.customerName||"-")}</div>
       ${inv.customerVatNumber?`<div class="party-detail">BTW: ${esc(inv.customerVatNumber)}</div>`:""}
       ${inv.customerAddress?`<div class="party-detail">${esc(inv.customerAddress)}</div>`:""}
     </div>
@@ -3908,9 +3908,9 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
           const canConvert = q.status === "aanvaard";
           return `<tr class="adm-row-link q-row" data-id="${q.id}" title="Open offerte">
             <td style="font-family:monospace;font-weight:600">${esc(q.number||"")}</td>
-            <td>${q.quoteDate?new Date(q.quoteDate).toLocaleDateString("nl-BE"):"—"}</td>
-            <td><strong>${esc(q.customerName||"—")}</strong></td>
-            <td style="${q.status==="verlopen"?"color:var(--wf-red);font-weight:600":""}">${q.validUntil?new Date(q.validUntil).toLocaleDateString("nl-BE"):"—"}</td>
+            <td>${q.quoteDate?new Date(q.quoteDate).toLocaleDateString("nl-BE"):"-"}</td>
+            <td><strong>${esc(q.customerName||"-")}</strong></td>
+            <td style="${q.status==="verlopen"?"color:var(--wf-red);font-weight:600":""}">${q.validUntil?new Date(q.validUntil).toLocaleDateString("nl-BE"):"-"}</td>
             <td style="font-weight:600">${fmtEurInv(q.total)}</td>
             <td><span class="adm-status ${st.css}">${st.label}</span>${q.invoiceId?`<div style="font-size:10px;color:var(--gray-400)">→ gefactureerd</div>`:""}</td>
             <td style="white-space:nowrap;display:flex;gap:5px;flex-wrap:wrap;">
@@ -3940,7 +3940,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
           const d = await api("POST", `/offertes/${b.dataset.id}/send`, {});
           const url = d.acceptUrl || "";
           try { await navigator.clipboard.writeText(url); } catch(_){}
-          window.showToast && window.showToast("Offerte verzonden ✓ — accepteer-link gekopieerd", "success");
+          window.showToast && window.showToast("Offerte verzonden ✓ · accepteer-link gekopieerd", "success");
           renderOffertes();
         } catch(e){ window.showToast && window.showToast("Fout: "+e.message, "error"); }
       }));
@@ -3980,7 +3980,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
 <form id="qForm">
   <div class="adm-form-group"><label>Klant *</label>
     <select name="customerId" id="qCustSel" style="width:100%" ${isEdit?"disabled":""}>
-      <option value="">— Handmatig invullen —</option>
+      <option value="">- Handmatig invullen -</option>
       ${customers.map(c=>`<option value="${c.id}" ${quote?.customerId===c.id?"selected":""}>${esc(c.name)}</option>`).join("")}
     </select>
   </div>
@@ -4126,9 +4126,9 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
           const st = INV_STATUS[inv.status] || { label: inv.status, css: "adm-status-pending" };
           return `<tr class="adm-row-link inv-row" data-id="${inv.id}" title="Open factuur">
             <td style="font-family:monospace;font-weight:600">${esc(inv.number||inv.id.slice(-6))}</td>
-            <td>${inv.invoiceDate ? new Date(inv.invoiceDate).toLocaleDateString("nl-BE") : "—"}</td>
-            <td><strong>${esc(inv.customerName||"—")}</strong>${inv.customerVatNumber?`<div style="font-size:11px;color:var(--gray-400)">${esc(inv.customerVatNumber)}</div>`:""}</td>
-            <td style="${inv.status==="overdue"?"color:var(--wf-red);font-weight:600":""}">${inv.dueDate ? new Date(inv.dueDate).toLocaleDateString("nl-BE") : "—"}</td>
+            <td>${inv.invoiceDate ? new Date(inv.invoiceDate).toLocaleDateString("nl-BE") : "-"}</td>
+            <td><strong>${esc(inv.customerName||"-")}</strong>${inv.customerVatNumber?`<div style="font-size:11px;color:var(--gray-400)">${esc(inv.customerVatNumber)}</div>`:""}</td>
+            <td style="${inv.status==="overdue"?"color:var(--wf-red);font-weight:600":""}">${inv.dueDate ? new Date(inv.dueDate).toLocaleDateString("nl-BE") : "-"}</td>
             <td style="font-weight:600">${fmtEurInv(inv.total)}</td>
             <td><span class="adm-status ${st.css}">${st.label}</span></td>
             <td style="white-space:nowrap;display:flex;gap:6px;">
@@ -4178,7 +4178,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
           try {
             const d = await api("POST", `/facturen/${btn.dataset.id}/peppol`, {});
             const via = d.provider === "mock" ? "mock-transport" : d.provider;
-            window.showToast && window.showToast(`Verstuurd via Peppol (${via}) — status: ${d.status} · ref ${d.reference}`, "success");
+            window.showToast && window.showToast(`Verstuurd via Peppol (${via}) · status: ${d.status} · ref ${d.reference}`, "success");
             renderFacturen();
           } catch(e) {
             const extra = (e.errors && e.errors.length) ? "\n\n• " + e.errors.join("\n• ") : "";
@@ -4240,7 +4240,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
   <div class="adm-form-group">
     <label>Klant *</label>
     <select name="customerId" id="invCustSel" style="width:100%">
-      <option value="">— Handmatig invullen —</option>
+      <option value="">- Handmatig invullen -</option>
       ${customers.map(c => `<option value="${c.id}" ${invoice?.customerId===c.id?"selected":""}>${esc(c.name)}</option>`).join("")}
     </select>
   </div>
@@ -4273,8 +4273,8 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
       <label>BTW-regime</label>
       <select name="vatRegime" id="invVatRegime" ${invoice?"disabled":""}>
         <option value="binnen" ${(invoice?.vatRegime&&invoice.vatRegime!=="binnen")?"":"selected"}>Binnenland (btw per regel)</option>
-        <option value="intracom" ${invoice?.vatRegime==="intracom"?"selected":""}>Intracommunautair — btw verlegd (0%)</option>
-        <option value="medecontractant" ${invoice?.vatRegime==="medecontractant"?"selected":""}>Medecontractant (bouw, KB nr. 1 art. 20) — btw verlegd (0%)</option>
+        <option value="intracom" ${invoice?.vatRegime==="intracom"?"selected":""}>Intracommunautair · btw verlegd (0%)</option>
+        <option value="medecontractant" ${invoice?.vatRegime==="medecontractant"?"selected":""}>Medecontractant (bouw, KB nr. 1 art. 20) · btw verlegd (0%)</option>
       </select>
     </div>
     <div class="adm-form-group" style="align-self:flex-end;padding-bottom:7px;font-size:11.5px;color:var(--gray-500);">Bij 'btw verlegd' wordt 0% btw toegepast met de wettelijke vermelding op de factuur.</div>
@@ -4432,7 +4432,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
       content.innerHTML = `
 <div style="margin-bottom:20px;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
   <div>
-    <div style="font-size:18px;font-weight:600;color:var(--gray-900);margin-bottom:4px;">Roadmap — ${esc(rm.tenant?.name||"")}</div>
+    <div style="font-size:18px;font-weight:600;color:var(--gray-900);margin-bottom:4px;">Roadmap · ${esc(rm.tenant?.name||"")}</div>
     <div style="font-size:13px;color:var(--gray-500);">Gegenereerd op ${new Date(rm.generatedAt||Date.now()).toLocaleString("nl-BE")} · ${rm.summary?.go||0}/${rm.summary?.total||0} fasen gereed · ${rm.summary?.openActions||0} open acties</div>
   </div>
   <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -4550,7 +4550,7 @@ ${phases.map(p => {
 
       content.innerHTML = `
 <div class="adm-kpis" style="margin-bottom:16px">
-  <div class="adm-kpi adm-kpi-green"><div class="adm-kpi-label">Huidig abonnement</div><div class="adm-kpi-value" style="font-size:18px;text-transform:capitalize">${esc(billing.plan||"—")}</div><div class="adm-kpi-sub">${esc(billing.status||"")}</div></div>
+  <div class="adm-kpi adm-kpi-green"><div class="adm-kpi-label">Huidig abonnement</div><div class="adm-kpi-value" style="font-size:18px;text-transform:capitalize">${esc(billing.plan||"-")}</div><div class="adm-kpi-sub">${esc(billing.status||"")}</div></div>
   <div class="adm-kpi adm-kpi-blue"><div class="adm-kpi-label">Maandprijs</div><div class="adm-kpi-value" style="font-size:20px">${fmtEur(monthlyShown)}</div><div class="adm-kpi-sub">excl. BTW</div></div>
   <div class="adm-kpi adm-kpi-purple"><div class="adm-kpi-label">Facturen</div><div class="adm-kpi-value">${invoices.length}</div><div class="adm-kpi-sub">${openInvoices.length} openstaand</div></div>
   <div class="adm-kpi ${hasPayment?"adm-kpi-green":"adm-kpi-amber"}"><div class="adm-kpi-label">Betaalmethode</div><div class="adm-kpi-value" style="font-size:15px">${hasPayment?esc(billing.paymentMethod):"Niet ingesteld"}</div></div>
@@ -4562,10 +4562,10 @@ ${billing.status === "trial" ? (() => {
   return `<div style="background:var(--wf-yellow-l);border:1px solid var(--wf-yellow-l);border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:12px">
   <span style="font-size:20px"></span>
   <div>
-    <div style="font-size:14px;font-weight:600;color:var(--wf-yellow)">Gratis proefperiode${daysLeft != null ? ` — nog ${daysLeft} dag${daysLeft === 1 ? "" : "en"}` : " actief"}</div>
+    <div style="font-size:14px;font-weight:600;color:var(--wf-yellow)">Gratis proefperiode${daysLeft != null ? ` · nog ${daysLeft} dag${daysLeft === 1 ? "" : "en"}` : " actief"}</div>
     <div style="font-size:12px;color:var(--wf-yellow);margin-top:2px">${hasPayment
       ? `Je kaart staat geregistreerd. ${endStr ? `Vanaf ${endStr} wordt automatisch ${fmtEur(monthlyShown)}/maand gefactureerd.` : "Na de proefperiode start de facturatie automatisch."} Opzeggen kan altijd in het beheerportaal.`
-      : "Kies hieronder je bundel. Je kaartgegevens zijn vereist om te starten — je wordt pas na 14 dagen gefactureerd en kan altijd opzeggen."}</div>
+      : "Kies hieronder je bundel. Je kaartgegevens zijn vereist om te starten · je wordt pas na 14 dagen gefactureerd en kan altijd opzeggen."}</div>
   </div>
 </div>`;
 })() : ""}
@@ -4585,7 +4585,7 @@ ${billing.status === "trial" ? (() => {
         const accent = isCurrent ? "var(--wf-blue)" : (p.popular ? "var(--wf-blue)" : "var(--line)");
         const ring = (isCurrent || p.popular) ? "2px" : "1px";
         // Jaarlijks = baseAnnual/12 per maand (2 maanden gratis t.o.v. maandelijks);
-        // maandelijks = baseAnnual/10 per maand. Puur weergave — checkout blijft gelijk.
+        // maandelijks = baseAnnual/10 per maand. Puur weergave · checkout blijft gelijk.
         const annual = p.baseAnnual || 0;
         const perMonth = _billPeriod === "year" ? Math.round(annual / 12) : Math.round(annual / 10);
         const seatExtra = _billPeriod === "year" ? Math.round((p.seatAnnual || 0) / 12) : Math.round((p.seatAnnual || 0) / 10);
@@ -4615,11 +4615,11 @@ ${billing.status === "trial" ? (() => {
     </div>
     ${trialEligible ? `<div style="margin-top:14px;background:var(--wf-blue-l);border-radius:12px;padding:12px 16px;font-size:12.5px;color:var(--wf-blue-d);display:flex;gap:9px;align-items:flex-start;">
       <span style="font-size:15px;"></span>
-      <span><strong>14 dagen gratis</strong> op elk plan. Je kaartgegevens zijn vereist om te starten (via onze beveiligde betaalpartner Stripe), maar je wordt <strong>pas na 14 dagen</strong> gefactureerd — en je kan altijd opzeggen vóór het einde van de proefperiode.</span>
+      <span><strong>14 dagen gratis</strong> op elk plan. Je kaartgegevens zijn vereist om te starten (via onze beveiligde betaalpartner Stripe), maar je wordt <strong>pas na 14 dagen</strong> gefactureerd · en je kan altijd opzeggen vóór het einde van de proefperiode.</span>
     </div>` : ""}
     <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
       <button class="adm-btn adm-btn-secondary adm-btn-sm" id="billPortal">Abonnement &amp; betaalmethode beheren</button>
-      <span style="font-size:12px;color:var(--gray-400);">Veilig betalen — je betaalgegevens worden door onze betaalpartner (Stripe) verwerkt. Upgraden, downgraden, betaalmethode en opzeggen regel je in het beheerportaal.</span>
+      <span style="font-size:12px;color:var(--gray-400);">Veilig betalen · je betaalgegevens worden door onze betaalpartner (Stripe) verwerkt. Upgraden, downgraden, betaalmethode en opzeggen regel je in het beheerportaal.</span>
     </div>
   </div>
 </div>
@@ -4639,11 +4639,11 @@ ${billing.status === "trial" ? (() => {
         <thead><tr><th>Factuur #</th><th>Datum</th><th>Vervaldatum</th><th>Omschrijving</th><th>Bedrag</th><th>Status</th></tr></thead>
         <tbody>${invoices.map(i => `<tr>
           <td style="font-family:monospace;font-weight:600">${esc(i.number||i.id.slice(-6))}</td>
-          <td>${i.date ? new Date(i.date).toLocaleDateString("nl-BE") : "—"}</td>
-          <td>${i.dueDate ? new Date(i.dueDate).toLocaleDateString("nl-BE") : "—"}</td>
+          <td>${i.date ? new Date(i.date).toLocaleDateString("nl-BE") : "-"}</td>
+          <td>${i.dueDate ? new Date(i.dueDate).toLocaleDateString("nl-BE") : "-"}</td>
           <td>${esc(i.description||i.title||"Abonnement Monargo One")}</td>
           <td style="font-weight:600">${fmtEur(i.amount)}</td>
-          <td><span class="adm-status ${statusCss[i.status]||"adm-status-pending"}">${esc(i.status||"—")}</span></td>
+          <td><span class="adm-status ${statusCss[i.status]||"adm-status-pending"}">${esc(i.status||"-")}</span></td>
         </tr>`).join("")}</tbody>
       </table></div>`}
 </div>`;
@@ -4711,7 +4711,7 @@ ${billing.status === "trial" ? (() => {
         </div>
         <div style="font-size:11.5px;color:var(--gray-400);margin-top:10px;">Add-ons worden door je accountbeheerder of support geactiveerd. Neem contact op om een add-on toe te voegen.</div>`;
         body.querySelectorAll(".addon-request").forEach(btn => btn.addEventListener("click", () =>
-          window.showToast && window.showToast(`Bedankt! Vraag '${btn.dataset.addon}' aan via je accountmanager of support — wij activeren het voor je organisatie.`, "info")));
+          window.showToast && window.showToast(`Bedankt! Vraag '${btn.dataset.addon}' aan via je accountmanager of support · wij activeren het voor je organisatie.`, "info")));
       })();
     } catch(e) { content.innerHTML = `<div style="padding:20px;color:var(--wf-red)">Fout: ${e.message}</div>`; }
   }
@@ -4726,7 +4726,7 @@ ${billing.status === "trial" ? (() => {
     catch (e) { content.innerHTML = `<div class="adm-card"><div class="adm-card-body">${esc(e.message)}</div></div>`; return; }
     const providers = data.providers || [];
     const byProvider = Object.fromEntries((data.rows || []).map(r => [r.provider, r]));
-    const fmtDT = s => s ? new Date(s).toLocaleString("nl-BE") : "—";
+    const fmtDT = s => s ? new Date(s).toLocaleString("nl-BE") : "-";
 
     const providerCard = p => {
   const conn = byProvider[p.key];
@@ -4761,7 +4761,7 @@ ${billing.status === "trial" ? (() => {
     const categories = [...new Set(providers.map(p => p.category))];
     content.innerHTML = `
 <div style="font-size:13px;color:var(--gray-500);margin-bottom:14px">Koppel je boekhouding en werfsoftware. Sleutels worden versleuteld bewaard; zonder geldige sleutel draait een sync in testmodus.</div>
-<div class="adm-card" style="margin-bottom:16px;background:var(--wf-blue-l);border:1px solid var(--wf-blue-l)"><div class="adm-card-body" style="font-size:13px;color:var(--wf-blue-d)">ℹ️ <strong>Compliance-aangiftes</strong> (Checkin@Work / CIAW en Limosa) verlopen <strong>automatisch</strong> bij in-/uitklokken — die beheer je niet hier maar onder <strong>Compliance → Checkin@Work</strong> en <strong>A1 / Limosa</strong>.</div></div>
+<div class="adm-card" style="margin-bottom:16px;background:var(--wf-blue-l);border:1px solid var(--wf-blue-l)"><div class="adm-card-body" style="font-size:13px;color:var(--wf-blue-d)">ℹ️ <strong>Compliance-aangiftes</strong> (Checkin@Work / CIAW en Limosa) verlopen <strong>automatisch</strong> bij in-/uitklokken · die beheer je niet hier maar onder <strong>Compliance → Checkin@Work</strong> en <strong>A1 / Limosa</strong>.</div></div>
 ${categories.map(cat => `
   <div class="adm-nav-label" style="margin:18px 0 8px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--gray-500)">${esc(cat)}</div>
   <div class="adm-grid-2">${providers.filter(p => p.category === cat).map(providerCard).join("")}</div>
@@ -4784,7 +4784,7 @@ ${categories.map(cat => `
       try {
         const r = await api("POST", `/integrations/${btn.dataset.sync}/sync`, {});
         const ok = r.result && r.result.log && r.result.log.status === "success";
-        window.showToast && window.showToast(ok ? "Synchronisatie voltooid" : "Sync mislukt — controleer sleutel/mapping", ok ? "success" : "error");
+        window.showToast && window.showToast(ok ? "Synchronisatie voltooid" : "Sync mislukt · controleer sleutel/mapping", ok ? "success" : "error");
         renderIntegraties();
       } catch (e) { window.showToast && window.showToast(e.message, "error"); btn.disabled = false; btn.textContent = "↻ Nu synchroniseren"; }
     }));
@@ -4839,7 +4839,7 @@ ${categories.map(cat => `
           </div>
         </div>
         <div class="adm-form-group"><label>Standaard-uurtarief (€)</label>
-          <input name="defaultHourlyRate" type="number" step="1" min="0" value="${tenant.defaultHourlyRate ?? ""}" placeholder="bv. 55 — gebruikt voor werkbonnen zonder eigen tarief">
+          <input name="defaultHourlyRate" type="number" step="1" min="0" value="${tenant.defaultHourlyRate ?? ""}" placeholder="bv. 55 · gebruikt voor werkbonnen zonder eigen tarief">
         </div>
         <div id="admOrgMsg" style="display:none;padding:8px 12px;border-radius:8px;font-size:13px;margin-bottom:8px;"></div>
         <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--gray-600);margin:4px 0 8px;cursor:pointer;">
@@ -4860,15 +4860,15 @@ ${categories.map(cat => `
       <div style="display:flex;flex-direction:column;gap:10px;">
         <div style="display:flex;justify-content:space-between;font-size:13px;">
           <span style="color:var(--gray-500);">Huidig plan</span>
-          <strong style="text-transform:capitalize;">${esc(tenant.plan || "—")}</strong>
+          <strong style="text-transform:capitalize;">${esc(tenant.plan || "-")}</strong>
         </div>
         <div style="display:flex;justify-content:space-between;font-size:13px;">
           <span style="color:var(--gray-500);">Status</span>
-          <span class="adm-status adm-status-${tenant.status === "active" ? "active" : tenant.status === "trial" ? "pending" : "inactive"}">${esc(tenant.status || "—")}</span>
+          <span class="adm-status adm-status-${tenant.status === "active" ? "active" : tenant.status === "trial" ? "pending" : "inactive"}">${esc(tenant.status || "-")}</span>
         </div>
         <div style="display:flex;justify-content:space-between;font-size:13px;">
           <span style="color:var(--gray-500);">Facturatie e-mail</span>
-          <span>${esc(tenant.billingEmail || "—")}</span>
+          <span>${esc(tenant.billingEmail || "-")}</span>
         </div>
         <hr style="border:none;border-top:1px solid var(--gray-100);margin:4px 0;">
         <button class="adm-btn adm-btn-secondary" id="admSettingsToBilling" style="width:100%;">Factuurgeschiedenis bekijken</button>
@@ -4876,7 +4876,7 @@ ${categories.map(cat => `
     </div>
   </div>
   <div class="adm-card">
-    <div class="adm-card-header"><h3 class="adm-card-title">Beveiliging — MFA</h3></div>
+    <div class="adm-card-header"><h3 class="adm-card-title">Beveiliging · MFA</h3></div>
     <div class="adm-card-body">
       <div id="admMfaStatus" style="margin-bottom:12px;font-size:13px;color:var(--gray-500);">Status laden…</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -4925,7 +4925,7 @@ ${categories.map(cat => `
       <p style="font-size:13px;color:var(--gray-500);margin-bottom:12px;">
         Geef je toestemming dan kan een supportmedewerker tijdelijk inloggen en je sessie overnemen om je te helpen.
         De toegang is tijdgebonden, wordt volledig geaudit, en je ziet een banner zolang een sessie actief is.
-        Je kunt de toestemming op elk moment intrekken — een lopende sessie stopt dan meteen.
+        Je kunt de toestemming op elk moment intrekken · een lopende sessie stopt dan meteen.
       </p>
       <div id="admSupportStatus" style="font-size:13px;margin-bottom:12px;"></div>
       <div class="adm-form-group" id="admSupportReasonWrap">
@@ -4933,7 +4933,7 @@ ${categories.map(cat => `
         <input id="admSupportReason" placeholder="bv. hulp bij facturatie-instelling">
         <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px;color:var(--gray-600);cursor:pointer;">
           <input type="checkbox" id="admSupportAutoRenew" checked>
-          Automatisch verlengen — blijft jaarlijks staan, je krijgt jaarlijks een mededeling per e-mail
+          Automatisch verlengen · blijft jaarlijks staan, je krijgt jaarlijks een mededeling per e-mail
         </label>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -5147,11 +5147,11 @@ ${categories.map(cat => `
         const disableBtn = document.getElementById("admMfaDisable");
         const setupBtn = document.getElementById("admMfaSetup");
         if (u.mfaEnabled) {
-          if (statusEl) statusEl.innerHTML = `<span style="color:var(--wf-green);font-weight:600;">MFA actief</span> — uw account is beveiligd met 2FA.`;
+          if (statusEl) statusEl.innerHTML = `<span style="color:var(--wf-green);font-weight:600;">MFA actief</span> · uw account is beveiligd met 2FA.`;
           if (disableBtn) disableBtn.style.display = "";
           if (setupBtn) setupBtn.textContent = "MFA opnieuw instellen";
         } else {
-          if (statusEl) statusEl.innerHTML = `<span style="color:var(--wf-yellow);font-weight:600;">MFA niet actief</span> — wij raden sterk aan om MFA in te schakelen.`;
+          if (statusEl) statusEl.innerHTML = `<span style="color:var(--wf-yellow);font-weight:600;">MFA niet actief</span> · wij raden sterk aan om MFA in te schakelen.`;
         }
       } catch(_){}
     })();
@@ -5165,7 +5165,7 @@ ${categories.map(cat => `
         const data = await api("POST", "/me/mfa/setup");
         const setup = data.setup || {};
         wizard.innerHTML = `
-<div style="font-size:14px;font-weight:600;margin-bottom:12px;">MFA instellen — stap 1 van 2</div>
+<div style="font-size:14px;font-weight:600;margin-bottom:12px;">MFA instellen · stap 1 van 2</div>
 <p style="font-size:13px;color:var(--gray-500);margin-bottom:10px;">Voeg dit account toe in Google Authenticator, Authy of een andere TOTP-app via <strong>handmatige invoer</strong>:</p>
 <div style="margin-bottom:14px;">
   <div style="font-size:11px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.4px;">Geheime sleutel</div>
@@ -5199,7 +5199,7 @@ ${categories.map(cat => `
 
     // MFA verplichten voor alle beheerders
     document.getElementById("admMfaEnforce")?.addEventListener("click", async () => {
-      if (!confirm("MFA verplicht maken voor álle beheerders van deze organisatie?\n\nBij de volgende login is een authenticator-code vereist. Bewaar de getoonde secrets en recovery codes zorgvuldig — ze worden maar één keer getoond.")) return;
+      if (!confirm("MFA verplicht maken voor álle beheerders van deze organisatie?\n\nBij de volgende login is een authenticator-code vereist. Bewaar de getoonde secrets en recovery codes zorgvuldig · ze worden maar één keer getoond.")) return;
       const wizard = document.getElementById("admMfaWizard");
       if (!wizard) return;
       wizard.style.display = "block";
@@ -5212,7 +5212,7 @@ ${categories.map(cat => `
           return;
         }
         wizard.innerHTML = `
-<div style="font-size:14px;font-weight:600;margin-bottom:4px;color:var(--gray-900);">MFA verplicht — ${enrolled.length} beheerder(s) ingeschreven</div>
+<div style="font-size:14px;font-weight:600;margin-bottom:4px;color:var(--gray-900);">MFA verplicht · ${enrolled.length} beheerder(s) ingeschreven</div>
 <div style="font-size:12px;color:var(--wf-yellow);background:var(--wf-yellow-l);border:1px solid var(--wf-yellow-l);border-radius:8px;padding:10px 12px;margin:10px 0;">
   Bewaar onderstaande gegevens nu. Ze worden niet opnieuw getoond. Voeg de sleutel toe aan een authenticator-app (Google Authenticator, Authy…).
 </div>
@@ -5282,7 +5282,7 @@ ${enrolled.map(e => `
     });
   }
 
-  // Backup-bewaarbeleid (retentie) — ALLEEN-LEZEN voor de tenant-beheerder.
+  // Backup-bewaarbeleid (retentie) · ALLEEN-LEZEN voor de tenant-beheerder.
   // Configuratie gebeurt centraal door Monargo (superadmin) per tenant.
   async function loadBackupPolicy() {
     const box = document.getElementById("admBackupPolicy");
@@ -5310,11 +5310,11 @@ ${enrolled.map(e => `
   Dit beleid wordt centraal beheerd door Monargo. Wil je het aanpassen, neem contact op met support.
 </div>
 <details style="margin-top:14px;">
-  <summary style="font-size:12px;color:var(--wf-blue);cursor:pointer;">Wettelijke bewaartermijnen (België) — info</summary>
+  <summary style="font-size:12px;color:var(--wf-blue);cursor:pointer;">Wettelijke bewaartermijnen (België) · info</summary>
   <div style="font-size:12px;color:var(--muted);margin-top:8px;line-height:1.6;">
     Deze backups zijn <strong>herstelmomenten (disaster recovery)</strong>, geen wettelijk archief. De wettelijke bewaarplicht rust op je live-data:
     <ul style="margin:6px 0 0;padding-left:18px;">
-      ${(d.legalReference||[]).map(r=>`<li>${esc(r.label)}: <strong>${yrs(r.days)}</strong> <span style="color:var(--gray-400);">— ${esc(r.note)}</span></li>`).join("")}
+      ${(d.legalReference||[]).map(r=>`<li>${esc(r.label)}: <strong>${yrs(r.days)}</strong> <span style="color:var(--gray-400);">- ${esc(r.note)}</span></li>`).join("")}
     </ul>
     <div style="margin-top:8px;">Conform GDPR art. 5(1)(e) (opslagbeperking) worden backups buiten de termijn automatisch en veilig opgeruimd; de ${esc(p.keepMinimum)} nieuwste blijven altijd bewaard.</div>
   </div>
@@ -5372,7 +5372,7 @@ ${enrolled.map(e => `
       if (cn) cn.textContent = "Monargo One";
     });
 
-    // ── Persoonlijke prikklok (topbar) — iedereen kan in-/uitklokken ──
+    // ── Persoonlijke prikklok (topbar) · iedereen kan in-/uitklokken ──
     (function wireClock(){
       const btn = document.getElementById("admClockBtn");
       if (!btn) return;
@@ -5559,7 +5559,7 @@ ${enrolled.map(e => `
     const typeKeys = Object.keys(_tplMeta.types);
     c.innerHTML = `
 <div class="adm-card" style="padding:14px 16px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-  <div style="font-size:13px;color:var(--gray-600)">Maak je eigen sjablonen voor facturen, offertes en werkbon-rapporten — met je logo, kleuren en de velden die jij wil. Het systeem drukt elk document af volgens het gekozen sjabloon.</div>
+  <div style="font-size:13px;color:var(--gray-600)">Maak je eigen sjablonen voor facturen, offertes en werkbon-rapporten · met je logo, kleuren en de velden die jij wil. Het systeem drukt elk document af volgens het gekozen sjabloon.</div>
   <select id="tplNew" class="adm-input" style="max-width:230px"><option value="">+ Nieuw sjabloon…</option>${typeKeys.map(t => `<option value="${t}">+ ${esc(_tplMeta.types[t].label)}</option>`).join("")}</select>
 </div>
 ${typeKeys.map(tk => {
@@ -5574,7 +5574,7 @@ ${typeKeys.map(tk => {
         <button class="adm-btn adm-btn-secondary adm-btn-sm tpl-prev" data-id="${esc(t.id)}">Voorbeeld</button>
         <button class="adm-btn adm-btn-danger adm-btn-sm tpl-del" data-id="${esc(t.id)}"><svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>
       </td></tr>`).join("")}</tbody></table>`
-    : `<div style="padding:16px;color:var(--gray-400);font-size:13px">Nog geen sjabloon — er wordt een nette standaard gebruikt tot je er één maakt.</div>`}
+    : `<div style="padding:16px;color:var(--gray-400);font-size:13px">Nog geen sjabloon · er wordt een nette standaard gebruikt tot je er één maakt.</div>`}
     </div></div>`;
 }).join("")}`;
     document.getElementById("tplNew").addEventListener("change", e => { if (e.target.value) { _tplEditing = { type: e.target.value, ...defaultTplDraft(e.target.value) }; renderTemplates(); } });
@@ -5600,7 +5600,7 @@ ${typeKeys.map(tk => {
     const fieldPicker = id => `<select class="adm-input tpl-insert" data-target="${id}" style="max-width:170px;margin-top:4px"><option value="">+ veld invoegen…</option>${fieldList.map(f => `<option value="{{${f}}}">${esc(f)}</option>`).join("")}</select>`;
     c.innerHTML = `
 <div class="adm-card" style="margin-bottom:14px"><div class="adm-card-header">
-  <h3 class="adm-card-title">${d.id ? "Sjabloon bewerken" : "Nieuw sjabloon"} — ${esc((_tplMeta.types[d.type] || {}).label || d.type)}</h3>
+  <h3 class="adm-card-title">${d.id ? "Sjabloon bewerken" : "Nieuw sjabloon"} · ${esc((_tplMeta.types[d.type] || {}).label || d.type)}</h3>
   <button class="adm-btn adm-btn-secondary adm-btn-sm" id="tplBack">← Terug</button>
 </div></div>
 <div class="adm-grid-2" style="align-items:start">
@@ -5611,7 +5611,7 @@ ${typeKeys.map(tk => {
       <div class="adm-form-group"><label>Taal</label><select class="adm-input" id="t_lang"><option value="nl" ${d.language === "nl" ? "selected" : ""}>Nederlands</option><option value="fr" ${d.language === "fr" ? "selected" : ""}>Frans</option></select></div>
     </div>
     <div class="adm-form-group"><label>Logo (optioneel)</label><input type="file" id="t_logo" accept="image/*" class="adm-input" style="padding:6px">${d.logo ? '<div style="font-size:12px;color:var(--wf-green);margin-top:4px">logo ingesteld <a href="#" id="t_logo_clear">verwijderen</a></div>' : ""}</div>
-    <div class="adm-form-group"><label>Eigen koptekst (leeg = bedrijfsblok)</label><textarea class="adm-input" id="t_header" rows="2" placeholder="Bv. {{bedrijf.naam}} — uw partner">${esc(d.headerText || "")}</textarea>${fieldPicker("t_header")}</div>
+    <div class="adm-form-group"><label>Eigen koptekst (leeg = bedrijfsblok)</label><textarea class="adm-input" id="t_header" rows="2" placeholder="Bv. {{bedrijf.naam}} · uw partner">${esc(d.headerText || "")}</textarea>${fieldPicker("t_header")}</div>
     <div class="adm-form-group"><label>Inleidingstekst</label><textarea class="adm-input" id="t_intro" rows="2">${esc(d.introText || "")}</textarea>${fieldPicker("t_intro")}</div>
     ${isFinancial ? `<div class="adm-form-group"><label>Kolommen</label><div style="display:flex;flex-wrap:wrap;gap:10px">${Object.keys(colDefs).map(k => `<label style="font-weight:400;font-size:12.5px;display:inline-flex;gap:5px;align-items:center"><input type="checkbox" class="t_col" value="${k}" ${(d.columns || []).includes(k) ? "checked" : ""}>${esc(colDefs[k])}</label>`).join("")}</div></div>
     <label style="font-weight:400;font-size:12.5px;display:inline-flex;gap:6px;align-items:center;margin-bottom:12px"><input type="checkbox" id="t_vat" ${d.showVat !== false ? "checked" : ""}> Btw-totaal tonen</label>
@@ -5678,10 +5678,10 @@ ${typeKeys.map(tk => {
     const rows = data.declarations || [];
     const statusBadge = s => {
       const map = { confirmed: ["var(--wf-green-l)", "var(--wf-green)", "bevestigd"], sent: ["var(--wf-blue-l)", "var(--wf-blue)", "verzonden"], failed: ["var(--wf-red-l)", "var(--wf-red)", "mislukt"], rejected: ["var(--wf-red-l)", "var(--wf-red)", "geweigerd"] };
-      const [bg, fg, label] = map[s] || ["var(--gray-100)", "var(--gray-600)", s || "—"];
+      const [bg, fg, label] = map[s] || ["var(--gray-100)", "var(--gray-600)", s || "-"];
       return `<span style="background:${bg};color:${fg};padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600">${esc(label)}</span>`;
     };
-    const geoBadge = d => d.geoVerified ? `<span title="binnen geofence" style="color:var(--wf-green)">✓${d.geoDistanceM != null ? ` ${d.geoDistanceM}m` : ""}</span>` : (d.geoDistanceM != null ? `<span title="buiten geofence" style="color:var(--wf-yellow)">${d.geoDistanceM}m</span>` : `<span style="color:var(--gray-400)">—</span>`);
+    const geoBadge = d => d.geoVerified ? `<span title="binnen geofence" style="color:var(--wf-green)">✓${d.geoDistanceM != null ? ` ${d.geoDistanceM}m` : ""}</span>` : (d.geoDistanceM != null ? `<span title="buiten geofence" style="color:var(--wf-yellow)">${d.geoDistanceM}m</span>` : `<span style="color:var(--gray-400)">-</span>`);
     const rsz = data.rszEmployerId || "";
     c.innerHTML = `
 <div class="adm-card" style="padding:14px 16px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
@@ -5690,7 +5690,7 @@ ${typeKeys.map(tk => {
 </div>
 <div class="adm-card" style="padding:14px 16px;margin-bottom:14px">
   <div style="font-weight:600;font-size:13px;margin-bottom:6px">RSZ-werkgeversnummer</div>
-  <div style="font-size:12.5px;color:var(--gray-500);margin-bottom:8px">Vereist voor geldige Checkin@Work-aangiftes. Het rijksregisternummer van elke medewerker stel je in op de medewerkersfiche.${rsz ? "" : ` <strong style="color:var(--wf-red)">Nog niet ingesteld — aangiftes worden geweigerd.</strong>`}</div>
+  <div style="font-size:12.5px;color:var(--gray-500);margin-bottom:8px">Vereist voor geldige Checkin@Work-aangiftes. Het rijksregisternummer van elke medewerker stel je in op de medewerkersfiche.${rsz ? "" : ` <strong style="color:var(--wf-red)">Nog niet ingesteld · aangiftes worden geweigerd.</strong>`}</div>
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     <input id="ciawRsz" class="adm-input" value="${esc(rsz)}" placeholder="bv. 12345678" style="max-width:220px">
     <button class="adm-btn-primary" id="ciawRszSave">Opslaan</button>
@@ -5699,7 +5699,7 @@ ${typeKeys.map(tk => {
 </div>
 <div class="adm-card" style="margin-bottom:14px">
   <div class="adm-card-header" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-    <div style="font-weight:600;font-size:13px">Aanwezigheidsregister (werfcontrole) <span style="font-weight:400;color:var(--gray-500)">— ${presence.present} aanwezig${presence.issues ? `, <span style="color:var(--wf-red)">${presence.issues} zonder bevestigde aangifte</span>` : ""}</span></div>
+    <div style="font-weight:600;font-size:13px">Aanwezigheidsregister (werfcontrole) <span style="font-weight:400;color:var(--gray-500)">- ${presence.present} aanwezig${presence.issues ? `, <span style="color:var(--wf-red)">${presence.issues} zonder bevestigde aangifte</span>` : ""}</span></div>
     <button class="adm-btn adm-btn-secondary adm-btn-sm" id="ciawPresenceCsv">Export voor controle (CSV)</button>
   </div>
   <div class="adm-table-wrap"><table class="adm-table"><thead><tr><th>Werf</th><th>Medewerker</th><th>INSZ</th><th>Sinds</th><th>CIAW</th></tr></thead><tbody>
@@ -5708,7 +5708,7 @@ ${typeKeys.map(tk => {
       <td>${esc(r.name)}</td>
       <td style="font-family:monospace;font-size:12px">${r.insz ? esc(r.insz) : '<span style="color:var(--wf-red)">ontbreekt</span>'}${r.insz && !r.inszValid ? ' <span title="ongeldig controlegetal" style="color:var(--wf-red)"></span>' : ""}</td>
       <td style="font-size:12px;color:var(--gray-500)">${esc((r.since || "").replace("T", " "))}</td>
-      <td>${statusBadge(r.ciawStatus === "none" ? "—" : r.ciawStatus)}</td>
+      <td>${statusBadge(r.ciawStatus === "none" ? "-" : r.ciawStatus)}</td>
     </tr>`).join("") || `<tr><td colspan="5" style="padding:18px;text-align:center;color:var(--gray-400)">Niemand momenteel ingeklokt.</td></tr>`}
   </tbody></table></div>
 </div>
@@ -5721,7 +5721,7 @@ ${typeKeys.map(tk => {
       <td>${d.action === "OUT" ? "Uitklokken" : "Inklokken"}</td>
       <td>${geoBadge(d)}</td>
       <td>${statusBadge(d.status)}</td>
-      <td style="font-family:monospace;font-size:12px">${esc(d.reference || "—")}${d.error ? `<div style="color:var(--wf-red);font-size:11px">${esc(d.error)}</div>` : ""}</td>
+      <td style="font-family:monospace;font-size:12px">${esc(d.reference || "-")}${d.error ? `<div style="color:var(--wf-red);font-size:11px">${esc(d.error)}</div>` : ""}</td>
       <td>${d.live ? "live" : "<span style='color:var(--gray-500)'>mock</span>"}</td>
       <td>${failed ? `<button class="adm-btn adm-btn-secondary adm-btn-sm ciaw-retry" data-clock="${esc(d.clockId)}" data-action="${d.action === "OUT" ? "out" : "in"}" style="padding:3px 9px;font-size:12px">↻ Opnieuw</button>` : ""}</td>
     </tr>`;}).join("") || `<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--gray-400)">Nog geen aangiftes. Ze verschijnen zodra medewerkers in-/uitklokken.</td></tr>`}
@@ -5767,7 +5767,7 @@ ${typeKeys.map(tk => {
     c.innerHTML = `
 <div class="adm-card" style="padding:14px 16px;margin-bottom:14px">
   <div style="font-size:13px;color:var(--gray-600);margin-bottom:6px">Detacheringsdossiers van (onder)aannemers en buitenlandse werknemers. Bewaak de geldigheid van A1-attesten en dien Limosa-meldingen in.</div>
-  <div style="font-size:12px;margin-bottom:6px">Limosa-provider: ${data.limosaMode === "live" ? '<span style="color:var(--wf-green);font-weight:600">● actief (live)</span>' : '<span style="color:var(--wf-yellow);font-weight:600">● testmodus (mock)</span> — meldingen worden gesimuleerd tot de provider live staat'}</div>
+  <div style="font-size:12px;margin-bottom:6px">Limosa-provider: ${data.limosaMode === "live" ? '<span style="color:var(--wf-green);font-weight:600">● actief (live)</span>' : '<span style="color:var(--wf-yellow);font-weight:600">● testmodus (mock)</span> · meldingen worden gesimuleerd tot de provider live staat'}</div>
   <div style="display:flex;gap:14px;font-size:12px;color:var(--gray-500)">
     <span>${data.total || 0} dossiers</span>
     ${data.expired ? `<span style="color:var(--wf-red)">${data.expired} verlopen</span>` : ""}
@@ -5793,8 +5793,8 @@ ${typeKeys.map(tk => {
   <table class="adm-table"><thead><tr><th>Werknemer</th><th>Onderaannemer</th><th>Land</th><th>A1</th><th>Geldigheid</th><th>Limosa</th><th></th></tr></thead><tbody>
     ${rows.map(r => `<tr data-id="${esc(r.id)}">
       <td>${esc(r.workerName)}</td>
-      <td>${esc(r.subcontractor || "—")}</td>
-      <td>${esc(r.country || "—")}</td>
+      <td>${esc(r.subcontractor || "-")}</td>
+      <td>${esc(r.country || "-")}</td>
       <td>${a1Badge(r.a1Status)}${r.documentRef ? `<div style="font-size:11px;color:var(--gray-500);font-family:monospace">${esc(r.documentRef)}</div>` : ""}${r.hasFile ? ` <a class="pw-file" data-id="${esc(r.id)}" href="#" style="font-size:11px">attest</a>` : ""}</td>
       <td style="font-size:12px;color:var(--gray-600)">${esc(r.validFrom || "?")} → ${esc(r.validTo || "?")}</td>
       <td>${r.limosa && r.limosa.reference ? `<span style="font-size:12px;color:var(--wf-green)">${esc(r.limosa.reference)}</span>` : `<button class="adm-btn-secondary pw-limosa" data-id="${esc(r.id)}" style="padding:4px 10px;font-size:12px">Indienen</button>`}</td>

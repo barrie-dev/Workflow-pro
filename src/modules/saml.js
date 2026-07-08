@@ -1,7 +1,7 @@
 "use strict";
 /**
  * SAML 2.0 Single Sign-On (add-on). Dunne, defensieve wrapper rond de
- * onderhouden, vetted library @node-saml/node-saml — we valideren XML-
+ * onderhouden, vetted library @node-saml/node-saml · we valideren XML-
  * signaturen NOOIT zelf (dat is precies waar signature-wrapping-aanvallen
  * vandaan komen). SP-initiated flow: app → IdP → ACS → sessie.
  *
@@ -79,7 +79,7 @@ async function buildLoginUrl(tenant, relayState) {
 }
 
 // Valideer de POST'te SAMLResponse en geef het IdP-profiel terug. Gooit bij een
-// ongeldige/ongetekende/verlopen assertie — de library doet de XML-DSig-checks.
+// ongeldige/ongetekende/verlopen assertie · de library doet de XML-DSig-checks.
 async function validateAcs(tenant, body) {
   const { profile } = await instanceFor(tenant).validatePostResponseAsync({
     SAMLResponse: body.SAMLResponse,

@@ -96,7 +96,7 @@ function renderWidgets(store, tenant, user, keys) {
     .map(k => WIDGET_MAP[k])
     .filter(w => allowed(store, tenant, user, w))
     .map(w => {
-      let data; try { data = w.compute(store, tenant, user); } catch (_) { data = { value: "—", sub: "" }; }
+      let data; try { data = w.compute(store, tenant, user); } catch (_) { data = { value: "-", sub: "" }; }
       return { key: w.key, label: w.label, type: w.type, group: w.group, ...data };
     });
 }

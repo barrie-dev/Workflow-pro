@@ -1,6 +1,6 @@
 "use strict";
 /**
- * Boden — de AI-assistent van Monargo One.
+ * Boden · de AI-assistent van Monargo One.
  *
  * Kernregel (beveiliging): Boden heeft GEEN directe DB-toegang. Hij werkt met
  * tools die onder de identiteit van de ingelogde gebruiker draaien en exact
@@ -156,7 +156,7 @@ function runTool(store, tenant, user, name, input, proposals) {
     };
     if (groupBy) {
       const groups = {};
-      for (const x of summ) { const k = String(x[groupBy] ?? "—"); (groups[k] = groups[k] || []).push(x); }
+      for (const x of summ) { const k = String(x[groupBy] ?? "-"); (groups[k] = groups[k] || []).push(x); }
       return { type, label: d.label, metric, field, groupBy, totaal_records: summ.length, groepen: Object.fromEntries(Object.entries(groups).map(([k, arr]) => [k, calc(arr)])) };
     }
     return { type, label: d.label, metric, field, aantal: summ.length, waarde: calc(summ) };
@@ -190,7 +190,7 @@ function runTool(store, tenant, user, name, input, proposals) {
     };
     if (a.path) { proposal.method = a.method; proposal.path = a.path; }
     proposals.push(proposal);
-    return { ok: true, melding: "Voorstel klaar. Vraag de gebruiker om te bevestigen — voer niets uit." };
+    return { ok: true, melding: "Voorstel klaar. Vraag de gebruiker om te bevestigen · voer niets uit." };
   }
 
   return { error: `Onbekende tool '${name}'.` };
@@ -218,7 +218,7 @@ function toolDefs() {
       status: { type: "string", description: "Optioneel statusfilter vóór de berekening" },
     }, required: ["type"] }),
     fn("get_kpis", "Geef de belangrijkste kerncijfers (KPI's) die deze gebruiker mag zien, kant-en-klaar berekend. Ideaal voor 'hoe staan we ervoor', 'geef me een overzicht' of vragen naar omzet, openstaande facturen, teamgrootte, open opdrachten enz.", { type: "object", properties: {} }),
-    fn("propose_action", "Stel een actie voor die de gebruiker bevestigt en die daarna ECHT wordt uitgevoerd (de gebruiker klikt bevestigen → het beveiligde endpoint draait). Jij voert zelf niets uit. 'navigate' brengt de gebruiker naar een scherm (params.view) — altijd beschikbaar. De overige acties (clock_in, clock_out, create_leave, create_expense, create_customer, create_workorder, create_quote, create_message, create_venue) vereisen de AI-acties-add-on én het juiste recht; geef params mee volgens de velden van de actie.", { type: "object", properties: {
+    fn("propose_action", "Stel een actie voor die de gebruiker bevestigt en die daarna ECHT wordt uitgevoerd (de gebruiker klikt bevestigen → het beveiligde endpoint draait). Jij voert zelf niets uit. 'navigate' brengt de gebruiker naar een scherm (params.view) · altijd beschikbaar. De overige acties (clock_in, clock_out, create_leave, create_expense, create_customer, create_workorder, create_quote, create_message, create_venue) vereisen de AI-acties-add-on én het juiste recht; geef params mee volgens de velden van de actie.", { type: "object", properties: {
       action: { type: "string", enum: Object.keys(ACTIONS) },
       params: { type: "object", description: "Veldwaarden voor de actie" },
     }, required: ["action"] }),
@@ -231,7 +231,7 @@ function systemPrompt(store, tenant, user) {
   const today = new Date();
   const dateNL = today.toLocaleDateString("nl-BE", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
   return [
-    "Je bent Boden, de behulpzame AI-assistent in Monargo One — een Belgische B2B SaaS voor KMO's (planning, werkbonnen, tijdregistratie, verlof, onkosten, offertes, facturen/Peppol, klanten, stock, wagenpark).",
+    "Je bent Boden, de behulpzame AI-assistent in Monargo One · een Belgische B2B SaaS voor KMO's (planning, werkbonnen, tijdregistratie, verlof, onkosten, offertes, facturen/Peppol, klanten, stock, wagenpark).",
     `Vandaag is ${dateNL} (${today.toISOString().slice(0, 10)}). Reken 'deze maand', 'deze week', 'vandaag' hier vanaf.`,
     `De gebruiker is ${user.name || user.email}, rol "${user.role}", organisatie "${tenant.name}".`,
     `Toegankelijke schermen: ${ent.views.join(", ")}.`,
@@ -241,14 +241,14 @@ function systemPrompt(store, tenant, user) {
       : "De AI-acties-add-on staat NIET aan: je kunt geen wijzigingen uitvoeren. Beantwoord vragen en verwijs de gebruiker naar het juiste scherm; vermeld zo nodig dat hiervoor de AI-acties-add-on nodig is. 'navigate' mag je wel gebruiken.",
     "",
     "WERKWIJZE (wees slim en proactief):",
-    "- Voor 'hoeveel', 'totaal', 'gemiddeld', 'per X' of cijfervragen: gebruik 'aggregate' (count/sum/avg, eventueel groupBy) — som nooit zelf records op uit het hoofd.",
+    "- Voor 'hoeveel', 'totaal', 'gemiddeld', 'per X' of cijfervragen: gebruik 'aggregate' (count/sum/avg, eventueel groupBy) · som nooit zelf records op uit het hoofd.",
     "- Voor 'hoe staan we ervoor', overzichten of vragen naar omzet/openstaande facturen/teamgrootte: gebruik 'get_kpis'.",
     "- Voor specifieke records: 'query_records' of 'search'. Roep 'get_my_context' aan als je twijfelt over de rechten.",
     "- Combineer gerust meerdere tools en redeneer met de uitkomsten (bv. een cijfer + een korte duiding of suggestie).",
     "",
     "STRIKTE REGELS:",
     "1) Gebruik UITSLUITEND data die je via tools terugkrijgt. Verzin nooit gegevens. Geeft een tool 'geen toegang' of 'niet in pakket', leg dat dan kort uit aan de gebruiker.",
-    "2) Toon nooit data van andere gebruikers of modules dan wat de tools teruggeven — de tools bewaken de rechten, jij mag die niet omzeilen.",
+    "2) Toon nooit data van andere gebruikers of modules dan wat de tools teruggeven · de tools bewaken de rechten, jij mag die niet omzeilen.",
     "3) Je voert zelf NOOIT wijzigingen uit. Voor elke aanmaak/wijziging/navigatie gebruik je propose_action en zeg je duidelijk dat de gebruiker moet bevestigen. Beweer nooit dat je iets hebt uitgevoerd.",
     "4) Antwoord in het Nederlands, kort en concreet. Geef getallen helder weer (bv. bedragen met €). Verwijs naar het juiste scherm waar nuttig.",
   ].join("\n");
@@ -300,18 +300,18 @@ async function bodenChat(store, tenant, user, history) {
   return { reply: "Sorry, dat lukt me even niet. Probeer je vraag anders te formuleren.", proposals, mock: false };
 }
 
-// ── Mock-modus (geen echte key) — gratis, voor QA. Toont dat rechten-scoping werkt ──
+// ── Mock-modus (geen echte key) · gratis, voor QA. Toont dat rechten-scoping werkt ──
 function mockChat(store, tenant, user, msgs) {
   const last = msgs[msgs.length - 1].content;
   const ctx = runTool(store, tenant, user, "get_my_context", {}, []);
   const found = runTool(store, tenant, user, "search", { query: last.slice(0, 40) }, []);
   let reply = `🤖 Boden draait in **demo-modus** (nog geen AI-sleutel ingesteld door de beheerder).\n\n`;
-  reply += `Je bent ingelogd als ${ctx.gebruiker} (${ctx.rol}). Ik kan je helpen met: ${ctx.toegankelijke_record_types.join(", ") || "—"}.\n`;
+  reply += `Je bent ingelogd als ${ctx.gebruiker} (${ctx.rol}). Ik kan je helpen met: ${ctx.toegankelijke_record_types.join(", ") || "-"}.\n`;
   if (found.aantal) {
     reply += `\nIk vond ${found.aantal} resultaat(en) voor "${last.slice(0, 40)}":\n`;
     reply += found.resultaten.slice(0, 5).map(r => `• ${r.type}: ${r.naam || r.nummer || r.titel || r.id}`).join("\n");
   } else {
-    reply += `\nZodra de beheerder de AI-sleutel instelt (super-admin → Integraties), beantwoord ik je vragen volledig — altijd binnen jouw rechten.`;
+    reply += `\nZodra de beheerder de AI-sleutel instelt (super-admin → Integraties), beantwoord ik je vragen volledig · altijd binnen jouw rechten.`;
   }
   return { reply, proposals: [], mock: true };
 }

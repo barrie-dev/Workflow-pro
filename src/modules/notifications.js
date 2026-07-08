@@ -6,7 +6,7 @@ function publicNotification(row) {
   return row;
 }
 
-// Bepaalt (puur) of een notificatie ook per e-mail moet — om inbox-spam te
+// Bepaalt (puur) of een notificatie ook per e-mail moet · om inbox-spam te
 // vermijden mailen we enkel expliciete e-mailkanalen of hoge prioriteit, en enkel
 // als de tenant e-mailnotificaties niet heeft uitgezet.
 function shouldEmailNotification(notification, tenant) {

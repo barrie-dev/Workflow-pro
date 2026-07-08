@@ -1,6 +1,6 @@
 "use strict";
 /**
- * Backup-bewaarbeleid (retention) per tenant — GDPR/Belgisch conform.
+ * Backup-bewaarbeleid (retention) per tenant · GDPR/Belgisch conform.
  *
  * Onderscheid (belangrijk, juridisch):
  *  - DISASTER-RECOVERY BACKUPS (dit bestand) = operationele herstelmomenten.
