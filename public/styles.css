@@ -20,8 +20,11 @@
   --wf-red-l:       #fee2e2;
   --wf-yellow:      #f59e0b;   /* Monargo warning */
   --wf-yellow-l:    #fef3c7;
-  --wf-purple:      #7c3aed;
-  --wf-purple-l:    #f3e8ff;
+  /* Paars afgeschaft (merk: enige primaire kleur = blauw). Tokens verwijzen nu
+     naar blauw zodat elk resterend UI-chrome-gebruik automatisch on-brand is.
+     Data-viz-paletten gebruiken expliciet distinct hues (geen --wf-purple). */
+  --wf-purple:      #0071e3;
+  --wf-purple-l:    #e9f1fd;
 
   --gray-50:  #f8fafc;
   --gray-100: #f1f5f9;
@@ -2057,43 +2060,40 @@ main > div:not(.hidden) {
   align-items: flex-start;
   gap: 10px;
   padding: 12px 14px;
-  border-radius: 10px;
-  background: #0F172A;
-  color: #fff;
+  border-radius: var(--radius);       /* 14px, spec */
+  background: var(--surface);
+  color: var(--ink);
   font-size: 13.5px;
   line-height: 1.45;
-  box-shadow: 0 8px 30px rgba(0,0,0,.25);
-  border-left: 4px solid #64748B;
+  box-shadow: 0 12px 32px rgba(11,19,32,.12);
+  border: 1px solid var(--line);
   opacity: 0;
   transform: translateY(8px);
-  transition: opacity .22s ease, transform .22s ease;
+  transition: opacity .22s var(--ease), transform .22s var(--ease);
   pointer-events: auto;
   word-break: break-word;
 }
 .app-toast2.visible { opacity: 1; transform: translateY(0); }
-.app-toast2-success { border-left-color: #10B981; }
-.app-toast2-error   { border-left-color: #EF4444; }
-.app-toast2-warning { border-left-color: #F59E0B; }
-.app-toast2-info    { border-left-color: #38BDF8; }
 .app-toast2-icon {
   flex-shrink: 0;
   width: 20px; height: 20px;
   border-radius: 50%;
   display: grid; place-items: center;
   font-size: 11px; font-weight: 800;
-  background: rgba(255,255,255,.12);
+  color: #fff;
+  background: var(--muted);
 }
-.app-toast2-success .app-toast2-icon { background: #10B981; }
-.app-toast2-error   .app-toast2-icon { background: #EF4444; }
-.app-toast2-warning .app-toast2-icon { background: #F59E0B; color:#1F2937; }
-.app-toast2-info    .app-toast2-icon { background: #38BDF8; color:#0F172A; }
+.app-toast2-success .app-toast2-icon { background: var(--wf-green); }
+.app-toast2-error   .app-toast2-icon { background: var(--wf-red); }
+.app-toast2-warning .app-toast2-icon { background: var(--wf-yellow); }
+.app-toast2-info    .app-toast2-icon { background: var(--wf-blue); }
 .app-toast2-msg { flex: 1; }
 .app-toast2-x {
-  background: none; border: none; color: rgba(255,255,255,.5);
+  background: none; border: none; color: var(--muted);
   font-size: 16px; line-height: 1; cursor: pointer; padding: 0 2px;
   flex-shrink: 0;
 }
-.app-toast2-x:hover { color: #fff; }
+.app-toast2-x:hover { color: var(--ink); }
 @media (max-width: 600px) {
   #appToastHost { left: 16px; right: 16px; bottom: 86px; max-width: none; }
 }

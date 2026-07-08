@@ -253,7 +253,7 @@ table.adm-table { width:100%; border-collapse:collapse; font-size:13px; }
 .adm-status-pending,.adm-status-aangevraagd,.adm-status-ingediend,.adm-status-queued { background:var(--wf-yellow-l); color:#92400E; }
 .adm-status-inactive,.adm-status-geweigerd,.adm-status-geannuleerd,.adm-status-overdue { background:var(--wf-red-l); color:#991B1B; }
 .adm-status-open,.adm-status-nieuw { background:var(--wf-blue-l); color:#1E40AF; }
-.adm-status-voltooid,.adm-status-afgewerkt { background:var(--wf-purple-l); color:#5B21B6; }
+.adm-status-voltooid,.adm-status-afgewerkt { background:var(--wf-green-l); color:#065F46; }
 
 /* ── Avatar ── */
 .adm-avatar { width:32px; height:32px; border-radius:50%; background:var(--wf-blue-l); color:var(--wf-blue-d); display:inline-grid; place-items:center; font-size:12px; font-weight:700; }
@@ -308,9 +308,10 @@ table.adm-table { width:100%; border-collapse:collapse; font-size:13px; }
 @keyframes adm-spin { to { transform:rotate(360deg); } }
 
 /* ── Empty state ── */
-.adm-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:52px 24px; color:var(--gray-400); }
-.adm-empty-icon { font-size:42px; margin-bottom:12px; }
-.adm-empty-text { font-size:14px; font-weight:500; }
+.adm-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:56px 24px; color:var(--muted); }
+.adm-empty-icon { font-size:44px; margin-bottom:14px; opacity:.85; }
+.adm-empty-title { font-size:15px; font-weight:600; color:var(--ink); margin-bottom:4px; }
+.adm-empty-text { font-size:13.5px; color:var(--muted); max-width:340px; line-height:1.5; }
 
 /* ── Badge (table) ── */
 .adm-badge { background:var(--wf-red); color:#fff; border-radius:999px; font-size:10px; padding:1px 6px; font-weight:700; vertical-align:middle; }

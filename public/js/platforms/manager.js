@@ -449,7 +449,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
       days.push(d.toISOString().slice(0,10));
     }
 
-    const MGR_COLORS = [["var(--wf-blue-l)","var(--wf-blue)"],["var(--wf-green-l)","var(--wf-green)"],["var(--wf-yellow-l)","var(--wf-yellow)"],["var(--wf-purple-l)","var(--wf-purple)"],["var(--wf-purple-l)","var(--wf-purple)"],["var(--wf-blue-l)","var(--wf-blue-d)"],["var(--wf-red-l)","var(--wf-red)"],["var(--wf-blue-l)","var(--wf-blue)"]];
+    const MGR_COLORS = [["var(--wf-blue-l)","var(--wf-blue)"],["var(--wf-green-l)","var(--wf-green)"],["var(--wf-yellow-l)","var(--wf-yellow)"],["var(--wf-orange-l)","var(--wf-orange)"],["var(--gray-200)","var(--gray-500)"],["var(--wf-blue-l)","var(--wf-blue-d)"],["var(--wf-red-l)","var(--wf-red)"],["var(--wf-blue-l)","var(--wf-blue)"]];
     const mgrColorMap = {}; let mgrColorIdx = 0;
     const getMgrColor = uid => { if (!mgrColorMap[uid]) { mgrColorMap[uid]=MGR_COLORS[mgrColorIdx%MGR_COLORS.length]; mgrColorIdx++; } return mgrColorMap[uid]; };
 
