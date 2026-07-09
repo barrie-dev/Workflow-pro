@@ -42,7 +42,8 @@ const {
   isEmployee,
   isManager,
   isAdmin,
-  canWrite
+  canWrite,
+  ownScopeOnly
 } = require("./lib/auth");
 const {
   getMyProfile, getMyPlanning, getMyClock, getMyExpenses,
@@ -109,6 +110,29 @@ function assertNotReadOnly(user, action, method) {
   // geen enkel recht → laat het endpoint zelf de juiste 403 geven
 }
 
+// ── Prikklok-helpers: canoniek schema (date + HH:MM) ─────────────────────────
+// Valide "HH:MM" of null; knipt seconden weg ("07:00:00" → "07:00").
+function hhmm(v) {
+  const s = String(v || "").slice(0, 5);
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(s) ? s : null;
+}
+function hhmmToMin(t) { return Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5)); }
+// Verrijk een klok-rij met beide representaties: canoniek (date/clockIn/clockOut/
+// durationMinutes) én afgeleide lokale ISO's (clockedIn/clockedOut) voor de UI.
+// Legacy ISO-rijen worden string-gewijs gelezen (geen Date-parse → geen tz-schuif).
+function enrichClock(c) {
+  const date = c.date || String(c.clockedIn || "").slice(0, 10) || null;
+  const clockIn = hhmm(c.clockIn) || (c.clockedIn ? hhmm(String(c.clockedIn).slice(11, 16)) : null);
+  const clockOut = hhmm(c.clockOut) || (c.clockedOut ? hhmm(String(c.clockedOut).slice(11, 16)) : null);
+  const durationMinutes = c.durationMinutes
+    ?? (clockIn && clockOut ? Math.max(0, hhmmToMin(clockOut) - hhmmToMin(clockIn)) : null);
+  return {
+    ...c, date, clockIn, clockOut, durationMinutes,
+    clockedIn: date && clockIn ? `${date}T${clockIn}:00` : null,
+    clockedOut: date && clockOut ? `${date}T${clockOut}:00` : null
+  };
+}
+
 // Klant-facturatie (offertes/facturen): toegankelijk met het admin-brede
 // "billing" óf het toekenbare "invoicing"-recht (finance-profiel zonder
 // toegang tot abonnementsbeheer).
@@ -160,6 +184,7 @@ function provisionPendingUser(fields) {
 const { listModule, createModuleRow, updateModuleRow } = require("./modules/crud");
 const { lookupKboResolve } = require("./modules/kbo");
 const { createCustomerInvoice, workorderInvoicePayload } = require("./modules/customer-invoicing");
+const { runPaymentReminders } = require("./modules/payment-reminders");
 const {
   createSetupIntent,
   billingQuote,
@@ -2722,7 +2747,8 @@ http.createServer(async (req, res) => {
       if (action === "leaves" && req.method === "GET") {
         assertCan(user, "leaves");
         const opts = {
-          userId: url.searchParams.get("userId"),
+          // own-scope: enkel eigen verlof zichtbaar (GDPR), ongeacht de query.
+          userId: ownScopeOnly(user, "leaves") ? user.id : url.searchParams.get("userId"),
           status: url.searchParams.get("status"),
           type: url.searchParams.get("type"),
           from: url.searchParams.get("from"),
@@ -3109,6 +3135,13 @@ http.createServer(async (req, res) => {
         const amount = Number(body.amount);
         if (!Number.isFinite(amount) || amount <= 0) return sendJson(res, 400, { ok: false, error: "Bedrag moet groter zijn dan €0" });
         if (amount > 100000) return sendJson(res, 400, { ok: false, error: "Bedrag is onrealistisch hoog · controleer de invoer" });
+        // Optionele werkbon-koppeling: zo kan de onkost later mee op de
+        // klantfactuur van die werkbon (doorrekenen aan de klant).
+        let expWorkorderId = null;
+        if (body.workorderId) {
+          const woRef = store.get("workorders", String(body.workorderId));
+          if (woRef && woRef.tenantId === tenantId) expWorkorderId = woRef.id;
+        }
         const row = store.insert("expenses", {
           id: `exp_${Date.now()}_${require("crypto").randomBytes(4).toString("hex")}`,
           tenantId,
@@ -3118,6 +3151,7 @@ http.createServer(async (req, res) => {
           amount,
           category: body.category || "overig",
           description: body.description || "",
+          workorderId: expWorkorderId,
           status: "ingediend",
           createdAt: new Date().toISOString()
         });
@@ -3871,20 +3905,35 @@ http.createServer(async (req, res) => {
       // ── Onkosten lijst (admin/manager) ────────────────────────────────────────
       if (action === "expenses" && req.method === "GET") {
         assertCan(user, "expenses");
-        const expenses = store.list("expenses", tenantId)
+        let expenses = store.list("expenses", tenantId)
           .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+        if (ownScopeOnly(user, "expenses")) expenses = expenses.filter(e => e.userId === user.id);
         sendJson(res, 200, { ok: true, expenses });
         return;
       }
 
-      // PATCH /expenses/:id · status bijwerken (goedgekeurd/geweigerd)
+      // PATCH /expenses/:id · status bijwerken (goedgekeurd/geweigerd) + werkbon-koppeling
       const expPatchMatch = action.match(/^expenses\/([^/]+)$/);
       if (expPatchMatch && req.method === "PATCH") {
         assertCan(user, "expenses");
+        const existingExp = store.get("expenses", expPatchMatch[1]);
+        if (!existingExp || existingExp.tenantId !== tenantId) {
+          return sendJson(res, 404, { ok: false, error: "Onkost niet gevonden" });
+        }
         const body = await readBody(req);
-        // Whitelist: only allow specific fields to be updated via this route
-        const allowed = ["status", "reviewNote", "reviewedBy", "reviewedAt", "amount", "category", "description", "date"];
+        // Whitelist: only allow specific fields to be updated via this route.
+        // workorderId/billable = doorrekenen aan de klant via de werkbon-factuur.
+        const allowed = ["status", "reviewNote", "reviewedBy", "reviewedAt", "amount", "category", "description", "date", "workorderId", "billable"];
         const patch = Object.fromEntries(Object.entries(body).filter(([k]) => allowed.includes(k)));
+        // Goed-/afkeuren is voorbehouden aan manager/admin (nooit je eigen nota's beoordelen).
+        if (patch.status !== undefined && (isEmployee(user) || existingExp.userId === user.id)) {
+          return sendJson(res, 403, { ok: false, error: "Onkosten beoordelen kan enkel door een manager of beheerder (en nooit je eigen nota's)" });
+        }
+        if (patch.workorderId) {
+          const woRef = store.get("workorders", String(patch.workorderId));
+          if (!woRef || woRef.tenantId !== tenantId) return sendJson(res, 400, { ok: false, error: "Werkbon niet gevonden" });
+        }
+        if (patch.billable !== undefined) patch.billable = patch.billable !== false && patch.billable !== "false";
         if (patch.status === "goedgekeurd" || patch.status === "geweigerd") {
           patch.reviewedBy = user.email;
           patch.reviewedAt = new Date().toISOString();
@@ -3914,55 +3963,108 @@ http.createServer(async (req, res) => {
       }
 
       // ── Clocks lijst (admin/manager) ──────────────────────────────────────────
+      // ── Prikklok: één canoniek schema aan de API-grens ────────────────────────
+      // Echte prikklok-rijen: date + clockIn/clockOut (HH:MM) + durationMinutes +
+      // status "active"/"ready_for_approval"/…  Oudere handmatige rijen gebruikten
+      // clockedIn/clockedOut (ISO). GET verrijkt elke rij met BEIDE representaties
+      // zodat alle schermen kloppen; mutaties schrijven canoniek en houden een
+      // correctie-spoor (corrections[]) bij voor de sociale-wetgeving-audit.
       if (action === "clocks" && req.method === "GET") {
         assertCan(user, "clockings");
         const fromQ = url.searchParams.get("from");
         const toQ   = url.searchParams.get("to");
-        let clocks = store.list("clocks", tenantId)
-          .sort((a, b) => (b.clockedIn || "").localeCompare(a.clockedIn || ""));
         const dateFilter = url.searchParams.get("date");
-        if (dateFilter) clocks = clocks.filter(c => c.clockedIn?.startsWith(dateFilter));
-        if (fromQ) clocks = clocks.filter(c => (c.clockedIn || "").slice(0,10) >= fromQ);
-        if (toQ)   clocks = clocks.filter(c => (c.clockedIn || "").slice(0,10) <= toQ);
+        let clocks = store.list("clocks", tenantId).map(enrichClock)
+          .sort((a, b) => `${b.date || ""}${b.clockIn || ""}`.localeCompare(`${a.date || ""}${a.clockIn || ""}`));
+        if (ownScopeOnly(user, "clockings")) clocks = clocks.filter(c => c.userId === user.id);
+        if (dateFilter) clocks = clocks.filter(c => c.date === dateFilter);
+        if (fromQ) clocks = clocks.filter(c => (c.date || "") >= fromQ);
+        if (toQ)   clocks = clocks.filter(c => (c.date || "") <= toQ);
         sendJson(res, 200, { ok: true, clocks });
         return;
       }
 
-      // Handmatige klokregistratie aanmaken (admin correctie)
+      // Handmatige klokregistratie (beheerder/manager: vergeten prik toevoegen)
       if (action === "clocks/manual" && req.method === "POST") {
         assertCan(user, "clockings");
         assertApiKeyWriteAllowed(user, req);
         const body = await readBody(req);
+        // Canoniek (date + clockIn HH:MM) mét fallback voor het oude ISO-contract.
+        const date = body.date || String(body.clockedIn || "").slice(0, 10);
+        const clockIn = hhmm(body.clockIn) || hhmm(String(body.clockedIn || "").slice(11, 16));
+        const clockOut = hhmm(body.clockOut) || hhmm(String(body.clockedOut || "").slice(11, 16));
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date || "") || !clockIn) {
+          return sendJson(res, 400, { ok: false, error: "Datum en inkloktijd zijn verplicht" });
+        }
+        if (clockOut && clockOut <= clockIn) {
+          return sendJson(res, 400, { ok: false, error: "Uitkloktijd moet na inkloktijd liggen" });
+        }
+        const target = store.getUserById(String(body.userId || ""));
+        if (!target || target.tenantId !== tenantId) {
+          return sendJson(res, 400, { ok: false, error: "Medewerker niet gevonden" });
+        }
         const row = store.insert("clocks", {
-          id: `clk_${Date.now()}_${require("crypto").randomBytes(4).toString("hex")}`,
+          id: `clock_${Date.now()}_${Math.random().toString(16).slice(2)}`,
           tenantId,
-          userId: body.userId,
-          userName: body.userName || body.userId,
-          clockedIn: body.clockedIn,
-          clockedOut: body.clockedOut || null,
-          status: body.clockedOut ? "out" : "in",
-          note: body.note || "Handmatige correctie",
+          userId: target.id,
+          userName: target.name || target.email,
+          date, clockIn, clockOut: clockOut || null,
+          durationMinutes: clockOut ? hhmmToMin(clockOut) - hhmmToMin(clockIn) : null,
+          status: clockOut ? "ready_for_approval" : "active",
+          note: body.note || "Handmatige registratie",
           manual: true,
           createdBy: user.email,
           createdAt: new Date().toISOString()
         });
         store.audit({ actor: user.email, tenantId, action: "clock_manual_created", area: "clockings",
-          detail: `${body.userName||body.userId} ${body.clockedIn?.slice(0,10)}` });
-        sendJson(res, 201, { ok: true, row });
+          detail: `${target.name || target.email} ${date} ${clockIn}-${clockOut || "…"}` });
+        sendJson(res, 201, { ok: true, row: enrichClock(row) });
         return;
       }
 
-      // Klokregistratie bijwerken (correctie)
+      // Klokregistratie corrigeren (met audit-spoor van de originele tijden)
       const clockItemMatch = action.match(/^clocks\/([^/]+)$/);
       if (clockItemMatch && req.method === "PATCH") {
         assertCan(user, "clockings");
         assertApiKeyWriteAllowed(user, req);
+        const existing = store.get("clocks", clockItemMatch[1]);
+        if (!existing || existing.tenantId !== tenantId) {
+          return sendJson(res, 404, { ok: false, error: "Klokregistratie niet gevonden" });
+        }
         const body = await readBody(req);
-        const allowed = ["clockedIn", "clockedOut", "status", "note"];
-        const patch = Object.fromEntries(Object.entries(body).filter(([k]) => allowed.includes(k)));
-        const updated = store.update("clocks", clockItemMatch[1], { ...patch, updatedAt: new Date().toISOString() });
-        store.audit({ actor: user.email, tenantId, action: "clock_corrected", area: "clockings", detail: clockItemMatch[1] });
-        sendJson(res, 200, { ok: true, row: updated });
+        const cur = enrichClock(existing);
+        const newIn = hhmm(body.clockIn) || hhmm(String(body.clockedIn || "").slice(11, 16)) || cur.clockIn;
+        const outCleared = body.clockOut === null || body.clockedOut === null;
+        const newOut = outCleared ? null
+          : (hhmm(body.clockOut) || hhmm(String(body.clockedOut || "").slice(11, 16)) || cur.clockOut);
+        if (!newIn) return sendJson(res, 400, { ok: false, error: "Inkloktijd is verplicht" });
+        if (newOut && newOut <= newIn) {
+          return sendJson(res, 400, { ok: false, error: "Uitkloktijd moet na inkloktijd liggen" });
+        }
+        const corrections = [...(existing.corrections || []), {
+          by: user.email,
+          at: new Date().toISOString(),
+          note: String(body.note || ""),
+          original: { clockIn: cur.clockIn, clockOut: cur.clockOut }
+        }];
+        const updated = store.update("clocks", existing.id, {
+          date: cur.date,
+          clockIn: newIn,
+          clockOut: newOut || null,
+          durationMinutes: newOut ? hhmmToMin(newOut) - hhmmToMin(newIn) : null,
+          // Uitkloktijd gezet op een actieve prik → klaar voor goedkeuring; anders status behouden.
+          status: newOut ? (["active", "in"].includes(existing.status) ? "ready_for_approval" : existing.status || "ready_for_approval") : "active",
+          note: body.note !== undefined ? body.note : existing.note,
+          corrections,
+          corrected: true,
+          // Legacy-velden mee-updaten zodat oude consumenten consistent blijven.
+          clockedIn: cur.date && newIn ? `${cur.date}T${newIn}:00` : null,
+          clockedOut: cur.date && newOut ? `${cur.date}T${newOut}:00` : null,
+          updatedAt: new Date().toISOString()
+        });
+        store.audit({ actor: user.email, tenantId, action: "clock_corrected", area: "clockings",
+          detail: `${cur.userName || existing.userId} ${cur.date}: ${cur.clockIn || "-"}-${cur.clockOut || "-"} naar ${newIn}-${newOut || "-"}` });
+        sendJson(res, 200, { ok: true, row: enrichClock(updated) });
         return;
       }
 
@@ -4045,8 +4147,9 @@ http.createServer(async (req, res) => {
       // ── Werkbonnen lijst (admin/manager) ─────────────────────────────────────
       if (action === "workorders" && req.method === "GET") {
         assertCan(user, "workorders");
-        const workorders = store.list("workorders", tenantId)
+        let workorders = store.list("workorders", tenantId)
           .sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+        if (ownScopeOnly(user, "workorders")) workorders = workorders.filter(w => w.userId === user.id || w.assignedTo === user.id);
         sendJson(res, 200, { ok: true, workorders });
         return;
       }
@@ -4092,6 +4195,10 @@ http.createServer(async (req, res) => {
           invoiceId: invoice.id, billableStatus: "invoiced",
           invoicedAt: new Date().toISOString(), updatedAt: new Date().toISOString()
         });
+        // Doorgerekende onkosten markeren zodat ze nooit dubbel op een factuur komen.
+        for (const expId of (payload.expenseIds || [])) {
+          store.update("expenses", expId, { invoiceId: invoice.id, invoicedAt: new Date().toISOString() });
+        }
         store.audit({ actor: user.email, tenantId, action: "workorder_invoiced", area: "facturen", detail: `${wo.number || wo.id} → ${invoice.number}` });
         sendJson(res, 201, { ok: true, invoice, workorder });
         return;
@@ -4137,6 +4244,10 @@ http.createServer(async (req, res) => {
         allowed.forEach(k => { if (body[k] !== undefined) patch[k] = body[k]; });
         // Standaard-uurtarief: fallback voor werkbonnen zonder eigen tarief bij facturatie.
         if (body.defaultHourlyRate !== undefined) patch.defaultHourlyRate = Math.max(0, Number(body.defaultHourlyRate) || 0);
+        // Automatische betaalherinneringen (opt-in; zie payment-reminders.js).
+        if (body.autoReminders && typeof body.autoReminders === "object") {
+          patch.autoReminders = { enabled: body.autoReminders.enabled === true };
+        }
         // E-mailnotificatie-voorkeur (tenant-breed).
         if (body.notificationPrefs && typeof body.notificationPrefs === "object") {
           patch.notificationPrefs = { ...(tenant.notificationPrefs || {}), emailEnabled: body.notificationPrefs.emailEnabled !== false };
@@ -4255,6 +4366,17 @@ http.createServer(async (req, res) => {
   const reviewSupportAccess = () => { try { runSupportAccessReview(store); } catch (_) {} };
   setImmediate(reviewSupportAccess);
   setInterval(reviewSupportAccess, 24 * 60 * 60 * 1000).unref();
+
+  // Automatische betaalherinneringen: opt-in per tenant, om de 6 uur een ronde.
+  // Het beleid in payment-reminders (interval + max) maakt de job idempotent;
+  // in dev/test verstuurt de mailer sowieso niets echts (guardrails).
+  const runReminderCycle = () => {
+    runPaymentReminders(store, config)
+      .then(r => { if (r.sent > 0) console.log(`  Herinnering: ${r.sent} betaalherinnering(en) verstuurd`); })
+      .catch(() => {});
+  };
+  setTimeout(runReminderCycle, 60 * 1000).unref();
+  setInterval(runReminderCycle, 6 * 60 * 60 * 1000).unref();
 });
 
 // ── Graceful shutdown ─────────────────────────────────────────

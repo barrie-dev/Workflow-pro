@@ -127,6 +127,24 @@ test("lookupKboResolve: fixture sluit kort vóór het netwerk", async () => {
   assert.equal(touched, false);
 });
 
+// ── Automatische betaalherinneringen ────────────────────────────────────────────
+const { reminderDue, MAX_REMINDERS } = require("../src/modules/payment-reminders");
+
+test("betaalherinnering: enkel vervallen open facturen, met interval en maximum", () => {
+  const today = "2026-07-09";
+  const base = { status: "open", dueDate: "2026-07-01", paidAt: null };
+  assert.equal(reminderDue({ ...base }, today), true, "vervallen zonder eerdere herinnering");
+  assert.equal(reminderDue({ ...base, dueDate: "2026-07-20" }, today), false, "nog niet vervallen");
+  assert.equal(reminderDue({ ...base, paidAt: "2026-07-02" }, today), false, "betaald");
+  assert.equal(reminderDue({ ...base, status: "draft" }, today), false, "concept niet herinneren");
+  const gisteren = new Date(Date.now() - 1 * 86400000).toISOString();
+  assert.equal(reminderDue({ ...base, reminders: [{ at: gisteren }] }, today), false, "interval van 7 dagen respecteren");
+  const langGeleden = new Date(Date.now() - 10 * 86400000).toISOString();
+  assert.equal(reminderDue({ ...base, reminders: [{ at: langGeleden }] }, today), true, "na interval opnieuw");
+  const max = Array.from({ length: MAX_REMINDERS }, () => ({ at: langGeleden }));
+  assert.equal(reminderDue({ ...base, reminders: max }, today), false, "maximum bereikt");
+});
+
 // ── Klantfacturatie: gedeelde logica + werkbon→factuur ──────────────────────────
 const { createCustomerInvoice, workorderInvoicePayload } = require("../src/modules/customer-invoicing");
 function fakeInvoiceStore() {

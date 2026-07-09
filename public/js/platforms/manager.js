@@ -647,13 +647,10 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     const d        = new Date(_mgrClockDate);
     const dateLabel = d.toLocaleDateString("nl-BE",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
 
-    // KPI counts
-    const totalIn  = clocks.filter(c => c.status === "in").length;
+    // KPI counts (canonieke velden: clockIn/clockOut HH:MM + durationMinutes)
+    const totalIn  = clocks.filter(c => c.clockIn && !c.clockOut).length;
     const totalAll = clocks.length;
-    const totalHours = clocks
-      .filter(c => c.clockedIn && c.clockedOut)
-      .reduce((sum,c) => sum + (new Date(c.clockedOut) - new Date(c.clockedIn))/3600000, 0)
-      .toFixed(1);
+    const totalHours = (clocks.reduce((sum,c) => sum + (c.durationMinutes || 0), 0) / 60).toFixed(1);
 
     content.innerHTML = `
 <div class="mgr-card" style="margin-bottom:16px;">
@@ -664,6 +661,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
       ${!isToday ? `<button class="mgr-btn mgr-btn-secondary mgr-btn-sm" id="mgrClkToday">Vandaag</button>` : ""}
       <button class="mgr-btn mgr-btn-secondary mgr-btn-sm" id="mgrClkNext" ${isToday?"disabled":""}>Volgende ›</button>
       <input type="date" id="mgrClkPicker" value="${_mgrClockDate}" style="padding:5px 8px;cursor:pointer" max="${todayStr}">
+      <button class="mgr-btn mgr-btn-primary mgr-btn-sm" id="mgrClkAdd" title="Vergeten prik handmatig toevoegen">+ Registratie</button>
     </div>
   </div>
   <div class="mgr-card-body" style="display:flex;gap:16px;flex-wrap:wrap;padding-bottom:0;">
@@ -679,25 +677,25 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
       <thead><tr><th>Medewerker</th><th>Inkloktijd</th><th>Uitkloktijd</th><th>Uren</th><th>Status</th><th>Acties</th></tr></thead>
       <tbody>
         ${clocks.map(c => {
-          const h = c.clockedIn && c.clockedOut
-            ? ((new Date(c.clockedOut)-new Date(c.clockedIn))/3600000).toFixed(1)
-            : "-";
-          const inTime  = c.clockedIn  ? new Date(c.clockedIn).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}) : "-";
-          const outTime = c.clockedOut ? new Date(c.clockedOut).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}) : "-";
+          const stillIn = c.clockIn && !c.clockOut;
+          const h = c.durationMinutes != null ? (c.durationMinutes/60).toFixed(1) : "-";
+          const marker = c.corrected
+            ? ' <span class="mgr-status" style="background:var(--wf-yellow-l);color:#92400e;" title="Tijden gecorrigeerd door een beheerder">gecorrigeerd</span>'
+            : (c.manual ? ' <span class="mgr-status" style="background:var(--gray-100);color:var(--gray-600);" title="Handmatig geregistreerd">manueel</span>' : "");
           return `<tr>
             <td>${esc(c.userName||c.userId)}</td>
-            <td>${inTime}</td>
-            <td>${outTime}</td>
+            <td>${esc(c.clockIn || "-")}</td>
+            <td>${stillIn ? '<span style="color:var(--wf-yellow)">nog ingeklokt</span>' : esc(c.clockOut || "-")}</td>
             <td>${h}</td>
-            <td>${c.status==="in"
+            <td>${stillIn
               ? '<span class="mgr-status mgr-status-active">Ingeklokt</span>'
-              : '<span class="mgr-status mgr-status-inactive">Uitgeklokt</span>'}</td>
+              : '<span class="mgr-status mgr-status-inactive">Uitgeklokt</span>'}${marker}</td>
             <td style="white-space:nowrap;">
               <button class="mgr-btn mgr-btn-secondary mgr-btn-sm mgr-clk-edit" data-id="${esc(c.id)}"
-                data-in="${esc(c.clockedIn||"")}" data-out="${esc(c.clockedOut||"")}" data-name="${esc(c.userName||c.userId)}"
+                data-cin="${esc(c.clockIn||"")}" data-cout="${esc(c.clockOut||"")}" data-name="${esc(c.userName||c.userId)}"
                 title="Corrigeer tijden" style="font-size:12px;">Corrigeer</button>
-              ${c.status==="in" ? `<button class="mgr-btn mgr-btn-danger mgr-btn-sm mgr-clk-forceout" data-id="${esc(c.id)}" data-name="${esc(c.userName||c.userId)}"
-                title="Forceer uitklopping" style="font-size:12px;margin-left:4px;">⏹ Uitkloppen</button>` : ""}
+              ${stillIn ? `<button class="mgr-btn mgr-btn-danger mgr-btn-sm mgr-clk-forceout" data-id="${esc(c.id)}" data-name="${esc(c.userName||c.userId)}"
+                title="Nu uitkloppen" style="font-size:12px;margin-left:4px;">Uitkloppen</button>` : ""}
             </td>
           </tr>`;
         }).join("") || '<tr><td colspan="6" class="mgr-empty">Geen registraties voor deze datum</td></tr>'}
@@ -732,52 +730,121 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     content.querySelectorAll(".mgr-clk-forceout").forEach(btn => {
       btn.addEventListener("click", async () => {
         const name = btn.dataset.name;
-        if (!confirm(`${name} forceren uit te kloppen?`)) return;
+        if (!confirm(`${name} nu uitkloppen?`)) return;
         btn.disabled = true; btn.textContent = "…";
         try {
-          const now = new Date().toISOString();
-          await api("PATCH", `/clocks/${btn.dataset.id}`, { clockedOut: now, status: "out" });
+          await api("PATCH", `/clocks/${btn.dataset.id}`, { clockOut: new Date().toTimeString().slice(0, 5), note: "Uitgeklokt door manager" });
           renderClocking();
-        } catch(e) { window.showToast(e.message, "error"); btn.disabled = false; btn.textContent = "⏹ Uitkloppen"; }
+        } catch(e) { window.showToast(e.message, "error"); btn.disabled = false; btn.textContent = "Uitkloppen"; }
+      });
+    });
+    document.getElementById("mgrClkAdd")?.addEventListener("click", openManualClockModal);
+  }
+
+  // ── Handmatige registratie: vergeten prik toevoegen voor een teamlid ──
+  function openManualClockModal() {
+    api("GET", "/manager/dashboard").catch(() => ({ teamList: [] })).then(dash => {
+      const team = dash.teamList || [];
+      let modal = document.getElementById("mgrClkAddModal");
+      if (!modal) {
+        modal = document.createElement("div");
+        modal.id = "mgrClkAddModal";
+        modal.style.cssText = "position:fixed;inset:0;background:rgba(11,19,32,.42);z-index:600;display:flex;align-items:center;justify-content:center;padding:16px";
+        document.body.appendChild(modal);
+      }
+      modal.innerHTML = `
+<div style="background:#fff;border-radius:14px;width:420px;max-width:100%;padding:24px;box-shadow:0 20px 60px rgba(11,19,32,.2)">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+    <h2 style="font-size:16px;font-weight:600;margin:0;color:var(--gray-900)">Registratie toevoegen</h2>
+    <button id="clkAddClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--gray-400)">×</button>
+  </div>
+  <form id="mgrClkAddForm" style="display:flex;flex-direction:column;gap:14px">
+    <div>
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Medewerker *</label>
+      <select name="userId" required style="width:100%;">
+        <option value="">Kies een teamlid</option>
+        ${team.map(u => `<option value="${esc(u.id)}">${esc(u.name || u.email)}</option>`).join("")}
+      </select>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+      <div>
+        <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Datum *</label>
+        <input name="date" type="date" required value="${_mgrClockDate}" max="${new Date().toISOString().slice(0,10)}" style="width:100%;">
+      </div>
+      <div>
+        <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Van *</label>
+        <input name="clockIn" type="time" required value="07:00" style="width:100%;">
+      </div>
+      <div>
+        <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Tot</label>
+        <input name="clockOut" type="time" style="width:100%;">
+      </div>
+    </div>
+    <div>
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Reden *</label>
+      <input name="note" required placeholder="bv. vergeten in te klokken" style="width:100%;">
+    </div>
+    <div id="clkAddErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:10px;font-size:13px"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button type="button" id="clkAddCancel2" style="padding:8px 16px;border:1px solid var(--line-strong);background:#fff;border-radius:10px;font-size:13px;cursor:pointer">Annuleren</button>
+      <button type="submit" style="padding:8px 20px;background:var(--wf-blue);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">Toevoegen</button>
+    </div>
+  </form>
+</div>`;
+      const close = () => modal.remove();
+      document.getElementById("clkAddClose").addEventListener("click", close);
+      document.getElementById("clkAddCancel2").addEventListener("click", close);
+      modal.addEventListener("click", e => { if (e.target === modal) close(); });
+      document.getElementById("mgrClkAddForm").addEventListener("submit", async e => {
+        e.preventDefault();
+        const body = Object.fromEntries(new FormData(e.target).entries());
+        if (!body.clockOut) delete body.clockOut;
+        const errEl = document.getElementById("clkAddErr");
+        const btn = e.target.querySelector("[type=submit]");
+        btn.disabled = true; btn.textContent = "Bezig…";
+        try {
+          await api("POST", "/clocks/manual", body);
+          window.showToast && window.showToast("Registratie toegevoegd", "success");
+          close();
+          renderClocking();
+        } catch (err) {
+          errEl.textContent = err.message; errEl.style.display = "";
+          btn.disabled = false; btn.textContent = "Toevoegen";
+        }
       });
     });
   }
 
-  function openClockCorrectionModal({ id, in: clockedIn, out: clockedOut, name }) {
-    // Parse existing times for the date picker
-    const inDt  = clockedIn  ? new Date(clockedIn)  : null;
-    const outDt = clockedOut ? new Date(clockedOut) : null;
-    const toLocal = dt => dt ? dt.toISOString().slice(0,16) : "";
-
+  function openClockCorrectionModal({ id, cin, cout, name }) {
     const modal = document.createElement("div");
-    modal.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:600;display:flex;align-items:center;justify-content:center;padding:16px";
+    modal.style.cssText = "position:fixed;inset:0;background:rgba(11,19,32,.42);z-index:600;display:flex;align-items:center;justify-content:center;padding:16px";
     modal.innerHTML = `
-<div style="background:#fff;border-radius:14px;width:420px;max-width:100%;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+<div style="background:#fff;border-radius:14px;width:420px;max-width:100%;padding:24px;box-shadow:0 20px 60px rgba(11,19,32,.2)">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
     <h2 style="font-size:16px;font-weight:600;margin:0;color:var(--gray-900)">Kloktijd corrigeren</h2>
     <button id="clkCorrClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--gray-400)">×</button>
   </div>
-  <div style="font-size:13px;color:var(--gray-500);margin-bottom:16px;">Medewerker: <strong>${esc(name)}</strong></div>
+  <div style="font-size:13px;color:var(--gray-500);margin-bottom:16px;">Medewerker: <strong>${esc(name)}</strong> · huidige tijden: ${esc(cin || "-")} tot ${esc(cout || "nog ingeklokt")}</div>
   <form id="clkCorrForm" style="display:flex;flex-direction:column;gap:14px">
-    <div>
-      <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Inkloktijd *</label>
-      <input name="clockedIn" type="datetime-local" value="${toLocal(inDt)}" required
-        style="width:100%;10px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div>
+        <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Inkloktijd *</label>
+        <input name="clockIn" type="time" value="${esc(cin || "")}" required style="width:100%;">
+      </div>
+      <div>
+        <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Uitkloktijd (leeg = nog ingeklokt)</label>
+        <input name="clockOut" type="time" value="${esc(cout || "")}" style="width:100%;">
+      </div>
     </div>
     <div>
-      <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Uitkloktijd</label>
-      <input name="clockedOut" type="datetime-local" value="${toLocal(outDt)}"
-        style="width:100%;10px">
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Reden van correctie *</label>
+      <input name="note" required placeholder="bv. vergeten uit te klokken" style="width:100%;">
     </div>
-    <div>
-      <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Notitie bij correctie</label>
-      <input name="note" placeholder="Reden voor correctie (optioneel)"
-        style="width:100%;10px">
-    </div>
+    <div style="font-size:11.5px;color:var(--gray-400);">De originele tijden blijven bewaard in het correctiespoor (audit).</div>
     <div id="clkCorrErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:10px;font-size:13px"></div>
     <div style="display:flex;gap:10px;justify-content:flex-end">
-      <button type="button" id="clkCorrCancel" style="padding:8px 16px;border:1px solid var(--gray-200);background:#fff;border-radius:8px;font-size:13px;cursor:pointer">Annuleren</button>
-      <button type="submit" style="padding:8px 20px;background:var(--wf-blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Opslaan</button>
+      <button type="button" id="clkCorrCancel" style="padding:8px 16px;border:1px solid var(--line-strong);background:#fff;border-radius:10px;font-size:13px;cursor:pointer">Annuleren</button>
+      <button type="submit" style="padding:8px 20px;background:var(--wf-blue);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">Opslaan</button>
     </div>
   </form>
 </div>`;
@@ -793,12 +860,11 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
       const btn = e.target.querySelector("[type=submit]");
       btn.disabled = true; btn.textContent = "Bezig…";
       try {
-        const patch = { clockedIn: new Date(fd.clockedIn).toISOString() };
-        if (fd.clockedOut) patch.clockedOut = new Date(fd.clockedOut).toISOString();
-        if (fd.note) patch.note = fd.note;
-        // status: if we set clockedOut it becomes "out"
-        if (fd.clockedOut) patch.status = "out";
+        const patch = { clockIn: fd.clockIn, note: fd.note };
+        // Expliciet leeggemaakt veld = terug naar "nog ingeklokt".
+        patch.clockOut = fd.clockOut ? fd.clockOut : null;
         await api("PATCH", `/clocks/${id}`, patch);
+        window.showToast && window.showToast("Kloktijd gecorrigeerd", "success");
         close(); renderClocking();
       } catch(err) {
         errEl.textContent = err.message; errEl.style.display = "";
@@ -1404,11 +1470,15 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
 
   // ── Werkbon aanmaken (manager) ─────────────────────────────
   function openWoModal() {
-    // Modal opent ALTIJD meteen; het team laadt op de achtergrond in de
-    // dropdown. Zo blokkeert een trage/falende dashboard-fetch nooit het
-    // aanmaken zelf (werkbon zonder toewijzing kan altijd).
-    api("GET", "/manager/dashboard").catch(() => ({ teamList: [] })).then(dash => {
+    // Modal opent ALTIJD meteen; team en klanten laden op de achtergrond.
+    // Klantenlijst is permission-aware: heeft de manager geen klanten-recht,
+    // dan blijft de vrije invoer werken (geen 403-blokkade).
+    Promise.all([
+      api("GET", "/manager/dashboard").catch(() => ({ teamList: [] })),
+      api("GET", "/customers").catch(() => ({ customers: [] })),
+    ]).then(([dash, custData]) => {
       const team = dash.teamList || [];
+      const customers = custData.customers || [];
       let modal = document.getElementById("mgrWoModal");
       if (!modal) {
         modal = document.createElement("div");
@@ -1437,7 +1507,13 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
       </div>
       <div>
         <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Klant</label>
-        <input name="clientName" placeholder="Naam klant" style="width:100%;10px">
+        ${customers.length ? `
+        <select name="customerId" id="mgrWoCustSel" style="width:100%;">
+          <option value="">Kies een klant</option>
+          ${customers.map(c => `<option value="${esc(c.id)}" data-name="${esc(c.name||"")}">${esc(c.name||c.email||c.id)}</option>`).join("")}
+        </select>
+        <input name="clientName" id="mgrWoClientName" placeholder="Of typ een naam" style="width:100%;margin-top:6px;">` : `
+        <input name="clientName" placeholder="Naam klant" style="width:100%;">`}
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
@@ -1465,9 +1541,16 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
       document.getElementById("woClose").addEventListener("click", close);
       document.getElementById("woCancel").addEventListener("click", close);
       modal.addEventListener("click", e => { if (e.target === modal) close(); });
+      // Klant-selectie vult de naam automatisch in (blijft overschrijfbaar).
+      document.getElementById("mgrWoCustSel")?.addEventListener("change", e => {
+        const opt = e.target.selectedOptions[0];
+        const nameInp = document.getElementById("mgrWoClientName");
+        if (opt && nameInp) nameInp.value = opt.dataset.name || "";
+      });
       document.getElementById("woForm").addEventListener("submit", async e => {
         e.preventDefault();
         const body = Object.fromEntries(new FormData(e.target).entries());
+        if (!body.customerId) delete body.customerId;
         const errEl = document.getElementById("woErr");
         const btn = e.target.querySelector("[type=submit]");
         btn.disabled = true; btn.textContent = "Bezig…";
@@ -1602,7 +1685,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
           <td><span class="mgr-status ${statusCss[v.status]||"mgr-status-pending"}">${esc(v.status||"-")}</span></td>
           <td>${v.nextService ? new Date(v.nextService).toLocaleDateString("nl-BE") : "-"}</td>
           <td style="white-space:nowrap;">
-            <button class="mgr-btn mgr-btn-secondary mgr-btn-sm mgr-veh-edit" data-id="${v.id}" style="margin-right:4px;"></button>
+            <button class="mgr-btn mgr-btn-secondary mgr-btn-sm mgr-veh-edit" data-id="${v.id}" style="margin-right:4px;">Bewerken</button>
             <button class="mgr-btn mgr-btn-secondary mgr-btn-sm mgr-veh-mileage" data-id="${v.id}" data-name="${esc(v.name||v.plate||"")}" data-mileage="${v.mileage||0}" title="KM loggen">KM</button>
           </td>
         </tr>`).join("")}

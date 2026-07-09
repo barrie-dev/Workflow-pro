@@ -57,8 +57,14 @@
         if (d && d.terminology && window.wfpTerms) window.wfpTerms.set(d.terminology);
         if (d && d.supportSession && d.supportSession.active) renderSupportBanner(d.supportSession);
         // Eerste keer inloggen zonder afgeronde onboarding → toon de wizard.
+        // Na "Later invullen" komt hij niet meer over het scherm heen; dan blijft
+        // enkel een rustige nudge-balk staan tot de gegevens compleet zijn.
         if (d && d.onboarding && d.onboarding.completed === false && !d.supportSession) {
-          setTimeout(() => { try { showOnboardingWizard(); } catch (_) {} }, 300);
+          if (localStorage.getItem(obSnoozeKey())) {
+            setTimeout(() => { try { renderObNudge(); } catch (_) {} }, 300);
+          } else {
+            setTimeout(() => { try { showOnboardingWizard(); } catch (_) {} }, 300);
+          }
         }
         const ent = d && d.entitlements;
         window._wfpEnt = ent || null; // stash voor submodule-gating in views
@@ -78,6 +84,27 @@
         });
       })
       .catch(() => {});
+  }
+
+  // Snooze per tenant en per toestel: na "Later invullen" nooit meer automatisch
+  // over het scherm heen; de nudge-balk blijft de weg naar de wizard.
+  function obSnoozeKey() {
+    return `wfp_ob_snooze_${(window._wfpCurrentUser && window._wfpCurrentUser.tenantId) || "t"}`;
+  }
+
+  function renderObNudge() {
+    if (document.getElementById("admObNudge")) return;
+    const content = document.getElementById("admContent");
+    if (!content || !content.parentElement) return;
+    const bar = document.createElement("div");
+    bar.id = "admObNudge";
+    bar.style.cssText = "margin:10px 18px 0;padding:9px 14px;background:var(--wf-blue-l);color:var(--wf-blue-d);border:1px solid rgba(0,113,227,.25);border-radius:10px;font-size:12.5px;display:flex;align-items:center;gap:10px;";
+    bar.innerHTML = `<span style="flex:1">Je bedrijfsgegevens zijn nog niet volledig. Die zijn nodig voor correcte facturen.</span>
+      <button id="admObNudgeOpen" class="adm-btn adm-btn-primary adm-btn-sm">Nu afwerken</button>
+      <button id="admObNudgeX" class="adm-btn adm-btn-ghost adm-btn-sm" title="Verbergen">×</button>`;
+    content.parentElement.insertBefore(bar, content);
+    bar.querySelector("#admObNudgeOpen").addEventListener("click", () => { bar.remove(); showOnboardingWizard(); });
+    bar.querySelector("#admObNudgeX").addEventListener("click", () => bar.remove());
   }
 
   // ── Onboarding-wizard: sector, teamgrootte, facturatie/contact ──────────────
@@ -135,7 +162,11 @@
         </form>
       </div>`;
     document.body.appendChild(ov);
-    document.getElementById("admObLater").addEventListener("click", () => ov.remove());
+    document.getElementById("admObLater").addEventListener("click", () => {
+      try { localStorage.setItem(obSnoozeKey(), new Date().toISOString()); } catch (_) {}
+      ov.remove();
+      renderObNudge();
+    });
     document.getElementById("admObForm").addEventListener("submit", async e => {
       e.preventDefault();
       const f = e.target;
@@ -155,6 +186,8 @@
       try {
         await api("POST", "/onboarding", payload);
         ov.remove();
+        try { localStorage.removeItem(obSnoozeKey()); } catch (_) {}
+        document.getElementById("admObNudge")?.remove();
         window.showToast && window.showToast("Bedrijfsgegevens opgeslagen.", "success");
       } catch (err) {
         const eEl = document.getElementById("admObErr"); eEl.style.display = "block"; eEl.textContent = err.message;
@@ -1450,9 +1483,8 @@ ${emp ? `
       // Wire force-out buttons
       document.querySelectorAll(".clk-force-out").forEach(btn => {
         btn.addEventListener("click", async () => {
-          const now = new Date().toISOString();
           btn.disabled = true;
-          try { await api("PATCH", `/clocks/${btn.dataset.id}`, { clockedOut: now, status: "out" }); loadClockData(); }
+          try { await api("PATCH", `/clocks/${btn.dataset.id}`, { clockOut: new Date().toTimeString().slice(0, 5), note: "Uitgeklokt door beheerder" }); loadClockData(); }
           catch(e) { window.showToast(e.message, "error"); btn.disabled = false; }
         });
       });
@@ -1517,15 +1549,12 @@ ${emp ? `
         const clockInTime = fd.get("clockInTime");
         const clockOutTime = fd.get("clockOutTime");
         const userId = fd.get("userId");
-        const emp = employees.find(u => u.id === userId);
         const body = {
           userId,
-          userName: emp?.name || emp?.email || userId,
-          clockedIn: `${date}T${clockInTime}:00.000Z`,
-          clockedOut: clockOutTime ? `${date}T${clockOutTime}:00.000Z` : null,
-          status: clockOutTime ? "out" : "in",
-          note: fd.get("note") || "Handmatige correctie",
-          manual: true
+          date,
+          clockIn: clockInTime,
+          clockOut: clockOutTime || undefined,
+          note: fd.get("note") || "Handmatige registratie"
         };
         try {
           await api("POST", "/clocks/manual", body);
@@ -1596,10 +1625,9 @@ ${emp ? `
       }
 
       const body = {
-        clockedIn:  `${date}T${clockInTime}:00.000Z`,
-        clockedOut: outISO ? `${date}T${clockOutTime}:00.000Z` : null,
-        status: clockOutTime ? "out" : "in",
-        note: fd.get("note") || undefined
+        clockIn: clockInTime,
+        clockOut: clockOutTime ? clockOutTime : null,
+        note: fd.get("note") || ""
       };
       const submitBtn = e.target.querySelector("[type=submit]");
       submitBtn.disabled = true; submitBtn.textContent = "Opslaan…";
@@ -1944,6 +1972,10 @@ ${emp ? `
   async function renderExpenses() {
     const data = await api("GET", "/expenses");
     const expenses = data.expenses || data || [];
+    // Werkbonnen voor de koppel-kolom (doorrekenen aan klant via werkbon-factuur).
+    const woData = await api("GET", "/workorders").catch(() => ({ workorders: [] }));
+    const allWos = woData.workorders || [];
+    const woById = Object.fromEntries(allWos.map(w => [w.id, w]));
 
     const pending   = expenses.filter(e => ["pending","ingediend"].includes(e.status));
     const approved  = expenses.filter(e => ["goedgekeurd","approved"].includes(e.status));
@@ -1992,13 +2024,21 @@ ${emp ? `
     function buildExpRows(rows) {
       if (!rows.length) return '<div class="adm-empty">Geen onkosten gevonden</div>';
       return `<table class="adm-table">
-        <thead><tr><th>Medewerker</th><th>Datum</th><th>Categorie</th><th>Bedrag</th><th>Omschrijving</th><th>Status</th><th>Acties</th></tr></thead>
-        <tbody>${rows.map(e => `<tr>
+        <thead><tr><th>Medewerker</th><th>Datum</th><th>Categorie</th><th>Bedrag</th><th>Omschrijving</th><th>Werkbon</th><th>Status</th><th>Acties</th></tr></thead>
+        <tbody>${rows.map(e => {
+          const wo = e.workorderId ? woById[e.workorderId] : null;
+          const woCell = e.invoiceId
+            ? `<span class="adm-status adm-status-paid" title="Doorgerekend op factuur">op factuur</span>`
+            : wo
+              ? `${esc(wo.number || wo.title || e.workorderId)}${e.billable === false ? ' <span style="font-size:10.5px;color:var(--gray-400);" title="Wordt niet doorgerekend aan de klant">niet doorrekenen</span>' : ""}`
+              : "-";
+          return `<tr>
           <td>${esc(uName(e))}</td>
           <td>${esc(e.date)}</td>
           <td>${esc(e.category||"-")}</td>
           <td style="font-weight:600;">€ ${Number(e.amount||0).toFixed(2)}</td>
           <td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(e.description||"")}">${esc(e.description||"-")}</td>
+          <td style="white-space:nowrap;font-size:12px;">${woCell}</td>
           <td>
             <span class="adm-status adm-status-${e.status}">${esc(e.status)}</span>
             ${e.reviewNote ? `<div style="font-size:11px;color:var(--gray-500);margin-top:2px;" title="${esc(e.reviewNote)}">${esc(e.reviewNote.slice(0,30))}${e.reviewNote.length>30?"…":""}</div>` : ""}
@@ -2006,19 +2046,77 @@ ${emp ? `
           <td style="white-space:nowrap;">${["pending","ingediend"].includes(e.status) ? `
             <button class="adm-btn adm-btn-success adm-btn-sm adm-exp-review" data-id="${e.id}" data-dec="goedgekeurd" data-name="${esc(uName(e))}" data-amount="${e.amount}" data-cat="${esc(e.category||"")}">Goed</button>
             <button class="adm-btn adm-btn-danger  adm-btn-sm adm-exp-review" data-id="${e.id}" data-dec="geweigerd"  data-name="${esc(uName(e))}" data-amount="${e.amount}" data-cat="${esc(e.category||"")}">Weigeren</button>
-          ` : "-"}</td>
-        </tr>`).join("")}</tbody>
+          ` : ""}
+          ${!e.invoiceId ? `<button class="adm-btn adm-btn-secondary adm-btn-sm adm-exp-link" data-id="${e.id}" style="margin-left:4px;">Werkbon</button>` : ""}</td>
+        </tr>`;}).join("")}</tbody>
       </table>`;
     }
 
+    // Werkbon koppelen/wijzigen + doorreken-vlag (billable) per onkost.
+    function openExpenseLinkModal(expId, refresh) {
+      const e = expenses.find(x => x.id === expId);
+      if (!e) return;
+      let modal = document.getElementById("admExpLinkModal");
+      if (!modal) {
+        modal = document.createElement("div");
+        modal.id = "admExpLinkModal";
+        modal.style.cssText = "position:fixed;inset:0;background:rgba(11,19,32,.42);z-index:600;display:flex;align-items:center;justify-content:center;padding:16px";
+        document.body.appendChild(modal);
+      }
+      const openWos = allWos.filter(w => !w.invoiceId);
+      modal.innerHTML = `
+<div style="background:#fff;border-radius:14px;width:420px;max-width:100%;padding:24px;box-shadow:0 20px 60px rgba(11,19,32,.2)">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+    <h2 style="font-size:16px;font-weight:600;margin:0;color:var(--gray-900)">Onkost koppelen aan werkbon</h2>
+    <button id="expLinkClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--gray-400)">×</button>
+  </div>
+  <div style="font-size:13px;color:var(--gray-500);margin-bottom:14px;">€ ${Number(e.amount||0).toFixed(2)} · ${esc(e.description || e.category || "")}</div>
+  <form id="expLinkForm" style="display:flex;flex-direction:column;gap:14px">
+    <div>
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Werkbon</label>
+      <select name="workorderId" style="width:100%;">
+        <option value="">Geen (ontkoppelen)</option>
+        ${openWos.map(w => `<option value="${esc(w.id)}" ${e.workorderId===w.id?"selected":""}>${esc(w.number ? w.number+" · " : "")}${esc(w.title||"Werkbon")}</option>`).join("")}
+      </select>
+    </div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
+      <input type="checkbox" name="billable" ${e.billable === false ? "" : "checked"}> Doorrekenen aan de klant op de werkbon-factuur
+    </label>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button type="button" id="expLinkCancel" class="adm-btn adm-btn-secondary adm-btn-sm">Annuleren</button>
+      <button type="submit" class="adm-btn adm-btn-primary adm-btn-sm">Opslaan</button>
+    </div>
+  </form>
+</div>`;
+      const close = () => modal.remove();
+      document.getElementById("expLinkClose").addEventListener("click", close);
+      document.getElementById("expLinkCancel").addEventListener("click", close);
+      modal.addEventListener("click", ev => { if (ev.target === modal) close(); });
+      document.getElementById("expLinkForm").addEventListener("submit", async ev => {
+        ev.preventDefault();
+        const fd = new FormData(ev.target);
+        try {
+          const patch = { workorderId: fd.get("workorderId") || null, billable: !!fd.get("billable") };
+          await api("PATCH", `/expenses/${expId}`, patch);
+          e.workorderId = patch.workorderId; e.billable = patch.billable;
+          window.showToast && window.showToast(patch.workorderId ? "Onkost gekoppeld aan werkbon" : "Onkost ontkoppeld", "success");
+          close(); refresh();
+        } catch (err) { window.showToast && window.showToast(err.message, "error"); }
+      });
+    }
+
     function wireExpBtns() {
+      const refreshTable = () => {
+        const sel = document.getElementById("admExpFilter");
+        const f = sel?.value || "";
+        const rows = f ? expenses.filter(e => e.status === f || (f==="ingediend" && e.status==="pending")) : expenses;
+        const tbl = document.getElementById("admExpTable"); if (tbl) { tbl.innerHTML = buildExpRows(rows); wireExpBtns(); }
+      };
       content.querySelectorAll(".adm-exp-review").forEach(btn => {
-        btn.addEventListener("click", () => openExpenseReviewModal(btn.dataset, () => {
-          const sel = document.getElementById("admExpFilter");
-          const f = sel?.value || "";
-          const rows = f ? expenses.filter(e => e.status === f || (f==="ingediend" && e.status==="pending")) : expenses;
-          const tbl = document.getElementById("admExpTable"); if (tbl) { tbl.innerHTML = buildExpRows(rows); wireExpBtns(); }
-        }));
+        btn.addEventListener("click", () => openExpenseReviewModal(btn.dataset, refreshTable));
+      });
+      content.querySelectorAll(".adm-exp-link").forEach(btn => {
+        btn.addEventListener("click", () => openExpenseLinkModal(btn.dataset.id, refreshTable));
       });
     }
 
@@ -3116,7 +3214,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
       <td style="font-family:monospace;font-size:12px">${esc(c.vatNumber||"-")}</td>
       <td style="white-space:nowrap">
         <button class="adm-btn adm-btn-primary adm-btn-sm cust-view" data-id="${c.id}">Detail</button>
-        <button class="adm-btn adm-btn-secondary adm-btn-sm cust-edit" data-id="${c.id}"></button>
+        <button class="adm-btn adm-btn-secondary adm-btn-sm cust-edit" data-id="${c.id}">Bewerken</button>
       </td>
     </tr>`).join("");
   }
@@ -3209,7 +3307,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
                 <td style="font-weight:600">${fmtEurCD(inv.total)}</td>
                 <td><span class="adm-status ${st.css}">${st.label}</span></td>
                 <td style="display:flex;gap:4px;">
-                  <button class="adm-btn adm-btn-secondary adm-btn-sm inv-from-cust" data-id="${inv.id}"></button>
+                  <button class="adm-btn adm-btn-secondary adm-btn-sm inv-from-cust" data-id="${inv.id}">Bewerken</button>
                   ${["open","overdue"].includes(inv.status)?`<button class="adm-btn adm-btn-success adm-btn-sm inv-paid-cust" data-id="${inv.id}">Betaald</button>`:""}
                 </td>
               </tr>`;
@@ -3510,7 +3608,7 @@ ${alerts.length ? `<div style="background:var(--wf-yellow-l);border:1px solid va
           <td><span class="adm-status adm-status-${v.status||"active"}">${esc(v.status||"actief")}</span></td>
           <td>${v.nextService ? new Date(v.nextService).toLocaleDateString("nl-BE") : "-"}</td>
           <td>
-            <button class="adm-btn adm-btn-secondary adm-btn-sm veh-edit" data-id="${v.id}"></button>
+            <button class="adm-btn adm-btn-secondary adm-btn-sm veh-edit" data-id="${v.id}">Bewerken</button>
             <button class="adm-btn adm-btn-secondary adm-btn-sm veh-km" data-id="${v.id}">KM log</button>
           </td>
         </tr>`).join("")}</tbody>
@@ -3658,7 +3756,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
         <td>${esc(i.minQuantity||"-")}</td>
         <td>${i.unitPrice ? new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR"}).format(i.unitPrice) : "-"}</td>
         <td>
-          <button class="adm-btn adm-btn-secondary adm-btn-sm st-edit" data-id="${i.id}"></button>
+          <button class="adm-btn adm-btn-secondary adm-btn-sm st-edit" data-id="${i.id}">Bewerken</button>
           <button class="adm-btn adm-btn-secondary adm-btn-sm st-mut" data-id="${i.id}">± Mutatie</button>
         </td>
       </tr>`;
@@ -3914,7 +4012,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
             <td style="font-weight:600">${fmtEurInv(q.total)}</td>
             <td><span class="adm-status ${st.css}">${st.label}</span>${q.invoiceId?`<div style="font-size:10px;color:var(--gray-400)">→ gefactureerd</div>`:""}</td>
             <td style="white-space:nowrap;display:flex;gap:5px;flex-wrap:wrap;">
-              <button class="adm-btn adm-btn-secondary adm-btn-sm q-edit" data-id="${q.id}" title="Bewerk"></button>
+              <button class="adm-btn adm-btn-secondary adm-btn-sm q-edit" data-id="${q.id}" title="Bewerk">Bewerken</button>
               <button class="adm-btn adm-btn-secondary adm-btn-sm q-pdf" data-id="${q.id}" title="PDF / Afdrukken"><svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg></button>
               ${["concept","verzonden"].includes(q.status)?`<button class="adm-btn adm-btn-secondary adm-btn-sm q-send" data-id="${q.id}" title="Versturen + link"><svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>`:""}
               ${canConvert && !q.invoiceId?`<button class="adm-btn adm-btn-success adm-btn-sm q-toinv" data-id="${q.id}" title="Naar factuur">→ Factuur</button>`:""}
@@ -4846,6 +4944,10 @@ ${categories.map(cat => `
           <input type="checkbox" id="admEmailNotif" ${tenant.notificationPrefs?.emailEnabled === false ? "" : "checked"}>
           E-mailnotificaties versturen (belangrijke meldingen naar betrokkenen)
         </label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--gray-600);margin:0 0 8px;cursor:pointer;">
+          <input type="checkbox" id="admAutoReminders" ${tenant.autoReminders?.enabled ? "checked" : ""}>
+          Automatische betaalherinneringen bij vervallen facturen (om de 7 dagen, max. 3 per factuur)
+        </label>
         <div style="display:flex;align-items:center;gap:10px;margin:0 0 12px;flex-wrap:wrap;">
           <button type="button" class="adm-btn adm-btn-secondary adm-btn-sm" id="admPushToggle">Pushmeldingen op dit toestel</button>
           <span id="admPushStatus" style="font-size:12px;color:var(--gray-400);"></span>
@@ -5072,6 +5174,7 @@ ${categories.map(cat => `
       // Voorkom dat de push-toggle-knop als formulierveld wordt meegestuurd.
       delete body.admPushToggle;
       body.notificationPrefs = { emailEnabled: document.getElementById("admEmailNotif")?.checked !== false };
+      body.autoReminders = { enabled: document.getElementById("admAutoReminders")?.checked === true };
       try {
         await api("PATCH", "/settings", body);
         msgEl.style.cssText = "display:block;background:var(--wf-green-l);color:var(--wf-green);padding:8px 12px;border-radius:8px;font-size:13px;margin-bottom:8px;";

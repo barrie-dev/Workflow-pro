@@ -142,6 +142,7 @@
       </div>
     </div>
     <div class="emp-header-right">
+      <button id="empLangToggle" title="Changer de langue / Taal wisselen" style="height:34px;padding:0 10px;border-radius:10px;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;">FR</button>
       <button id="empBackToMgmt" title="Terug naar je beheer-weergave" style="display:none;align-items:center;gap:6px;height:34px;padding:0 12px;border-radius:10px;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);font-size:12.5px;font-weight:600;font-family:inherit;cursor:pointer;white-space:nowrap;">
         ← Teambeheer
       </button>
@@ -177,23 +178,23 @@
   <nav class="emp-tabbar" aria-label="Hoofdnavigatie">
     <button class="emp-tab active" data-view="today">
       <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
-      <span>Vandaag</span>
+      <span data-i18n="emp.tab.today">Vandaag</span>
     </button>
     <button class="emp-tab" data-view="planning">
       <svg viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/></svg>
-      <span>Planning</span>
+      <span data-i18n="emp.tab.planning">Planning</span>
     </button>
     <button class="emp-tab emp-tab-clock" data-view="clock">
       <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
-      <span>Prikklok</span>
+      <span data-i18n="emp.tab.clock">Prikklok</span>
     </button>
     <button class="emp-tab" data-view="leaves">
       <svg viewBox="0 0 24 24"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
-      <span>Verlof</span>
+      <span data-i18n="emp.tab.leaves">Verlof</span>
     </button>
     <button class="emp-tab" data-view="more">
       <svg viewBox="0 0 24 24"><path d="M6 10c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
-      <span>Meer</span>
+      <span data-i18n="emp.tab.more">Meer</span>
     </button>
   </nav>
 </div>
@@ -203,7 +204,7 @@
 <div class="emp-sheet hidden" id="empLeaveSheet">
   <div class="emp-sheet-handle"></div>
   <div class="emp-sheet-header">
-    <h2>Verlof aanvragen</h2>
+    <h2 data-i18n="emp.sheet.leave">Verlof aanvragen</h2>
     <button class="emp-sheet-close" id="empLeaveSheetClose">&times;</button>
   </div>
   <div class="emp-sheet-body">
@@ -236,7 +237,7 @@
 <div class="emp-sheet hidden" id="empExpSheet">
   <div class="emp-sheet-handle"></div>
   <div class="emp-sheet-header">
-    <h2>Onkosten indienen</h2>
+    <h2 data-i18n="emp.sheet.expense">Onkosten indienen</h2>
     <button class="emp-sheet-close" id="empExpSheetClose">&times;</button>
   </div>
   <div class="emp-sheet-body">
@@ -256,6 +257,9 @@
       <div class="emp-form-group"><label>Datum</label><input type="date" name="date" required></div>
       <div class="emp-form-group"><label>Bedrag (€)</label><input type="number" name="amount" step="0.01" min="0" required placeholder="0.00"></div>
       <div class="emp-form-group"><label>Omschrijving</label><input name="description" required placeholder="Waarvoor?"></div>
+      <div class="emp-form-group"><label>Werkbon (optioneel · voor doorrekening aan de klant)</label>
+        <select name="workorderId" id="empExpWoSelect"><option value="">Geen werkbon</option></select>
+      </div>
       <button type="submit" class="emp-btn emp-btn-primary emp-btn-full">Indienen</button>
     </form>
   </div>
@@ -1850,6 +1854,19 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
     const today = new Date().toISOString().slice(0,10);
     const form = document.getElementById("empExpForm");
     if (form) form.date.value = today;
+    // Eigen open werkbonnen laden voor de optionele koppeling (doorrekenen aan klant).
+    const sel = document.getElementById("empExpWoSelect");
+    if (sel && sel.options.length <= 1) {
+      api("GET", "/me/workorders").then(d => {
+        const open = (d.workorders || d.rows || []).filter(w => !["Voltooid", "Afgewerkt", "geannuleerd"].includes(w.status));
+        for (const w of open) {
+          const opt = document.createElement("option");
+          opt.value = w.id;
+          opt.textContent = `${w.number ? w.number + " · " : ""}${w.title || "Werkbon"}`;
+          sel.appendChild(opt);
+        }
+      }).catch(() => {});
+    }
   }
 
   function closeSheets() {
@@ -1872,10 +1889,11 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
   }
 
   function getGreeting() {
+    const t = k => (window.wfpI18n ? window.wfpI18n.t(k) : null);
     const h = new Date().getHours();
-    if (h < 12) return "Goedemorgen";
-    if (h < 18) return "Goedemiddag";
-    return "Goedenavond";
+    if (h < 12) return t("emp.greet.morning") || "Goedemorgen";
+    if (h < 18) return t("emp.greet.afternoon") || "Goedemiddag";
+    return t("emp.greet.evening") || "Goedenavond";
   }
 
   // ── Init ───────────────────────────────────────────────────
@@ -1893,6 +1911,24 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
       const grEl = document.getElementById("empGreeting");
       if (grEl) grEl.textContent = getGreeting();
     } catch (_) {}
+    // NL/FR: vertaal de shell (tabs/sheets) en herhaal dat bij taalwissel.
+    if (window.wfpI18n) {
+      const paintLangBtn = () => {
+        const b = document.getElementById("empLangToggle");
+        if (b) b.textContent = window.wfpI18n.lang === "fr" ? "NL" : "FR";
+      };
+      window.wfpI18n.apply(document.getElementById("platform-employee"));
+      paintLangBtn();
+      document.getElementById("empLangToggle")?.addEventListener("click", () => {
+        window.wfpI18n.setLang(window.wfpI18n.lang === "fr" ? "nl" : "fr");
+      });
+      document.addEventListener("wfp:langchange", () => {
+        window.wfpI18n.apply(document.getElementById("platform-employee"));
+        const grEl2 = document.getElementById("empGreeting");
+        if (grEl2) grEl2.textContent = getGreeting();
+        paintLangBtn();
+      });
+    }
     switchView("today");
   }
 

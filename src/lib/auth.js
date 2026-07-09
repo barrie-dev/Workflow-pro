@@ -413,6 +413,16 @@ function canWrite(user, permission) {
   return false; // enkel read:X → niet schrijven
 }
 
+// Heeft deze gebruiker ENKEL eigen-data-toegang voor dit onderdeel?
+// (own:X zonder vol X, read:X of *) → lijsten server-side filteren op eigen
+// userId. GDPR: een veldwerker hoort geen verlof/uren van collega's te zien.
+function ownScopeOnly(user, permission) {
+  if (!user || user.role === "super_admin") return false;
+  const p = user.permissions || [];
+  if (p.includes("*") || p.includes(permission) || p.includes(`read:${permission}`)) return false;
+  return p.includes(`own:${permission}`);
+}
+
 function assertCanWrite(user, permission) {
   assertAdminMfa(user);
   if (!canWrite(user, permission)) {
@@ -566,6 +576,7 @@ module.exports = {
   resetLoginFailures,
   can,
   canWrite,
+  ownScopeOnly,
   assertTenant,
   assertCan,
   assertCanWrite,

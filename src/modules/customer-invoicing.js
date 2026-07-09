@@ -97,6 +97,20 @@ function workorderInvoicePayload(store, tenant, workorder, extraLines = []) {
       lines.push({ description: String(extra.description).trim(), qty, unitPrice, vatRate: 21 });
     }
   }
+  // Goedgekeurde onkosten gekoppeld aan deze werkbon rekenen mee door aan de
+  // klant (tenzij expliciet billable:false of al gefactureerd). De endpoint
+  // markeert ze via expenseIds als gefactureerd zodra de factuur bestaat.
+  const expenseIds = [];
+  const linkedExpenses = (typeof store.list === "function" ? store.list("expenses", tenant.id) : [])
+    .filter(e => e.workorderId === workorder.id
+      && ["approved", "goedgekeurd"].includes(e.status)
+      && !e.invoiceId
+      && e.billable !== false
+      && Number(e.amount) > 0);
+  for (const e of linkedExpenses) {
+    lines.push({ description: `Onkost · ${e.description || e.category || "diversen"}`, qty: 1, unitPrice: round2(Number(e.amount)), vatRate: 21 });
+    expenseIds.push(e.id);
+  }
   if (!lines.length) {
     const reason = (workorder.billableHours ?? workorder.clockedHours ?? workorder.hours)
       ? "er is geen uurtarief (op de werkbon of als standaardtarief)"
@@ -113,6 +127,7 @@ function workorderInvoicePayload(store, tenant, workorder, extraLines = []) {
     notes: `Op basis van werkbon ${workorder.number || workorder.id}`,
     workorderId: workorder.id,
     lines,
+    expenseIds,   // door de endpoint te markeren als gefactureerd
   };
 }
 

@@ -878,6 +878,35 @@ test("rechten: finance-profiel — lezen werkbonnen, schrijven facturatie, geen 
   });
 });
 
+// ── Prikklok: manuele registratie + correctie (canoniek schema) ────────────────
+test("prikklok: manuele registratie + correctie met audit-spoor", async () => {
+  const mgr = await login("manager@demobouw.be", "Demo2026!");
+  const H = { "Content-Type": "application/json", Authorization: `Bearer ${mgr.token}` };
+  const created = await (await fetch(`${BASE}/api/tenants/t_demo/clocks/manual`, {
+    method: "POST", headers: H,
+    body: JSON.stringify({ userId: "u_emp1", date: "2026-06-01", clockIn: "07:00", note: "vergeten prik" }),
+  })).json();
+  assert.equal(created.ok, true);
+  assert.equal(created.row.status, "active", "zonder uitkloktijd = actief");
+  assert.equal(created.row.manual, true);
+
+  const corr = await (await fetch(`${BASE}/api/tenants/t_demo/clocks/${created.row.id}`, {
+    method: "PATCH", headers: H,
+    body: JSON.stringify({ clockIn: "07:15", clockOut: "15:30", note: "juiste tijden" }),
+  })).json();
+  assert.equal(corr.row.durationMinutes, 495, "duur herberekend");
+  assert.equal(corr.row.status, "ready_for_approval");
+  assert.equal(corr.row.corrected, true);
+  assert.equal(corr.row.corrections[0].original.clockIn, "07:00", "origineel bewaard in audit-spoor");
+
+  assert.equal((await fetch(`${BASE}/api/tenants/t_demo/clocks/${created.row.id}`, {
+    method: "PATCH", headers: H, body: JSON.stringify({ clockIn: "16:00", clockOut: "08:00", note: "x" }),
+  })).status, 400, "uit voor in geweigerd");
+  assert.equal((await fetch(`${BASE}/api/tenants/t_demo/clocks/bestaat-niet`, {
+    method: "PATCH", headers: H, body: JSON.stringify({ clockIn: "08:00" }),
+  })).status, 404);
+});
+
 test("mfa: verify accepteert token-alias uit frontend contract", async () => {
   const sara = await login("sara@demobouw.be", "Demo2026!");
   const headers = { "Content-Type": "application/json", Authorization: `Bearer ${sara.token}` };
