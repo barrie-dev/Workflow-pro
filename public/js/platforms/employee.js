@@ -143,9 +143,6 @@
     </div>
     <div class="emp-header-right">
       <button id="empLangToggle" title="Changer de langue / Taal wisselen" style="height:34px;padding:0 10px;border-radius:10px;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;">FR</button>
-      <button id="empBackToMgmt" title="Terug naar je beheer-weergave" style="display:none;align-items:center;gap:6px;height:34px;padding:0 12px;border-radius:10px;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);font-size:12.5px;font-weight:600;font-family:inherit;cursor:pointer;white-space:nowrap;">
-        ← Teambeheer
-      </button>
       <button class="emp-icon-btn" id="empMsgBtn" title="Berichten">
         <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
         <span class="emp-notif-dot hidden" id="empMsgDot"></span>
@@ -644,6 +641,62 @@
   /* Inhoud mag de breedte benutten: kaarten in twee kolommen */
   .emp-cards-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
 }
+
+/* ── Volwaardige pc-view (kantoor-medewerkers): zijnav links, brede inhoud ──
+   Zelfde structuur als de andere desktop-portalen; mobiel en tablet blijven
+   exact zoals ze waren. */
+@media (min-width: 1100px) {
+  .emp-layout {
+    max-width: none;
+    display: grid;
+    grid-template-columns: 216px 1fr;
+    grid-template-rows: auto 1fr;
+    grid-template-areas: "side header" "side main";
+    box-shadow: none;
+  }
+  .emp-tabbar {
+    grid-area: side;
+    position: static;
+    transform: none;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch;
+    gap: 4px;
+    width: auto; max-width: none;
+    padding: 18px 12px;
+    background: var(--surface);
+    border-right: 1px solid var(--line);
+    border-top: none; border-bottom: none;
+  }
+  .emp-header { grid-area: header; padding: 16px 32px; }
+  .emp-main { grid-area: main; padding: 28px 36px 40px; max-width: 1080px; width: 100%; }
+  .emp-tab {
+    flex: 0 0 auto;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 10px;
+    width: 100%;
+    font-size: 13.5px;
+    font-weight: 500;
+    padding: 10px 12px;
+    border-radius: 10px;
+    color: var(--text);
+  }
+  .emp-tab svg { width: 18px; height: 18px; }
+  .emp-tab:hover { background: var(--gray-100); color: var(--ink); }
+  .emp-tab.active { background: var(--wf-blue-l); color: var(--wf-blue); font-weight: 600; }
+  /* Formulieren niet als bottom-sheet maar als gecentreerde modal */
+  .emp-sheet {
+    bottom: auto; top: 50%;
+    transform: translate(-50%, -50%);
+    width: 480px;
+    border-radius: 16px;
+    box-shadow: 0 24px 80px rgba(11,19,32,.18);
+  }
+  .emp-sheet.hidden { display: none; }
+  .emp-sheet-handle { display: none; }
+  .emp-cards-2col { grid-template-columns: 1fr 1fr; }
+}
 </style>`;
 
     // tab nav
@@ -656,18 +709,6 @@
       localStorage.removeItem("wfp_token");
       location.reload();
     });
-
-    // Manager/admin die via "Mijn portaal" binnenkwam: toon de terugknop naar
-    // de beheer-weergave (zelfde login · enkel de weergave wisselt).
-    const backBtn = document.getElementById("empBackToMgmt");
-    if (backBtn && window.__wfpReturnRole) {
-      backBtn.style.display = "inline-flex";
-      backBtn.addEventListener("click", () => {
-        const role = window.__wfpReturnRole;
-        window.__wfpReturnRole = null;
-        window.WorkFlowProPlatformRouter && window.WorkFlowProPlatformRouter.showPlatform(role);
-      });
-    }
 
     // msg btn
     document.getElementById("empMsgBtn")?.addEventListener("click", () => switchView("messages"));

@@ -76,15 +76,15 @@
       </a>
       <a class="mgr-nav-item" data-view="team" href="#">
         <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
-        Mijn team
+        <span data-i18n="nav.team">Mijn team</span>
       </a>
       <a class="mgr-nav-item" data-view="planning" href="#">
         <svg viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/></svg>
-        Planning
+        <span data-i18n="nav.planning">Planning</span>
       </a>
       <a class="mgr-nav-item" data-view="clocking" href="#">
         <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
-        Prikklok
+        <span data-i18n="nav.clocking">Prikklok</span>
       </a>
       <a class="mgr-nav-item" data-view="leaves" href="#">
         <svg viewBox="0 0 24 24"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
@@ -98,7 +98,7 @@
       </a>
       <a class="mgr-nav-item" data-view="workorders" href="#">
         <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
-        Werkbonnen
+        <span data-i18n="nav.leaves">Werkbonnen</span>
       </a>
       <a class="mgr-nav-item" data-view="messages" href="#">
         <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
@@ -107,11 +107,11 @@
       </a>
       <a class="mgr-nav-item" data-view="vehicles" href="#">
         <svg viewBox="0 0 24 24"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></svg>
-        Voertuigen
+        <span data-i18n="nav.messages">Voertuigen</span>
       </a>
       <a class="mgr-nav-item" data-view="reports" href="#">
         <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>
-        Rapporten
+        <span data-i18n="nav.reports">Rapporten</span>
       </a>
     </nav>
     <div class="mgr-sidebar-footer">
@@ -135,10 +135,7 @@
         <svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
       </button>
       <h1 class="mgr-page-title" id="mgrPageTitle">Dashboard</h1>
-      <button class="mgr-clockbtn" id="mgrMyPortal" title="Open je persoonlijke medewerker-weergave (eigen planning, verlof, onkosten)" style="margin-left:auto">
-        <svg class="mgr-clockbtn-ico" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-        <span>Mijn portaal</span>
-      </button>
+      <button class="mgr-clockbtn" id="mgrLangToggle" title="Changer de langue / Taal wisselen" style="margin-left:auto;">FR</button>
       <button class="mgr-clockbtn" id="mgrClockBtn" title="Klok jezelf in of uit">
         <span class="mgr-clockbtn-dot"></span>
         <svg class="mgr-clockbtn-ico" viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
@@ -263,12 +260,20 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
       location.reload();
     });
     wireMgrClock();
-    // Manager is óók medewerker: open de volledige medewerker-weergave (eigen
-    // planning, verlof aanvragen, onkosten indienen). Zelfde login, zelfde data.
-    document.getElementById("mgrMyPortal")?.addEventListener("click", () => {
-      window.__wfpReturnRole = "manager";
-      window.WorkFlowProPlatformRouter && window.WorkFlowProPlatformRouter.showPlatform("employee");
-    });
+    // NL/FR: vertaal de nav + herhaal bij taalwissel.
+    if (window.wfpI18n) {
+      const root = document.getElementById("platform-manager");
+      const paintLang = () => {
+        const b = document.getElementById("mgrLangToggle");
+        if (b) b.textContent = window.wfpI18n.lang === "fr" ? "NL" : "FR";
+      };
+      window.wfpI18n.apply(root);
+      paintLang();
+      document.getElementById("mgrLangToggle")?.addEventListener("click", () => {
+        window.wfpI18n.setLang(window.wfpI18n.lang === "fr" ? "nl" : "fr");
+      });
+      document.addEventListener("wfp:langchange", () => { window.wfpI18n.apply(root); paintLang(); });
+    }
   }
 
   // ── Persoonlijke prikklok (topbar) · manager kan zichzelf in-/uitklokken ──
@@ -319,7 +324,9 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     document.querySelectorAll(".mgr-nav-item").forEach(a => {
       a.classList.toggle("active", a.dataset.view === view);
     });
-    document.getElementById("mgrPageTitle").textContent = LABELS[view] || view;
+    document.getElementById("mgrPageTitle").textContent = window.wfpI18n
+      ? window.wfpI18n.t(`nav.${view}`, LABELS[view] || view)
+      : (LABELS[view] || view);
     document.getElementById("mgrContent").innerHTML = `<div class="mgr-loading">Laden…</div>`;
     const renders = {
       dashboard: renderDashboard,
@@ -762,8 +769,9 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     <div>
       <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Medewerker *</label>
       <select name="userId" required style="width:100%;">
-        <option value="">Kies een teamlid</option>
-        ${team.map(u => `<option value="${esc(u.id)}">${esc(u.name || u.email)}</option>`).join("")}
+        <option value="">Kies een medewerker</option>
+        ${(window._wfpCurrentUser ? `<option value="${esc(window._wfpCurrentUser.id)}">Mezelf (${esc(window._wfpCurrentUser.name || window._wfpCurrentUser.email || "")})</option>` : "")}
+        ${team.filter(u => !window._wfpCurrentUser || u.id !== window._wfpCurrentUser.id).map(u => `<option value="${esc(u.id)}">${esc(u.name || u.email)}</option>`).join("")}
       </select>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
@@ -925,9 +933,11 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     <div>
       <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Medewerker *</label>
       <select name="userId" required style="width:100%;">
-        <option value="">Kies een teamlid</option>
-        ${team.map(u => `<option value="${esc(u.id)}">${esc(u.name || u.email)}</option>`).join("")}
+        <option value="">Kies een medewerker</option>
+        ${(window._wfpCurrentUser ? `<option value="${esc(window._wfpCurrentUser.id)}">Mezelf (${esc(window._wfpCurrentUser.name || window._wfpCurrentUser.email || "")})</option>` : "")}
+        ${team.filter(u => !window._wfpCurrentUser || u.id !== window._wfpCurrentUser.id).map(u => `<option value="${esc(u.id)}">${esc(u.name || u.email)}</option>`).join("")}
       </select>
+      <div style="font-size:11.5px;color:var(--gray-400);margin-top:4px;">Voor een teamlid: meteen goedgekeurd. Voor jezelf: aanvraag ter goedkeuring door de beheerder.</div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div>
@@ -974,7 +984,8 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
         btn.disabled = true; btn.textContent = "Bezig…";
         try {
           await api("POST", "/leaves", body);
-          window.showToast && window.showToast("Verlof geregistreerd en goedgekeurd", "success");
+          const own = window._wfpCurrentUser && body.userId === window._wfpCurrentUser.id;
+          window.showToast && window.showToast(own ? "Verlofaanvraag ingediend (ter goedkeuring)" : "Verlof geregistreerd en goedgekeurd", "success");
           close();
           renderLeaves();
         } catch (err) {
@@ -1210,12 +1221,15 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
 <div class="mgr-card">
   <div class="mgr-card-header">
     <h3 class="mgr-card-title">Onkostennota's</h3>
-    <select id="mgrExpFilter" style="padding:5px 9px;font-size:12px">
-      <option value="">Alle</option>
-      <option value="ingediend">In behandeling</option>
-      <option value="goedgekeurd">Goedgekeurd</option>
-      <option value="geweigerd">Geweigerd</option>
-    </select>
+    <div style="display:flex;gap:6px;align-items:center;">
+      <select id="mgrExpFilter" style="padding:5px 9px;font-size:12px">
+        <option value="">Alle</option>
+        <option value="ingediend">In behandeling</option>
+        <option value="goedgekeurd">Goedgekeurd</option>
+        <option value="geweigerd">Geweigerd</option>
+      </select>
+      <button class="mgr-btn mgr-btn-primary mgr-btn-sm" id="mgrExpOwn" title="Eigen onkost indienen (ter goedkeuring door de beheerder)">+ Onkost indienen</button>
+    </div>
   </div>
   <div class="mgr-card-body mgr-table-wrap">
     <table class="mgr-table">
@@ -1252,6 +1266,91 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
       const f = e.target.value;
       const rows = f ? expenses.filter(exp => exp.status === f || (f==="ingediend" && exp.status==="pending")) : expenses;
       const tb = document.getElementById("mgrExpTbody"); if (tb) { tb.innerHTML = buildExpRows(rows); wireExpBtns(); }
+    });
+    document.getElementById("mgrExpOwn")?.addEventListener("click", openOwnExpenseModal);
+  }
+
+  // ── Eigen onkost indienen (manager) · gaat als aanvraag naar de beheerder ──
+  function openOwnExpenseModal() {
+    api("GET", "/workorders").catch(() => ({ workorders: [] })).then(woData => {
+      const openWos = (woData.workorders || []).filter(w => !["Voltooid", "Afgewerkt", "geannuleerd"].includes(w.status));
+      let modal = document.getElementById("mgrOwnExpModal");
+      if (!modal) {
+        modal = document.createElement("div");
+        modal.id = "mgrOwnExpModal";
+        modal.style.cssText = "position:fixed;inset:0;background:rgba(11,19,32,.42);z-index:600;display:flex;align-items:center;justify-content:center;padding:16px";
+        document.body.appendChild(modal);
+      }
+      const today = new Date().toISOString().slice(0, 10);
+      modal.innerHTML = `
+<div style="background:#fff;border-radius:14px;width:440px;max-width:100%;max-height:90vh;overflow-y:auto;padding:24px;box-shadow:0 20px 60px rgba(11,19,32,.2)">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+    <h2 style="font-size:16px;font-weight:600;margin:0;color:var(--gray-900)">Eigen onkost indienen</h2>
+    <button id="ownExpClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--gray-400)">×</button>
+  </div>
+  <form id="mgrOwnExpForm" style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div>
+        <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Categorie *</label>
+        <select name="category" required style="width:100%;">
+          <option value="transport">Transport</option>
+          <option value="maaltijd">Maaltijd</option>
+          <option value="materiaal">Materiaal</option>
+          <option value="telefoon">Telefoon/Internet</option>
+          <option value="hotel">Hotel/Verblijf</option>
+          <option value="overig">Overig</option>
+        </select>
+      </div>
+      <div>
+        <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Bedrag (€) *</label>
+        <input name="amount" type="number" step="0.01" min="0" required placeholder="0.00" style="width:100%;">
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div>
+        <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Datum *</label>
+        <input name="date" type="date" required value="${today}" style="width:100%;">
+      </div>
+      <div>
+        <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Omschrijving *</label>
+        <input name="description" required placeholder="Waarvoor?" style="width:100%;">
+      </div>
+    </div>
+    <div>
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Werkbon (optioneel · voor doorrekening aan de klant)</label>
+      <select name="workorderId" style="width:100%;">
+        <option value="">Geen werkbon</option>
+        ${openWos.map(w => `<option value="${esc(w.id)}">${esc(w.number ? w.number + " · " : "")}${esc(w.title || "Werkbon")}</option>`).join("")}
+      </select>
+    </div>
+    <div id="ownExpErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:10px;font-size:13px"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button type="button" id="ownExpCancel" style="padding:8px 16px;border:1px solid var(--line-strong);background:#fff;border-radius:10px;font-size:13px;cursor:pointer">Annuleren</button>
+      <button type="submit" style="padding:8px 20px;background:var(--wf-blue);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">Indienen</button>
+    </div>
+  </form>
+</div>`;
+      const close = () => modal.remove();
+      document.getElementById("ownExpClose").addEventListener("click", close);
+      document.getElementById("ownExpCancel").addEventListener("click", close);
+      modal.addEventListener("click", e => { if (e.target === modal) close(); });
+      document.getElementById("mgrOwnExpForm").addEventListener("submit", async e => {
+        e.preventDefault();
+        const body = Object.fromEntries(new FormData(e.target).entries());
+        if (!body.workorderId) delete body.workorderId;
+        const errEl = document.getElementById("ownExpErr");
+        const btn = e.target.querySelector("[type=submit]");
+        btn.disabled = true; btn.textContent = "Bezig…";
+        try {
+          await api("POST", "/me/expenses", body);
+          window.showToast && window.showToast("Onkost ingediend (ter goedkeuring)", "success");
+          close();
+          renderExpenses();
+        } catch (err) {
+          errEl.textContent = err.message; errEl.style.display = "";
+          btn.disabled = false; btn.textContent = "Indienen";
+        }
+      });
     });
   }
 
