@@ -164,26 +164,26 @@
 <style>
 #platform-manager { font-family:var(--font-sans); height:100vh; overflow:hidden; }
 .mgr-layout { display:flex; height:100vh; background:var(--bg); }
-.mgr-sidebar { width:220px; background:var(--surface); color:var(--ink); border-right:1px solid var(--line); display:flex; flex-direction:column; flex-shrink:0; }
-.mgr-logo { display:flex; align-items:center; gap:10px; padding:20px 16px; border-bottom:1px solid var(--line); }
-.mgr-logo-mark { background:var(--wf-blue); color:#fff; width:32px; height:32px; border-radius:9px; display:grid; place-items:center; font-weight:600; font-size:13px; flex-shrink:0; }
-.mgr-logo-text { font-weight:600; font-size:15px; letter-spacing:-.2px; }
+.mgr-sidebar { width:220px; background:var(--ink); color:rgba(255,255,255,.80); border-right:none; display:flex; flex-direction:column; flex-shrink:0; }
+.mgr-logo { display:flex; align-items:center; gap:10px; padding:20px 16px; border-bottom:1px solid rgba(255,255,255,.10); }
+.mgr-logo-mark { background:var(--wf-blue); color:#fff; width:32px; height:32px; border-radius:9px; display:grid; place-items:center; font-weight:600; font-size:13px; flex-shrink:0; box-shadow:0 4px 12px rgba(0,113,227,.35); }
+.mgr-logo-text { font-weight:600; font-size:15px; letter-spacing:-.2px; color:#fff; }
 .mgr-nav { padding:12px 8px; flex:1; }
-.mgr-nav-item { display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:9px; color:var(--gray-600); text-decoration:none; font-size:13.5px; transition:background .15s,color .15s; }
+.mgr-nav-item { display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:9px; color:rgba(255,255,255,.72); text-decoration:none; font-size:13.5px; transition:background .15s,color .15s; }
 .mgr-nav-item svg { width:18px; height:18px; fill:currentColor; flex-shrink:0; opacity:.7; }
-.mgr-nav-item:hover { background:rgba(0,0,0,.045); color:var(--ink); }
+.mgr-nav-item:hover { background:rgba(255,255,255,.07); color:#fff; }
 .mgr-nav-item:hover svg { opacity:1; }
-.mgr-nav-item.active { background:var(--wf-blue-l); color:var(--wf-blue); font-weight:600; }
+.mgr-nav-item.active { background:var(--wf-blue); color:#fff; font-weight:600; box-shadow:0 4px 12px rgba(0,113,227,.30); }
 .mgr-nav-item.active svg { opacity:1; }
 .mgr-badge { margin-left:auto; background:var(--wf-red); color:#fff; border-radius:999px; font-size:11px; padding:1px 6px; font-weight:600; }
-.mgr-sidebar-footer { padding:12px; border-top:1px solid var(--line); display:flex; align-items:center; gap:8px; }
+.mgr-sidebar-footer { padding:12px; border-top:1px solid rgba(255,255,255,.10); display:flex; align-items:center; gap:8px; }
 .mgr-user-chip { display:flex; align-items:center; gap:8px; flex:1; min-width:0; }
 .mgr-user-avatar { width:32px; height:32px; border-radius:50%; background:var(--wf-blue); color:#fff; display:grid; place-items:center; font-weight:600; font-size:13px; flex-shrink:0; }
 .mgr-user-info { min-width:0; }
-.mgr-user-name { font-size:13px; font-weight:500; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.mgr-user-role { font-size:11px; color:var(--muted); }
-.mgr-logout-btn { background:none; border:none; color:var(--gray-400); cursor:pointer; padding:4px; border-radius:6px; }
-.mgr-logout-btn:hover { color:var(--wf-red); }
+.mgr-user-name { font-size:13px; font-weight:500; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.mgr-user-role { font-size:11px; color:rgba(255,255,255,.55); }
+.mgr-logout-btn { background:none; border:none; color:rgba(255,255,255,.55); cursor:pointer; padding:4px; border-radius:6px; }
+.mgr-logout-btn:hover { color:#fff; background:rgba(255,255,255,.10); }
 .mgr-logout-btn svg { width:18px; height:18px; fill:currentColor; display:block; }
 .mgr-main { flex:1; display:flex; flex-direction:column; overflow:hidden; }
 .mgr-topbar { display:flex; align-items:center; gap:12px; padding:0 20px; height:56px; background:rgba(255,255,255,.8); backdrop-filter:saturate(180%) blur(20px); border-bottom:1px solid var(--line); flex-shrink:0; }

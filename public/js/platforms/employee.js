@@ -664,8 +664,8 @@
     gap: 4px;
     width: auto; max-width: none;
     padding: 18px 12px;
-    background: var(--surface);
-    border-right: 1px solid var(--line);
+    background: var(--ink);
+    border-right: none;
     border-top: none; border-bottom: none;
   }
   .emp-header { grid-area: header; padding: 16px 32px; }
@@ -680,11 +680,11 @@
     font-weight: 500;
     padding: 10px 12px;
     border-radius: 10px;
-    color: var(--text);
+    color: rgba(255,255,255,.72);
   }
   .emp-tab svg { width: 18px; height: 18px; }
-  .emp-tab:hover { background: var(--gray-100); color: var(--ink); }
-  .emp-tab.active { background: var(--wf-blue-l); color: var(--wf-blue); font-weight: 600; }
+  .emp-tab:hover { background: rgba(255,255,255,.07); color: #fff; }
+  .emp-tab.active { background: var(--wf-blue); color: #fff; font-weight: 600; box-shadow: 0 4px 12px rgba(0,113,227,.30); }
   /* Formulieren niet als bottom-sheet maar als gecentreerde modal */
   .emp-sheet {
     bottom: auto; top: 50%;

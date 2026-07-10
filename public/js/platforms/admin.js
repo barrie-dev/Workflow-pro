@@ -617,50 +617,227 @@
     });
   }
 
-  // ── Standaard-overzicht (KPI's + lijsten) ──────────────────
+  // ── Standaard-overzicht (cockpit: KPI's met sparklines + widgets) ──
+  function admSpark(points, color) {
+    let pts = (points || []).map(Number);
+    if (pts.length < 2) pts = [0, 0];
+    const max = Math.max(...pts), min = Math.min(...pts);
+    const range = (max - min) || 1;
+    const W = 100, H = 28, P = 2;
+    const step = (W - P * 2) / (pts.length - 1);
+    const xy = pts.map((v, i) => `${(P + i * step).toFixed(1)},${(H - P - ((v - min) / range) * (H - P * 2)).toFixed(1)}`);
+    const gid = `sg${Math.random().toString(16).slice(2, 8)}`;
+    return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${color}" stop-opacity=".20"/><stop offset="100%" stop-color="${color}" stop-opacity="0"/></linearGradient></defs><polygon points="${P},${H - P} ${xy.join(" ")} ${W - P},${H - P}" fill="url(#${gid})"/><polyline points="${xy.join(" ")}" fill="none" stroke="${color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>`;
+  }
+
+  function admDonut(segs) {
+    const total = segs.reduce((s, x) => s + x.count, 0);
+    if (!total) return `<svg viewBox="0 0 42 42" aria-hidden="true"><circle r="15.915" cx="21" cy="21" fill="none" stroke="var(--gray-100)" stroke-width="4.5"/></svg>`;
+    let offset = 25, out = "";
+    segs.filter(s => s.count > 0).forEach(s => {
+      const val = (s.count / total) * 100;
+      out += `<circle r="15.915" cx="21" cy="21" fill="none" stroke="${s.color}" stroke-width="4.5" stroke-dasharray="${val.toFixed(3)} ${(100 - val).toFixed(3)}" stroke-dashoffset="${offset.toFixed(3)}"/>`;
+      offset -= val;
+    });
+    return `<svg viewBox="0 0 42 42" aria-hidden="true">${out}</svg>`;
+  }
+
+  function admTimeAgo(ts) {
+    if (!ts) return "";
+    const diff = Date.now() - new Date(ts).getTime();
+    if (!isFinite(diff) || diff < 0) return "";
+    const min = Math.floor(diff / 60000);
+    if (min < 1) return "zojuist";
+    if (min < 60) return `${min} min geleden`;
+    const h = Math.floor(min / 60);
+    if (h < 24) return `${h} u geleden`;
+    const d = Math.floor(h / 24);
+    if (d === 1) return "gisteren";
+    if (d < 7) return `${d} dagen geleden`;
+    return String(ts).slice(0, 10);
+  }
+
+  // Opent de Boden-widget, optioneel met een voorgestelde vraag.
+  function admAskBoden(question) {
+    const fab = document.getElementById("bodenFab");
+    if (!fab) return;
+    const panel = document.getElementById("bodenPanel");
+    if (!panel || !panel.classList.contains("open")) fab.click();
+    if (question) {
+      const input = document.getElementById("bodenInput");
+      if (input) { input.value = question; document.getElementById("bodenSend")?.click(); }
+    }
+  }
+
   async function renderStandardDashboard() {
-    const [dash, pending, factData, expData, gpData] = await Promise.all([
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const dow = (new Date().getDay() + 6) % 7; // maandag = 0
+    const lastDays = n => Array.from({ length: n }, (_, i) => new Date(Date.now() - (n - 1 - i) * 864e5).toISOString().slice(0, 10));
+    const weekStartIso = lastDays(dow + 1)[0];
+
+    const [dash, pending, factData, expData, gpData, woData, planData, clockData] = await Promise.all([
       api("GET", "/manager/dashboard"),
       api("GET", "/leaves?status=aangevraagd").catch(() => ({ leaves: [] })),
       api("GET", "/facturen").catch(() => ({ invoices: [] })),
       api("GET", "/expenses").catch(() => ({ expenses: [] })),
-      api("GET", "/golden-path").catch(() => null)
+      api("GET", "/golden-path").catch(() => null),
+      viewEnabled("workorders") ? api("GET", "/workorders").catch(() => ({ workorders: [] })) : { workorders: [] },
+      viewEnabled("planning") ? api("GET", `/manager/planning?from=${todayIso}&to=${todayIso}`).catch(() => ({ shifts: [] })) : { shifts: [] },
+      viewEnabled("clocking") ? api("GET", `/clocks?from=${weekStartIso}&to=${todayIso}`).catch(() => ({ clocks: [] })) : { clocks: [] }
     ]);
+
+    const eur0 = new Intl.NumberFormat("nl-BE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
+    const invoices = factData.invoices || [];
+    const workorders = woData.workorders || [];
+    const todayShifts = (planData.shifts || []).slice().sort((a, b) => (a.start || "").localeCompare(b.start || ""));
+    const weekClocks = clockData.clocks || [];
+    const d14 = lastDays(14);
+
+    // KPI · omzet deze maand (gefactureerd, excl. concepten)
+    const ym = todayIso.slice(0, 7);
+    const prevM = new Date(); prevM.setDate(1); prevM.setMonth(prevM.getMonth() - 1);
+    const prevYm = prevM.toISOString().slice(0, 7);
+    const billed = invoices.filter(i => i.status && i.status !== "draft");
+    const mtdInv = billed.filter(i => (i.invoiceDate || "").startsWith(ym));
+    const mtdTotal = mtdInv.reduce((s, i) => s + Number(i.total || 0), 0);
+    const prevTotal = billed.filter(i => (i.invoiceDate || "").startsWith(prevYm)).reduce((s, i) => s + Number(i.total || 0), 0);
+    const trendPct = prevTotal > 0 ? Math.round(((mtdTotal - prevTotal) / prevTotal) * 100) : null;
+    let cum = 0;
+    const omzetSerie = Array.from({ length: Number(todayIso.slice(8, 10)) }, (_, d) =>
+      (cum += mtdInv.filter(i => Number((i.invoiceDate || "").slice(8, 10)) === d + 1).reduce((s, i) => s + Number(i.total || 0), 0)));
+
+    // KPI · openstaande facturen
+    const openInv = invoices.filter(i => i.status === "open" || i.status === "overdue");
+    const overdueCount = invoices.filter(i => i.status === "overdue").length;
+    const openTotal = openInv.reduce((s, i) => s + Number(i.total || 0), 0);
+    const openSerie = d14.map(d => openInv.filter(i => (i.invoiceDate || "") === d).reduce((s, i) => s + Number(i.total || 0), 0));
+
+    // KPI · open werkbonnen (+ te laat)
+    const activeWos = workorders.filter(w => w.status === "open" || w.status === "in_progress");
+    const lateWos = activeWos.filter(w => w.scheduledDate && w.scheduledDate < todayIso);
+    const woSerie = d14.map(d => workorders.filter(w => (w.createdAt || "").slice(0, 10) === d).length);
+
+    // KPI · uren deze week
+    const weekMin = weekClocks.reduce((s, c) => s + Number(c.durationMinutes || 0), 0);
+    const weekUren = (Math.round(weekMin / 6) / 10).toLocaleString("nl-BE");
+    const urenSerie = lastDays(dow + 1).map(d => weekClocks.filter(c => c.date === d).reduce((s, c) => s + Number(c.durationMinutes || 0), 0));
+    const clockedUsers = new Set(weekClocks.map(c => c.userId)).size;
+
+    const kpiCards = [];
+    if (viewEnabled("facturen")) {
+      kpiCards.push(`
+  <div class="adm-kpi adm-kpi-link" data-goto="facturen" title="Naar facturen">
+    <div class="adm-kpi-label">Omzet deze maand</div>
+    <div class="adm-kpi-value">${eur0.format(mtdTotal)}</div>
+    <div class="adm-kpi-sub">${trendPct === null ? "Geen omzet vorige maand" : `<span class="adm-trend ${trendPct >= 0 ? "up" : "down"}">${trendPct >= 0 ? "▲" : "▼"} ${Math.abs(trendPct)}%</span> t.o.v. vorige maand`}</div>
+    <div class="adm-kpi-spark">${admSpark(omzetSerie, "var(--wf-blue)")}</div>
+  </div>`);
+      kpiCards.push(`
+  <div class="adm-kpi adm-kpi-link" data-goto="facturen" title="Naar facturen">
+    <div class="adm-kpi-label">Openstaande facturen</div>
+    <div class="adm-kpi-value">${eur0.format(openTotal)}</div>
+    <div class="adm-kpi-sub">${openInv.length} facturen${overdueCount ? ` · <span class="adm-trend down">${overdueCount} vervallen</span>` : ""}</div>
+    <div class="adm-kpi-spark">${admSpark(openSerie, "var(--wf-yellow)")}</div>
+  </div>`);
+    }
+    if (viewEnabled("workorders")) kpiCards.push(`
+  <div class="adm-kpi adm-kpi-link" data-goto="workorders" title="Naar werkbonnen">
+    <div class="adm-kpi-label">Open werkbonnen</div>
+    <div class="adm-kpi-value">${activeWos.length}</div>
+    <div class="adm-kpi-sub">${lateWos.length ? `<span class="adm-trend down">${lateWos.length} te laat</span>` : "Alles op schema"}</div>
+    <div class="adm-kpi-spark">${admSpark(woSerie, "var(--wf-blue)")}</div>
+  </div>`);
+    if (viewEnabled("clocking")) kpiCards.push(`
+  <div class="adm-kpi adm-kpi-link" data-goto="clocking" title="Naar prikklok">
+    <div class="adm-kpi-label">Uren deze week</div>
+    <div class="adm-kpi-value">${weekUren} u</div>
+    <div class="adm-kpi-sub">${clockedUsers === 1 ? "1 medewerker klokte" : `${clockedUsers} medewerkers klokten`} · ${dash.clockedIn ?? 0} nu ingeklokt</div>
+    <div class="adm-kpi-spark">${admSpark(urenSerie, "var(--wf-green)")}</div>
+  </div>`);
+    if (kpiCards.length < 4) kpiCards.unshift(`
+  <div class="adm-kpi adm-kpi-link" data-goto="employees" title="Naar medewerkers">
+    <div class="adm-kpi-label">Team</div>
+    <div class="adm-kpi-value">${dash.team ?? "-"}</div>
+    <div class="adm-kpi-sub">${dash.clockedIn ?? 0} nu ingeklokt</div>
+  </div>`);
+
+    // Werkbonnen per status (donut)
+    const stat = k => workorders.filter(w => w.status === k).length;
+    const woSegs = [
+      { label: "Open", count: stat("open"), color: "var(--wf-blue)" },
+      { label: "In uitvoering", count: stat("in_progress"), color: "var(--wf-yellow)" },
+      { label: "Afgerond", count: stat("Voltooid") + stat("Afgewerkt"), color: "var(--wf-green)" },
+      { label: "Geannuleerd", count: stat("geannuleerd"), color: "var(--wf-red)" }
+    ];
+    const woOther = workorders.length - woSegs.reduce((s, x) => s + x.count, 0);
+    if (woOther > 0) woSegs.push({ label: "Overig", count: woOther, color: "var(--gray-400)" });
+
+    // Planning vandaag
+    const nameById = {};
+    (dash.teamList || []).forEach(u => { nameById[u.id] = u.name || u.email || "Medewerker"; });
+    const planRows = todayShifts.slice(0, 8).map(s => `
+      <div class="adm-tl-row">
+        <span class="adm-tl-time">${esc(s.start || "")} – ${esc(s.end || "")}</span>
+        <span style="font-weight:500;color:var(--ink);white-space:nowrap">${esc(nameById[s.userId] || "Medewerker")}</span>
+        ${s.note ? `<span style="color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.note)}</span>` : ""}
+      </div>`).join("");
+
+    // Recente activiteit (samengesteld uit facturen, werkbonnen, verlof, onkosten)
+    const invLabel = { paid: "betaald", open: "openstaand", overdue: "vervallen", draft: "concept" };
+    const woLabel = { open: "open", in_progress: "in uitvoering", Voltooid: "voltooid", Afgewerkt: "afgewerkt", geannuleerd: "geannuleerd" };
+    const acts = [
+      ...invoices.map(i => ({ t: i.createdAt || "", color: i.status === "paid" ? "var(--wf-green)" : i.status === "overdue" ? "var(--wf-red)" : "var(--wf-blue)", text: `Factuur ${i.number || ""} · ${invLabel[i.status] || i.status || ""} · ${eur0.format(Number(i.total || 0))}`, view: "facturen" })),
+      ...workorders.map(w => ({ t: w.createdAt || "", color: "var(--wf-yellow)", text: `Werkbon ${w.number || w.title || ""} · ${woLabel[w.status] || w.status || ""}`, view: "workorders" })),
+      ...((pending.leaves || pending) || []).map(l => ({ t: l.createdAt || "", color: "var(--wf-blue)", text: `Verlofaanvraag van ${uName(l) || "medewerker"}`, view: "leaves" })),
+      ...(expData.expenses || []).filter(e => e.status === "pending" || !e.status).map(e => ({ t: e.createdAt || "", color: "var(--wf-red)", text: `Onkostennota ${eur0.format(Number(e.amount || 0))} van ${uName(e) || "medewerker"}`, view: "expenses" }))
+    ].filter(a => a.t).sort((a, b) => b.t.localeCompare(a.t)).slice(0, 7);
+
+    const planCard = viewEnabled("planning") ? `
+  <div class="adm-card">
+    <div class="adm-card-header"><h3 class="adm-card-title">Planning vandaag</h3><a href="#" class="adm-btn adm-btn-secondary adm-btn-sm" id="admDashPlanning">Naar planning</a></div>
+    <div class="adm-card-body">
+      ${planRows || `<div class="adm-empty" style="padding:28px 16px"><div class="adm-empty-text">Nog niets ingepland voor vandaag.</div></div>`}
+    </div>
+  </div>` : "";
+    const donutCard = viewEnabled("workorders") ? `
+  <div class="adm-card">
+    <div class="adm-card-header"><h3 class="adm-card-title">Werkbonnen per status</h3></div>
+    <div class="adm-card-body" style="display:flex;align-items:center;gap:22px;flex-wrap:wrap">
+      <div class="adm-donut-wrap">${admDonut(woSegs)}<div class="adm-donut-center"><div><div class="adm-donut-num">${workorders.length}</div><div class="adm-donut-cap">totaal</div></div></div></div>
+      <div class="adm-legend">
+        ${woSegs.filter(s => s.count > 0).map(s => `<div class="adm-legend-row"><span class="adm-legend-dot" style="background:${s.color}"></span>${esc(s.label)}<span class="adm-legend-n">${s.count}</span></div>`).join("") || `<div style="font-size:12.5px;color:var(--muted)">Nog geen werkbonnen.</div>`}
+      </div>
+    </div>
+  </div>` : "";
+    const actCard = `
+  <div class="adm-card">
+    <div class="adm-card-header"><h3 class="adm-card-title">Recente activiteit</h3></div>
+    <div class="adm-card-body">
+      ${acts.map(a => `<div class="adm-act-row adm-act-link" data-view="${a.view}"><span class="adm-legend-dot" style="background:${a.color}"></span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(a.text)}</span><span class="adm-act-time">${esc(admTimeAgo(a.t))}</span></div>`).join("") || `<div class="adm-empty" style="padding:28px 16px"><div class="adm-empty-text">Nog geen activiteit.</div></div>`}
+    </div>
+  </div>`;
+    const aiCard = document.getElementById("bodenFab") ? `
+  <div class="adm-ai-card">
+    <div class="adm-ai-head"><span class="adm-ai-badge">AI</span> Boden · AI-assistent</div>
+    <p class="adm-ai-text">Stel een vraag over je cijfers, planning of klanten. Boden kijkt enkel naar gegevens waar jij rechten op hebt.</p>
+    <div class="adm-ai-chips">
+      <button class="adm-ai-chip" data-q="Welke facturen zijn vervallen?">Welke facturen zijn vervallen?</button>
+      <button class="adm-ai-chip" data-q="Wat staat er vandaag op de planning?">Wat staat er vandaag gepland?</button>
+      <button class="adm-ai-chip" data-q="Hoeveel werkbonnen staan er open?">Hoeveel werkbonnen staan open?</button>
+    </div>
+    <div style="margin-top:auto"><button class="adm-btn adm-btn-primary adm-btn-sm" id="admAiOpen">Open Boden</button></div>
+  </div>` : "";
+    const cockpitRows = `
+${planCard || donutCard ? `<div class="adm-grid-2" style="margin-bottom:18px">${planCard}${donutCard}</div>` : ""}
+<div class="adm-grid-2" style="margin-bottom:18px">${actCard}${aiCard}</div>`;
 
     const content = document.getElementById("dashBody") || document.getElementById("admContent");
     content.innerHTML = `
-<div class="adm-kpis">
-  <div class="adm-kpi adm-kpi-blue adm-kpi-link" data-goto="employees" title="Naar medewerkers">
-    <div class="adm-kpi-icon"><svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg></div>
-    <div class="adm-kpi-label">Team</div>
-    <div class="adm-kpi-value">${dash.team ?? "-"}</div>
-    <div class="adm-kpi-sub">Actieve medewerkers</div>
-  </div>
-  <div class="adm-kpi adm-kpi-green adm-kpi-link" data-goto="clocking" title="Naar prikklok">
-    <div class="adm-kpi-icon"><svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg></div>
-    <div class="adm-kpi-label">Ingeklokt</div>
-    <div class="adm-kpi-value">${dash.clockedIn ?? "-"}</div>
-    <div class="adm-kpi-sub">Van ${dash.team ?? "?"} medewerkers</div>
-  </div>
-  ${viewEnabled("leaves") ? `<div class="adm-kpi adm-kpi-amber adm-kpi-link" data-goto="leaves" title="Naar verlof">
-    <div class="adm-kpi-icon"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg></div>
-    <div class="adm-kpi-label">Verlof aanvragen</div>
-    <div class="adm-kpi-value">${dash.pendingLeaves ?? "-"}</div>
-    <div class="adm-kpi-sub">Wacht op goedkeuring</div>
-  </div>` : ""}
-  ${viewEnabled("expenses") ? `<div class="adm-kpi adm-kpi-red adm-kpi-link" data-goto="expenses" title="Naar onkosten">
-    <div class="adm-kpi-icon"><svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg></div>
-    <div class="adm-kpi-label">Onkosten</div>
-    <div class="adm-kpi-value">${dash.pendingExpenses ?? "-"}</div>
-    <div class="adm-kpi-sub">Te verwerken</div>
-  </div>` : ""}
-  ${viewEnabled("workorders") ? `<div class="adm-kpi adm-kpi-purple adm-kpi-link" data-goto="workorders" title="Naar werkbonnen">
-    <div class="adm-kpi-icon"><svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg></div>
-    <div class="adm-kpi-label">Werkbonnen</div>
-    <div class="adm-kpi-value">${dash.openWorkorders ?? "-"}</div>
-    <div class="adm-kpi-sub">Openstaand</div>
-  </div>` : ""}
+<div class="adm-kpis adm-kpis-cockpit">
+${kpiCards.join("")}
 </div>
+
+${cockpitRows}
 
 <div class="adm-grid-2">
   <div class="adm-card">
@@ -752,6 +929,12 @@ ${(() => {
       el.addEventListener("mouseenter", () => el.style.background = "var(--gray-50)");
       el.addEventListener("mouseleave", () => el.style.background = "");
     });
+
+    // Cockpit-widgets: planning, activiteit en Boden
+    document.getElementById("admDashPlanning")?.addEventListener("click", e => { e.preventDefault(); switchView("planning"); });
+    document.querySelectorAll(".adm-act-link").forEach(el => el.addEventListener("click", () => switchView(el.dataset.view)));
+    document.getElementById("admAiOpen")?.addEventListener("click", () => admAskBoden());
+    document.querySelectorAll(".adm-ai-chip").forEach(ch => ch.addEventListener("click", () => admAskBoden(ch.dataset.q)));
 
     // Golden path widget injection
     if (gpData?.readiness) {
