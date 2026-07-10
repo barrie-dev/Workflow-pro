@@ -449,13 +449,17 @@
 
 `;
 
-    // nav click
+    // nav click + hover-submenu (flyout) per module
     el.querySelectorAll(".adm-nav-item[data-view]").forEach(a => {
       a.addEventListener("click", e => {
         e.preventDefault();
         switchView(a.dataset.view);
+        hideNavFlyout(true);
       });
+      a.addEventListener("mouseenter", () => showNavFlyout(a, a.dataset.view));
+      a.addEventListener("mouseleave", () => hideNavFlyout());
     });
+    document.getElementById("admSidebar")?.addEventListener("scroll", () => hideNavFlyout(true), { passive: true });
 
     // sidebar toggle
     document.getElementById("admMenuToggle").addEventListener("click", () => {
@@ -515,6 +519,169 @@
     employees: "+ Medewerker", messages: "+ Bericht", customers: "+ Klant",
     offertes: "+ Offerte", facturen: "+ Factuur", venues: "+ Locatie", vehicles: "+ Voertuig", stock: "+ Artikel"
   };
+
+  // ── Hover-submenu per module (flyout naast de zijbalk) ─────
+  // Elk item: go {view, set {id,value} filter, click knop-id, scroll element-id}
+  // of drawer (nieuw-record-paneel). needsView gate't cross-module-links op
+  // entitlements. Alleen modules met minstens 2 zinvolle items krijgen een flyout.
+  function navSubmenus() {
+    const jobs = (window.wfpTerms && window.wfpTerms.t("jobPlural")) || "Werkbonnen";
+    const venuesTerm = (window.wfpTerms && window.wfpTerms.t("venuePlural")) || "Locaties";
+    return {
+      planning: [
+        { label: "Weekplanning", go: { view: "planning" } },
+        { label: "+ Nieuwe shift", go: { view: "planning", click: "admAddShift" } },
+        { label: "Verlofkalender", go: { view: "leaves" }, needsView: "leaves" }
+      ],
+      clocking: [
+        { label: "Dagoverzicht", go: { view: "clocking" } },
+        { label: "+ Manuele registratie", go: { view: "clocking", click: "admClockAdd" } },
+        { label: "Pauzebeleid", go: { view: "settings", scroll: "admPaidBreaks" }, needsView: "settings" }
+      ],
+      leaves: [
+        { label: "Alle aanvragen", go: { view: "leaves", set: { id: "admLeaveFilter", value: "" } } },
+        { label: "Te beoordelen", go: { view: "leaves", set: { id: "admLeaveFilter", value: "aangevraagd" } } },
+        { label: "+ Verlof aanmaken", go: { view: "leaves", click: "admLeaveNew" } }
+      ],
+      expenses: [
+        { label: "Alle onkosten", go: { view: "expenses", set: { id: "admExpFilter", value: "" } } },
+        { label: "In behandeling", go: { view: "expenses", set: { id: "admExpFilter", value: "ingediend" } } }
+      ],
+      workorders: [
+        { label: `Alle ${jobs.toLowerCase()}`, go: { view: "workorders", set: { id: "admWoStatusFilter", value: "" } } },
+        { label: "Open", go: { view: "workorders", set: { id: "admWoStatusFilter", value: "open" } } },
+        { label: "In uitvoering", go: { view: "workorders", set: { id: "admWoStatusFilter", value: "in_progress" } } },
+        { label: "Voltooid", go: { view: "workorders", set: { id: "admWoStatusFilter", value: "done" } } },
+        { label: "+ Nieuwe werkbon", go: { view: "workorders", click: "admNewWO" } },
+        { label: "Documentsjabloon", go: { view: "templates" }, needsView: "templates" }
+      ],
+      customers: [
+        { label: "Alle klanten", go: { view: "customers" } },
+        { label: "+ Nieuwe klant", go: { view: "customers" }, drawer: "customer" }
+      ],
+      offertes: [
+        { label: "Alle offertes", go: { view: "offertes" } },
+        { label: "+ Nieuwe offerte", go: { view: "offertes" }, drawer: "offerte" },
+        { label: "Documentsjabloon", go: { view: "templates" }, needsView: "templates" }
+      ],
+      facturen: [
+        { label: "Alle facturen", go: { view: "facturen", set: { id: "invStatusFilter", value: "" } } },
+        { label: "Openstaand", go: { view: "facturen", set: { id: "invStatusFilter", value: "open" } } },
+        { label: "Vervallen", go: { view: "facturen", set: { id: "invStatusFilter", value: "overdue" } } },
+        { label: "+ Nieuwe factuur", go: { view: "facturen" }, drawer: "factuur" },
+        { label: "Betaalherinneringen", go: { view: "settings", scroll: "admAutoReminders" }, needsView: "settings" },
+        { label: "Documentsjabloon", go: { view: "templates" }, needsView: "templates" }
+      ],
+      employees: [
+        { label: "Alle medewerkers", go: { view: "employees" } },
+        { label: "+ Nieuwe medewerker", go: { view: "employees" }, drawer: "employee" },
+        { label: "Startpagina-template", go: { view: "settings", scroll: "admEhwSave" }, needsView: "settings" }
+      ],
+      messages: [
+        { label: "Alle berichten", go: { view: "messages" } },
+        { label: "+ Nieuw bericht", go: { view: "messages" }, drawer: "message" }
+      ],
+      vehicles: [
+        { label: "Alle voertuigen", go: { view: "vehicles" } },
+        { label: "+ Nieuw voertuig", go: { view: "vehicles" }, drawer: "vehicle" }
+      ],
+      stock: [
+        { label: "Alle artikelen", go: { view: "stock" } },
+        { label: "+ Nieuw artikel", go: { view: "stock" }, drawer: "stock" }
+      ],
+      venues: [
+        { label: `Alle ${venuesTerm.toLowerCase()}`, go: { view: "venues" } },
+        { label: "+ Nieuwe locatie", go: { view: "venues" }, drawer: "venue" }
+      ],
+      settings: [
+        { label: "Bedrijfsgegevens", go: { view: "settings" } },
+        { label: "Betaalherinneringen", go: { view: "settings", scroll: "admAutoReminders" } },
+        { label: "Pauzebeleid", go: { view: "settings", scroll: "admPaidBreaks" } },
+        { label: "Startpagina medewerkers", go: { view: "settings", scroll: "admEhwSave" } }
+      ]
+    };
+  }
+
+  let _flyHideTimer = null;
+  function ensureNavFlyout() {
+    let fly = document.getElementById("admNavFlyout");
+    if (!fly) {
+      fly = document.createElement("div");
+      fly.id = "admNavFlyout";
+      fly.className = "adm-nav-flyout";
+      fly.addEventListener("mouseenter", () => clearTimeout(_flyHideTimer));
+      fly.addEventListener("mouseleave", () => hideNavFlyout());
+      document.getElementById("platform-admin").appendChild(fly);
+    }
+    return fly;
+  }
+
+  function hideNavFlyout(now) {
+    clearTimeout(_flyHideTimer);
+    const fly = document.getElementById("admNavFlyout");
+    if (!fly) return;
+    if (now) { fly.classList.remove("open"); return; }
+    _flyHideTimer = setTimeout(() => fly.classList.remove("open"), 140);
+  }
+
+  function showNavFlyout(anchor, view) {
+    // Alleen op toestellen met echte hover (pc); mobiel houdt de gewone nav.
+    if (!window.matchMedia("(hover: hover)").matches) return;
+    const items = (navSubmenus()[view] || []).filter(i => !i.needsView || viewEnabled(i.needsView));
+    if (items.length < 2) { hideNavFlyout(); return; }
+    const fly = ensureNavFlyout();
+    const termTitle = window.wfpTerms && (view === "workorders" ? window.wfpTerms.t("jobPlural") : view === "venues" ? window.wfpTerms.t("venuePlural") : null);
+    fly.innerHTML = `<div class="adm-nav-flyout-title">${esc(termTitle || VIEW_LABELS[view] || view)}</div>`
+      + items.map((i, idx) => `<button type="button" class="adm-nav-flyout-item${i.drawer || (i.go && i.go.click) ? " act" : ""}" data-idx="${idx}">${esc(i.label)}</button>`).join("");
+    fly.querySelectorAll(".adm-nav-flyout-item").forEach(btn => {
+      btn.addEventListener("click", () => navFlyoutGo(view, items[Number(btn.dataset.idx)]));
+    });
+    fly.classList.add("open");
+    const r = anchor.getBoundingClientRect();
+    const top = Math.max(8, Math.min(r.top - 6, window.innerHeight - fly.offsetHeight - 8));
+    fly.style.top = `${top}px`;
+    fly.style.left = `${r.right + 8}px`;
+    clearTimeout(_flyHideTimer);
+  }
+
+  function navFlyoutGo(parentView, item) {
+    hideNavFlyout(true);
+    const g = item.go || {};
+    switchView(g.view || parentView);
+    // Views renderen async: kort pollen tot het doel er is, dan de actie doen.
+    let tries = 0;
+    const apply = () => {
+      if (item.drawer) {
+        const d = window.wfpAdmin && window.wfpAdmin.drawers;
+        if (!d || !d[item.drawer]) return false;
+        d[item.drawer](null);
+        return true;
+      }
+      if (g.click) {
+        const el = document.getElementById(g.click);
+        if (!el) return false;
+        el.click();
+        return true;
+      }
+      if (g.set) {
+        const el = document.getElementById(g.set.id);
+        if (!el) return false;
+        el.value = g.set.value;
+        el.dispatchEvent(new Event("change", { bubbles: true }));
+        return true;
+      }
+      if (g.scroll) {
+        const el = document.getElementById(g.scroll);
+        if (!el) return false;
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        const card = el.closest(".adm-card");
+        if (card) { card.style.outline = "2px solid var(--wf-blue)"; card.style.outlineOffset = "2px"; setTimeout(() => { card.style.outline = ""; }, 1800); }
+        return true;
+      }
+      return true;
+    };
+    const timer = setInterval(() => { tries += 1; if (apply() || tries > 25) clearInterval(timer); }, 120);
+  }
 
   function switchView(view) {
     _currentView = view;

@@ -176,6 +176,11 @@
 .mgr-nav-item.active { background:var(--wf-blue); color:#fff; font-weight:600; box-shadow:0 4px 12px rgba(0,113,227,.30); }
 .mgr-nav-item.active svg { opacity:1; }
 .mgr-badge { margin-left:auto; background:var(--wf-red); color:#fff; border-radius:999px; font-size:11px; padding:1px 6px; font-weight:600; }
+.mgr-nav-flyout { position:fixed; z-index:240; min-width:200px; max-width:270px; background:var(--ink); border:1px solid rgba(255,255,255,.12); border-radius:12px; padding:8px; box-shadow:var(--shadow-elevated); display:none; flex-direction:column; gap:2px; }
+.mgr-nav-flyout.open { display:flex; }
+.mgr-nav-flyout-title { font-size:10.5px; font-weight:700; color:rgba(255,255,255,.45); text-transform:uppercase; letter-spacing:.07em; padding:5px 10px 6px; }
+.mgr-nav-flyout-item { display:block; width:100%; text-align:left; background:none; border:none; cursor:pointer; font-family:inherit; font-size:13px; font-weight:500; color:rgba(255,255,255,.78); padding:8px 10px; border-radius:8px; transition:background .12s, color .12s; }
+.mgr-nav-flyout-item:hover { background:rgba(255,255,255,.08); color:#fff; }
 .mgr-sidebar-footer { padding:12px; border-top:1px solid rgba(255,255,255,.10); display:flex; align-items:center; gap:8px; }
 .mgr-user-chip { display:flex; align-items:center; gap:8px; flex:1; min-width:0; }
 .mgr-user-avatar { width:32px; height:32px; border-radius:50%; background:var(--wf-blue); color:#fff; display:grid; place-items:center; font-weight:600; font-size:13px; flex-shrink:0; }
@@ -250,7 +255,9 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
 </style>`;
 
     el.querySelectorAll(".mgr-nav-item[data-view]").forEach(a => {
-      a.addEventListener("click", e => { e.preventDefault(); switchView(a.dataset.view); });
+      a.addEventListener("click", e => { e.preventDefault(); switchView(a.dataset.view); hideMgrFlyout(true); });
+      a.addEventListener("mouseenter", () => showMgrFlyout(a, a.dataset.view));
+      a.addEventListener("mouseleave", () => hideMgrFlyout());
     });
     document.getElementById("mgrMenuToggle").addEventListener("click", () => {
       document.getElementById("mgrSidebar").classList.toggle("open");
@@ -274,6 +281,83 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
       });
       document.addEventListener("wfp:langchange", () => { window.wfpI18n.apply(root); paintLang(); });
     }
+  }
+
+  // ── Hover-submenu per module (flyout naast de zijbalk) ─────
+  // Zelfde patroon als de admin-shell: filters/tabs + nieuw-acties per module.
+  function mgrSubmenus() {
+    const jobs = (window.wfpTerms && window.wfpTerms.t("jobPlural")) || "Werkbonnen";
+    return {
+      planning: [
+        { label: "Weekplanning", go: { view: "planning" } },
+        { label: "+ Nieuwe shift", go: { view: "planning", click: "mgrAddShift" } }
+      ],
+      clocking: [
+        { label: "Dagoverzicht", go: { view: "clocking" } },
+        { label: "+ Registratie", go: { view: "clocking", click: "mgrClkAdd" } }
+      ],
+      leaves: [
+        { label: "Aanvragen", go: { view: "leaves", click: "mgrLeaveTabReq" } },
+        { label: "Kalender", go: { view: "leaves", click: "mgrLeaveTabCal" } },
+        { label: "Saldi", go: { view: "leaves", click: "mgrLeaveTabBal" } },
+        { label: "+ Registreren", go: { view: "leaves", click: "mgrLeaveNew" } }
+      ],
+      expenses: [
+        { label: "Te beoordelen", go: { view: "expenses" } },
+        { label: "+ Onkost indienen", go: { view: "expenses", click: "mgrExpOwn" } }
+      ],
+      workorders: [
+        { label: `Alle ${jobs.toLowerCase()}`, go: { view: "workorders" } },
+        { label: "+ Werkbon", go: { view: "workorders", click: "mgrNewWO" } }
+      ]
+    };
+  }
+
+  let _mgrFlyTimer = null;
+  function hideMgrFlyout(now) {
+    clearTimeout(_mgrFlyTimer);
+    const fly = document.getElementById("mgrNavFlyout");
+    if (!fly) return;
+    if (now) { fly.classList.remove("open"); return; }
+    _mgrFlyTimer = setTimeout(() => fly.classList.remove("open"), 140);
+  }
+
+  function showMgrFlyout(anchor, view) {
+    if (!window.matchMedia("(hover: hover)").matches) return;
+    const items = mgrSubmenus()[view] || [];
+    if (items.length < 2) { hideMgrFlyout(); return; }
+    let fly = document.getElementById("mgrNavFlyout");
+    if (!fly) {
+      fly = document.createElement("div");
+      fly.id = "mgrNavFlyout";
+      fly.className = "mgr-nav-flyout";
+      fly.addEventListener("mouseenter", () => clearTimeout(_mgrFlyTimer));
+      fly.addEventListener("mouseleave", () => hideMgrFlyout());
+      document.getElementById("platform-manager").appendChild(fly);
+    }
+    const title = anchor.textContent.trim().replace(/\d+$/, "").trim();
+    fly.innerHTML = `<div class="mgr-nav-flyout-title">${esc(title)}</div>`
+      + items.map((i, idx) => `<button type="button" class="mgr-nav-flyout-item" data-idx="${idx}">${esc(i.label)}</button>`).join("");
+    fly.querySelectorAll(".mgr-nav-flyout-item").forEach(btn => {
+      btn.addEventListener("click", () => {
+        hideMgrFlyout(true);
+        const item = items[Number(btn.dataset.idx)];
+        switchView(item.go.view);
+        if (!item.go.click) return;
+        let tries = 0;
+        const t = setInterval(() => {
+          tries += 1;
+          const target = document.getElementById(item.go.click);
+          if (target) { target.click(); clearInterval(t); }
+          else if (tries > 25) clearInterval(t);
+        }, 120);
+      });
+    });
+    fly.classList.add("open");
+    const r = anchor.getBoundingClientRect();
+    fly.style.top = `${Math.max(8, Math.min(r.top - 6, window.innerHeight - fly.offsetHeight - 8))}px`;
+    fly.style.left = `${r.right + 8}px`;
+    clearTimeout(_mgrFlyTimer);
   }
 
   // ── Persoonlijke prikklok (topbar) · manager kan zichzelf in-/uitklokken ──
