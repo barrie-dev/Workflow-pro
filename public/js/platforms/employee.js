@@ -1203,8 +1203,9 @@ ${cfgPanel}`;
         return sum + Math.max(0, en - st);
       }, 0);
     };
+    // Betaalde pauzes (tenant-instelling): sessieduur = bruto; anders netto.
     const netElapsed = () => data.active
-      ? Math.max(0, (Date.now() - new Date(data.active.clockedIn).getTime()) / 3600000 - liveBreakMin() / 60)
+      ? Math.max(0, (Date.now() - new Date(data.active.clockedIn).getTime()) / 3600000 - (data.paidBreaks ? 0 : liveBreakMin() / 60))
       : 0;
 
     const R = 108, CIRC = 2 * Math.PI * R;                 // ring-omtrek

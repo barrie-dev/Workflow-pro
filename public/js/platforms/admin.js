@@ -5201,9 +5201,20 @@ ${categories.map(cat => `
           <input type="checkbox" id="admEmailNotif" ${tenant.notificationPrefs?.emailEnabled === false ? "" : "checked"}>
           E-mailnotificaties versturen (belangrijke meldingen naar betrokkenen)
         </label>
-        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--gray-600);margin:0 0 8px;cursor:pointer;">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--gray-600);margin:0 0 6px;cursor:pointer;">
           <input type="checkbox" id="admAutoReminders" ${tenant.autoReminders?.enabled ? "checked" : ""}>
-          Automatische betaalherinneringen bij vervallen facturen (om de 7 dagen, max. 3 per factuur)
+          Automatische betaalherinneringen bij vervallen facturen
+        </label>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;color:var(--gray-600);margin:0 0 10px;padding-left:24px;">
+          om de
+          <input type="number" id="admRemInterval" min="1" max="90" step="1" value="${tenant.autoReminders?.intervalDays ?? 7}" style="width:64px;text-align:center;" aria-label="Interval in dagen">
+          dagen, maximaal
+          <input type="number" id="admRemMax" min="1" max="10" step="1" value="${tenant.autoReminders?.maxReminders ?? 3}" style="width:64px;text-align:center;" aria-label="Maximum aantal herinneringen">
+          herinneringen per factuur
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--gray-600);margin:0 0 8px;cursor:pointer;">
+          <input type="checkbox" id="admPaidBreaks" ${tenant.clockingPrefs?.paidBreaks ? "checked" : ""}>
+          Pauzes tellen mee als betaalde werktijd (geldt voor registraties vanaf de wijziging)
         </label>
         <div style="display:flex;align-items:center;gap:10px;margin:0 0 12px;flex-wrap:wrap;">
           <button type="button" class="adm-btn adm-btn-secondary adm-btn-sm" id="admPushToggle">Pushmeldingen op dit toestel</button>
@@ -5454,7 +5465,12 @@ ${categories.map(cat => `
       // Voorkom dat de push-toggle-knop als formulierveld wordt meegestuurd.
       delete body.admPushToggle;
       body.notificationPrefs = { emailEnabled: document.getElementById("admEmailNotif")?.checked !== false };
-      body.autoReminders = { enabled: document.getElementById("admAutoReminders")?.checked === true };
+      body.autoReminders = {
+        enabled: document.getElementById("admAutoReminders")?.checked === true,
+        intervalDays: Number(document.getElementById("admRemInterval")?.value) || 7,
+        maxReminders: Number(document.getElementById("admRemMax")?.value) || 3
+      };
+      body.clockingPrefs = { paidBreaks: document.getElementById("admPaidBreaks")?.checked === true };
       try {
         await api("PATCH", "/settings", body);
         msgEl.style.cssText = "display:block;background:var(--wf-green-l);color:var(--wf-green);padding:8px 12px;border-radius:8px;font-size:13px;margin-bottom:8px;";

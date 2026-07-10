@@ -990,6 +990,44 @@ test("startpagina: admin bepaalt template, medewerker kiest eigen selectie", asy
   })).status, 400, "selectie zonder geldige blokken geweigerd");
 });
 
+// ── Instellingen: pauzebeleid + herinneringsfrequentie per bedrijf ─────────────
+test("instellingen: betaalde pauzes en herinneringsbeleid zijn per bedrijf instelbaar", async () => {
+  const adm = await login("admin@demobouw.be", "Demo2026!");
+  const AH = { "Content-Type": "application/json", Authorization: `Bearer ${adm.token}` };
+  const set = await (await fetch(`${BASE}/api/tenants/t_demo/settings`, {
+    method: "PATCH", headers: AH,
+    body: JSON.stringify({
+      clockingPrefs: { paidBreaks: true },
+      autoReminders: { enabled: true, intervalDays: 14, maxReminders: 5 }
+    }),
+  })).json();
+  assert.equal(set.ok, true);
+  assert.equal(set.tenant.clockingPrefs.paidBreaks, true);
+  assert.equal(set.tenant.autoReminders.intervalDays, 14, "eigen interval bewaard");
+  assert.equal(set.tenant.autoReminders.maxReminders, 5, "eigen maximum bewaard");
+
+  // De medewerker-app krijgt het pauzebeleid mee.
+  const jan = await login("jan@demobouw.be", "Demo2026!");
+  const JH = { Authorization: `Bearer ${jan.token}` };
+  const myClock = await (await fetch(`${BASE}/api/tenants/t_demo/me/clock`, { headers: JH })).json();
+  assert.equal(myClock.paidBreaks, true, "me/clock geeft pauzebeleid door");
+
+  // Onzinnige waarden worden begrensd, niet geweigerd.
+  const clamped = await (await fetch(`${BASE}/api/tenants/t_demo/settings`, {
+    method: "PATCH", headers: AH,
+    body: JSON.stringify({ autoReminders: { enabled: true, intervalDays: 0, maxReminders: 99 } }),
+  })).json();
+  assert.equal(clamped.tenant.autoReminders.intervalDays, 1);
+  assert.equal(clamped.tenant.autoReminders.maxReminders, 10);
+
+  // Terug naar de standaard zodat andere tests onaangetast blijven.
+  const reset = await (await fetch(`${BASE}/api/tenants/t_demo/settings`, {
+    method: "PATCH", headers: AH,
+    body: JSON.stringify({ clockingPrefs: { paidBreaks: false }, autoReminders: { enabled: false, intervalDays: 7, maxReminders: 3 } }),
+  })).json();
+  assert.equal(reset.tenant.clockingPrefs.paidBreaks, false);
+});
+
 test("mfa: verify accepteert token-alias uit frontend contract", async () => {
   const sara = await login("sara@demobouw.be", "Demo2026!");
   const headers = { "Content-Type": "application/json", Authorization: `Bearer ${sara.token}` };

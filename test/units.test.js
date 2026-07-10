@@ -1191,3 +1191,35 @@ test("breaks: prikking zonder pauzes houdt volledige duur", () => {
   assert.equal(out.durationMinutes, 480);
   assert.equal(out.breakMinutes, 0);
 });
+
+test("breaks: betaalde pauzes (paidBreaks) houden de bruto duur aan", () => {
+  const fakeStore = { list: () => [], get: () => null };
+  const active = { userId: "u1", date: "2026-07-10", clockIn: "08:00", breaks: [{ start: "12:00", end: "12:30" }] };
+  const paid = normalizeClockOut(fakeStore, "t1", active, { clockOut: "16:00" }, "16:00", { paidBreaks: true });
+  assert.equal(paid.durationMinutes, 480, "betaald: pauze telt mee als werktijd");
+  assert.equal(paid.breakMinutes, 30, "pauze blijft wel geregistreerd");
+  const unpaid = normalizeClockOut(fakeStore, "t1", active, { clockOut: "16:00" }, "16:00", { paidBreaks: false });
+  assert.equal(unpaid.durationMinutes, 450, "onbetaald: pauze gaat van de duur af");
+});
+
+// ── Betaalherinneringen: beleid per bedrijf (interval + maximum) ───────────────
+const { reminderDue: remDue, reminderPolicy } = require("../src/modules/payment-reminders");
+
+test("reminders: reminderPolicy begrenst op veilige waarden", () => {
+  assert.deepEqual(reminderPolicy(), { intervalDays: 7, maxReminders: 3 });
+  assert.deepEqual(reminderPolicy({ intervalDays: 14, maxReminders: 5 }), { intervalDays: 14, maxReminders: 5 });
+  assert.deepEqual(reminderPolicy({ intervalDays: 0, maxReminders: 99 }), { intervalDays: 1, maxReminders: 10 });
+  assert.deepEqual(reminderPolicy({ intervalDays: "onzin", maxReminders: null }), { intervalDays: 7, maxReminders: 3 });
+});
+
+test("reminders: bedrijfsbeleid bepaalt frequentie en maximum", () => {
+  const today = "2026-07-10";
+  const base = { status: "open", dueDate: "2026-06-01", total: 100 };
+  const sentDaysAgo = d => [{ at: new Date(Date.now() - d * 86400000).toISOString(), level: 1 }];
+  // Laatste herinnering 10 dagen geleden: due bij interval 7, nog niet bij interval 14.
+  assert.equal(remDue({ ...base, reminders: sentDaysAgo(10) }, today, reminderPolicy({ intervalDays: 7 })), true);
+  assert.equal(remDue({ ...base, reminders: sentDaysAgo(10) }, today, reminderPolicy({ intervalDays: 14 })), false);
+  // Maximum van het bedrijf telt: 1 verzonden bij max 1 → klaar; bij max 3 → nog due.
+  assert.equal(remDue({ ...base, reminders: sentDaysAgo(10) }, today, reminderPolicy({ intervalDays: 7, maxReminders: 1 })), false);
+  assert.equal(remDue({ ...base, reminders: sentDaysAgo(10) }, today, reminderPolicy({ intervalDays: 7, maxReminders: 3 })), true);
+});

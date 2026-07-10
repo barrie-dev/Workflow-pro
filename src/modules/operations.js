@@ -35,6 +35,11 @@ function durationHours(clock) {
   return Math.max(0, ((outHour * 60 + outMinute) - (inHour * 60 + inMinute)) / 60);
 }
 
+// Tenant-instelling: tellen pauzes mee als betaalde werktijd? (default: nee)
+function tenantPaidBreaks(tenant) {
+  return tenant?.clockingPrefs?.paidBreaks === true;
+}
+
 // Verweesde prikking (vergeten uit te klokken op een vorige dag): sluit af op
 // 23:59 van die dag met status needs_review, zodat de medewerker nooit vast
 // komt te zitten en de beheerder de tijd kan corrigeren.
@@ -60,7 +65,7 @@ function closeStaleClocks(store, tenant, userId, actorEmail) {
       clockOut: "23:59",
       breaks: closedBreaks,
       breakMinutes: pauseMin,
-      durationMinutes: Math.max(0, gross - pauseMin),
+      durationMinutes: tenantPaidBreaks(tenant) ? gross : Math.max(0, gross - pauseMin),
       status: "needs_review",
       autoClosed: true,
       note: [c.note, "Automatisch afgesloten: uitklokken vergeten"].filter(Boolean).join(" · ")
@@ -115,7 +120,7 @@ function clockOut(store, tenant, payload, actor) {
     error.status = 404;
     throw error;
   }
-  const normalized = normalizeClockOut(store, tenant.id, active, payload, new Date().toTimeString().slice(0, 5));
+  const normalized = normalizeClockOut(store, tenant.id, active, payload, new Date().toTimeString().slice(0, 5), { paidBreaks: tenantPaidBreaks(tenant) });
   const row = store.update("clocks", active.id, normalized);
   store.audit({ actor: actor.email, tenantId: tenant.id, action: "clock_out", area: "clockings", detail: row.id });
   maybeAutoCiaw(store, tenant, row, "out");

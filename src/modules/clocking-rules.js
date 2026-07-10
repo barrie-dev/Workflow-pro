@@ -105,7 +105,7 @@ function normalizeClockIn(store, tenantId, payload, actor, fallbackTime) {
   };
 }
 
-function normalizeClockOut(store, tenantId, active, payload, fallbackTime) {
+function normalizeClockOut(store, tenantId, active, payload, fallbackTime, options = {}) {
   const clockOut = payload.clockOut || fallbackTime;
   // Contextuele melding i.p.v. het generieke "Eindtijd moet na Starttijd liggen":
   // de medewerker koos geen eindtijd, dus leg uit dat uitklokken nog niet kan.
@@ -124,8 +124,9 @@ function normalizeClockOut(store, tenantId, active, payload, fallbackTime) {
     ? Math.abs(window.start - shiftWindow.start) + Math.abs(window.end - shiftWindow.end)
     : null;
 
-  // Pauzes: nog open pauze wordt afgesloten op het uitklok-moment; de netto
-  // duur (excl. pauze) is wat richting goedkeuring/loon gaat.
+  // Pauzes: nog open pauze wordt afgesloten op het uitklok-moment. Of pauzes
+  // meetellen als betaalde werktijd is een tenant-instelling
+  // (clockingPrefs.paidBreaks): betaald → bruto duur, anders bruto - pauze.
   const closedBreaks = (active.breaks || []).map(b => (b.end ? b : { ...b, end: clockOut }));
   const pauseMin = breakMinutes(closedBreaks);
   const gross = window.end - window.start;
@@ -134,7 +135,7 @@ function normalizeClockOut(store, tenantId, active, payload, fallbackTime) {
     clockOut,
     breaks: closedBreaks,
     breakMinutes: pauseMin,
-    durationMinutes: Math.max(0, gross - pauseMin),
+    durationMinutes: options.paidBreaks ? gross : Math.max(0, gross - pauseMin),
     note: payload.note || active.note || "",
     planningDeviationMinutes: deviationMinutes,
     status: deviationMinutes == null || deviationMinutes <= 30 ? "ready_for_approval" : "needs_review"

@@ -186,7 +186,7 @@ function provisionPendingUser(fields) {
 const { listModule, createModuleRow, updateModuleRow } = require("./modules/crud");
 const { lookupKboResolve } = require("./modules/kbo");
 const { createCustomerInvoice, workorderInvoicePayload } = require("./modules/customer-invoicing");
-const { runPaymentReminders } = require("./modules/payment-reminders");
+const { runPaymentReminders, reminderPolicy } = require("./modules/payment-reminders");
 const {
   createSetupIntent,
   billingQuote,
@@ -3021,7 +3021,7 @@ http.createServer(async (req, res) => {
       }
 
       if (action === "me/clock" && req.method === "GET") {
-        sendJson(res, 200, { ok: true, ...getMyClock(store, tenantId, user.id) });
+        sendJson(res, 200, { ok: true, ...getMyClock(store, tenantId, user.id), paidBreaks: tenant.clockingPrefs?.paidBreaks === true });
         return;
       }
 
@@ -4099,11 +4099,13 @@ http.createServer(async (req, res) => {
           note: String(body.note || ""),
           original: { clockIn: cur.clockIn, clockOut: cur.clockOut }
         }];
+        // Duur herberekenen conform het pauzebeleid van de tenant.
+        const corrPause = tenant.clockingPrefs?.paidBreaks === true ? 0 : clockBreakMinutes(existing.breaks);
         const updated = store.update("clocks", existing.id, {
           date: cur.date,
           clockIn: newIn,
           clockOut: newOut || null,
-          durationMinutes: newOut ? hhmmToMin(newOut) - hhmmToMin(newIn) : null,
+          durationMinutes: newOut ? Math.max(0, hhmmToMin(newOut) - hhmmToMin(newIn) - corrPause) : null,
           // Uitkloktijd gezet op een actieve prik → klaar voor goedkeuring; anders status behouden.
           status: newOut ? (["active", "in"].includes(existing.status) ? "ready_for_approval" : existing.status || "ready_for_approval") : "active",
           note: body.note !== undefined ? body.note : existing.note,
@@ -4304,8 +4306,20 @@ http.createServer(async (req, res) => {
         // Standaard-uurtarief: fallback voor werkbonnen zonder eigen tarief bij facturatie.
         if (body.defaultHourlyRate !== undefined) patch.defaultHourlyRate = Math.max(0, Number(body.defaultHourlyRate) || 0);
         // Automatische betaalherinneringen (opt-in; zie payment-reminders.js).
+        // Frequentie en maximum bepaalt het bedrijf zelf; reminderPolicy
+        // begrenst op veilige waarden (1-90 dagen, 1-10 herinneringen).
         if (body.autoReminders && typeof body.autoReminders === "object") {
-          patch.autoReminders = { enabled: body.autoReminders.enabled === true };
+          const policy = reminderPolicy(body.autoReminders);
+          patch.autoReminders = {
+            enabled: body.autoReminders.enabled === true,
+            intervalDays: policy.intervalDays,
+            maxReminders: policy.maxReminders
+          };
+        }
+        // Prikklok-beleid: tellen pauzes mee als betaalde werktijd?
+        // Geldt voor registraties vanaf de wijziging; bestaande blijven staan.
+        if (body.clockingPrefs && typeof body.clockingPrefs === "object") {
+          patch.clockingPrefs = { ...(tenant.clockingPrefs || {}), paidBreaks: body.clockingPrefs.paidBreaks === true };
         }
         // E-mailnotificatie-voorkeur (tenant-breed).
         if (body.notificationPrefs && typeof body.notificationPrefs === "object") {
