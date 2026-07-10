@@ -86,7 +86,7 @@
         window._wfpEnt = ent || null; // stash voor sectie-gating in 'Meer'
         if (!ent || ent.views === "*") return;
         const allowed = new Set(ent.views || []);
-        const alias = { clock: "clocking" };          // tab-naam → catalogus-view
+        const alias = { clock: "clocking", timesheet: "clocking" }; // tab-naam → catalogus-view
         const alwaysShow = new Set(["today", "more"]); // persoonlijke kern-tabs
         document.querySelectorAll(".emp-tab[data-view]").forEach(a => {
           const v = a.getAttribute("data-view");
@@ -171,8 +171,12 @@
     <div class="emp-loading">Laden…</div>
   </main>
 
-  <!-- Bottom tab bar -->
+  <!-- Bottom tab bar (mobiel) · zijnav (pc) -->
   <nav class="emp-tabbar" aria-label="Hoofdnavigatie">
+    <div class="emp-side-brand emp-desk-only">
+      <div class="emp-side-brand-mark">M</div>
+      <div><div class="emp-side-brand-name">Monargo One</div><div class="emp-side-brand-sub" id="empSideBrandSub">Mijn werkplek</div></div>
+    </div>
     <button class="emp-tab active" data-view="today">
       <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
       <span data-i18n="emp.tab.today">Vandaag</span>
@@ -189,9 +193,27 @@
       <svg viewBox="0 0 24 24"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
       <span data-i18n="emp.tab.leaves">Verlof</span>
     </button>
+    <button class="emp-tab emp-tab-extra" data-view="workorders">
+      <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+      <span data-term="jobPlural">Werkbonnen</span>
+    </button>
+    <button class="emp-tab emp-tab-extra" data-view="expenses">
+      <svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
+      <span data-i18n="emp.tab.expenses">Onkosten</span>
+    </button>
+    <button class="emp-tab emp-tab-extra" data-view="messages">
+      <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+      <span data-i18n="emp.tab.messages">Berichten</span>
+    </button>
+    <button class="emp-tab emp-tab-extra" data-view="timesheet">
+      <svg viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zm-7-1c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm.5-8H11v3.5l2.6 1.56.75-1.23-1.85-1.1V10z"/></svg>
+      <span data-i18n="emp.tab.timesheet">Tijdregistratie</span>
+    </button>
     <button class="emp-tab" data-view="more">
-      <svg viewBox="0 0 24 24"><path d="M6 10c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
-      <span data-i18n="emp.tab.more">Meer</span>
+      <svg class="emp-mob-only" viewBox="0 0 24 24"><path d="M6 10c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+      <svg class="emp-desk-only" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+      <span class="emp-mob-only" data-i18n="emp.tab.more">Meer</span>
+      <span class="emp-desk-only" data-i18n="emp.tab.profile">Profiel</span>
     </button>
   </nav>
 </div>
@@ -369,6 +391,9 @@
 .emp-tab.active { color: var(--wf-blue); }
 .emp-tab-clock { color: var(--wf-blue); }
 .emp-tab-clock.clocked-in { color: var(--wf-green); }
+/* Extra module-tabs en desktop-elementen: enkel zichtbaar in de pc-view */
+.emp-tab-extra { display: none; }
+.emp-desk-only { display: none; }
 
 /* ── Cards ──────────────────────────────────── */
 .emp-card {
@@ -644,8 +669,9 @@
 
 /* ── Volwaardige pc-view (kantoor-medewerkers): zijnav links, brede inhoud ──
    Zelfde structuur als de andere desktop-portalen; mobiel en tablet blijven
-   exact zoals ze waren. */
-@media (min-width: 1100px) {
+   exact zoals ze waren. 1024px zodat ook laptops met 125% schaling de
+   pc-view krijgen. */
+@media (min-width: 1024px) {
   .emp-layout {
     max-width: none;
     display: grid;
@@ -669,7 +695,24 @@
     border-top: none; border-bottom: none;
   }
   .emp-header { grid-area: header; padding: 16px 32px; }
-  .emp-main { grid-area: main; padding: 28px 36px 40px; max-width: 1080px; width: 100%; }
+  .emp-header .emp-logo-mark { display: none; }
+  .emp-main { grid-area: main; padding: 28px 36px 40px; max-width: 1200px; width: 100%; }
+  /* Alle modules passen in de zijnav: extra tabs tonen, mobiel-only weg */
+  .emp-tab-extra { display: flex; }
+  .emp-mob-only { display: none !important; }
+  .emp-desk-only { display: revert; }
+  .emp-side-brand {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 4px 16px; margin-bottom: 6px;
+    border-bottom: 1px solid rgba(255,255,255,.10);
+  }
+  .emp-side-brand-mark {
+    width: 32px; height: 32px; border-radius: 9px; background: var(--wf-blue);
+    color: #fff; display: grid; place-items: center; font-weight: 600; font-size: 13px;
+    flex-shrink: 0; box-shadow: 0 4px 12px rgba(0,113,227,.35);
+  }
+  .emp-side-brand-name { font-size: 14px; font-weight: 600; color: #fff; letter-spacing: -.2px; }
+  .emp-side-brand-sub { font-size: 10.5px; color: rgba(255,255,255,.55); margin-top: 1px; }
   .emp-tab {
     flex: 0 0 auto;
     flex-direction: row;
@@ -1772,8 +1815,9 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
     } catch (_) {}
 
     main.innerHTML = `
-<div style="font-size:16px;font-weight:600;margin-bottom:12px;">Meer</div>
-<div class="emp-card">
+<div class="emp-mob-only" style="font-size:16px;font-weight:600;margin-bottom:12px;">Meer</div>
+<div class="emp-desk-only" style="font-size:20px;font-weight:600;letter-spacing:-.3px;margin-bottom:14px;" data-i18n="emp.more.profileTitle">Profiel & instellingen</div>
+<div class="emp-card emp-mob-only">
   ${viewEnabled("workorders") ? `<div class="emp-list-item" id="empMoreWO" style="cursor:pointer;">
     <div class="emp-list-icon"><svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg></div>
     <div class="emp-list-info"><div class="emp-list-title">${(window.wfpTerms && window.wfpTerms.t("jobPlural")) || "Werkbonnen"}</div><div class="emp-list-sub">Mijn ${((window.wfpTerms && window.wfpTerms.t("jobPlural")) || "werkbonnen").toLowerCase()} bekijken</div></div>
