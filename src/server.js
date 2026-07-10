@@ -124,10 +124,12 @@ function enrichClock(c) {
   const date = c.date || String(c.clockedIn || "").slice(0, 10) || null;
   const clockIn = hhmm(c.clockIn) || (c.clockedIn ? hhmm(String(c.clockedIn).slice(11, 16)) : null);
   const clockOut = hhmm(c.clockOut) || (c.clockedOut ? hhmm(String(c.clockedOut).slice(11, 16)) : null);
+  const pauseMin = c.breakMinutes ?? clockBreakMinutes(c.breaks);
   const durationMinutes = c.durationMinutes
-    ?? (clockIn && clockOut ? Math.max(0, hhmmToMin(clockOut) - hhmmToMin(clockIn)) : null);
+    ?? (clockIn && clockOut ? Math.max(0, hhmmToMin(clockOut) - hhmmToMin(clockIn) - pauseMin) : null);
   return {
     ...c, date, clockIn, clockOut, durationMinutes,
+    breakMinutes: pauseMin,
     clockedIn: date && clockIn ? `${date}T${clockIn}:00` : null,
     clockedOut: date && clockOut ? `${date}T${clockOut}:00` : null
   };
@@ -206,7 +208,19 @@ const { readiness, applyKbo, createDemoGoldenPath } = require("./modules/golden-
 const { SECTORS, TEAM_SIZES, isValidSector, publicSectors, sectorByKey, terminologyFor } = require("./modules/sectors");
 const { availableWidgets, renderWidgets, sanitizeKeys: sanitizeWidgetKeys } = require("./modules/dashboards");
 const { todayPayload, completeWorkorder, attachWorkorderPhoto, signWorkorder, syncMobileQueue } = require("./modules/mobile");
-const { clockIn, clockOut, approveExpense, managementReport } = require("./modules/operations");
+const { clockIn, clockOut, breakStart, breakStop, approveExpense, managementReport } = require("./modules/operations");
+const { breakMinutes: clockBreakMinutes } = require("./modules/clocking-rules");
+
+// Widget-catalogus voor de medewerker-startpagina. `view` koppelt een widget
+// aan een module-view zodat entitlements bepalen wat kiesbaar is.
+const EMP_HOME_WIDGETS = [
+  { key: "clock", label: "Prikklok & vandaag", view: "clocking" },
+  { key: "quickactions", label: "Snelacties", view: null },
+  { key: "urgent", label: "Urgente werkbonnen", view: "workorders" },
+  { key: "overview", label: "Mijn overzicht", view: null },
+  { key: "leavebalance", label: "Verlofsaldo", view: "leaves" },
+  { key: "notifications", label: "Ongelezen meldingen", view: null }
+];
 const { leaveConflictOn } = require("./modules/planning-rules");
 const { listIntegrations, connectIntegration, updateMapping, runSync, retrySync, listProviders, runRobawsDocSync } = require("./modules/integrations");
 const { commissionOverview, publicReseller, commissionPctFor } = require("./modules/resellers");
@@ -3128,6 +3142,44 @@ http.createServer(async (req, res) => {
         sendJson(res, 200, { ok: true, row: clockOut(store, tenant, { userId: user.id }, user) });
         return;
       }
+      // Pauze op de actieve prikking: netto gewerkte tijd = bruto - pauzes.
+      if (action === "me/clock/break/start" && req.method === "POST") {
+        sendJson(res, 200, { ok: true, row: breakStart(store, tenant, { userId: user.id }, user) });
+        return;
+      }
+      if (action === "me/clock/break/stop" && req.method === "POST") {
+        sendJson(res, 200, { ok: true, row: breakStop(store, tenant, { userId: user.id }, user) });
+        return;
+      }
+
+      // Startpagina-widgets van de medewerker: de beheerder bepaalt het
+      // standaardtemplate (Instellingen), de medewerker mag zelf een eigen
+      // selectie kiezen; entitlements filteren wat beschikbaar is.
+      if (action === "me/home-config" && req.method === "GET") {
+        const ent = user.role === "super_admin"
+          ? { views: "*" }
+          : resolveTenantModules(store, tenant);
+        const available = EMP_HOME_WIDGETS.filter(w => !w.view || ent.views === "*" || (ent.views || []).includes(w.view));
+        const availKeys = new Set(available.map(w => w.key));
+        const template = (tenant.employeeHomeTemplate || []).filter(k => availKeys.has(k));
+        const personal = Array.isArray(user.homeWidgets) ? user.homeWidgets.filter(k => availKeys.has(k)) : null;
+        sendJson(res, 200, { ok: true, available, template: template.length ? template : available.map(w => w.key), personal });
+        return;
+      }
+      if (action === "me/home-config" && req.method === "POST") {
+        assertHumanUser(user);
+        const body = await readBody(req);
+        const validKeys = new Set(EMP_HOME_WIDGETS.map(w => w.key));
+        let homeWidgets = null; // null = terugvallen op het bedrijfstemplate
+        if (Array.isArray(body.widgets)) {
+          homeWidgets = body.widgets.filter(k => validKeys.has(k));
+          if (!homeWidgets.length) return sendJson(res, 400, { ok: false, error: "Kies minstens één blok, of herstel de bedrijfsstandaard" });
+        }
+        store.update("users", user.id, { homeWidgets });
+        store.audit({ actor: user.email, tenantId, action: "home_config_updated", area: "settings", detail: homeWidgets ? homeWidgets.join(",") : "standaard" });
+        sendJson(res, 200, { ok: true, personal: homeWidgets });
+        return;
+      }
 
       // me/expenses POST · medewerker dient onkosten in
       if (action === "me/expenses" && req.method === "POST") {
@@ -4242,6 +4294,13 @@ http.createServer(async (req, res) => {
         const allowed = ["name", "vatNumber", "address", "contactEmail", "phone", "invoiceProfile"];
         const patch = {};
         allowed.forEach(k => { if (body[k] !== undefined) patch[k] = body[k]; });
+        // Standaardtemplate voor de medewerker-startpagina (widget-keys).
+        if (body.employeeHomeTemplate !== undefined) {
+          const validKeys = new Set(EMP_HOME_WIDGETS.map(w => w.key));
+          const tpl = Array.isArray(body.employeeHomeTemplate) ? body.employeeHomeTemplate.filter(k => validKeys.has(k)) : [];
+          if (!tpl.length) return sendJson(res, 400, { ok: false, error: "Kies minstens één blok voor de startpagina" });
+          patch.employeeHomeTemplate = tpl;
+        }
         // Standaard-uurtarief: fallback voor werkbonnen zonder eigen tarief bij facturatie.
         if (body.defaultHourlyRate !== undefined) patch.defaultHourlyRate = Math.max(0, Number(body.defaultHourlyRate) || 0);
         // Automatische betaalherinneringen (opt-in; zie payment-reminders.js).

@@ -5214,6 +5214,29 @@ ${categories.map(cat => `
     </div>
   </div>
   <div class="adm-card">
+    <div class="adm-card-header"><h3 class="adm-card-title">Startpagina medewerkers</h3></div>
+    <div class="adm-card-body">
+      <p style="font-size:12.5px;color:var(--gray-500);margin:0 0 12px;">Bepaal welke blokken medewerkers standaard op hun startpagina zien. Elke medewerker kan daarnaast een eigen selectie kiezen via "Aanpassen" in de app.</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;">
+        ${(() => {
+          const HOME_WIDGETS = [
+            ["clock", "Prikklok & vandaag"], ["quickactions", "Snelacties"], ["urgent", "Urgente werkbonnen"],
+            ["overview", "Mijn overzicht"], ["leavebalance", "Verlofsaldo"], ["notifications", "Ongelezen meldingen"]
+          ];
+          const tpl = tenant.employeeHomeTemplate || HOME_WIDGETS.map(w => w[0]);
+          return HOME_WIDGETS.map(([key, label]) => `<label style="display:flex;align-items:center;gap:8px;font-size:13px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;cursor:pointer;">
+            <input type="checkbox" class="adm-ehw" value="${key}" ${tpl.includes(key) ? "checked" : ""}>
+            <span>${label}</span>
+          </label>`).join("");
+        })()}
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap;">
+        <button type="button" class="adm-btn adm-btn-primary adm-btn-sm" id="admEhwSave">Template opslaan</button>
+        <span id="admEhwMsg" style="font-size:12.5px;color:var(--wf-green);"></span>
+      </div>
+    </div>
+  </div>
+  <div class="adm-card">
     <div class="adm-card-header"><h3 class="adm-card-title">Abonnement &amp; plan</h3></div>
     <div class="adm-card-body">
       <div style="display:flex;flex-direction:column;gap:10px;">
@@ -5440,6 +5463,21 @@ ${categories.map(cat => `
       } catch (err) {
         msgEl.style.cssText = "display:block;background:var(--wf-red-l);color:var(--wf-red);padding:8px 12px;border-radius:8px;font-size:13px;margin-bottom:8px;";
         msgEl.textContent = err.message;
+      }
+    });
+
+    // Standaardtemplate voor de medewerker-startpagina
+    document.getElementById("admEhwSave")?.addEventListener("click", async () => {
+      const msg = document.getElementById("admEhwMsg");
+      const picked = [...document.querySelectorAll(".adm-ehw:checked")].map(c => c.value);
+      try {
+        await api("PATCH", "/settings", { employeeHomeTemplate: picked });
+        msg.style.color = "var(--wf-green)";
+        msg.textContent = "Template opgeslagen · geldt voor medewerkers zonder eigen selectie";
+        setTimeout(() => { msg.textContent = ""; }, 4000);
+      } catch (err) {
+        msg.style.color = "var(--wf-red)";
+        msg.textContent = err.message;
       }
     });
 

@@ -58,13 +58,32 @@ function getMyClock(store, tenantId, userId) {
     .sort((a, b) => String(b.clockedIn || "").localeCompare(String(a.clockedIn || "")))
     .slice(0, 30);
 
-  const active = clocks.find(c => c.status === "active" || c.status === "in" || !c.clockedOut) || null;
   const today = new Date().toISOString().slice(0, 10);
+  // Enkel een prikking van vandaag telt als actief; verweesde oude rijen
+  // worden bij de eerstvolgende in-/uitklok automatisch afgesloten.
+  const active = clocks.find(c => (c.date || "").startsWith(today) && !c.clockedOut) || null;
+  const openBreak = active ? (active.breaks || []).find(b => !b.end) || null : null;
+  const breakMin = (breaks, nowMin) => (breaks || []).reduce((s, b) => {
+    const p = t => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(t || "")); return m ? Number(m[1]) * 60 + Number(m[2]) : null; };
+    const st = p(b.start); if (st == null) return s;
+    const en = b.end ? p(b.end) : nowMin;
+    return en == null ? s : s + Math.max(0, en - st);
+  }, 0);
+  const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
   const todayHours = clocks
     .filter(c => (c.date || c.clockedIn || "").startsWith(today) && c.clockedIn && c.clockedOut)
-    .reduce((sum, c) => sum + Math.max(0, (new Date(c.clockedOut) - new Date(c.clockedIn)) / 3600000), 0);
+    .reduce((sum, c) => sum + (c.durationMinutes != null
+      ? Number(c.durationMinutes) / 60
+      : Math.max(0, (new Date(c.clockedOut) - new Date(c.clockedIn)) / 3600000)), 0);
 
-  return { clocks, active, todayHours: Math.round(todayHours * 10) / 10 };
+  return {
+    clocks,
+    active,
+    onBreak: !!openBreak,
+    breakSince: openBreak ? openBreak.start : null,
+    activeBreakMinutes: active ? breakMin(active.breaks, nowMin) : 0,
+    todayHours: Math.round(todayHours * 10) / 10
+  };
 }
 
 // ── Employee: eigen onkosten ───────────────────────────────────────────────────
@@ -133,8 +152,16 @@ function getMyDashboard(store, tenantId, user) {
   const myShifts = store.list("shifts", tenantId)
     .filter(s => s.userId === user.id && s.date === today);
 
-  const activeClock = store.list("clocks", tenantId)
-    .find(c => c.userId === user.id && c.status === "in");
+  // Canoniek schema: een prikking van vandaag zonder clockOut is actief.
+  // (Voorheen werd op het oude status "in" gezocht, waardoor de startpagina
+  // altijd "niet ingeklokt" toonde en opnieuw inklokken op een 409 botste.)
+  const activeRaw = store.list("clocks", tenantId)
+    .find(c => c.userId === user.id && (c.date || "").startsWith(today) && !c.clockOut && !c.clockedOut);
+  const openBreak = activeRaw ? (activeRaw.breaks || []).find(b => !b.end) || null : null;
+  const activeClock = activeRaw ? {
+    ...activeRaw,
+    clockedIn: activeRaw.date && activeRaw.clockIn ? `${activeRaw.date}T${activeRaw.clockIn}:00` : activeRaw.clockedIn || null
+  } : null;
 
   const pendingExpenses = store.list("expenses", tenantId)
     .filter(e => e.userId === user.id && ["pending", "ingediend"].includes(e.status)).length;
@@ -164,6 +191,8 @@ function getMyDashboard(store, tenantId, user) {
     todayShifts: myShifts,
     clockedIn: !!activeClock,
     activeClock: activeClock || null,
+    onBreak: !!openBreak,
+    breakSince: openBreak ? openBreak.start : null,
     pendingExpenses,
     openWorkorders,
     urgentWorkorders,
@@ -186,7 +215,7 @@ function getManagerDashboard(store, tenantId, manager) {
   const unplanned = team.filter(u => !plannedIds.has(u.id));
 
   const clockedIn = store.list("clocks", tenantId)
-    .filter(c => c.status === "in" && team.some(u => u.id === c.userId));
+    .filter(c => (c.date || "").startsWith(today) && !c.clockOut && !c.clockedOut && team.some(u => u.id === c.userId));
 
   const pendingLeaves = store.list("leaves", tenantId)
     .filter(l => l.status === "aangevraagd");

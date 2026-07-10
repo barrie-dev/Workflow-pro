@@ -9,6 +9,23 @@ const { verifyClockGeo } = require("./geo");
 
 const MAX_CLOCK_MINUTES = 16 * 60;
 
+// Pauzeminuten van een prikking: som van afgesloten pauzes; een nog open
+// pauze telt mee tot `untilMinutes` (bv. het uitklok-moment).
+function safeMinutes(hhmmStr) {
+  const m = /^([01]?\d|2[0-3]):([0-5]\d)$/.exec(String(hhmmStr || ""));
+  return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+}
+
+function breakMinutes(breaks, untilMinutes = null) {
+  return (breaks || []).reduce((sum, b) => {
+    const start = safeMinutes(b.start);
+    if (start == null) return sum;
+    const end = b.end ? safeMinutes(b.end) : untilMinutes;
+    if (end == null) return sum;
+    return sum + Math.max(0, end - start);
+  }, 0);
+}
+
 function clockWindowSafe(clock) {
   return windowFromTimesSafe(clock.clockIn, clock.clockOut);
 }
@@ -107,9 +124,17 @@ function normalizeClockOut(store, tenantId, active, payload, fallbackTime) {
     ? Math.abs(window.start - shiftWindow.start) + Math.abs(window.end - shiftWindow.end)
     : null;
 
+  // Pauzes: nog open pauze wordt afgesloten op het uitklok-moment; de netto
+  // duur (excl. pauze) is wat richting goedkeuring/loon gaat.
+  const closedBreaks = (active.breaks || []).map(b => (b.end ? b : { ...b, end: clockOut }));
+  const pauseMin = breakMinutes(closedBreaks);
+  const gross = window.end - window.start;
+
   return {
     clockOut,
-    durationMinutes: window.end - window.start,
+    breaks: closedBreaks,
+    breakMinutes: pauseMin,
+    durationMinutes: Math.max(0, gross - pauseMin),
     note: payload.note || active.note || "",
     planningDeviationMinutes: deviationMinutes,
     status: deviationMinutes == null || deviationMinutes <= 30 ? "ready_for_approval" : "needs_review"
@@ -164,4 +189,4 @@ function clockingInsights(clocks, shifts = []) {
   };
 }
 
-module.exports = { normalizeClockIn, normalizeClockOut, clockingInsights };
+module.exports = { normalizeClockIn, normalizeClockOut, clockingInsights, breakMinutes };

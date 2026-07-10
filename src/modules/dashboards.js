@@ -52,7 +52,7 @@ const WIDGETS = [
   { key: "team_size", label: "Teamgrootte", type: "kpi", group: "Team", scope: "tenant", module: "employees", perm: "employees",
     compute: (s, t) => ({ value: s.list("users", t.id).filter(u => u.active !== false && !["tenant_admin", "super_admin"].includes(u.role)).length, sub: "actieve medewerkers" }) },
   { key: "clocked_in_now", label: "Nu ingeklokt", type: "kpi", group: "Team", scope: "tenant", module: "clockings", perm: "clockings",
-    compute: (s, t) => ({ value: s.list("clocks", t.id).filter(c => c.status === "in").length, sub: "aan het werk" }) },
+    compute: (s, t) => ({ value: s.list("clocks", t.id).filter(c => (c.date || "").startsWith(new Date().toISOString().slice(0, 10)) && !c.clockOut && !c.clockedOut).length, sub: "aan het werk" }) },
   { key: "open_workorders", label: "Open opdrachten (team)", type: "kpi", group: "Operaties", scope: "tenant", module: "workorders", perm: "workorders",
     compute: (s, t) => ({ value: s.list("workorders", t.id).filter(OPEN_WO).length, sub: "niet afgewerkt" }) },
   { key: "pending_leaves", label: "Verlofaanvragen", type: "kpi", group: "Team", scope: "tenant", module: "leaves", perm: "leaves",

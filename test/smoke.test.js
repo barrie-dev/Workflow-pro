@@ -907,6 +907,89 @@ test("prikklok: manuele registratie + correctie met audit-spoor", async () => {
   })).status, 404);
 });
 
+// ── Prikklok: eigen in/uit + pauzes + auto-afsluiten verweesde prikking ────────
+test("prikklok: medewerker klokt in, pauzeert en verweesde prikking sluit automatisch", async () => {
+  const mgr = await login("manager@demobouw.be", "Demo2026!");
+  const MH = { "Content-Type": "application/json", Authorization: `Bearer ${mgr.token}` };
+  // Verweesde actieve prikking van een vorige dag (uitklokken vergeten).
+  const orphan = await (await fetch(`${BASE}/api/tenants/t_demo/clocks/manual`, {
+    method: "POST", headers: MH,
+    body: JSON.stringify({ userId: "u_emp1", date: "2026-06-03", clockIn: "07:30" }),
+  })).json();
+  assert.equal(orphan.ok, true);
+
+  const jan = await login("jan@demobouw.be", "Demo2026!");
+  const H = { "Content-Type": "application/json", Authorization: `Bearer ${jan.token}` };
+
+  // Uitklokken zonder actieve prikking van vandaag: sluit de verweesde af i.p.v. 404.
+  const autoClose = await (await fetch(`${BASE}/api/tenants/t_demo/me/clock/out`, { method: "POST", headers: H })).json();
+  assert.equal(autoClose.ok, true);
+  assert.equal(autoClose.row.autoClosed, true, "verweesde prikking automatisch afgesloten");
+  assert.equal(autoClose.row.clockOut, "23:59");
+  assert.equal(autoClose.row.status, "needs_review", "auto-afgesloten prikking vraagt review");
+
+  // Inklokken werkt daarna gewoon.
+  const cin = await (await fetch(`${BASE}/api/tenants/t_demo/me/clock/in`, { method: "POST", headers: H, body: "{}" })).json();
+  assert.equal(cin.ok, true);
+  assert.equal(cin.row.status, "active");
+
+  // Startpagina-dashboard ziet de actieve prikking (canoniek schema).
+  const dash = await (await fetch(`${BASE}/api/tenants/t_demo/me/dashboard`, { headers: H })).json();
+  assert.equal(dash.clockedIn, true, "dashboard herkent actieve prikking op canoniek schema");
+
+  // Pauze starten → status zichtbaar; dubbel starten geweigerd; stoppen sluit af.
+  const b1 = await (await fetch(`${BASE}/api/tenants/t_demo/me/clock/break/start`, { method: "POST", headers: H })).json();
+  assert.equal(b1.ok, true);
+  const myClock = await (await fetch(`${BASE}/api/tenants/t_demo/me/clock`, { headers: H })).json();
+  assert.equal(myClock.onBreak, true, "me/clock toont lopende pauze");
+  assert.equal((await fetch(`${BASE}/api/tenants/t_demo/me/clock/break/start`, { method: "POST", headers: H })).status, 409, "dubbele pauze geweigerd");
+  const b2 = await (await fetch(`${BASE}/api/tenants/t_demo/me/clock/break/stop`, { method: "POST", headers: H })).json();
+  assert.equal(b2.ok, true);
+  assert.ok(b2.row.breaks[0].end, "pauze kreeg een eindtijd");
+  assert.equal((await fetch(`${BASE}/api/tenants/t_demo/me/clock/break/stop`, { method: "POST", headers: H })).status, 409, "stoppen zonder pauze geweigerd");
+});
+
+// ── Startpagina-widgets: admin-template + eigen keuze van de medewerker ────────
+test("startpagina: admin bepaalt template, medewerker kiest eigen selectie", async () => {
+  const jan = await login("jan@demobouw.be", "Demo2026!");
+  const H = { "Content-Type": "application/json", Authorization: `Bearer ${jan.token}` };
+  const cfg = await (await fetch(`${BASE}/api/tenants/t_demo/me/home-config`, { headers: H })).json();
+  assert.equal(cfg.ok, true);
+  assert.ok(cfg.available.length >= 1, "widget-catalogus beschikbaar");
+  assert.ok(Array.isArray(cfg.template), "template is een lijst");
+  assert.equal(cfg.personal, null, "geen eigen selectie = bedrijfsstandaard");
+
+  // Admin stelt het standaardtemplate in.
+  const adm = await login("admin@demobouw.be", "Demo2026!");
+  const AH = { "Content-Type": "application/json", Authorization: `Bearer ${adm.token}` };
+  const set = await (await fetch(`${BASE}/api/tenants/t_demo/settings`, {
+    method: "PATCH", headers: AH, body: JSON.stringify({ employeeHomeTemplate: ["clock", "overview"] }),
+  })).json();
+  assert.equal(set.ok, true);
+  const cfg2 = await (await fetch(`${BASE}/api/tenants/t_demo/me/home-config`, { headers: H })).json();
+  assert.deepEqual(cfg2.template, ["clock", "overview"], "medewerker krijgt het admin-template");
+
+  // Medewerker kiest een eigen selectie; onbekende keys worden genegeerd.
+  const save = await (await fetch(`${BASE}/api/tenants/t_demo/me/home-config`, {
+    method: "POST", headers: H, body: JSON.stringify({ widgets: ["leavebalance", "clock", "bestaat_niet"] }),
+  })).json();
+  assert.equal(save.ok, true);
+  assert.deepEqual(save.personal, ["leavebalance", "clock"]);
+  const cfg3 = await (await fetch(`${BASE}/api/tenants/t_demo/me/home-config`, { headers: H })).json();
+  assert.deepEqual(cfg3.personal, ["leavebalance", "clock"], "eigen selectie bewaard");
+
+  // Terug naar de bedrijfsstandaard.
+  const reset = await (await fetch(`${BASE}/api/tenants/t_demo/me/home-config`, {
+    method: "POST", headers: H, body: JSON.stringify({ widgets: null }),
+  })).json();
+  assert.equal(reset.ok, true);
+  assert.equal(reset.personal, null);
+  // Lege selectie is niet toegestaan.
+  assert.equal((await fetch(`${BASE}/api/tenants/t_demo/me/home-config`, {
+    method: "POST", headers: H, body: JSON.stringify({ widgets: ["bestaat_niet"] }),
+  })).status, 400, "selectie zonder geldige blokken geweigerd");
+});
+
 test("mfa: verify accepteert token-alias uit frontend contract", async () => {
   const sara = await login("sara@demobouw.be", "Demo2026!");
   const headers = { "Content-Type": "application/json", Authorization: `Bearer ${sara.token}` };

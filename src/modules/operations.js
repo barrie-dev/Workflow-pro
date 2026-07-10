@@ -1,5 +1,5 @@
 const { planningInsights } = require("./planning-rules");
-const { clockingInsights, normalizeClockIn, normalizeClockOut } = require("./clocking-rules");
+const { clockingInsights, normalizeClockIn, normalizeClockOut, breakMinutes } = require("./clocking-rules");
 const { expenseInsights, validateExpenseForApproval } = require("./expense-rules");
 const { workorderInsights } = require("./workorder-rules");
 const { isModuleEnabled } = require("./entitlements");
@@ -35,7 +35,44 @@ function durationHours(clock) {
   return Math.max(0, ((outHour * 60 + outMinute) - (inHour * 60 + inMinute)) / 60);
 }
 
+// Verweesde prikking (vergeten uit te klokken op een vorige dag): sluit af op
+// 23:59 van die dag met status needs_review, zodat de medewerker nooit vast
+// komt te zitten en de beheerder de tijd kan corrigeren.
+function closeStaleClocks(store, tenant, userId, actorEmail) {
+  const todayStr = today();
+  // Zowel canonieke rijen (date + clockIn) als legacy-rijen (ISO clockedIn
+  // zonder date) van vóór vandaag worden afgesloten.
+  const stale = store.list("clocks", tenant.id).filter(c => {
+    if (c.userId !== userId || c.clockOut || c.clockedOut) return false;
+    const d = c.date || String(c.clockedIn || "").slice(0, 10);
+    return d && d < todayStr;
+  });
+  stale.forEach(c => {
+    const date = c.date || String(c.clockedIn || "").slice(0, 10);
+    const clockInHH = c.clockIn || String(c.clockedIn || "").slice(11, 16) || "00:00";
+    const [inH, inM] = clockInHH.split(":").map(Number);
+    const gross = Math.max(0, (23 * 60 + 59) - (inH * 60 + inM));
+    const closedBreaks = (c.breaks || []).map(b => (b.end ? b : { ...b, end: "23:59" }));
+    const pauseMin = breakMinutes(closedBreaks);
+    store.update("clocks", c.id, {
+      date,
+      clockIn: clockInHH,
+      clockOut: "23:59",
+      breaks: closedBreaks,
+      breakMinutes: pauseMin,
+      durationMinutes: Math.max(0, gross - pauseMin),
+      status: "needs_review",
+      autoClosed: true,
+      note: [c.note, "Automatisch afgesloten: uitklokken vergeten"].filter(Boolean).join(" · ")
+    });
+    store.audit({ actor: actorEmail, tenantId: tenant.id, action: "clock_out_autoclose", area: "clockings", detail: c.id });
+  });
+  return stale.length;
+}
+
 function clockIn(store, tenant, payload, actor) {
+  // Een blijven hangen prikking van gisteren mag inklokken vandaag niet blokkeren.
+  closeStaleClocks(store, tenant, payload.userId || actor.id, actor.email);
   const normalized = normalizeClockIn(store, tenant.id, payload, actor, new Date().toTimeString().slice(0, 5));
   const row = store.insert("clocks", {
     id: `clock_${Date.now()}_${Math.random().toString(16).slice(2)}`,
@@ -65,6 +102,15 @@ function clockOut(store, tenant, payload, actor) {
   const date = payload.date || today();
   const active = store.list("clocks", tenant.id).find(clock => clock.userId === userId && clock.date === date && !clock.clockOut);
   if (!active) {
+    // Geen prikking van vandaag, maar mogelijk wel een verweesde van eerder:
+    // sluit die netjes af zodat de knop niet in een dood spoor eindigt.
+    const closed = closeStaleClocks(store, tenant, userId, actor.email);
+    if (closed > 0) {
+      const latest = store.list("clocks", tenant.id)
+        .filter(c => c.userId === userId && c.autoClosed)
+        .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")))[0];
+      return latest;
+    }
     const error = new Error("Geen actieve tijdregistratie gevonden");
     error.status = 404;
     throw error;
@@ -73,6 +119,36 @@ function clockOut(store, tenant, payload, actor) {
   const row = store.update("clocks", active.id, normalized);
   store.audit({ actor: actor.email, tenantId: tenant.id, action: "clock_out", area: "clockings", detail: row.id });
   maybeAutoCiaw(store, tenant, row, "out");
+  return row;
+}
+
+// ── Pauzes op de actieve prikking ─────────────────────────────
+function findActiveClock(store, tenantId, userId) {
+  return store.list("clocks", tenantId).find(c => c.userId === userId && c.date === today() && !c.clockOut) || null;
+}
+
+function breakStart(store, tenant, payload, actor) {
+  const userId = payload.userId || actor.id;
+  const active = findActiveClock(store, tenant.id, userId);
+  if (!active) { const e = new Error("Geen actieve tijdregistratie · klok eerst in"); e.status = 404; throw e; }
+  const breaks = active.breaks || [];
+  if (breaks.some(b => !b.end)) { const e = new Error("Er loopt al een pauze"); e.status = 409; throw e; }
+  const row = store.update("clocks", active.id, { breaks: [...breaks, { start: new Date().toTimeString().slice(0, 5), end: null }] });
+  store.audit({ actor: actor.email, tenantId: tenant.id, action: "clock_break_start", area: "clockings", detail: active.id });
+  return row;
+}
+
+function breakStop(store, tenant, payload, actor) {
+  const userId = payload.userId || actor.id;
+  const active = findActiveClock(store, tenant.id, userId);
+  if (!active) { const e = new Error("Geen actieve tijdregistratie gevonden"); e.status = 404; throw e; }
+  const breaks = active.breaks || [];
+  const open = breaks.find(b => !b.end);
+  if (!open) { const e = new Error("Er loopt geen pauze"); e.status = 409; throw e; }
+  const now = new Date().toTimeString().slice(0, 5);
+  const updated = breaks.map(b => (b === open ? { ...b, end: now } : b));
+  const row = store.update("clocks", active.id, { breaks: updated, breakMinutes: breakMinutes(updated) });
+  store.audit({ actor: actor.email, tenantId: tenant.id, action: "clock_break_stop", area: "clockings", detail: active.id });
   return row;
 }
 
@@ -132,4 +208,4 @@ function managementReport(store, tenantId) {
   };
 }
 
-module.exports = { clockIn, clockOut, approveExpense, managementReport };
+module.exports = { clockIn, clockOut, breakStart, breakStop, approveExpense, managementReport };

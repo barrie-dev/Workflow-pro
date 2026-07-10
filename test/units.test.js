@@ -1155,3 +1155,39 @@ test("templates: renderDocument werkbon = rapport (checklist + handtekening), ge
   assert.match(html, /Handtekening klant/);
   assert.ok(!/TOTAAL/.test(html), "rapport heeft geen totalen-tabel");
 });
+
+// ── Prikklok: pauzes (breaks) en netto duur ────────────────────────────────────
+const { breakMinutes, normalizeClockOut } = require("../src/modules/clocking-rules");
+
+test("breaks: breakMinutes telt afgesloten en lopende pauzes", () => {
+  assert.equal(breakMinutes([]), 0);
+  assert.equal(breakMinutes([{ start: "10:00", end: "10:15" }]), 15);
+  assert.equal(breakMinutes([{ start: "10:00", end: "10:15" }, { start: "12:00", end: "12:30" }]), 45);
+  // Lopende pauze telt tot het meegegeven moment (bv. uitklokken om 13:00).
+  assert.equal(breakMinutes([{ start: "12:30", end: null }], 13 * 60), 30);
+  // Zonder eindmoment telt een lopende pauze niet mee (geen gok).
+  assert.equal(breakMinutes([{ start: "12:30", end: null }]), 0);
+  // Onzin-invoer wordt genegeerd i.p.v. te crashen.
+  assert.equal(breakMinutes([{ start: "geen-tijd", end: "12:00" }]), 0);
+});
+
+test("breaks: normalizeClockOut trekt pauzes af en sluit open pauze op uitklokmoment", () => {
+  const fakeStore = { list: () => [], get: () => null };
+  const active = { userId: "u1", date: "2026-07-10", clockIn: "08:00", breaks: [
+    { start: "10:00", end: "10:30" },
+    { start: "12:00", end: null }        // lopende pauze bij het uitklokken
+  ] };
+  const out = normalizeClockOut(fakeStore, "t1", active, { clockOut: "16:00" }, "16:00");
+  assert.equal(out.clockOut, "16:00");
+  assert.equal(out.breaks[1].end, "16:00", "open pauze afgesloten op uitklokmoment");
+  assert.equal(out.breakMinutes, 30 + 240, "30 min + lopende pauze 12:00-16:00");
+  assert.equal(out.durationMinutes, 480 - 270, "netto = bruto (8u) - pauze (4u30)");
+});
+
+test("breaks: prikking zonder pauzes houdt volledige duur", () => {
+  const fakeStore = { list: () => [], get: () => null };
+  const active = { userId: "u1", date: "2026-07-10", clockIn: "09:00" };
+  const out = normalizeClockOut(fakeStore, "t1", active, { clockOut: "17:00" }, "17:00");
+  assert.equal(out.durationMinutes, 480);
+  assert.equal(out.breakMinutes, 0);
+});

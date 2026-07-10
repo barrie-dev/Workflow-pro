@@ -430,6 +430,7 @@
   font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 980px;
 }
 .emp-clock-chip.on { background: var(--wf-green-l); color: var(--wf-green); }
+.emp-clock-chip.brk { background: var(--wf-yellow-l); color: var(--wf-yellow); }
 .emp-clock-chip.off { background: var(--gray-100); color: var(--muted); }
 .emp-clock-chip .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
 .emp-clock-chip.on .dot { animation: empPulse 1.6s ease-in-out infinite; }
@@ -444,6 +445,7 @@
 .emp-clock-btn:active { transform: scale(.97); }
 .emp-clock-btn-in  { background: var(--wf-blue); color: #fff; box-shadow: 0 8px 24px rgba(0,113,227,.32); }
 .emp-clock-btn-out { background: var(--wf-red);  color: #fff; box-shadow: 0 8px 24px rgba(220,38,38,.28); }
+.emp-clock-btn-brk { background: var(--surface); color: var(--ink); border: 1px solid var(--line-strong); margin-top: 8px; }
 .emp-clock-stats { display: flex; gap: 10px; margin-top: 22px; }
 .emp-clock-stat { flex: 1; background: var(--gray-50); border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
 .emp-clock-stat-val { font-size: 20px; font-weight: 600; color: var(--ink); letter-spacing: -.5px; font-variant-numeric: tabular-nums; }
@@ -912,12 +914,21 @@
     if (renders[view]) renders[view]();
   }
 
-  // ── Today ──────────────────────────────────────────────────
+  // ── Today (widget-gebaseerd: admin bepaalt het template, medewerker
+  //     kan een eigen selectie kiezen via "Aanpassen") ────────
+  function t9(key, fallback) { return window.wfpI18n ? window.wfpI18n.t(key, fallback) : fallback; }
+
+  async function breakAction(dir) {
+    await api("POST", dir === "start" ? "/me/clock/break/start" : "/me/clock/break/stop");
+    window.showToast && window.showToast(dir === "start" ? t9("emp.clock.breakStarted", "Pauze gestart") : t9("emp.clock.breakStopped", "Pauze beëindigd"), "success");
+  }
+
   async function renderToday() {
-    const [dash, balData, notifData] = await Promise.all([
+    const [dash, balData, notifData, cfg] = await Promise.all([
       api("GET", "/me/dashboard"),
       api("GET", "/me/leaves/balance").catch(() => null),
-      api("GET", "/me/notifications").catch(() => null)
+      api("GET", "/me/notifications").catch(() => null),
+      api("GET", "/me/home-config").catch(() => null)
     ]);
     const today = new Date();
     const dateStr = today.toLocaleDateString("nl-BE", { weekday: "long", day: "numeric", month: "long" });
@@ -925,25 +936,45 @@
     _clockActive = dash.clockedIn;
     updateClockTab();
 
-    const main = document.getElementById("empMain");
-    main.innerHTML = `
+    const clockLabel = dash.clockedIn ? t9("emp.clock.out", "Uitklokken") : t9("emp.clock.in", "Inklokken");
+    const widgets = {};
+
+    widgets.clock = `
 <div class="emp-card">
   <p class="emp-card-title">Vandaag</p>
   <div style="font-size:14px;color:var(--gray-500);margin-bottom:12px;">${dateStr}</div>
 
-  ${dash.clockedIn ? `
+  ${dash.clockedIn ? (dash.onBreak ? `
+  <div style="display:flex;align-items:center;gap:8px;background:var(--wf-yellow-l);border-radius:10px;padding:10px 12px;">
+    <span style="width:8px;height:8px;background:var(--wf-yellow);border-radius:50%;flex-shrink:0;"></span>
+    <div style="flex:1;">
+      <div style="font-size:13px;font-weight:600;color:var(--wf-yellow);">${t9("emp.clock.onBreak", "In pauze")}</div>
+      <div style="font-size:11px;color:var(--wf-yellow);">${t9("emp.clock.since", "Sinds")} ${esc(dash.breakSince || "-")}</div>
+    </div>
+  </div>` : `
   <div style="display:flex;align-items:center;gap:8px;background:var(--wf-green-l);border-radius:10px;padding:10px 12px;">
     <span style="width:8px;height:8px;background:var(--wf-green);border-radius:50%;flex-shrink:0;animation:pulse 2s infinite;"></span>
     <div style="flex:1;">
       <div style="font-size:13px;font-weight:600;color:var(--wf-green);">Je bent ingeklokt</div>
-      <div style="font-size:11px;color:var(--wf-green);">Sinds ${dash.activeClock?.clockedIn ? new Date(dash.activeClock.clockedIn).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}) : "-"}</div>
+      <div style="font-size:11px;color:var(--wf-green);">${t9("emp.clock.since", "Sinds")} ${dash.activeClock?.clockedIn ? new Date(dash.activeClock.clockedIn).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}) : "-"}</div>
     </div>
     <div id="empClockDuration" style="font-size:18px;font-weight:600;color:var(--wf-green);font-family:monospace;"></div>
-  </div>` : `
+  </div>`) : `
   <div style="display:flex;align-items:center;gap:8px;background:var(--gray-100);border-radius:10px;padding:10px 12px;">
     <span style="width:8px;height:8px;background:var(--gray-400);border-radius:50%;flex-shrink:0;"></span>
     <div style="font-size:13px;color:var(--gray-500);">Nog niet ingeklokt</div>
   </div>`}
+
+  <div style="display:flex;gap:8px;margin-top:12px;">
+    <button class="emp-action-btn ${dash.clockedIn ? "emp-action-btn-danger" : ""}" id="empHomeClockBtn" style="flex:1;flex-direction:row;gap:8px;padding:11px;">
+      <svg viewBox="0 0 24 24" style="width:18px;height:18px;"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
+      ${clockLabel}
+    </button>
+    ${dash.clockedIn ? `<button class="emp-action-btn" id="empHomeBreakBtn" style="flex:1;flex-direction:row;gap:8px;padding:11px;">
+      <svg viewBox="0 0 24 24" style="width:18px;height:18px;"><path d="${dash.onBreak ? "M8 5v14l11-7z" : "M6 19h4V5H6v14zm8-14v14h4V5h-4z"}"/></svg>
+      ${dash.onBreak ? t9("emp.clock.breakEnd", "Pauze beëindigen") : t9("emp.clock.breakStart", "Pauze starten")}
+    </button>` : ""}
+  </div>
 
   ${dash.todayShifts?.length ? `
   <div style="margin-top:14px;">
@@ -957,12 +988,13 @@
       </div>
     </div>`).join("")}
   </div>` : ""}
-</div>
+</div>`;
 
+    widgets.quickactions = `
 <div class="emp-action-row">
   <button class="emp-action-btn ${dash.clockedIn?"emp-action-btn-danger":""}" id="empActClock">
     <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
-    ${dash.clockedIn ? "Uitkloppen" : "Inkloppen"}
+    ${clockLabel}
   </button>
   <button class="emp-action-btn" id="empActWO">
     <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
@@ -976,18 +1008,19 @@
     <svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
     Onkosten
   </button>
-</div>
+</div>`;
 
-${dash.urgentWorkorders > 0 ? `
-<div style="background:var(--wf-red-l);border:1px solid var(--wf-red-l);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;" id="empUrgentWO">
+    widgets.urgent = dash.urgentWorkorders > 0 ? `
+<div style="background:var(--wf-red-l);border:1px solid var(--wf-red-l);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:12px;" id="empUrgentWO">
   <span class="adm-dot" style="background:var(--wf-red);width:12px;height:12px"></span>
   <div style="flex:1">
     <div style="font-size:13px;font-weight:600;color:var(--wf-red);">${dash.urgentWorkorders} urgente werkbon${dash.urgentWorkorders > 1 ? "nen" : ""}</div>
     <div style="font-size:12px;color:var(--wf-red);">Hoge prioriteit · actie vereist</div>
   </div>
   <svg viewBox="0 0 24 24" style="width:16px;fill:var(--wf-red);flex-shrink:0"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
-</div>` : ""}
+</div>` : "";
 
+    widgets.overview = `
 <div class="emp-card">
   <p class="emp-card-title">Mijn overzicht</p>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
@@ -1008,9 +1041,9 @@ ${dash.urgentWorkorders > 0 ? `
       <div style="font-size:11px;color:var(--gray-400);">Onkosten in behandeling</div>
     </div>
   </div>
-</div>
+</div>`;
 
-${balData ? (() => {
+    widgets.leavebalance = balData ? (() => {
   const pct = balData.quota > 0 ? Math.round((balData.remaining / balData.quota) * 100) : 0;
   const color = pct > 50 ? "var(--wf-green)" : pct > 20 ? "var(--wf-yellow)" : "var(--wf-red)";
   return `<div class="emp-card" style="cursor:pointer;" id="empLeaveBalCard">
@@ -1026,9 +1059,9 @@ ${balData ? (() => {
     <span>${balData.remaining} beschikbaar</span>
   </div>
 </div>`;
-})() : ""}
+})() : "";
 
-${(() => {
+    widgets.notifications = (() => {
   const unread = (notifData?.rows || []).filter(n => n.status !== "read").slice(0, 3);
   if (!unread.length) return "";
   const fmtT = iso => { if (!iso) return ""; const diff = Math.floor((Date.now()-new Date(iso))/60000); if (diff<60) return `${diff}m`; if (diff<1440) return `${Math.floor(diff/60)}u`; return new Date(iso).toLocaleDateString("nl-BE"); };
@@ -1047,8 +1080,73 @@ ${(() => {
     <div style="font-size:10.5px;color:var(--gray-400);flex-shrink:0;">${fmtT(n.createdAt)}</div>
   </div>`).join("")}
 </div>`;
-})()}`;
+})();
 
+    // Volgorde: eigen keuze van de medewerker → anders het bedrijfstemplate.
+    const availKeys = cfg ? cfg.available.map(w => w.key) : Object.keys(widgets);
+    const effective = (cfg && (cfg.personal || cfg.template)) || availKeys;
+    const shown = effective.filter(k => availKeys.includes(k) && widgets[k] !== undefined);
+
+    const cfgPanel = cfg ? `
+<div class="emp-card hidden" id="empHomeCfgPanel">
+  <p class="emp-card-title">${t9("emp.home.customizeTitle", "Startpagina aanpassen")}</p>
+  <div style="font-size:12px;color:var(--gray-500);margin:0 0 10px;">${cfg.personal ? t9("emp.home.ownChoice", "Je gebruikt nu je eigen selectie.") : t9("emp.home.companyDefault", "Je volgt nu de standaard van je bedrijf.")}</div>
+  <div style="display:flex;flex-direction:column;gap:6px;">
+    ${cfg.available.map(w => `<label style="display:flex;align-items:center;gap:9px;font-size:13px;border:1px solid var(--line);border-radius:9px;padding:9px 11px;cursor:pointer;">
+      <input type="checkbox" class="emp-hw" value="${esc(w.key)}" ${effective.includes(w.key) ? "checked" : ""}>
+      <span>${esc(w.label)}</span>
+    </label>`).join("")}
+  </div>
+  <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+    <button id="empHomeCfgSave" style="padding:9px 16px;background:var(--wf-blue);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">${t9("emp.home.save", "Opslaan")}</button>
+    ${cfg.personal ? `<button id="empHomeCfgReset" style="padding:9px 16px;background:var(--surface);color:var(--ink);border:1px solid var(--line-strong);border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">${t9("emp.home.useDefault", "Bedrijfsstandaard gebruiken")}</button>` : ""}
+  </div>
+</div>` : "";
+
+    const main = document.getElementById("empMain");
+    main.innerHTML = `
+${cfg ? `<div style="display:flex;justify-content:flex-end;margin-bottom:6px;">
+  <button id="empHomeCfgBtn" style="background:none;border:none;cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);padding:4px 8px;border-radius:8px;font-family:inherit;display:inline-flex;align-items:center;gap:5px;">
+    <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+    ${t9("emp.home.customize", "Aanpassen")}
+  </button>
+</div>` : ""}
+${shown.map(k => widgets[k]).join("\n")}
+${cfgPanel}`;
+
+    // Widget-configuratie
+    document.getElementById("empHomeCfgBtn")?.addEventListener("click", () => {
+      document.getElementById("empHomeCfgPanel")?.classList.toggle("hidden");
+    });
+    document.getElementById("empHomeCfgSave")?.addEventListener("click", async () => {
+      const picked = [...document.querySelectorAll(".emp-hw:checked")].map(c => c.value);
+      try {
+        await api("POST", "/me/home-config", { widgets: picked });
+        window.showToast && window.showToast(t9("emp.home.saved", "Startpagina opgeslagen"), "success");
+        renderToday();
+      } catch (e) { window.showToast(e.message, "error"); }
+    });
+    document.getElementById("empHomeCfgReset")?.addEventListener("click", async () => {
+      try {
+        await api("POST", "/me/home-config", { widgets: null });
+        window.showToast && window.showToast(t9("emp.home.resetDone", "Bedrijfsstandaard hersteld"), "success");
+        renderToday();
+      } catch (e) { window.showToast(e.message, "error"); }
+    });
+
+    // Prikklok-acties (vandaag-kaart + snelactie)
+    document.getElementById("empHomeClockBtn")?.addEventListener("click", async () => {
+      try {
+        await clockAction(dash.clockedIn ? "out" : "in");
+        renderToday();
+      } catch(e) { window.showToast(e.message, "error"); }
+    });
+    document.getElementById("empHomeBreakBtn")?.addEventListener("click", async () => {
+      try {
+        await breakAction(dash.onBreak ? "stop" : "start");
+        renderToday();
+      } catch(e) { window.showToast(e.message, "error"); }
+    });
     document.getElementById("empActClock")?.addEventListener("click", async () => {
       try {
         await clockAction(dash.clockedIn ? "out" : "in");
@@ -1094,14 +1192,28 @@ ${(() => {
     _clockActive = !!data.active;
     updateClockTab();
 
-    let elapsed = 0;
-    if (data.active) {
-      elapsed = (Date.now() - new Date(data.active.clockedIn).getTime()) / 3600000;
-    }
+    // Live pauzeminuten van de actieve prikking (afgesloten + lopende pauze).
+    const liveBreakMin = () => {
+      if (!data.active) return 0;
+      const p = s => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(s || "")); return m ? Number(m[1]) * 60 + Number(m[2]) : null; };
+      const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+      return (data.active.breaks || []).reduce((sum, b) => {
+        const st = p(b.start); if (st == null) return sum;
+        const en = b.end ? p(b.end) : nowMin;
+        return sum + Math.max(0, en - st);
+      }, 0);
+    };
+    const netElapsed = () => data.active
+      ? Math.max(0, (Date.now() - new Date(data.active.clockedIn).getTime()) / 3600000 - liveBreakMin() / 60)
+      : 0;
 
     const R = 108, CIRC = 2 * Math.PI * R;                 // ring-omtrek
     const WORKDAY = 8;                                       // referentie voor de voortgangsring
     const startLabel = data.active ? new Date(data.active.clockedIn).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}) : "";
+    const chipState = data.active ? (data.onBreak ? "brk" : "on") : "off";
+    const chipText = data.active
+      ? (data.onBreak ? `${t9("emp.clock.onBreak", "In pauze")} ${t9("emp.clock.since", "sinds").toLowerCase()} ${esc(data.breakSince || "-")}` : `Actief sinds ${startLabel}`)
+      : "Niet ingeklokt";
 
     const main = document.getElementById("empMain");
     main.innerHTML = `
@@ -1115,17 +1227,23 @@ ${(() => {
     <div class="emp-clock-center">
       <div class="emp-clock-time" id="empLiveClock">--:--</div>
       <div class="emp-clock-date">${new Date().toLocaleDateString("nl-BE",{weekday:"long",day:"numeric",month:"long"})}</div>
-      <div class="emp-clock-chip ${data.active ? "on" : "off"}"><span class="dot"></span>${data.active ? `Actief sinds ${startLabel}` : "Niet ingeklokt"}</div>
+      <div class="emp-clock-chip ${chipState}"><span class="dot"></span>${chipText}</div>
     </div>
   </div>
 
   <button class="emp-clock-btn ${data.active ? "emp-clock-btn-out" : "emp-clock-btn-in"}" id="empClockToggle">
     <svg viewBox="0 0 24 24"><path d="${data.active ? "M6 6h12v12H6z" : "M8 5v14l11-7z"}"/></svg>
-    ${data.active ? "Uitkloppen" : "Inkloppen"}
+    ${data.active ? t9("emp.clock.out", "Uitklokken") : t9("emp.clock.in", "Inklokken")}
   </button>
+  ${data.active ? `
+  <button class="emp-clock-btn emp-clock-btn-brk" id="empBreakToggle">
+    <svg viewBox="0 0 24 24"><path d="${data.onBreak ? "M8 5v14l11-7z" : "M6 19h4V5H6v14zm8-14v14h4V5h-4z"}"/></svg>
+    ${data.onBreak ? t9("emp.clock.breakEnd", "Pauze beëindigen") : t9("emp.clock.breakStart", "Pauze starten")}
+  </button>` : ""}
 
   <div class="emp-clock-stats">
-    <div class="emp-clock-stat"><div class="emp-clock-stat-val" id="empSession">${elapsed.toFixed(1)} u</div><div class="emp-clock-stat-lbl">Huidige sessie</div></div>
+    <div class="emp-clock-stat"><div class="emp-clock-stat-val" id="empSession">${netElapsed().toFixed(1)} u</div><div class="emp-clock-stat-lbl">Huidige sessie</div></div>
+    <div class="emp-clock-stat"><div class="emp-clock-stat-val" id="empBreakStat">${liveBreakMin()} min</div><div class="emp-clock-stat-lbl">Pauze</div></div>
     <div class="emp-clock-stat"><div class="emp-clock-stat-val">${data.todayHours} u</div><div class="emp-clock-stat-lbl">Vandaag totaal</div></div>
   </div>
 </div>
@@ -1143,14 +1261,16 @@ ${(() => {
   </div>`).join("") || '<div class="emp-empty"><div class="emp-empty-text">Geen registraties</div></div>'}
 </div>`;
 
-    // live clock tick · tijd, sessieduur en voortgangsring
+    // live clock tick · tijd, netto sessieduur (excl. pauze) en voortgangsring
     const tick = () => {
       const el = document.getElementById("empLiveClock");
       if (el) el.textContent = new Date().toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
       if (data.active) {
-        const h = (Date.now() - new Date(data.active.clockedIn).getTime()) / 3600000;
+        const h = netElapsed();
         const sEl = document.getElementById("empSession");
         if (sEl) sEl.textContent = h.toFixed(1) + " u";
+        const bEl = document.getElementById("empBreakStat");
+        if (bEl) bEl.textContent = `${liveBreakMin()} min`;
         const ring = document.getElementById("empRing");
         if (ring) ring.setAttribute("stroke-dashoffset", (CIRC * (1 - Math.min(h / WORKDAY, 1))).toFixed(1));
       }
@@ -1161,6 +1281,13 @@ ${(() => {
     document.getElementById("empClockToggle")?.addEventListener("click", async () => {
       try {
         await clockAction(data.active ? "out" : "in");
+        clearInterval(tid);
+        renderClock();
+      } catch(e) { window.showToast(e.message, "error"); }
+    });
+    document.getElementById("empBreakToggle")?.addEventListener("click", async () => {
+      try {
+        await breakAction(data.onBreak ? "stop" : "start");
         clearInterval(tid);
         renderClock();
       } catch(e) { window.showToast(e.message, "error"); }
