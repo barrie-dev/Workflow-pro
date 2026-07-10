@@ -532,7 +532,7 @@
       ],
       clocking: [
         { label: "+ Manuele registratie", go: { view: "clocking", click: "admClockAdd" } },
-        { label: "Pauzebeleid", go: { view: "settings", scroll: "admPaidBreaks" }, needsView: "settings" }
+        { label: "Instellingen", settingsSection: "clocking", needsView: "settings" }
       ],
       leaves: [
         { label: "+ Verlof aanmaken", go: { view: "leaves", click: "admLeaveNew" } }
@@ -550,12 +550,12 @@
       ],
       facturen: [
         { label: "+ Nieuwe factuur", go: { view: "facturen" }, drawer: "factuur" },
-        { label: "Betaalherinneringen", go: { view: "settings", scroll: "admAutoReminders" }, needsView: "settings" },
+        { label: "Betaalherinneringen", settingsSection: "facturen", needsView: "settings" },
         { label: "Documentsjabloon", go: { view: "templates" }, needsView: "templates" }
       ],
       employees: [
         { label: "+ Nieuwe medewerker", go: { view: "employees" }, drawer: "employee" },
-        { label: "Startpagina-template", go: { view: "settings", scroll: "admEhwSave" }, needsView: "settings" }
+        { label: "Startpagina-template", settingsSection: "employees", needsView: "settings" }
       ],
       messages: [
         { label: "+ Nieuw bericht", go: { view: "messages" }, drawer: "message" }
@@ -571,9 +571,9 @@
       ],
       settings: [
         { label: "Bedrijfsgegevens", go: { view: "settings" } },
-        { label: "Betaalherinneringen", go: { view: "settings", scroll: "admAutoReminders" } },
-        { label: "Pauzebeleid", go: { view: "settings", scroll: "admPaidBreaks" } },
-        { label: "Startpagina medewerkers", go: { view: "settings", scroll: "admEhwSave" } }
+        { label: "Prikklok", settingsSection: "clocking" },
+        { label: "Betaalherinneringen", settingsSection: "facturen" },
+        { label: "Startpagina medewerkers", settingsSection: "employees" }
       ]
     };
   }
@@ -622,6 +622,12 @@
 
   function navFlyoutGo(parentView, item) {
     hideNavFlyout(true);
+    // Module-instelling: open de gefocuste sectie in de Instellingen-view.
+    if (item.settingsSection) {
+      _settingsSection = item.settingsSection;
+      switchView("settings");
+      return;
+    }
     const g = item.go || {};
     switchView(g.view || parentView);
     // Views renderen async: kort pollen tot het doel er is, dan de actie doen.
@@ -5304,6 +5310,123 @@ ${categories.map(cat => `
     }));
   }
 
+  // Gefocuste module-instelling geopend vanuit de flyout (bv. "clocking").
+  // null = de volledige Instellingen-pagina.
+  let _settingsSection = null;
+
+  // Instellingen die bij één module horen krijgen hun eigen, correct getitelde
+  // kaart (niet weggestopt in "Bedrijfsgegevens"). Elke kaart is een op zichzelf
+  // staand formulier met een eigen opslaan-knop; .wire() koppelt de handlers.
+  function buildModuleSettingsCards(tenant) {
+    const HOME_WIDGETS = [
+      ["clock", "Prikklok & vandaag"], ["quickactions", "Snelacties"], ["urgent", "Urgente werkbonnen"],
+      ["overview", "Mijn overzicht"], ["leavebalance", "Verlofsaldo"], ["notifications", "Ongelezen meldingen"]
+    ];
+    const homeTpl = tenant.employeeHomeTemplate || HOME_WIDGETS.map(w => w[0]);
+    const savedMsg = (el, text, ok) => {
+      if (!el) return;
+      el.style.color = ok === false ? "var(--wf-red)" : "var(--wf-green)";
+      el.textContent = text;
+      if (ok !== false) setTimeout(() => { el.textContent = ""; }, 4000);
+    };
+    return {
+      clocking: {
+        title: "Prikklok",
+        card: `
+  <div class="adm-card">
+    <div class="adm-card-header"><h3 class="adm-card-title">Prikklok</h3></div>
+    <div class="adm-card-body">
+      <label style="display:flex;flex-direction:row;align-items:center;gap:8px;font-size:13.5px;font-weight:500;color:var(--gray-700);cursor:pointer;">
+        <input type="checkbox" id="admPaidBreaks" style="width:16px;height:16px;flex-shrink:0;" ${tenant.clockingPrefs?.paidBreaks ? "checked" : ""}>
+        Pauzes tellen mee als betaalde werktijd
+      </label>
+      <p style="font-size:12px;color:var(--gray-400);margin:6px 0 0;padding-left:24px;">Staat dit uit, dan worden pauzes van de gewerkte tijd afgetrokken. Wijzigingen gelden voor registraties vanaf nu.</p>
+      <div style="display:flex;gap:8px;margin-top:14px;align-items:center;flex-wrap:wrap;">
+        <button type="button" class="adm-btn adm-btn-primary adm-btn-sm" id="admPaidBreaksSave">Opslaan</button>
+        <span id="admPaidBreaksMsg" style="font-size:12.5px;"></span>
+      </div>
+    </div>
+  </div>`,
+        wire: () => {
+          document.getElementById("admPaidBreaksSave")?.addEventListener("click", async () => {
+            const msg = document.getElementById("admPaidBreaksMsg");
+            try {
+              await api("PATCH", "/settings", { clockingPrefs: { paidBreaks: document.getElementById("admPaidBreaks")?.checked === true } });
+              savedMsg(msg, "Pauzebeleid opgeslagen");
+            } catch (e) { savedMsg(msg, e.message, false); }
+          });
+        }
+      },
+      facturen: {
+        title: "Betaalherinneringen",
+        card: `
+  <div class="adm-card">
+    <div class="adm-card-header"><h3 class="adm-card-title">Betaalherinneringen</h3></div>
+    <div class="adm-card-body">
+      <label style="display:flex;flex-direction:row;align-items:center;gap:8px;font-size:13.5px;font-weight:500;color:var(--gray-700);cursor:pointer;margin-bottom:10px;">
+        <input type="checkbox" id="admAutoReminders" style="width:16px;height:16px;flex-shrink:0;" ${tenant.autoReminders?.enabled ? "checked" : ""}>
+        Stuur automatisch een herinnering bij vervallen facturen
+      </label>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;color:var(--gray-600);padding-left:24px;">
+        om de
+        <input type="number" id="admRemInterval" min="1" max="90" step="1" value="${tenant.autoReminders?.intervalDays ?? 7}" style="width:64px;text-align:center;" aria-label="Interval in dagen">
+        dagen, maximaal
+        <input type="number" id="admRemMax" min="1" max="10" step="1" value="${tenant.autoReminders?.maxReminders ?? 3}" style="width:64px;text-align:center;" aria-label="Maximum aantal herinneringen">
+        herinneringen per factuur
+      </div>
+      <div style="display:flex;gap:8px;margin-top:14px;align-items:center;flex-wrap:wrap;">
+        <button type="button" class="adm-btn adm-btn-primary adm-btn-sm" id="admRemSave">Opslaan</button>
+        <span id="admRemMsg" style="font-size:12.5px;"></span>
+      </div>
+    </div>
+  </div>`,
+        wire: () => {
+          document.getElementById("admRemSave")?.addEventListener("click", async () => {
+            const msg = document.getElementById("admRemMsg");
+            try {
+              await api("PATCH", "/settings", { autoReminders: {
+                enabled: document.getElementById("admAutoReminders")?.checked === true,
+                intervalDays: Number(document.getElementById("admRemInterval")?.value) || 7,
+                maxReminders: Number(document.getElementById("admRemMax")?.value) || 3
+              } });
+              savedMsg(msg, "Herinneringsbeleid opgeslagen");
+            } catch (e) { savedMsg(msg, e.message, false); }
+          });
+        }
+      },
+      employees: {
+        title: "Startpagina medewerkers",
+        card: `
+  <div class="adm-card">
+    <div class="adm-card-header"><h3 class="adm-card-title">Startpagina medewerkers</h3></div>
+    <div class="adm-card-body">
+      <p style="font-size:12.5px;color:var(--gray-500);margin:0 0 12px;">Bepaal welke blokken medewerkers standaard op hun startpagina zien. Elke medewerker kan daarnaast een eigen selectie kiezen via "Aanpassen" in de app.</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;">
+        ${HOME_WIDGETS.map(([key, label]) => `<label style="display:flex;flex-direction:row;align-items:center;gap:8px;font-size:13px;font-weight:500;border:1px solid var(--line);border-radius:8px;padding:8px 10px;cursor:pointer;">
+          <input type="checkbox" class="adm-ehw" value="${key}" style="width:16px;height:16px;flex-shrink:0;" ${homeTpl.includes(key) ? "checked" : ""}>
+          <span>${label}</span>
+        </label>`).join("")}
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap;">
+        <button type="button" class="adm-btn adm-btn-primary adm-btn-sm" id="admEhwSave">Template opslaan</button>
+        <span id="admEhwMsg" style="font-size:12.5px;"></span>
+      </div>
+    </div>
+  </div>`,
+        wire: () => {
+          document.getElementById("admEhwSave")?.addEventListener("click", async () => {
+            const msg = document.getElementById("admEhwMsg");
+            const picked = [...document.querySelectorAll(".adm-ehw:checked")].map(c => c.value);
+            try {
+              await api("PATCH", "/settings", { employeeHomeTemplate: picked });
+              savedMsg(msg, "Template opgeslagen · geldt voor medewerkers zonder eigen selectie");
+            } catch (e) { savedMsg(msg, e.message, false); }
+          });
+        }
+      }
+    };
+  }
+
   async function renderSettings() {
     const content = document.getElementById("admContent");
     content.innerHTML = `<div class="adm-loading">Laden…</div>`;
@@ -5312,6 +5435,24 @@ ${categories.map(cat => `
       const res = await api("GET", "/settings");
       tenant = res.tenant || {};
     } catch (_) {}
+
+    const moduleCards = buildModuleSettingsCards(tenant);
+    const section = _settingsSection;
+    _settingsSection = null; // volgende gewone navigatie toont de volledige pagina
+
+    // Gefocuste module-instelling (geopend vanuit de flyout): enkel die kaart.
+    if (section && moduleCards[section]) {
+      document.getElementById("admPageTitle").textContent = moduleCards[section].title;
+      content.innerHTML = `
+        <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admSettingsBack" style="margin-bottom:16px;">‹ Alle instellingen</button>
+        <div style="max-width:640px;">${moduleCards[section].card}</div>`;
+      document.getElementById("admSettingsBack")?.addEventListener("click", () => {
+        document.getElementById("admPageTitle").textContent = VIEW_LABELS.settings;
+        renderSettings();
+      });
+      moduleCards[section].wire();
+      return;
+    }
 
     content.innerHTML = `
 <div class="adm-grid-2">
@@ -5340,24 +5481,9 @@ ${categories.map(cat => `
           <input name="defaultHourlyRate" type="number" step="1" min="0" value="${tenant.defaultHourlyRate ?? ""}" placeholder="bv. 55 · gebruikt voor werkbonnen zonder eigen tarief">
         </div>
         <div id="admOrgMsg" style="display:none;padding:8px 12px;border-radius:8px;font-size:13px;margin-bottom:8px;"></div>
-        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--gray-600);margin:4px 0 8px;cursor:pointer;">
-          <input type="checkbox" id="admEmailNotif" ${tenant.notificationPrefs?.emailEnabled === false ? "" : "checked"}>
+        <label style="display:flex;flex-direction:row;align-items:center;gap:8px;font-size:13px;font-weight:500;color:var(--gray-600);margin:4px 0 12px;cursor:pointer;">
+          <input type="checkbox" id="admEmailNotif" style="width:16px;height:16px;flex-shrink:0;" ${tenant.notificationPrefs?.emailEnabled === false ? "" : "checked"}>
           E-mailnotificaties versturen (belangrijke meldingen naar betrokkenen)
-        </label>
-        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--gray-600);margin:0 0 6px;cursor:pointer;">
-          <input type="checkbox" id="admAutoReminders" ${tenant.autoReminders?.enabled ? "checked" : ""}>
-          Automatische betaalherinneringen bij vervallen facturen
-        </label>
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;color:var(--gray-600);margin:0 0 10px;padding-left:24px;">
-          om de
-          <input type="number" id="admRemInterval" min="1" max="90" step="1" value="${tenant.autoReminders?.intervalDays ?? 7}" style="width:64px;text-align:center;" aria-label="Interval in dagen">
-          dagen, maximaal
-          <input type="number" id="admRemMax" min="1" max="10" step="1" value="${tenant.autoReminders?.maxReminders ?? 3}" style="width:64px;text-align:center;" aria-label="Maximum aantal herinneringen">
-          herinneringen per factuur
-        </div>
-        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--gray-600);margin:0 0 8px;cursor:pointer;">
-          <input type="checkbox" id="admPaidBreaks" ${tenant.clockingPrefs?.paidBreaks ? "checked" : ""}>
-          Pauzes tellen mee als betaalde werktijd (geldt voor registraties vanaf de wijziging)
         </label>
         <div style="display:flex;align-items:center;gap:10px;margin:0 0 12px;flex-wrap:wrap;">
           <button type="button" class="adm-btn adm-btn-secondary adm-btn-sm" id="admPushToggle">Pushmeldingen op dit toestel</button>
@@ -5367,29 +5493,9 @@ ${categories.map(cat => `
       </form>
     </div>
   </div>
-  <div class="adm-card">
-    <div class="adm-card-header"><h3 class="adm-card-title">Startpagina medewerkers</h3></div>
-    <div class="adm-card-body">
-      <p style="font-size:12.5px;color:var(--gray-500);margin:0 0 12px;">Bepaal welke blokken medewerkers standaard op hun startpagina zien. Elke medewerker kan daarnaast een eigen selectie kiezen via "Aanpassen" in de app.</p>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;">
-        ${(() => {
-          const HOME_WIDGETS = [
-            ["clock", "Prikklok & vandaag"], ["quickactions", "Snelacties"], ["urgent", "Urgente werkbonnen"],
-            ["overview", "Mijn overzicht"], ["leavebalance", "Verlofsaldo"], ["notifications", "Ongelezen meldingen"]
-          ];
-          const tpl = tenant.employeeHomeTemplate || HOME_WIDGETS.map(w => w[0]);
-          return HOME_WIDGETS.map(([key, label]) => `<label style="display:flex;align-items:center;gap:8px;font-size:13px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;cursor:pointer;">
-            <input type="checkbox" class="adm-ehw" value="${key}" ${tpl.includes(key) ? "checked" : ""}>
-            <span>${label}</span>
-          </label>`).join("");
-        })()}
-      </div>
-      <div style="display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap;">
-        <button type="button" class="adm-btn adm-btn-primary adm-btn-sm" id="admEhwSave">Template opslaan</button>
-        <span id="admEhwMsg" style="font-size:12.5px;color:var(--wf-green);"></span>
-      </div>
-    </div>
-  </div>
+  ${moduleCards.clocking.card}
+  ${moduleCards.facturen.card}
+  ${moduleCards.employees.card}
   <div class="adm-card">
     <div class="adm-card-header"><h3 class="adm-card-title">Abonnement &amp; plan</h3></div>
     <div class="adm-card-body">
@@ -5467,8 +5573,8 @@ ${categories.map(cat => `
       <div class="adm-form-group" id="admSupportReasonWrap">
         <label>Reden / context (optioneel)</label>
         <input id="admSupportReason" placeholder="bv. hulp bij facturatie-instelling">
-        <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px;color:var(--gray-600);cursor:pointer;">
-          <input type="checkbox" id="admSupportAutoRenew" checked>
+        <label style="display:flex;flex-direction:row;align-items:center;gap:8px;margin-top:10px;font-size:13px;font-weight:500;color:var(--gray-600);cursor:pointer;">
+          <input type="checkbox" id="admSupportAutoRenew" style="width:16px;height:16px;flex-shrink:0;" checked>
           Automatisch verlengen · blijft jaarlijks staan, je krijgt jaarlijks een mededeling per e-mail
         </label>
       </div>
@@ -5608,12 +5714,6 @@ ${categories.map(cat => `
       // Voorkom dat de push-toggle-knop als formulierveld wordt meegestuurd.
       delete body.admPushToggle;
       body.notificationPrefs = { emailEnabled: document.getElementById("admEmailNotif")?.checked !== false };
-      body.autoReminders = {
-        enabled: document.getElementById("admAutoReminders")?.checked === true,
-        intervalDays: Number(document.getElementById("admRemInterval")?.value) || 7,
-        maxReminders: Number(document.getElementById("admRemMax")?.value) || 3
-      };
-      body.clockingPrefs = { paidBreaks: document.getElementById("admPaidBreaks")?.checked === true };
       try {
         await api("PATCH", "/settings", body);
         msgEl.style.cssText = "display:block;background:var(--wf-green-l);color:var(--wf-green);padding:8px 12px;border-radius:8px;font-size:13px;margin-bottom:8px;";
@@ -5625,20 +5725,11 @@ ${categories.map(cat => `
       }
     });
 
-    // Standaardtemplate voor de medewerker-startpagina
-    document.getElementById("admEhwSave")?.addEventListener("click", async () => {
-      const msg = document.getElementById("admEhwMsg");
-      const picked = [...document.querySelectorAll(".adm-ehw:checked")].map(c => c.value);
-      try {
-        await api("PATCH", "/settings", { employeeHomeTemplate: picked });
-        msg.style.color = "var(--wf-green)";
-        msg.textContent = "Template opgeslagen · geldt voor medewerkers zonder eigen selectie";
-        setTimeout(() => { msg.textContent = ""; }, 4000);
-      } catch (err) {
-        msg.style.color = "var(--wf-red)";
-        msg.textContent = err.message;
-      }
-    });
+    // Module-instellingen (prikklok, facturen, startpagina) koppelen hun eigen
+    // opslaan-knoppen — zelfde .wire() als in de gefocuste sectieweergave.
+    moduleCards.clocking.wire();
+    moduleCards.facturen.wire();
+    moduleCards.employees.wire();
 
     (async () => {
       const btn = document.getElementById("admPushToggle");
