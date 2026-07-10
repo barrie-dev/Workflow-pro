@@ -928,10 +928,18 @@ test("prikklok: medewerker klokt in, pauzeert en verweesde prikking sluit automa
   assert.equal(autoClose.row.clockOut, "23:59");
   assert.equal(autoClose.row.status, "needs_review", "auto-afgesloten prikking vraagt review");
 
-  // Inklokken werkt daarna gewoon.
+  // Inklokken werkt daarna gewoon en de prikking draagt de naam van de
+  // medewerker (lijsten moeten werkbaar blijven, geen "Onbekende medewerker").
   const cin = await (await fetch(`${BASE}/api/tenants/t_demo/me/clock/in`, { method: "POST", headers: H, body: "{}" })).json();
   assert.equal(cin.ok, true);
   assert.equal(cin.row.status, "active");
+  assert.equal(cin.row.userName, "Jan Janssen", "prikking draagt de naam van de medewerker");
+
+  // Beheerderslijsten tonen namen: elke klok-rij heeft een leesbare userName.
+  const mgrClocks = await (await fetch(`${BASE}/api/tenants/t_demo/clocks`, { headers: MH })).json();
+  assert.equal(mgrClocks.ok, true);
+  assert.ok(mgrClocks.clocks.length > 0);
+  assert.ok(mgrClocks.clocks.every(c => c.userName && !c.userName.startsWith("u_")), "alle klok-rijen hebben een naam, geen kale id");
 
   // Startpagina-dashboard ziet de actieve prikking (canoniek schema).
   const dash = await (await fetch(`${BASE}/api/tenants/t_demo/me/dashboard`, { headers: H })).json();

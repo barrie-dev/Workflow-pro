@@ -135,6 +135,21 @@ function enrichClock(c) {
   };
 }
 
+// Vul userName aan vanuit het gebruikersbestand voor lijsten die enkel een
+// userId dragen. GDPR-scoping gebeurt op rij-niveau (own-scope filtert wat je
+// mag zien); wat je wél mag zien moet werkbaar zijn en dus een naam tonen.
+function withUserNames(store, rows) {
+  const cache = {};
+  return rows.map(r => {
+    if (r.userName || !r.userId) return r;
+    if (!cache[r.userId]) {
+      const u = store.getUserById(r.userId);
+      cache[r.userId] = u ? (u.name || u.email) : r.userId;
+    }
+    return { ...r, userName: cache[r.userId] };
+  });
+}
+
 // Klant-facturatie (offertes/facturen): toegankelijk met het admin-brede
 // "billing" óf het toekenbare "invoicing"-recht (finance-profiel zonder
 // toegang tot abonnementsbeheer).
@@ -2769,12 +2784,7 @@ http.createServer(async (req, res) => {
           to: url.searchParams.get("to")
         };
         const leaveResult = listLeaves(store, tenantId, opts);
-        const uCache1 = {};
-        leaveResult.leaves = leaveResult.leaves.map(l => {
-          if (l.userName) return l;
-          if (!uCache1[l.userId]) { const u = store.getUserById(l.userId); uCache1[l.userId] = u ? (u.name || u.email) : l.userId; }
-          return { ...l, userName: uCache1[l.userId] };
-        });
+        leaveResult.leaves = withUserNames(store, leaveResult.leaves);
         sendJson(res, 200, { ok: true, ...leaveResult });
         return;
       }
@@ -2784,12 +2794,7 @@ http.createServer(async (req, res) => {
         const year = Number(url.searchParams.get("year") || new Date().getFullYear());
         const month = Number(url.searchParams.get("month") || new Date().getMonth() + 1);
         const calResult = leaveCalendar(store, tenantId, year, month);
-        const uCache2 = {};
-        calResult.leaves = calResult.leaves.map(l => {
-          if (l.userName) return l;
-          if (!uCache2[l.userId]) { const u = store.getUserById(l.userId); uCache2[l.userId] = u ? (u.name || u.email) : l.userId; }
-          return { ...l, userName: uCache2[l.userId] };
-        });
+        calResult.leaves = withUserNames(store, calResult.leaves);
         sendJson(res, 200, { ok: true, ...calResult });
         return;
       }
@@ -3302,7 +3307,7 @@ http.createServer(async (req, res) => {
       if (action === "manager/planning" && req.method === "GET") {
         assertCan(user, "planning");
         const opts = { from: url.searchParams.get("from"), to: url.searchParams.get("to") };
-        sendJson(res, 200, { ok: true, shifts: getManagerTeamPlanning(store, tenantId, opts) });
+        sendJson(res, 200, { ok: true, shifts: withUserNames(store, getManagerTeamPlanning(store, tenantId, opts)) });
         return;
       }
 
@@ -3957,7 +3962,7 @@ http.createServer(async (req, res) => {
       // ── Onkosten lijst (admin/manager) ────────────────────────────────────────
       if (action === "expenses" && req.method === "GET") {
         assertCan(user, "expenses");
-        let expenses = store.list("expenses", tenantId)
+        let expenses = withUserNames(store, store.list("expenses", tenantId))
           .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
         if (ownScopeOnly(user, "expenses")) expenses = expenses.filter(e => e.userId === user.id);
         sendJson(res, 200, { ok: true, expenses });
@@ -4026,7 +4031,7 @@ http.createServer(async (req, res) => {
         const fromQ = url.searchParams.get("from");
         const toQ   = url.searchParams.get("to");
         const dateFilter = url.searchParams.get("date");
-        let clocks = store.list("clocks", tenantId).map(enrichClock)
+        let clocks = withUserNames(store, store.list("clocks", tenantId).map(enrichClock))
           .sort((a, b) => `${b.date || ""}${b.clockIn || ""}`.localeCompare(`${a.date || ""}${a.clockIn || ""}`));
         if (ownScopeOnly(user, "clockings")) clocks = clocks.filter(c => c.userId === user.id);
         if (dateFilter) clocks = clocks.filter(c => c.date === dateFilter);
@@ -4201,7 +4206,7 @@ http.createServer(async (req, res) => {
       // ── Werkbonnen lijst (admin/manager) ─────────────────────────────────────
       if (action === "workorders" && req.method === "GET") {
         assertCan(user, "workorders");
-        let workorders = store.list("workorders", tenantId)
+        let workorders = withUserNames(store, store.list("workorders", tenantId))
           .sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
         if (ownScopeOnly(user, "workorders")) workorders = workorders.filter(w => w.userId === user.id || w.assignedTo === user.id);
         sendJson(res, 200, { ok: true, workorders });

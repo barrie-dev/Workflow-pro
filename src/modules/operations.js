@@ -79,10 +79,12 @@ function clockIn(store, tenant, payload, actor) {
   // Een blijven hangen prikking van gisteren mag inklokken vandaag niet blokkeren.
   closeStaleClocks(store, tenant, payload.userId || actor.id, actor.email);
   const normalized = normalizeClockIn(store, tenant.id, payload, actor, new Date().toTimeString().slice(0, 5));
+  const clockUser = store.getUserById ? store.getUserById(normalized.userId) : null;
   const row = store.insert("clocks", {
     id: `clock_${Date.now()}_${Math.random().toString(16).slice(2)}`,
     tenantId: tenant.id,
     userId: normalized.userId,
+    userName: clockUser ? (clockUser.name || clockUser.email) : (normalized.userId === actor.id ? (actor.name || actor.email) : null),
     venueId: normalized.venueId,
     shiftId: normalized.shiftId,
     workorderId: normalized.workorderId,
