@@ -521,76 +521,52 @@
   };
 
   // ── Hover-submenu per module (flyout naast de zijbalk) ─────
-  // Elk item: go {view, set {id,value} filter, click knop-id, scroll element-id}
-  // of drawer (nieuw-record-paneel). needsView gate't cross-module-links op
-  // entitlements. Alleen modules met minstens 2 zinvolle items krijgen een flyout.
+  // Geen lijstfilters hier (die staan al in de view zelf): het submenu is
+  // voor de instellingen/configuratie en acties die bij de module horen.
+  // Item-vormen: go {view, click knop-id, scroll element-id} of drawer
+  // (nieuw-record-paneel). needsView gate't cross-module-links op entitlements.
   function navSubmenus() {
-    const jobs = (window.wfpTerms && window.wfpTerms.t("jobPlural")) || "Werkbonnen";
-    const venuesTerm = (window.wfpTerms && window.wfpTerms.t("venuePlural")) || "Locaties";
     return {
       planning: [
-        { label: "Weekplanning", go: { view: "planning" } },
-        { label: "+ Nieuwe shift", go: { view: "planning", click: "admAddShift" } },
-        { label: "Verlofkalender", go: { view: "leaves" }, needsView: "leaves" }
+        { label: "+ Nieuwe shift", go: { view: "planning", click: "admAddShift" } }
       ],
       clocking: [
-        { label: "Dagoverzicht", go: { view: "clocking" } },
         { label: "+ Manuele registratie", go: { view: "clocking", click: "admClockAdd" } },
         { label: "Pauzebeleid", go: { view: "settings", scroll: "admPaidBreaks" }, needsView: "settings" }
       ],
       leaves: [
-        { label: "Alle aanvragen", go: { view: "leaves", set: { id: "admLeaveFilter", value: "" } } },
-        { label: "Te beoordelen", go: { view: "leaves", set: { id: "admLeaveFilter", value: "aangevraagd" } } },
         { label: "+ Verlof aanmaken", go: { view: "leaves", click: "admLeaveNew" } }
       ],
-      expenses: [
-        { label: "Alle onkosten", go: { view: "expenses", set: { id: "admExpFilter", value: "" } } },
-        { label: "In behandeling", go: { view: "expenses", set: { id: "admExpFilter", value: "ingediend" } } }
-      ],
       workorders: [
-        { label: `Alle ${jobs.toLowerCase()}`, go: { view: "workorders", set: { id: "admWoStatusFilter", value: "" } } },
-        { label: "Open", go: { view: "workorders", set: { id: "admWoStatusFilter", value: "open" } } },
-        { label: "In uitvoering", go: { view: "workorders", set: { id: "admWoStatusFilter", value: "in_progress" } } },
-        { label: "Voltooid", go: { view: "workorders", set: { id: "admWoStatusFilter", value: "done" } } },
         { label: "+ Nieuwe werkbon", go: { view: "workorders", click: "admNewWO" } },
         { label: "Documentsjabloon", go: { view: "templates" }, needsView: "templates" }
       ],
       customers: [
-        { label: "Alle klanten", go: { view: "customers" } },
         { label: "+ Nieuwe klant", go: { view: "customers" }, drawer: "customer" }
       ],
       offertes: [
-        { label: "Alle offertes", go: { view: "offertes" } },
         { label: "+ Nieuwe offerte", go: { view: "offertes" }, drawer: "offerte" },
         { label: "Documentsjabloon", go: { view: "templates" }, needsView: "templates" }
       ],
       facturen: [
-        { label: "Alle facturen", go: { view: "facturen", set: { id: "invStatusFilter", value: "" } } },
-        { label: "Openstaand", go: { view: "facturen", set: { id: "invStatusFilter", value: "open" } } },
-        { label: "Vervallen", go: { view: "facturen", set: { id: "invStatusFilter", value: "overdue" } } },
         { label: "+ Nieuwe factuur", go: { view: "facturen" }, drawer: "factuur" },
         { label: "Betaalherinneringen", go: { view: "settings", scroll: "admAutoReminders" }, needsView: "settings" },
         { label: "Documentsjabloon", go: { view: "templates" }, needsView: "templates" }
       ],
       employees: [
-        { label: "Alle medewerkers", go: { view: "employees" } },
         { label: "+ Nieuwe medewerker", go: { view: "employees" }, drawer: "employee" },
         { label: "Startpagina-template", go: { view: "settings", scroll: "admEhwSave" }, needsView: "settings" }
       ],
       messages: [
-        { label: "Alle berichten", go: { view: "messages" } },
         { label: "+ Nieuw bericht", go: { view: "messages" }, drawer: "message" }
       ],
       vehicles: [
-        { label: "Alle voertuigen", go: { view: "vehicles" } },
         { label: "+ Nieuw voertuig", go: { view: "vehicles" }, drawer: "vehicle" }
       ],
       stock: [
-        { label: "Alle artikelen", go: { view: "stock" } },
         { label: "+ Nieuw artikel", go: { view: "stock" }, drawer: "stock" }
       ],
       venues: [
-        { label: `Alle ${venuesTerm.toLowerCase()}`, go: { view: "venues" } },
         { label: "+ Nieuwe locatie", go: { view: "venues" }, drawer: "venue" }
       ],
       settings: [
@@ -628,7 +604,7 @@
     // Alleen op toestellen met echte hover (pc); mobiel houdt de gewone nav.
     if (!window.matchMedia("(hover: hover)").matches) return;
     const items = (navSubmenus()[view] || []).filter(i => !i.needsView || viewEnabled(i.needsView));
-    if (items.length < 2) { hideNavFlyout(); return; }
+    if (!items.length) { hideNavFlyout(); return; }
     const fly = ensureNavFlyout();
     const termTitle = window.wfpTerms && (view === "workorders" ? window.wfpTerms.t("jobPlural") : view === "venues" ? window.wfpTerms.t("venuePlural") : null);
     fly.innerHTML = `<div class="adm-nav-flyout-title">${esc(termTitle || VIEW_LABELS[view] || view)}</div>`

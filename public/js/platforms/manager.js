@@ -284,16 +284,14 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
   }
 
   // ── Hover-submenu per module (flyout naast de zijbalk) ─────
-  // Zelfde patroon als de admin-shell: filters/tabs + nieuw-acties per module.
+  // Zelfde patroon als de admin-shell: acties en subonderdelen van de module,
+  // GEEN lijstfilters (die staan al in de view zelf).
   function mgrSubmenus() {
-    const jobs = (window.wfpTerms && window.wfpTerms.t("jobPlural")) || "Werkbonnen";
     return {
       planning: [
-        { label: "Weekplanning", go: { view: "planning" } },
         { label: "+ Nieuwe shift", go: { view: "planning", click: "mgrAddShift" } }
       ],
       clocking: [
-        { label: "Dagoverzicht", go: { view: "clocking" } },
         { label: "+ Registratie", go: { view: "clocking", click: "mgrClkAdd" } }
       ],
       leaves: [
@@ -303,11 +301,9 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
         { label: "+ Registreren", go: { view: "leaves", click: "mgrLeaveNew" } }
       ],
       expenses: [
-        { label: "Te beoordelen", go: { view: "expenses" } },
         { label: "+ Onkost indienen", go: { view: "expenses", click: "mgrExpOwn" } }
       ],
       workorders: [
-        { label: `Alle ${jobs.toLowerCase()}`, go: { view: "workorders" } },
         { label: "+ Werkbon", go: { view: "workorders", click: "mgrNewWO" } }
       ]
     };
@@ -325,7 +321,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
   function showMgrFlyout(anchor, view) {
     if (!window.matchMedia("(hover: hover)").matches) return;
     const items = mgrSubmenus()[view] || [];
-    if (items.length < 2) { hideMgrFlyout(); return; }
+    if (!items.length) { hideMgrFlyout(); return; }
     let fly = document.getElementById("mgrNavFlyout");
     if (!fly) {
       fly = document.createElement("div");
