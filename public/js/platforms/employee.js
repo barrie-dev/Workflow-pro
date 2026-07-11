@@ -2124,17 +2124,16 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
       const grEl = document.getElementById("empGreeting");
       if (grEl) grEl.textContent = getGreeting();
     } catch (_) {}
-    // NL/FR: vertaal de shell (tabs/sheets) en herhaal dat bij taalwissel.
+    // NL/FR/EN: vertaal de shell (tabs/sheets) en herhaal dat bij taalwissel.
+    // De knop cycelt NL → FR → EN en toont de taal waarnaar je overschakelt.
     if (window.wfpI18n) {
       const paintLangBtn = () => {
         const b = document.getElementById("empLangToggle");
-        if (b) b.textContent = window.wfpI18n.lang === "fr" ? "NL" : "FR";
+        if (b) b.textContent = window.wfpI18n.nextLang(window.wfpI18n.lang).toUpperCase();
       };
       window.wfpI18n.apply(document.getElementById("platform-employee"));
       paintLangBtn();
-      document.getElementById("empLangToggle")?.addEventListener("click", () => {
-        window.wfpI18n.setLang(window.wfpI18n.lang === "fr" ? "nl" : "fr");
-      });
+      document.getElementById("empLangToggle")?.addEventListener("click", () => window.wfpI18n.cycleLang());
       document.addEventListener("wfp:langchange", () => {
         window.wfpI18n.apply(document.getElementById("platform-employee"));
         const grEl2 = document.getElementById("empGreeting");

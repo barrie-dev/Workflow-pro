@@ -5990,18 +5990,17 @@ ${enrolled.map(e => `
     applyEntitlements();
     window.WfpBoden && window.WfpBoden.mount({ navigate: switchView });
 
-    // NL/FR: vertaal de nav + herhaal bij taalwissel.
+    // NL/FR/EN: vertaal de nav + herhaal bij taalwissel. De knop cycelt
+    // NL → FR → EN en toont de taal waarnaar je overschakelt.
     if (window.wfpI18n) {
       const i18nRoot = document.getElementById("platform-admin");
       const paintLang = () => {
         const b = document.getElementById("admLangToggle");
-        if (b) b.textContent = window.wfpI18n.lang === "fr" ? "NL" : "FR";
+        if (b) b.textContent = window.wfpI18n.nextLang(window.wfpI18n.lang).toUpperCase();
       };
       window.wfpI18n.apply(i18nRoot);
       paintLang();
-      document.getElementById("admLangToggle")?.addEventListener("click", () => {
-        window.wfpI18n.setLang(window.wfpI18n.lang === "fr" ? "nl" : "fr");
-      });
+      document.getElementById("admLangToggle")?.addEventListener("click", () => window.wfpI18n.cycleLang());
       document.addEventListener("wfp:langchange", () => { window.wfpI18n.apply(i18nRoot); paintLang(); });
     }
 

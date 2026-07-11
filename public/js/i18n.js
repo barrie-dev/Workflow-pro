@@ -238,18 +238,139 @@
       "nav.audit": "Journal d'audit",
       "nav.settings": "Paramètres",
     },
+    en: {
+      "hero.l1": "Plan smarter.",
+      "hero.l2": "Work more efficiently.",
+      "hero.l3": "Invoice faster.",
+      "hero.sub": "One platform for planning, work orders, time tracking and invoicing · for Belgian SMEs with teams in the field.",
+      "hero.b1": "Real-time overview for office and field",
+      "hero.b2": "Smart planning & time management",
+      "hero.b3": "Automatic invoicing & Peppol e-invoicing",
+      "hero.b4": "Admin control & reporting",
+      "hero.trustBE": "Trusted in Belgium",
+      "hero.trustGDPR": "GDPR compliant",
+      "login.welcome": "Welcome back!",
+      "login.subtitle": "Sign in to Monargo One",
+      "login.email": "Email",
+      "login.password": "Password",
+      "login.forgot": "Forgot?",
+      "login.mfa": "🛡️ Authenticator code",
+      "login.mfaHint": "Open your authenticator app or use a recovery code",
+      "login.submit": "Sign in",
+      "login.sso": "🔐 Sign in with SSO (Single Sign-On)",
+      "login.noAccount": "No account yet?",
+      "login.registerCompany": "Register your company",
+      "login.demoTry": "Prefer to try the demo first?",
+      "login.privacy": "Privacy policy",
+      "login.terms": "Terms & conditions",
+      "reg.title": "Create account",
+      "reg.subtitle": "Try Monargo One free for 14 days · choose your plan",
+      "reg.vat": "VAT / company number",
+      "reg.vatFetch": "Fetch",
+      "reg.company": "Company name",
+      "reg.yourName": "Your name",
+      "reg.plan": "Plan",
+      "reg.pwHint": "You'll receive an email to set your password securely.",
+      "reg.trialNote": "14 days free · no payment details required · cancel monthly",
+      "reg.plansLoading": "Loading plans…",
+      "reg.submit": "Start free trial",
+      "reg.haveAccount": "Already have an account?",
+      "reg.login": "Sign in",
+      "reg.becomeReseller": "Become a reseller",
+      "reg.registerCompany": "Register a company",
+      "reseller.title": "Become a reseller",
+      "reseller.subtitle": "Request a partner account · we'll approve it",
+      "reseller.submit": "Submit request",
+      "activate.title": "Set your password",
+      "activate.subtitle": "Activate your Monargo One account",
+      "activate.newPw": "New password",
+      "activate.repeatPw": "Repeat password",
+      "activate.submit": "Set password & sign in",
+      "activate.resend": "Activation link expired? Resend",
+      "reset.title": "New password",
+      "reset.subtitle": "Choose a new password for your account",
+      "reset.submit": "Save password & sign in",
+      "reset.backToLogin": "Back to sign in",
+      // ── Employee app (field workers) ──
+      "emp.tab.today": "Today",
+      "emp.tab.planning": "Schedule",
+      "emp.tab.clock": "Clock",
+      "emp.tab.leaves": "Leave",
+      "emp.tab.more": "More",
+      "emp.tab.expenses": "Expenses",
+      "emp.tab.messages": "Messages",
+      "emp.tab.timesheet": "Timesheet",
+      "emp.tab.profile": "Profile",
+      "emp.more.profileTitle": "Profile & settings",
+      "emp.greet.morning": "Good morning",
+      "emp.greet.afternoon": "Good afternoon",
+      "emp.greet.evening": "Good evening",
+      "emp.clock.in": "Clock in",
+      "emp.clock.out": "Clock out",
+      "emp.clock.breakStart": "Start break",
+      "emp.clock.breakEnd": "End break",
+      "emp.clock.breakStarted": "Break started",
+      "emp.clock.breakStopped": "Break ended",
+      "emp.clock.onBreak": "On break",
+      "emp.clock.since": "Since",
+      "emp.home.customize": "Customise",
+      "emp.home.customizeTitle": "Customise home screen",
+      "emp.home.ownChoice": "You're using your own selection.",
+      "emp.home.companyDefault": "You're following your company's default.",
+      "emp.home.save": "Save",
+      "emp.home.useDefault": "Use company default",
+      "emp.home.saved": "Home screen saved",
+      "emp.home.resetDone": "Company default restored",
+      "emp.sheet.leave": "Request leave",
+      "emp.sheet.expense": "Submit expense",
+      "emp.submit": "Submit",
+      "emp.back": "Back",
+      // ── Navigation (admin + manager) ──
+      "nav.dashboard": "Dashboard",
+      "nav.team": "My team",
+      "nav.reports": "Reports",
+      "nav.planning": "Planning",
+      "nav.clocking": "Time clock",
+      "nav.workorders": "Work orders",
+      "nav.leaves": "Leave",
+      "nav.expenses": "Expenses",
+      "nav.messages": "Messages",
+      "nav.customers": "Customers",
+      "nav.offertes": "Quotes",
+      "nav.facturen": "Invoices",
+      "nav.billing": "Billing",
+      "nav.employees": "Employees",
+      "nav.vehicles": "Fleet",
+      "nav.stock": "Stock",
+      "nav.venues": "Sites",
+      "nav.ciaw": "Checkin@Work",
+      "nav.posted_workers": "A1 / Limosa",
+      "nav.integrations": "Integrations",
+      "nav.templates": "Document templates",
+      "nav.roadmap": "Roadmap",
+      "nav.audit": "Audit trail",
+      "nav.settings": "Settings",
+    },
   };
+
+  const LANGS = ["nl", "fr", "en"];
 
   function detectLang() {
     try {
       const saved = localStorage.getItem("wfp_lang");
-      if (saved === "nl" || saved === "fr") return saved;
+      if (LANGS.includes(saved)) return saved;
     } catch (_) {}
     const nav = (navigator.language || "nl").slice(0, 2).toLowerCase();
-    return nav === "fr" ? "fr" : "nl";
+    return LANGS.includes(nav) ? nav : "nl";
   }
 
   let lang = detectLang();
+
+  // Volgende taal in de cyclus NL → FR → EN → NL (voor de taalknop in de shells).
+  function nextLang(cur) {
+    const i = LANGS.indexOf(cur);
+    return LANGS[(i + 1) % LANGS.length];
+  }
 
   function t(key, fallback) {
     return (DICT[lang] && DICT[lang][key]) || (DICT.nl && DICT.nl[key]) || fallback || key;
@@ -275,14 +396,17 @@
   }
 
   function setLang(next) {
-    if (next !== "nl" && next !== "fr") return;
+    if (!LANGS.includes(next)) return;
     lang = next;
     try { localStorage.setItem("wfp_lang", next); } catch (_) {}
     apply(document);
     document.dispatchEvent(new CustomEvent("wfp:langchange", { detail: { lang } }));
   }
 
-  window.wfpI18n = { t, setLang, apply, get lang() { return lang; }, DICT };
+  // Wissel naar de volgende taal in de cyclus (voor de éénknops-taalwissel).
+  function cycleLang() { setLang(nextLang(lang)); }
+
+  window.wfpI18n = { t, setLang, cycleLang, nextLang, apply, LANGS, get lang() { return lang; }, DICT };
 
   // Pas toe zodra de DOM klaar is (script staat vóór de UI-scripts).
   if (document.readyState === "loading") {

@@ -267,18 +267,17 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
       location.reload();
     });
     wireMgrClock();
-    // NL/FR: vertaal de nav + herhaal bij taalwissel.
+    // NL/FR/EN: vertaal de nav + herhaal bij taalwissel. De knop cycelt
+    // NL → FR → EN en toont de taal waarnaar je overschakelt.
     if (window.wfpI18n) {
       const root = document.getElementById("platform-manager");
       const paintLang = () => {
         const b = document.getElementById("mgrLangToggle");
-        if (b) b.textContent = window.wfpI18n.lang === "fr" ? "NL" : "FR";
+        if (b) b.textContent = window.wfpI18n.nextLang(window.wfpI18n.lang).toUpperCase();
       };
       window.wfpI18n.apply(root);
       paintLang();
-      document.getElementById("mgrLangToggle")?.addEventListener("click", () => {
-        window.wfpI18n.setLang(window.wfpI18n.lang === "fr" ? "nl" : "fr");
-      });
+      document.getElementById("mgrLangToggle")?.addEventListener("click", () => window.wfpI18n.cycleLang());
       document.addEventListener("wfp:langchange", () => { window.wfpI18n.apply(root); paintLang(); });
     }
   }

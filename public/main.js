@@ -2556,6 +2556,7 @@ document.getElementById("loginForgot")?.addEventListener("click", async event =>
 // Taalkeuze NL / FR (België is tweetalig). wfpI18n vertaalt de publieke flows.
 document.getElementById("langNL")?.addEventListener("click", () => window.wfpI18n && window.wfpI18n.setLang("nl"));
 document.getElementById("langFR")?.addEventListener("click", () => window.wfpI18n && window.wfpI18n.setLang("fr"));
+document.getElementById("langEN")?.addEventListener("click", () => window.wfpI18n && window.wfpI18n.setLang("en"));
 
 // Demo-rol knoppen (CSP blokkeert inline onclick → hier via addEventListener)
 document.querySelectorAll(".login-role-btn[data-demo-email]").forEach(btn => {
