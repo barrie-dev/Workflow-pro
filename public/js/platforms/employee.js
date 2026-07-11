@@ -941,7 +941,7 @@
 
     widgets.clock = `
 <div class="emp-card">
-  <p class="emp-card-title">Vandaag</p>
+  <p class="emp-card-title">${t9("emp.tab.today", "Vandaag")}</p>
   <div style="font-size:14px;color:var(--gray-500);margin-bottom:12px;">${dateStr}</div>
 
   ${dash.clockedIn ? (dash.onBreak ? `
@@ -955,14 +955,14 @@
   <div style="display:flex;align-items:center;gap:8px;background:var(--wf-green-l);border-radius:10px;padding:10px 12px;">
     <span style="width:8px;height:8px;background:var(--wf-green);border-radius:50%;flex-shrink:0;animation:pulse 2s infinite;"></span>
     <div style="flex:1;">
-      <div style="font-size:13px;font-weight:600;color:var(--wf-green);">Je bent ingeklokt</div>
+      <div style="font-size:13px;font-weight:600;color:var(--wf-green);">${t9("emp.today.clockedIn", "Je bent ingeklokt")}</div>
       <div style="font-size:11px;color:var(--wf-green);">${t9("emp.clock.since", "Sinds")} ${dash.activeClock?.clockedIn ? new Date(dash.activeClock.clockedIn).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}) : "-"}</div>
     </div>
     <div id="empClockDuration" style="font-size:18px;font-weight:600;color:var(--wf-green);font-family:monospace;"></div>
   </div>`) : `
   <div style="display:flex;align-items:center;gap:8px;background:var(--gray-100);border-radius:10px;padding:10px 12px;">
     <span style="width:8px;height:8px;background:var(--gray-400);border-radius:50%;flex-shrink:0;"></span>
-    <div style="font-size:13px;color:var(--gray-500);">Nog niet ingeklokt</div>
+    <div style="font-size:13px;color:var(--gray-500);">${t9("emp.today.notClocked", "Nog niet ingeklokt")}</div>
   </div>`}
 
   <div style="display:flex;gap:8px;margin-top:12px;">
@@ -978,7 +978,7 @@
 
   ${dash.todayShifts?.length ? `
   <div style="margin-top:14px;">
-    <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Mijn shifts vandaag</div>
+    <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">${t9("emp.today.myShifts", "Mijn shifts vandaag")}</div>
     ${dash.todayShifts.map(s => `
     <div class="emp-shift-item">
       <div class="emp-shift-time">${s.start||""}${s.end?`–${s.end}`:""}</div>
@@ -1002,11 +1002,11 @@
   </button>
   <button class="emp-action-btn" id="empActLeave">
     <svg viewBox="0 0 24 24"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
-    Verlof
+    ${t9("emp.tab.leaves", "Verlof")}
   </button>
   <button class="emp-action-btn" id="empActExp">
     <svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
-    Onkosten
+    ${t9("emp.tab.expenses", "Onkosten")}
   </button>
 </div>`;
 
@@ -1014,31 +1014,31 @@
 <div style="background:var(--wf-red-l);border:1px solid var(--wf-red-l);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:12px;" id="empUrgentWO">
   <span class="adm-dot" style="background:var(--wf-red);width:12px;height:12px"></span>
   <div style="flex:1">
-    <div style="font-size:13px;font-weight:600;color:var(--wf-red);">${dash.urgentWorkorders} urgente werkbon${dash.urgentWorkorders > 1 ? "nen" : ""}</div>
-    <div style="font-size:12px;color:var(--wf-red);">Hoge prioriteit · actie vereist</div>
+    <div style="font-size:13px;font-weight:600;color:var(--wf-red);">${t9("emp.today.urgentWo", "{n} urgente werkbon(nen)").replace("{n}", dash.urgentWorkorders)}</div>
+    <div style="font-size:12px;color:var(--wf-red);">${t9("emp.today.urgentSub", "Hoge prioriteit · actie vereist")}</div>
   </div>
   <svg viewBox="0 0 24 24" style="width:16px;fill:var(--wf-red);flex-shrink:0"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
 </div>` : "";
 
     widgets.overview = `
 <div class="emp-card">
-  <p class="emp-card-title">Mijn overzicht</p>
+  <p class="emp-card-title">${t9("emp.today.overview", "Mijn overzicht")}</p>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
     <div style="background:${dash.openWorkorders>0?"var(--wf-blue-l)":"var(--gray-50)"};border-radius:10px;padding:12px;text-align:center;cursor:pointer;" id="empKpiWO">
       <div style="font-size:22px;font-weight:600;color:${dash.openWorkorders>0?"var(--wf-blue)":"var(--gray-900)"};">${dash.openWorkorders ?? 0}</div>
-      <div style="font-size:11px;color:var(--gray-400);">Open werkbonnen</div>
+      <div style="font-size:11px;color:var(--gray-400);">${t9("emp.today.openWo", "Open werkbonnen")}</div>
     </div>
     <div style="background:${dash.unreadMessages>0?"var(--wf-yellow-l)":"var(--gray-50)"};border-radius:10px;padding:12px;text-align:center;cursor:pointer;" id="empKpiMsg">
       <div style="font-size:22px;font-weight:600;color:${dash.unreadMessages>0?"var(--wf-yellow)":"var(--gray-900)"};">${dash.unreadMessages ?? 0}</div>
-      <div style="font-size:11px;color:var(--gray-400);">Ongelezen berichten</div>
+      <div style="font-size:11px;color:var(--gray-400);">${t9("emp.today.unreadMsg", "Ongelezen berichten")}</div>
     </div>
     <div style="background:var(--gray-50);border-radius:10px;padding:12px;text-align:center;cursor:pointer;" id="empKpiLeave">
       <div style="font-size:22px;font-weight:600;color:var(--gray-900);">${dash.pendingLeaves ?? 0}</div>
-      <div style="font-size:11px;color:var(--gray-400);">Verlof aangevraagd</div>
+      <div style="font-size:11px;color:var(--gray-400);">${t9("emp.today.leavesRequested", "Verlof aangevraagd")}</div>
     </div>
     <div style="background:var(--gray-50);border-radius:10px;padding:12px;text-align:center;cursor:pointer;" id="empKpiExp">
       <div style="font-size:22px;font-weight:600;color:var(--gray-900);">${dash.pendingExpenses ?? 0}</div>
-      <div style="font-size:11px;color:var(--gray-400);">Onkosten in behandeling</div>
+      <div style="font-size:11px;color:var(--gray-400);">${t9("emp.today.expensesPending", "Onkosten in behandeling")}</div>
     </div>
   </div>
 </div>`;
@@ -1048,15 +1048,15 @@
   const color = pct > 50 ? "var(--wf-green)" : pct > 20 ? "var(--wf-yellow)" : "var(--wf-red)";
   return `<div class="emp-card" style="cursor:pointer;" id="empLeaveBalCard">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-    <p class="emp-card-title" style="margin:0">Verlofkrediet ${new Date().getFullYear()}</p>
-    <span style="font-size:12px;color:${color};font-weight:600;">${balData.remaining} van ${balData.quota} dagen resterend</span>
+    <p class="emp-card-title" style="margin:0">${t9("emp.today.leaveCredit", "Verlofkrediet")} ${new Date().getFullYear()}</p>
+    <span style="font-size:12px;color:${color};font-weight:600;">${t9("emp.today.daysRemaining", "{r} van {q} dagen resterend").replace("{r}", balData.remaining).replace("{q}", balData.quota)}</span>
   </div>
   <div style="background:var(--gray-100);border-radius:6px;height:10px;overflow:hidden;">
     <div style="width:${pct}%;background:${color};height:100%;border-radius:6px;transition:width .5s;"></div>
   </div>
   <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:var(--gray-400);">
-    <span>${balData.used ?? 0} opgenomen</span>
-    <span>${balData.remaining} beschikbaar</span>
+    <span>${balData.used ?? 0} ${t9("emp.today.taken", "opgenomen")}</span>
+    <span>${balData.remaining} ${t9("emp.today.available", "beschikbaar")}</span>
   </div>
 </div>`;
 })() : "";
@@ -1067,7 +1067,7 @@
   const fmtT = iso => { if (!iso) return ""; const diff = Math.floor((Date.now()-new Date(iso))/60000); if (diff<60) return `${diff}m`; if (diff<1440) return `${Math.floor(diff/60)}u`; return new Date(iso).toLocaleDateString("nl-BE"); };
   return `<div class="emp-card">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-    <p class="emp-card-title" style="margin:0">Ongelezen meldingen</p>
+    <p class="emp-card-title" style="margin:0">${t9("emp.today.unreadNotif", "Ongelezen meldingen")}</p>
     <span style="font-size:11px;color:var(--wf-blue);font-weight:600;">${unread.length}</span>
   </div>
   ${unread.map(n => `
@@ -1094,7 +1094,7 @@
   <div style="display:flex;flex-direction:column;gap:6px;">
     ${cfg.available.map(w => `<label style="display:flex;align-items:center;gap:9px;font-size:13px;border:1px solid var(--line);border-radius:9px;padding:9px 11px;cursor:pointer;">
       <input type="checkbox" class="emp-hw" value="${esc(w.key)}" ${effective.includes(w.key) ? "checked" : ""}>
-      <span>${esc(w.label)}</span>
+      <span>${esc(t9("emp.widget." + w.key, w.label))}</span>
     </label>`).join("")}
   </div>
   <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
@@ -2139,6 +2139,8 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
         const grEl2 = document.getElementById("empGreeting");
         if (grEl2) grEl2.textContent = getGreeting();
         paintLangBtn();
+        // t()-gebaseerde scherminhoud verandert niet vanzelf → huidig scherm herrenderen.
+        if (_currentView) switchView(_currentView);
       });
     }
     switchView("today");
