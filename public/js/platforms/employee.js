@@ -168,7 +168,7 @@
 
   <!-- Main content area -->
   <main class="emp-main" id="empMain">
-    <div class="emp-loading">Laden…</div>
+    <div class="emp-loading">${t9("emp.common.loading","Laden…")}</div>
   </main>
 
   <!-- Bottom tab bar (mobiel) · zijnav (pc) -->
@@ -898,7 +898,7 @@
       if (isActive) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
     });
     const main = document.getElementById("empMain");
-    main.innerHTML = `<div class="emp-loading">Laden…</div>`;
+    main.innerHTML = `<div class="emp-loading">${t9("emp.common.loading","Laden…")}</div>`;
 
     const renders = {
       today: renderToday,
@@ -917,6 +917,9 @@
   // ── Today (widget-gebaseerd: admin bepaalt het template, medewerker
   //     kan een eigen selectie kiezen via "Aanpassen") ────────
   function t9(key, fallback) { return window.wfpI18n ? window.wfpI18n.t(key, fallback) : fallback; }
+  // Server-statuswaarden (goedgekeurd/geweigerd/…) vertalen voor weergave.
+  function tStatus(status) { return t9("emp.status." + String(status || ""), status || ""); }
+  function tPrio(p) { return t9("emp.prio." + String(p || ""), p || "-"); }
 
   async function breakAction(dir) {
     await api("POST", dir === "start" ? "/me/clock/break/start" : "/me/clock/break/stop");
@@ -1213,8 +1216,8 @@ ${cfgPanel}`;
     const startLabel = data.active ? new Date(data.active.clockedIn).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}) : "";
     const chipState = data.active ? (data.onBreak ? "brk" : "on") : "off";
     const chipText = data.active
-      ? (data.onBreak ? `${t9("emp.clock.onBreak", "In pauze")} ${t9("emp.clock.since", "sinds").toLowerCase()} ${esc(data.breakSince || "-")}` : `Actief sinds ${startLabel}`)
-      : "Niet ingeklokt";
+      ? (data.onBreak ? `${t9("emp.clock.onBreak", "In pauze")} ${t9("emp.clock.since", "sinds").toLowerCase()} ${esc(data.breakSince || "-")}` : `${t9("emp.clock.activeSince", "Actief sinds")} ${startLabel}`)
+      : t9("emp.today.notClocked", "Niet ingeklokt");
 
     const main = document.getElementById("empMain");
     main.innerHTML = `
@@ -1243,23 +1246,23 @@ ${cfgPanel}`;
   </button>` : ""}
 
   <div class="emp-clock-stats">
-    <div class="emp-clock-stat"><div class="emp-clock-stat-val" id="empSession">${netElapsed().toFixed(1)} u</div><div class="emp-clock-stat-lbl">Huidige sessie</div></div>
-    <div class="emp-clock-stat"><div class="emp-clock-stat-val" id="empBreakStat">${liveBreakMin()} min</div><div class="emp-clock-stat-lbl">Pauze</div></div>
-    <div class="emp-clock-stat"><div class="emp-clock-stat-val">${data.todayHours} u</div><div class="emp-clock-stat-lbl">Vandaag totaal</div></div>
+    <div class="emp-clock-stat"><div class="emp-clock-stat-val" id="empSession">${netElapsed().toFixed(1)} ${t9("emp.unit.h", "u")}</div><div class="emp-clock-stat-lbl">${t9("emp.clock.currentSession", "Huidige sessie")}</div></div>
+    <div class="emp-clock-stat"><div class="emp-clock-stat-val" id="empBreakStat">${liveBreakMin()} ${t9("emp.unit.min", "min")}</div><div class="emp-clock-stat-lbl">${t9("emp.clock.breakLabel", "Pauze")}</div></div>
+    <div class="emp-clock-stat"><div class="emp-clock-stat-val">${data.todayHours} ${t9("emp.unit.h", "u")}</div><div class="emp-clock-stat-lbl">${t9("emp.clock.todayTotal", "Vandaag totaal")}</div></div>
   </div>
 </div>
 
 <div class="emp-card">
-  <p class="emp-card-title">Recente registraties</p>
+  <p class="emp-card-title">${t9("emp.clock.recent", "Recente registraties")}</p>
   ${(data.clocks||[]).slice(0,5).map(c => `
   <div class="emp-list-item">
     <div class="emp-list-icon"><svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2z"/></svg></div>
     <div class="emp-list-info">
       <div class="emp-list-title">${c.clockedIn?.slice(0,10)||"-"}</div>
-      <div class="emp-list-sub">${c.clockedIn ? new Date(c.clockedIn).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}) : "-"} – ${c.clockedOut ? new Date(c.clockedOut).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}) : "Lopend"}</div>
+      <div class="emp-list-sub">${c.clockedIn ? new Date(c.clockedIn).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}) : "-"} – ${c.clockedOut ? new Date(c.clockedOut).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}) : t9("emp.clock.running", "Lopend")}</div>
     </div>
-    <span class="emp-pill ${c.status==="in"?"emp-pill-green":"emp-pill-gray"}">${c.status==="in"?"Actief":"Klaar"}</span>
-  </div>`).join("") || '<div class="emp-empty"><div class="emp-empty-text">Geen registraties</div></div>'}
+    <span class="emp-pill ${c.status==="in"?"emp-pill-green":"emp-pill-gray"}">${c.status==="in"?t9("emp.clock.activePill","Actief"):t9("emp.clock.donePill","Klaar")}</span>
+  </div>`).join("") || `<div class="emp-empty"><div class="emp-empty-text">${t9("emp.clock.none", "Geen registraties")}</div></div>`}
 </div>`;
 
     // live clock tick · tijd, netto sessieduur (excl. pauze) en voortgangsring
@@ -1269,9 +1272,9 @@ ${cfgPanel}`;
       if (data.active) {
         const h = netElapsed();
         const sEl = document.getElementById("empSession");
-        if (sEl) sEl.textContent = h.toFixed(1) + " u";
+        if (sEl) sEl.textContent = h.toFixed(1) + " " + t9("emp.unit.h", "u");
         const bEl = document.getElementById("empBreakStat");
-        if (bEl) bEl.textContent = `${liveBreakMin()} min`;
+        if (bEl) bEl.textContent = `${liveBreakMin()} ${t9("emp.unit.min", "min")}`;
         const ring = document.getElementById("empRing");
         if (ring) ring.setAttribute("stroke-dashoffset", (CIRC * (1 - Math.min(h / WORKDAY, 1))).toFixed(1));
       }
@@ -1305,7 +1308,7 @@ ${cfgPanel}`;
 
   async function renderPlanning() {
     const main = document.getElementById("empMain");
-    main.innerHTML = `<div class="emp-card" style="padding:24px;text-align:center;color:var(--gray-400);">Laden…</div>`;
+    main.innerHTML = `<div class="emp-card" style="padding:24px;text-align:center;color:var(--gray-400);">${t9("emp.common.loading","Laden…")}</div>`;
 
     const weekStart = getWeekStartFromOffset(_empPlanningWeekOffset);
     const weekEnd   = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 6);
@@ -1325,7 +1328,7 @@ ${cfgPanel}`;
 
     // Week label
     const weekLabel = isCurrentWeek
-      ? "Deze week"
+      ? t9("emp.plan.thisWeek", "Deze week")
       : `${weekStart.toLocaleDateString("nl-BE",{day:"numeric",month:"short"})} – ${weekEnd.toLocaleDateString("nl-BE",{day:"numeric",month:"short",year:"numeric"})}`;
 
     main.innerHTML = `
@@ -1334,7 +1337,7 @@ ${cfgPanel}`;
     <p class="emp-card-title" style="margin:0;">${esc(weekLabel)}</p>
     <div style="display:flex;gap:6px;">
       <button class="emp-btn emp-btn-secondary emp-btn-sm" id="empPlanPrev" style="padding:4px 10px;font-size:12px;">‹</button>
-      ${!isCurrentWeek ? `<button class="emp-btn emp-btn-secondary emp-btn-sm" id="empPlanNow" style="padding:4px 10px;font-size:12px;">Nu</button>` : ""}
+      ${!isCurrentWeek ? `<button class="emp-btn emp-btn-secondary emp-btn-sm" id="empPlanNow" style="padding:4px 10px;font-size:12px;">${t9("emp.plan.now", "Nu")}</button>` : ""}
       <button class="emp-btn emp-btn-secondary emp-btn-sm" id="empPlanNext" style="padding:4px 10px;font-size:12px;">›</button>
     </div>
   </div>
@@ -1354,16 +1357,16 @@ ${shifts.length ? shifts.map(s => `
 <div class="emp-card">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
     <div style="font-size:13px;font-weight:600;color:var(--gray-900);">${new Date(s.date).toLocaleDateString("nl-BE",{weekday:"long",day:"numeric",month:"long"})}</div>
-    ${s.date===today?'<span class="emp-pill emp-pill-blue">Vandaag</span>':""}
+    ${s.date===today?`<span class="emp-pill emp-pill-blue">${t9("emp.tab.today","Vandaag")}</span>`:""}
   </div>
   <div class="emp-shift-item" style="border:none;padding:0;">
     <div class="emp-shift-time">${esc(s.start||"")}${s.end?`–${esc(s.end)}`:""}</div>
     <div class="emp-shift-info">
-      <div class="emp-shift-title">${esc(s.location||s.title||"Shift")}</div>
+      <div class="emp-shift-title">${esc(s.location||s.title||t9("emp.plan.shift","Shift"))}</div>
       <div class="emp-shift-sub">${esc(s.notes||"")}</div>
     </div>
   </div>
-</div>`).join("") : `<div class="emp-empty"><div class="emp-empty-text">Geen shifts gepland deze week</div></div>`}`;
+</div>`).join("") : `<div class="emp-empty"><div class="emp-empty-text">${t9("emp.plan.noShifts", "Geen shifts gepland deze week")}</div></div>`}`;
 
     document.getElementById("empPlanPrev")?.addEventListener("click", () => {
       _empPlanningWeekOffset--; renderPlanning();
@@ -1391,52 +1394,52 @@ ${shifts.length ? shifts.map(s => `
 
     main.innerHTML = `
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-  <div style="font-size:16px;font-weight:600;">Mijn verlof</div>
-  <button class="emp-btn emp-btn-primary emp-btn-sm" id="empNewLeave">+ Aanvragen</button>
+  <div style="font-size:16px;font-weight:600;">${t9("emp.leave.title", "Mijn verlof")}</div>
+  <button class="emp-btn emp-btn-primary emp-btn-sm" id="empNewLeave">${t9("emp.leave.request", "+ Aanvragen")}</button>
 </div>
 
 ${bal.quota != null ? `
 <div class="emp-card" style="margin-bottom:10px;">
-  <p class="emp-card-title" style="margin-bottom:8px;">Vakantiesaldo ${bal.year || ""}</p>
+  <p class="emp-card-title" style="margin-bottom:8px;">${t9("emp.leave.balance", "Vakantiesaldo")} ${bal.year || ""}</p>
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-    <span style="font-size:13px;color:var(--gray-900);"><strong>${bal.remaining ?? "-"}</strong> resterende dagen</span>
-    <span style="font-size:12px;color:var(--gray-500);">${bal.used ?? 0} / ${bal.quota ?? "?"} gebruikt</span>
+    <span style="font-size:13px;color:var(--gray-900);"><strong>${bal.remaining ?? "-"}</strong> ${t9("emp.leave.remainingDays", "resterende dagen")}</span>
+    <span style="font-size:12px;color:var(--gray-500);">${bal.used ?? 0} / ${bal.quota ?? "?"} ${t9("emp.leave.used", "gebruikt")}</span>
   </div>
   <div style="background:var(--gray-100);border-radius:4px;height:6px;overflow:hidden;">
     <div style="background:${balColor};height:6px;width:${balPct}%;border-radius:4px;transition:width .3s;"></div>
   </div>
 </div>` : ""}
 
-${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px;padding:12px;margin-bottom:12px;font-size:13px;color:var(--wf-yellow);">Je bent momenteel afwezig wegens goedgekeurd verlof.</div>` : ""}
+${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px;padding:12px;margin-bottom:12px;font-size:13px;color:var(--wf-yellow);">${t9("emp.leave.absentNow", "Je bent momenteel afwezig wegens goedgekeurd verlof.")}</div>` : ""}
 
 <div class="emp-card">
-  <p class="emp-card-title">Verlofaanvragen</p>
+  <p class="emp-card-title">${t9("emp.leave.requests", "Verlofaanvragen")}</p>
   ${leaves.length ? leaves.map(l => `
   <div class="emp-list-item" style="flex-wrap:wrap;gap:6px;">
     <div class="emp-list-icon" style="background:var(--wf-yellow-l);">
       <svg viewBox="0 0 24 24" style="fill:var(--wf-yellow)"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
     </div>
     <div class="emp-list-info" style="flex:1;min-width:0;">
-      <div class="emp-list-title">${esc(l.type||"Verlof")} · ${l.startDate} t/m ${l.endDate}</div>
+      <div class="emp-list-title">${esc(l.type||t9("emp.type.leave","Verlof"))} · ${l.startDate} ${t9("emp.leave.until","t/m")} ${l.endDate}</div>
       <div class="emp-list-sub">${esc(l.reason||"")}${l.reviewNote?` · <em>${esc(l.reviewNote)}</em>`:""}</div>
     </div>
     <div style="display:flex;gap:6px;align-items:center;">
-      <span class="emp-pill ${l.status==="goedgekeurd"?"emp-pill-green":l.status==="geweigerd"?"emp-pill-red":l.status==="geannuleerd"?"":"emp-pill-amber"}">${esc(l.status)}</span>
-      ${l.status==="aangevraagd" ? `<button class="emp-btn emp-btn-danger emp-btn-sm emp-leave-cancel" data-id="${esc(l.id)}" style="font-size:11px;padding:3px 8px;">Intrekken</button>` : ""}
+      <span class="emp-pill ${l.status==="goedgekeurd"?"emp-pill-green":l.status==="geweigerd"?"emp-pill-red":l.status==="geannuleerd"?"":"emp-pill-amber"}">${esc(tStatus(l.status))}</span>
+      ${l.status==="aangevraagd" ? `<button class="emp-btn emp-btn-danger emp-btn-sm emp-leave-cancel" data-id="${esc(l.id)}" style="font-size:11px;padding:3px 8px;">${t9("emp.leave.cancel","Intrekken")}</button>` : ""}
     </div>
-  </div>`).join("") : '<div class="emp-empty"><div class="emp-empty-text">Geen verlofaanvragen</div></div>'}
+  </div>`).join("") : `<div class="emp-empty"><div class="emp-empty-text">${t9("emp.leave.none","Geen verlofaanvragen")}</div></div>`}
 </div>`;
 
     document.getElementById("empNewLeave")?.addEventListener("click", openLeaveSheet);
     document.querySelectorAll(".emp-leave-cancel").forEach(btn => {
       btn.addEventListener("click", async () => {
-        if (!confirm("Verlofaanvraag intrekken?")) return;
+        if (!confirm(t9("emp.leave.cancelConfirm", "Verlofaanvraag intrekken?"))) return;
         btn.disabled = true; btn.textContent = "…";
         try {
           await api("DELETE", `/me/leaves/${btn.dataset.id}`);
-          window.showToast && window.showToast("Aanvraag ingetrokken", "success");
+          window.showToast && window.showToast(t9("emp.leave.cancelled", "Aanvraag ingetrokken"), "success");
           renderLeaves();
-        } catch(e) { window.showToast(e.message, "error"); btn.disabled = false; btn.textContent = "Intrekken"; }
+        } catch(e) { window.showToast(e.message, "error"); btn.disabled = false; btn.textContent = t9("emp.leave.cancel", "Intrekken"); }
       });
     });
   }
@@ -1449,23 +1452,23 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
 
     main.innerHTML = `
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-  <div style="font-size:16px;font-weight:600;">Mijn onkosten</div>
-  <button class="emp-btn emp-btn-primary emp-btn-sm" id="empNewExp">+ Indienen</button>
+  <div style="font-size:16px;font-weight:600;">${t9("emp.exp.title", "Mijn onkosten")}</div>
+  <button class="emp-btn emp-btn-primary emp-btn-sm" id="empNewExp">${t9("emp.exp.submit", "+ Indienen")}</button>
 </div>
 
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
   <div class="emp-card" style="margin:0;text-align:center;">
     <div style="font-size:22px;font-weight:600;">${data.pending ?? 0}</div>
-    <div style="font-size:11px;color:var(--gray-400);">In behandeling</div>
+    <div style="font-size:11px;color:var(--gray-400);">${t9("emp.exp.pending", "In behandeling")}</div>
   </div>
   <div class="emp-card" style="margin:0;text-align:center;">
     <div style="font-size:22px;font-weight:600;">€${(data.totalApproved||0).toFixed(0)}</div>
-    <div style="font-size:11px;color:var(--gray-400);">Goedgekeurd</div>
+    <div style="font-size:11px;color:var(--gray-400);">${t9("emp.exp.approved", "Goedgekeurd")}</div>
   </div>
 </div>
 
 <div class="emp-card">
-  <p class="emp-card-title">Declaraties</p>
+  <p class="emp-card-title">${t9("emp.exp.declarations", "Declaraties")}</p>
   ${expenses.length ? expenses.map(e => {
     const isPending = ["aangevraagd","ingediend","pending"].includes(e.status);
     return `
@@ -1478,20 +1481,20 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
       <div class="emp-list-sub">${esc(e.date)} · ${esc(e.description||"")}${e.reviewNote?` · <em>${esc(e.reviewNote)}</em>`:""}</div>
     </div>
     <div style="display:flex;gap:6px;align-items:center;">
-      <span class="emp-pill ${e.status==="goedgekeurd"||e.status==="approved"?"emp-pill-green":e.status==="geweigerd"?"emp-pill-red":"emp-pill-amber"}">${esc(e.status)}</span>
+      <span class="emp-pill ${e.status==="goedgekeurd"||e.status==="approved"?"emp-pill-green":e.status==="geweigerd"?"emp-pill-red":"emp-pill-amber"}">${esc(tStatus(e.status))}</span>
       ${isPending ? `<button class="emp-btn emp-btn-danger emp-btn-sm emp-exp-delete" data-id="${esc(e.id)}" style="font-size:11px;padding:3px 8px;">✕</button>` : ""}
     </div>
-  </div>`;}).join("") : '<div class="emp-empty"><div class="emp-empty-text">Geen declaraties</div></div>'}
+  </div>`;}).join("") : `<div class="emp-empty"><div class="emp-empty-text">${t9("emp.exp.none","Geen declaraties")}</div></div>`}
 </div>`;
 
     document.getElementById("empNewExp")?.addEventListener("click", openExpSheet);
     document.querySelectorAll(".emp-exp-delete").forEach(btn => {
       btn.addEventListener("click", async () => {
-        if (!confirm("Declaratie verwijderen?")) return;
+        if (!confirm(t9("emp.exp.deleteConfirm", "Declaratie verwijderen?"))) return;
         btn.disabled = true; btn.textContent = "…";
         try {
           await api("DELETE", `/me/expenses/${btn.dataset.id}`);
-          window.showToast && window.showToast("Declaratie verwijderd", "success");
+          window.showToast && window.showToast(t9("emp.exp.deleted", "Declaratie verwijderd"), "success");
           renderExpenses();
         } catch(e) { window.showToast(e.message, "error"); btn.disabled = false; btn.textContent = "✕"; }
       });
@@ -1508,17 +1511,17 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
     const inProg = ["in_progress"];
 
     main.innerHTML = `
-<div style="font-size:16px;font-weight:600;margin-bottom:12px;">Mijn werkbonnen</div>
+<div style="font-size:16px;font-weight:600;margin-bottom:12px;">${(window.wfpTerms && window.wfpTerms.t("jobPlural")) ? "Mijn " + window.wfpTerms.t("jobPlural").toLowerCase() : t9("emp.wo.title", "Mijn werkbonnen")}</div>
 <div class="emp-card">
-  <p class="emp-card-title">${data.open ?? 0} open · ${data.urgent ?? 0} urgent</p>
+  <p class="emp-card-title">${t9("emp.wo.summary", "{o} open · {u} urgent").replace("{o}", data.open ?? 0).replace("{u}", data.urgent ?? 0)}</p>
   ${workorders.length ? workorders.map(w => {
     const isDone = done.includes(w.status);
     const isInProg = inProg.includes(w.status);
     let actionBtn = "";
     if (!isDone && !isInProg) {
-      actionBtn = `<button class="emp-wo-start emp-pill" data-id="${esc(w.id)}" style="background:var(--wf-blue);color:#fff;border:none;cursor:pointer;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:600;">▶ Start</button>`;
+      actionBtn = `<button class="emp-wo-start emp-pill" data-id="${esc(w.id)}" style="background:var(--wf-blue);color:#fff;border:none;cursor:pointer;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:600;">${t9("emp.wo.start","▶ Start")}</button>`;
     } else if (isInProg) {
-      actionBtn = `<button class="emp-wo-done emp-pill" data-id="${esc(w.id)}" style="background:var(--wf-green);color:#fff;border:none;cursor:pointer;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:600;">Voltooid</button>`;
+      actionBtn = `<button class="emp-wo-done emp-pill" data-id="${esc(w.id)}" style="background:var(--wf-green);color:#fff;border:none;cursor:pointer;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:600;">${t9("emp.wo.complete","Voltooid")}</button>`;
     }
     return `
   <div class="emp-list-item emp-wo-row" data-id="${esc(w.id)}" style="gap:10px;align-items:center;cursor:pointer;">
@@ -1526,12 +1529,12 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
       <svg viewBox="0 0 24 24" style="fill:${isDone?"var(--wf-green)":isInProg?"var(--wf-yellow)":"var(--wf-blue)"}"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
     </div>
     <div class="emp-list-info" style="flex:1;min-width:0;">
-      <div class="emp-list-title">${esc(w.title||"Werkbon")}</div>
+      <div class="emp-list-title">${esc(w.title||t9("emp.wo.default","Werkbon"))}</div>
       <div class="emp-list-sub">${esc(w.clientName||"")}${w.clientName&&(w.scheduledDate||w.createdAt)?" · ":""}${esc(w.scheduledDate||w.createdAt?.slice(0,10)||"")}</div>
     </div>
-    ${actionBtn || `<span class="emp-pill ${isDone?"emp-pill-green":"emp-pill-blue"}">${esc(w.status||"-")}</span>`}
+    ${actionBtn || `<span class="emp-pill ${isDone?"emp-pill-green":"emp-pill-blue"}">${esc(tStatus(w.status)||"-")}</span>`}
   </div>`;
-  }).join("") : '<div class="emp-empty"><div class="emp-empty-text">Geen werkbonnen</div></div>'}
+  }).join("") : `<div class="emp-empty"><div class="emp-empty-text">${t9("emp.wo.none","Geen werkbonnen")}</div></div>`}
 </div>`;
 
     // Wire start/done buttons
@@ -1564,7 +1567,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
   function openWorkorderSheet(wo) {
     const done    = ["Voltooid","Afgewerkt","done"].includes(wo.status);
     const inProg  = wo.status === "in_progress";
-    const priorityLabel = { hoog:"Hoog", normaal:"Normaal", laag:"Laag" }[wo.priority] || wo.priority || "-";
+    const priorityLabel = wo.priority ? tPrio(wo.priority) : "-";
 
     const sheet = document.createElement("div");
     sheet.style.cssText = "position:fixed;inset:0;z-index:1100;display:flex;flex-direction:column;justify-content:flex-end;";
@@ -1578,8 +1581,8 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
   <!-- Header -->
   <div style="padding:8px 20px 16px;border-bottom:1px solid var(--gray-100);">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
-      <div style="font-size:16px;font-weight:600;color:var(--gray-900);line-height:1.3;">${esc(wo.title||"Werkbon")}</div>
-      <span class="emp-pill ${done?"emp-pill-green":inProg?"emp-pill-amber":"emp-pill-blue"}" style="white-space:nowrap;">${esc(wo.status||"-")}</span>
+      <div style="font-size:16px;font-weight:600;color:var(--gray-900);line-height:1.3;">${esc(wo.title||t9("emp.wo.default","Werkbon"))}</div>
+      <span class="emp-pill ${done?"emp-pill-green":inProg?"emp-pill-amber":"emp-pill-blue"}" style="white-space:nowrap;">${esc(tStatus(wo.status)||"-")}</span>
     </div>
     ${wo.number ? `<div style="font-size:12px;color:var(--gray-400);font-family:monospace;margin-top:2px;">#${esc(wo.number)}</div>` : ""}
   </div>
@@ -1587,53 +1590,53 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
   <div style="padding:16px 20px;display:flex;flex-direction:column;gap:12px;">
     ${wo.description ? `
     <div>
-      <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Omschrijving</div>
+      <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">${t9("emp.wo.description","Omschrijving")}</div>
       <div style="font-size:14px;color:var(--gray-700);line-height:1.5;">${esc(wo.description)}</div>
     </div>` : ""}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
       <div>
-        <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">Klant</div>
+        <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">${t9("emp.wo.customer","Klant")}</div>
         <div style="font-size:13px;color:var(--gray-900);">${esc(wo.clientName||"-")}</div>
       </div>
       <div>
-        <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">Prioriteit</div>
+        <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">${t9("emp.wo.priority","Prioriteit")}</div>
         <div style="font-size:13px;">${priorityLabel}</div>
       </div>
       <div>
-        <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">Geplande datum</div>
+        <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">${t9("emp.wo.scheduledDate","Geplande datum")}</div>
         <div style="font-size:13px;color:var(--gray-900);">${wo.scheduledDate || "-"}</div>
       </div>
       ${wo.startedAt ? `<div>
-        <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">Gestart op</div>
+        <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">${t9("emp.wo.startedAt","Gestart op")}</div>
         <div style="font-size:13px;color:var(--gray-900);">${new Date(wo.startedAt).toLocaleString("nl-BE",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}</div>
       </div>` : ""}
       ${wo.completedAt ? `<div>
-        <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">Voltooid op</div>
+        <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">${t9("emp.wo.completedAt","Voltooid op")}</div>
         <div style="font-size:13px;color:var(--wf-green);">${new Date(wo.completedAt).toLocaleString("nl-BE",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}</div>
       </div>` : ""}
     </div>
     ${wo.notes||wo.note ? `
     <div>
-      <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Notities</div>
+      <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">${t9("emp.wo.notes","Notities")}</div>
       <div style="font-size:13px;color:var(--gray-700);background:var(--gray-50);border-radius:8px;padding:10px;line-height:1.5;">${esc(wo.notes||wo.note)}</div>
     </div>` : ""}
   </div>
   <!-- Action buttons -->
   ${!done ? `
   <div style="padding:0 20px;display:flex;flex-direction:column;gap:10px;">
-    ${!inProg ? `<button id="woSheetStart" class="emp-btn emp-btn-primary" style="padding:12px;font-size:14px;font-weight:600;">▶ Start werkbon</button>` : ""}
-    ${inProg  ? `<button id="woSheetDone"  class="emp-btn emp-btn-primary" style="padding:12px;font-size:14px;font-weight:600;background:var(--wf-green);">Afsluiten & notitie toevoegen</button>` : ""}
+    ${!inProg ? `<button id="woSheetStart" class="emp-btn emp-btn-primary" style="padding:12px;font-size:14px;font-weight:600;">${t9("emp.wo.startBtn","▶ Start werkbon")}</button>` : ""}
+    ${inProg  ? `<button id="woSheetDone"  class="emp-btn emp-btn-primary" style="padding:12px;font-size:14px;font-weight:600;background:var(--wf-green);">${t9("emp.wo.finishBtn","Afsluiten & notitie toevoegen")}</button>` : ""}
   </div>` : `
   <div style="padding:0 20px 8px;">
-    <div style="background:var(--wf-green-l);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--wf-green);font-weight:600;">Werkbon voltooid${wo.completedAt?" op "+new Date(wo.completedAt).toLocaleDateString("nl-BE"):""}</div>
+    <div style="background:var(--wf-green-l);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--wf-green);font-weight:600;">${t9("emp.wo.completedMsg","Werkbon voltooid")}${wo.completedAt?" · "+new Date(wo.completedAt).toLocaleDateString("nl-BE"):""}</div>
     ${wo.completionNote?`<div style="margin-top:8px;font-size:12px;color:var(--gray-500);background:var(--gray-50);border-radius:6px;padding:8px;">${esc(wo.completionNote)}</div>`:""}
   </div>`}
   <!-- Foto's sectie -->
   <div style="padding:0 20px;margin-top:12px;">
-    <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Foto's</div>
-    ${(wo.photos||[]).length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;">${(wo.photos||[]).map(p=>`<img src="${p}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--gray-200);">`).join("")}</div>` : `<div style="font-size:12px;color:var(--gray-400);">Geen foto's</div>`}
+    <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">${t9("emp.wo.photos","Foto's")}</div>
+    ${(wo.photos||[]).length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;">${(wo.photos||[]).map(p=>`<img src="${p}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--gray-200);">`).join("")}</div>` : `<div style="font-size:12px;color:var(--gray-400);">${t9("emp.wo.noPhotos","Geen foto's")}</div>`}
     <label id="woAddPhotoBtn" style="display:inline-flex;align-items:center;gap:6px;margin-top:8px;background:var(--gray-100);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-weight:500;color:var(--gray-700);">
-      Foto toevoegen <input type="file" accept="image/*" capture="environment" id="woPhotoInput" style="display:none;">
+      ${t9("emp.wo.addPhoto","Foto toevoegen")} <input type="file" accept="image/*" capture="environment" id="woPhotoInput" style="display:none;">
     </label>
     <div id="woPhotoPreview" style="margin-top:8px;"></div>
   </div>
@@ -1646,7 +1649,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
     document.getElementById("woSheetStart")?.addEventListener("click", async () => {
       try {
         await api("PATCH", `/me/workorders/${wo.id}`, { status: "in_progress" });
-        window.showToast && window.showToast("Werkbon gestart ▶", "success");
+        window.showToast && window.showToast(t9("emp.wo.started","Werkbon gestart"), "success");
         close(); renderWorkorders();
       } catch(e) { window.showToast(e.message, "error"); }
     });
@@ -1655,7 +1658,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
     document.getElementById("woPhotoInput")?.addEventListener("change", async e => {
       const file = e.target.files[0]; if (!file) return;
       const preview = document.getElementById("woPhotoPreview");
-      if (file.size > 3 * 1024 * 1024) { window.showToast("Foto is te groot (max 3MB)", "warning"); return; }
+      if (file.size > 3 * 1024 * 1024) { window.showToast(t9("emp.wo.photoTooBig","Foto is te groot (max 3MB)"), "warning"); return; }
       const reader = new FileReader();
       reader.onload = async (ev) => {
         const b64 = ev.target.result;
@@ -1663,7 +1666,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
         try {
           const existing = wo.photos || [];
           await api("PATCH", `/me/workorders/${wo.id}`, { photos: [...existing, b64] });
-          window.showToast && window.showToast("Foto opgeslagen", "success");
+          window.showToast && window.showToast(t9("emp.wo.photoSaved","Foto opgeslagen"), "success");
           wo.photos = [...existing, b64];
         } catch(err) { window.showToast("Upload fout: "+err.message, "error"); }
       };
@@ -1675,12 +1678,12 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
       const actionDiv = document.querySelector("#woSheetDone")?.parentElement;
       if (actionDiv) actionDiv.innerHTML = `
 <div style="background:var(--wf-green-l);border-radius:10px;padding:14px;">
-  <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Werkbon afsluiten</div>
-  <textarea id="woCompletionNote" rows="3" placeholder="Optionele notitie bij afronding (bijv. uitgevoerde werkzaamheden, materiaal gebruikt…)"
+  <div style="font-size:13px;font-weight:600;margin-bottom:8px;">${t9("emp.wo.finishTitle","Werkbon afsluiten")}</div>
+  <textarea id="woCompletionNote" rows="3" placeholder="${t9("emp.wo.finishPh","Optionele notitie bij afronding (bijv. uitgevoerde werkzaamheden, materiaal gebruikt…)")}"
     style="width:100%;padding:8px;border:1px solid var(--wf-green-l);border-radius:8px;font-size:13px;resize:vertical;"></textarea>
   <div style="display:flex;gap:8px;margin-top:10px;">
-    <button id="woCompleteCancelBtn" class="emp-btn emp-btn-secondary" style="flex:1;padding:10px;">Annuleren</button>
-    <button id="woCompleteConfirmBtn" class="emp-btn emp-btn-primary" style="flex:2;padding:10px;background:var(--wf-green);font-weight:600;">Bevestigen</button>
+    <button id="woCompleteCancelBtn" class="emp-btn emp-btn-secondary" style="flex:1;padding:10px;">${t9("emp.wo.cancel","Annuleren")}</button>
+    <button id="woCompleteConfirmBtn" class="emp-btn emp-btn-primary" style="flex:2;padding:10px;background:var(--wf-green);font-weight:600;">${t9("emp.wo.confirm","Bevestigen")}</button>
   </div>
 </div>`;
       document.getElementById("woCompleteCancelBtn")?.addEventListener("click", close);
@@ -1688,7 +1691,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
         const note = document.getElementById("woCompletionNote")?.value?.trim();
         try {
           await api("PATCH", `/me/workorders/${wo.id}`, { status: "Voltooid", completionNote: note||undefined });
-          window.showToast && window.showToast("Werkbon voltooid", "success");
+          window.showToast && window.showToast(t9("emp.wo.completedMsg","Werkbon voltooid"), "success");
           close(); renderWorkorders();
         } catch(e) { window.showToast(e.message, "error"); }
       });
@@ -1708,8 +1711,8 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
 
     main.innerHTML = `
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-  <div style="font-size:16px;font-weight:600;">Berichten${unread>0?` <span style="background:var(--wf-red);color:#fff;border-radius:999px;padding:1px 7px;font-size:11px;vertical-align:middle;">${unread}</span>`:""}</div>
-  <button id="empComposeBtn" style="background:var(--wf-blue);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;">+ Bericht</button>
+  <div style="font-size:16px;font-weight:600;">${t9("emp.tab.messages","Berichten")}${unread>0?` <span style="background:var(--wf-red);color:#fff;border-radius:999px;padding:1px 7px;font-size:11px;vertical-align:middle;">${unread}</span>`:""}</div>
+  <button id="empComposeBtn" style="background:var(--wf-blue);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;">${t9("emp.msg.compose","+ Bericht")}</button>
 </div>
 <div class="emp-card">
   ${messages.length ? messages.map(m => {
@@ -1721,7 +1724,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
     </div>
     <div class="emp-list-info" style="flex:1;min-width:0;">
       <div class="emp-list-title" style="${isUnread?"font-weight:600;":""}">
-        ${esc(m.senderName||m.senderId||"Systeem")}
+        ${esc(m.senderName||m.senderId||t9("emp.msg.system","Systeem"))}
         ${m.subject ? `<span style="font-size:11px;color:var(--gray-500);margin-left:4px">· ${esc(m.subject)}</span>` : ""}
       </div>
       <div class="emp-list-sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(m.body||m.message||"-")}</div>
@@ -1731,7 +1734,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
       ${isUnread ? '<div style="width:8px;height:8px;border-radius:50%;background:var(--wf-blue);"></div>' : ""}
     </div>
   </div>`;
-  }).join("") : '<div class="emp-empty"><div class="emp-empty-text">Geen berichten</div></div>'}
+  }).join("") : `<div class="emp-empty"><div class="emp-empty-text">${t9("emp.msg.none","Geen berichten")}</div></div>`}
 </div>`;
 
     document.getElementById("empComposeBtn")?.addEventListener("click", openComposeSheet);
@@ -1757,10 +1760,10 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
   </div>
   <div style="padding:12px 20px 16px;border-bottom:1px solid var(--gray-100);">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
-      <div style="font-size:16px;font-weight:600;color:var(--gray-900);">${esc(msg.subject||"Bericht")}</div>
+      <div style="font-size:16px;font-weight:600;color:var(--gray-900);">${esc(msg.subject||t9("emp.msg.default","Bericht"))}</div>
       <button id="msgSheetClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--gray-400);padding:2px">×</button>
     </div>
-    <div style="margin-top:6px;font-size:12px;color:var(--gray-400);">Van: <strong>${esc(msg.senderName||msg.senderId||"Systeem")}</strong> · ${dateStr}</div>
+    <div style="margin-top:6px;font-size:12px;color:var(--gray-400);">${t9("emp.msg.from","Van")}: <strong>${esc(msg.senderName||msg.senderId||t9("emp.msg.system","Systeem"))}</strong> · ${dateStr}</div>
   </div>
   <div style="padding:16px 20px;">
     <p style="font-size:14px;color:var(--gray-700);line-height:1.7;white-space:pre-wrap;margin:0;">${esc(msg.body||msg.message||"-")}</p>
@@ -1790,28 +1793,28 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
     modal.innerHTML = `
 <div style="background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:540px;padding:20px 20px 32px;box-shadow:0 -4px 32px rgba(0,0,0,.15)">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-    <h3 style="font-size:16px;font-weight:600;color:var(--gray-900);margin:0">Nieuw bericht</h3>
+    <h3 style="font-size:16px;font-weight:600;color:var(--gray-900);margin:0">${t9("emp.msg.newTitle","Nieuw bericht")}</h3>
     <button id="empComposeClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--gray-400);padding:2px">×</button>
   </div>
   <form id="empComposeForm" style="display:flex;flex-direction:column;gap:12px">
     <div>
-      <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Aan</label>
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">${t9("emp.msg.to","Aan")}</label>
       <select name="recipientRole" style="width:100%;10px">
-        <option value="">Alle teamleden</option>
-        <option value="manager">Manager(s)</option>
-        <option value="tenant_admin">Admin</option>
+        <option value="">${t9("emp.msg.allTeam","Alle teamleden")}</option>
+        <option value="manager">${t9("emp.msg.managers","Manager(s)")}</option>
+        <option value="tenant_admin">${t9("emp.msg.admin","Admin")}</option>
       </select>
     </div>
     <div>
-      <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Onderwerp</label>
-      <input name="subject" placeholder="Onderwerp van je bericht" style="width:100%;10px">
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">${t9("emp.msg.subject","Onderwerp")}</label>
+      <input name="subject" placeholder="${t9("emp.msg.subjectPh","Onderwerp van je bericht")}" style="width:100%;10px">
     </div>
     <div>
-      <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">Bericht *</label>
-      <textarea name="body" required rows="3" placeholder="Schrijf je bericht…" style="width:100%;10px;resize:none"></textarea>
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">${t9("emp.msg.body","Bericht")} *</label>
+      <textarea name="body" required rows="3" placeholder="${t9("emp.msg.bodyPh","Schrijf je bericht…")}" style="width:100%;10px;resize:none"></textarea>
     </div>
     <div id="empComposeErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:8px 10px;font-size:12px"></div>
-    <button type="submit" style="padding:11px;background:var(--wf-blue);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;">Versturen</button>
+    <button type="submit" style="padding:11px;background:var(--wf-blue);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;">${t9("emp.msg.send","Versturen")}</button>
   </form>
 </div>`;
 
@@ -1823,14 +1826,14 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
       const errEl = document.getElementById("empComposeErr");
       const btn = e.target.querySelector("[type=submit]");
       const body = Object.fromEntries(new FormData(e.target).entries());
-      btn.disabled = true; btn.textContent = "Bezig…";
+      btn.disabled = true; btn.textContent = t9("emp.msg.sending","Bezig…");
       try {
         await api("POST", "/messages", body);
         close();
         renderMessages();
       } catch(err) {
         errEl.textContent = err.message; errEl.style.display = "";
-        btn.disabled = false; btn.textContent = "Versturen";
+        btn.disabled = false; btn.textContent = t9("emp.msg.send","Versturen");
       }
     });
   }
@@ -1839,7 +1842,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
   let _tsMonthOffset = 0;
   async function renderTimesheet() {
     const main = document.getElementById("empMain");
-    main.innerHTML = `<div class="emp-loading">Laden…</div>`;
+    main.innerHTML = `<div class="emp-loading">${t9("emp.common.loading","Laden…")}</div>`;
 
     const now = new Date();
     const d = new Date(now.getFullYear(), now.getMonth() + _tsMonthOffset, 1);
@@ -1886,7 +1889,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
     <button class="emp-btn emp-btn-secondary emp-btn-sm" id="tsPrev">‹</button>
     <span style="font-size:14px;font-weight:600;text-transform:capitalize;">${monthLabel}</span>
     <button class="emp-btn emp-btn-secondary emp-btn-sm" id="tsNext" ${_tsMonthOffset===0?"disabled":""}>›</button>
-    ${_tsMonthOffset!==0?`<button class="emp-btn emp-btn-secondary emp-btn-sm" id="tsNow">Nu</button>`:""}
+    ${_tsMonthOffset!==0?`<button class="emp-btn emp-btn-secondary emp-btn-sm" id="tsNow">${t9("emp.plan.now","Nu")}</button>`:""}
   </div>
   <button class="emp-btn emp-btn-secondary emp-btn-sm" id="tsExport">CSV</button>
 </div>
@@ -1894,36 +1897,36 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
 <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;">
   <div class="emp-card" style="margin:0;text-align:center;">
     <div style="font-size:22px;font-weight:600;color:var(--gray-900);">${totalHours.toFixed(1)}</div>
-    <div style="font-size:11px;color:var(--gray-400);">Uren gewerkt</div>
+    <div style="font-size:11px;color:var(--gray-400);">${t9("emp.ts.hoursWorked","Uren gewerkt")}</div>
   </div>
   <div class="emp-card" style="margin:0;text-align:center;">
     <div style="font-size:22px;font-weight:600;color:var(--gray-900);">${workedDays}</div>
-    <div style="font-size:11px;color:var(--gray-400);">Dagen aanwezig</div>
+    <div style="font-size:11px;color:var(--gray-400);">${t9("emp.ts.daysPresent","Dagen aanwezig")}</div>
   </div>
   <div class="emp-card" style="margin:0;text-align:center;">
     <div style="font-size:22px;font-weight:600;color:var(--gray-900);">${workedDays?((totalHours/workedDays).toFixed(1)):"-"}</div>
-    <div style="font-size:11px;color:var(--gray-400);">Gem. uur/dag</div>
+    <div style="font-size:11px;color:var(--gray-400);">${t9("emp.ts.avgPerDay","Gem. uur/dag")}</div>
   </div>
 </div>
 
 <div class="emp-card">
-  <p class="emp-card-title">Dagdetail · ${monthLabel}</p>
+  <p class="emp-card-title">${t9("emp.ts.dayDetail","Dagdetail")} · ${monthLabel}</p>
   ${Object.keys(byDay).length ? Object.entries(byDay).sort((a,b)=>a[0].localeCompare(b[0])).map(([day, dc]) => {
     const dayHours = dc.reduce((s,c)=>s+(c.clockedOut?(new Date(c.clockedOut)-new Date(c.clockedIn))/3600000:0),0);
     const dayName = new Date(day).toLocaleDateString("nl-BE",{weekday:"short",day:"numeric",month:"short"});
     return `<div style="padding:8px 0;border-bottom:1px solid var(--gray-50);">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
         <span style="font-size:13px;font-weight:600;color:var(--gray-900);text-transform:capitalize;">${dayName}</span>
-        <span style="font-size:12px;font-weight:600;color:var(--wf-green);">${dayHours.toFixed(1)} u</span>
+        <span style="font-size:12px;font-weight:600;color:var(--wf-green);">${dayHours.toFixed(1)} ${t9("emp.unit.h","u")}</span>
       </div>
       ${dc.map(c=>`<div style="font-size:11.5px;color:var(--gray-500);display:flex;gap:8px;padding:1px 0;">
         <span>${c.clockedIn?new Date(c.clockedIn).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}):"-"}</span>
         <span>–</span>
-        <span>${c.clockedOut?new Date(c.clockedOut).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}):`<span style="color:var(--wf-yellow)">Lopend</span>`}</span>
-        <span style="margin-left:auto;">${c.clockedOut?((new Date(c.clockedOut)-new Date(c.clockedIn))/3600000).toFixed(1)+" u":""}</span>
+        <span>${c.clockedOut?new Date(c.clockedOut).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}):`<span style="color:var(--wf-yellow)">${t9("emp.clock.running","Lopend")}</span>`}</span>
+        <span style="margin-left:auto;">${c.clockedOut?((new Date(c.clockedOut)-new Date(c.clockedIn))/3600000).toFixed(1)+" "+t9("emp.unit.h","u"):""}</span>
       </div>`).join("")}
     </div>`;
-  }).join("") : `<div class="emp-empty"><div class="emp-empty-text">Geen registraties in ${monthLabel}</div></div>`}
+  }).join("") : `<div class="emp-empty"><div class="emp-empty-text">${t9("emp.ts.noneMonth","Geen registraties in {month}").replace("{month}", monthLabel)}</div></div>`}
 </div>`;
 
     document.getElementById("tsPrev")?.addEventListener("click", () => { _tsMonthOffset--; renderTimesheet(); });
@@ -1943,70 +1946,70 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
     } catch (_) {}
 
     main.innerHTML = `
-<div class="emp-mob-only" style="font-size:16px;font-weight:600;margin-bottom:12px;">Meer</div>
+<div class="emp-mob-only" style="font-size:16px;font-weight:600;margin-bottom:12px;">${t9("emp.tab.more","Meer")}</div>
 <div class="emp-desk-only" style="font-size:20px;font-weight:600;letter-spacing:-.3px;margin-bottom:14px;" data-i18n="emp.more.profileTitle">Profiel & instellingen</div>
 <div class="emp-card emp-mob-only">
   ${viewEnabled("workorders") ? `<div class="emp-list-item" id="empMoreWO" style="cursor:pointer;">
     <div class="emp-list-icon"><svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg></div>
-    <div class="emp-list-info"><div class="emp-list-title">${(window.wfpTerms && window.wfpTerms.t("jobPlural")) || "Werkbonnen"}</div><div class="emp-list-sub">Mijn ${((window.wfpTerms && window.wfpTerms.t("jobPlural")) || "werkbonnen").toLowerCase()} bekijken</div></div>
+    <div class="emp-list-info"><div class="emp-list-title">${(window.wfpTerms && window.wfpTerms.t("jobPlural")) || t9("emp.tab.workorders","Werkbonnen")}</div><div class="emp-list-sub">${t9("emp.more.woSub","Mijn werk bekijken")}</div></div>
     <svg viewBox="0 0 24 24" style="width:16px;fill:var(--gray-400);flex-shrink:0;"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
   </div>` : ""}
   ${viewEnabled("expenses") ? `<div class="emp-list-item" id="empMoreExp" style="cursor:pointer;">
     <div class="emp-list-icon" style="background:var(--wf-yellow-l);"><svg viewBox="0 0 24 24" style="fill:var(--wf-yellow)"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg></div>
-    <div class="emp-list-info"><div class="emp-list-title">Onkosten</div><div class="emp-list-sub">Declaraties bekijken & indienen</div></div>
+    <div class="emp-list-info"><div class="emp-list-title">${t9("emp.tab.expenses","Onkosten")}</div><div class="emp-list-sub">${t9("emp.more.expSub","Declaraties bekijken & indienen")}</div></div>
     <svg viewBox="0 0 24 24" style="width:16px;fill:var(--gray-400);flex-shrink:0;"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
   </div>` : ""}
   ${viewEnabled("messages") ? `<div class="emp-list-item" id="empMoreMsg" style="cursor:pointer;">
     <div class="emp-list-icon" style="background:var(--wf-blue-l);"><svg viewBox="0 0 24 24" style="fill:var(--wf-blue-d)"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg></div>
-    <div class="emp-list-info"><div class="emp-list-title">Berichten</div><div class="emp-list-sub">Team communicatie</div></div>
+    <div class="emp-list-info"><div class="emp-list-title">${t9("emp.tab.messages","Berichten")}</div><div class="emp-list-sub">${t9("emp.more.msgSub","Team communicatie")}</div></div>
     <svg viewBox="0 0 24 24" style="width:16px;fill:var(--gray-400);flex-shrink:0;"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
   </div>` : ""}
   <div class="emp-list-item" id="empMoreTimesheet" style="cursor:pointer;">
     <div class="emp-list-icon" style="background:var(--wf-green-l);"><svg viewBox="0 0 24 24" style="fill:var(--wf-green)"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg></div>
-    <div class="emp-list-info"><div class="emp-list-title">Tijdregistratie</div><div class="emp-list-sub">Maandoverzicht van mijn uren</div></div>
+    <div class="emp-list-info"><div class="emp-list-title">${t9("emp.tab.timesheet","Tijdregistratie")}</div><div class="emp-list-sub">${t9("emp.more.tsSub","Maandoverzicht van mijn uren")}</div></div>
     <svg viewBox="0 0 24 24" style="width:16px;fill:var(--gray-400);flex-shrink:0;"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
   </div>
 </div>
 
 <!-- Mijn profiel -->
-<div style="font-size:13px;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px;">Mijn profiel</div>
+<div style="font-size:13px;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px;">${t9("emp.more.myProfile","Mijn profiel")}</div>
 <div class="emp-card">
   <form id="empProfileForm" style="display:flex;flex-direction:column;gap:12px;">
     <div>
-      <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px;">Naam</label>
-      <input name="name" value="${profile.name||""}" placeholder="Volledige naam" style="width:100%;10px">
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px;">${t9("emp.more.name","Naam")}</label>
+      <input name="name" value="${profile.name||""}" placeholder="${t9("emp.more.name","Naam")}" style="width:100%;10px">
     </div>
     <div>
-      <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px;">Telefoon</label>
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px;">${t9("emp.more.phone","Telefoon")}</label>
       <input name="phone" type="tel" value="${profile.phone||""}" placeholder="+32 ..." style="width:100%;10px">
     </div>
     <div>
-      <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px;">Adres</label>
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px;">${t9("emp.more.address","Adres")}</label>
       <input name="address" value="${profile.address||""}" placeholder="Straat 1, 1000 Brussel" style="width:100%;10px">
     </div>
     <div>
-      <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px;">IBAN <span style="font-weight:400;color:var(--gray-400);">(voor onkostenvergoeding)</span></label>
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px;">IBAN <span style="font-weight:400;color:var(--gray-400);">${t9("emp.more.ibanNote","(voor onkostenvergoeding)")}</span></label>
       <input name="iban" value="${profile.iban||""}" placeholder="BE68 5390 0754 7034" style="width:100%;10px;font-family:monospace" autocomplete="off">
     </div>
     <div id="empProfileMsg" style="display:none;padding:8px 10px;border-radius:8px;font-size:12px;"></div>
-    <button type="submit" style="padding:10px;background:var(--wf-blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Opslaan</button>
+    <button type="submit" style="padding:10px;background:var(--wf-blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">${t9("emp.more.save","Opslaan")}</button>
   </form>
 </div>
 
 <!-- Wachtwoord wijzigen -->
-<div style="font-size:13px;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px;">Wachtwoord</div>
+<div style="font-size:13px;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px;">${t9("emp.more.password","Wachtwoord")}</div>
 <div class="emp-card">
   <form id="empPwForm" style="display:flex;flex-direction:column;gap:12px;">
     <div>
-      <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px;">Huidig wachtwoord</label>
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px;">${t9("emp.more.currentPw","Huidig wachtwoord")}</label>
       <input name="currentPassword" type="password" required style="width:100%;10px">
     </div>
     <div>
-      <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px;">Nieuw wachtwoord</label>
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px;">${t9("emp.more.newPw","Nieuw wachtwoord")}</label>
       <input name="newPassword" type="password" required minlength="8" style="width:100%;10px">
     </div>
     <div id="empPwMsg" style="display:none;padding:8px 10px;border-radius:8px;font-size:12px;"></div>
-    <button type="submit" style="padding:10px;background:var(--gray-900);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Wijzigen</button>
+    <button type="submit" style="padding:10px;background:var(--gray-900);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">${t9("emp.more.change","Wijzigen")}</button>
   </form>
 </div>
 <div style="text-align:center;font-size:11px;color:var(--gray-400);padding:18px 0 8px;">Powered by <strong style="color:var(--gray-500)">Monargo</strong></div>`;
@@ -2023,7 +2026,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
       try {
         await api("PATCH", "/me", body);
         msgEl.style.cssText = "display:block;background:var(--wf-green-l);color:var(--wf-green);padding:8px 10px;border-radius:8px;font-size:12px;";
-        msgEl.textContent = "Profiel opgeslagen ✓";
+        msgEl.textContent = t9("emp.more.profileSaved","Profiel opgeslagen");
         setTimeout(() => { msgEl.style.display = "none"; }, 3000);
         // Update header name
         const nameEl = document.getElementById("empHeaderName");
@@ -2041,7 +2044,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
       try {
         await api("POST", "/auth/change-password", { currentPassword, newPassword });
         msgEl.style.cssText = "display:block;background:var(--wf-green-l);color:var(--wf-green);padding:8px 10px;border-radius:8px;font-size:12px;";
-        msgEl.textContent = "Wachtwoord gewijzigd ✓";
+        msgEl.textContent = t9("emp.more.pwChanged","Wachtwoord gewijzigd");
         e.target.reset();
         setTimeout(() => { msgEl.style.display = "none"; }, 3000);
       } catch (err) {
