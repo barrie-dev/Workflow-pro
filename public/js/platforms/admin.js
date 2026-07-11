@@ -550,12 +550,12 @@
       ],
       facturen: [
         { label: "+ Nieuwe factuur", go: { view: "facturen" }, drawer: "factuur" },
-        { label: "Betaalherinneringen", settingsSection: "facturen", needsView: "settings" },
+        { label: "Instellingen", settingsSection: "facturen", needsView: "settings" },
         { label: "Documentsjabloon", go: { view: "templates" }, needsView: "templates" }
       ],
       employees: [
         { label: "+ Nieuwe medewerker", go: { view: "employees" }, drawer: "employee" },
-        { label: "Startpagina-template", settingsSection: "employees", needsView: "settings" }
+        { label: "Instellingen", settingsSection: "employees", needsView: "settings" }
       ],
       messages: [
         { label: "+ Nieuw bericht", go: { view: "messages" }, drawer: "message" }
@@ -569,12 +569,10 @@
       venues: [
         { label: "+ Nieuwe locatie", go: { view: "venues" }, drawer: "venue" }
       ],
-      settings: [
-        { label: "Bedrijfsgegevens", go: { view: "settings" } },
-        { label: "Prikklok", settingsSection: "clocking" },
-        { label: "Betaalherinneringen", settingsSection: "facturen" },
-        { label: "Startpagina medewerkers", settingsSection: "employees" }
-      ]
+      // De centrale Instellingen bevat enkel overkoepelende zaken (bedrijf,
+      // beveiliging, backup, abonnement). Module-gebonden instellingen wonen
+      // onder de module zelf, dus hier geen module-links.
+      settings: []
     };
   }
 
@@ -5493,9 +5491,6 @@ ${categories.map(cat => `
       </form>
     </div>
   </div>
-  ${moduleCards.clocking.card}
-  ${moduleCards.facturen.card}
-  ${moduleCards.employees.card}
   <div class="adm-card">
     <div class="adm-card-header"><h3 class="adm-card-title">Abonnement &amp; plan</h3></div>
     <div class="adm-card-body">
@@ -5725,11 +5720,8 @@ ${categories.map(cat => `
       }
     });
 
-    // Module-instellingen (prikklok, facturen, startpagina) koppelen hun eigen
-    // opslaan-knoppen — zelfde .wire() als in de gefocuste sectieweergave.
-    moduleCards.clocking.wire();
-    moduleCards.facturen.wire();
-    moduleCards.employees.wire();
+    // Module-gebonden instellingen wonen NIET op de centrale Instellingen-pagina;
+    // ze zijn bereikbaar via de flyout van hun eigen module (gefocuste sectie).
 
     (async () => {
       const btn = document.getElementById("admPushToggle");
