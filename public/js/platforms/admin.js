@@ -227,6 +227,9 @@
     return (e.views || []).includes(view);
   }
 
+  // i18n-helper voor de admin-shell (t()-gebaseerde, dynamisch opgebouwde inhoud).
+  function tA(key, fallback) { return window.wfpI18n ? window.wfpI18n.t(key, fallback) : fallback; }
+
   // ── Shell ──────────────────────────────────────────────────
   function buildShell() {
     const el = document.getElementById("platform-admin");
@@ -249,7 +252,7 @@
 
     <nav class="adm-nav" aria-label="Hoofdnavigatie">
       <!-- Hoofdmenu -->
-      <div class="adm-nav-label">Overzicht</div>
+      <div class="adm-nav-label" data-i18n="nav.sec.overview">Overzicht</div>
       <a class="adm-nav-item active" data-view="dashboard" href="#">
         <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
         <span data-i18n="nav.dashboard">Dashboard</span>
@@ -259,7 +262,7 @@
         <span data-i18n="nav.reports">Rapportages</span>
       </a>
 
-      <div class="adm-nav-label">Operaties</div>
+      <div class="adm-nav-label" data-i18n="nav.sec.operations">Operaties</div>
       <a class="adm-nav-item" data-view="planning" href="#">
         <svg viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/></svg>
         <span data-i18n="nav.planning">Planning</span>
@@ -288,7 +291,7 @@
         <span class="adm-nav-badge" id="admMsgBadge" style="display:none">0</span>
       </a>
 
-      <div class="adm-nav-label">Klanten & Financiën</div>
+      <div class="adm-nav-label" data-i18n="nav.sec.finance">Klanten & Financiën</div>
       <a class="adm-nav-item" data-view="customers" href="#">
         <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
         <span data-i18n="nav.customers">Klanten</span>
@@ -309,7 +312,7 @@
         <span class="adm-nav-badge" id="admInvoiceBadge" style="display:none">0</span>
       </a>
 
-      <div class="adm-nav-label">Middelen</div>
+      <div class="adm-nav-label" data-i18n="nav.sec.resources">Middelen</div>
       <a class="adm-nav-item" data-view="employees" href="#">
         <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
         <span data-i18n="nav.employees">Medewerkers</span>
@@ -327,7 +330,7 @@
         <span data-term="venuePlural">Locaties</span>
       </a>
 
-      <div class="adm-nav-label">Compliance</div>
+      <div class="adm-nav-label" data-i18n="nav.sec.compliance">Compliance</div>
       <a class="adm-nav-item" data-view="ciaw" href="#">
         <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
         <span data-i18n="nav.ciaw">Checkin@Work</span>
@@ -337,7 +340,7 @@
         <span data-i18n="nav.posted_workers">A1 / Limosa</span>
       </a>
 
-      <div class="adm-nav-label">Systeem</div>
+      <div class="adm-nav-label" data-i18n="nav.sec.system">Systeem</div>
       <a class="adm-nav-item" data-view="integrations" href="#">
         <svg viewBox="0 0 24 24"><path d="M22 7h-7V2H9v5H2v15h20V7zM11 4h2v3h-2V4zm9 16H4V9h16v11zM9 13h2v2H9v-2zm4 0h2v2h-2v-2z"/></svg>
         <span data-i18n="nav.integrations">Koppelingen</span>
@@ -366,7 +369,7 @@
         <div class="adm-user-av" id="admUserAvatar">A</div>
         <div class="adm-user-details">
           <div class="adm-user-name" id="admUserName">Admin</div>
-          <div class="adm-user-role">Beheerder</div>
+          <div class="adm-user-role" data-i18n="role.admin">Beheerder</div>
         </div>
       </div>
       <button class="adm-logout-btn" id="admLogoutBtn" title="Uitloggen">
@@ -386,7 +389,7 @@
       <!-- Search -->
       <div class="adm-search-box">
         <svg class="adm-search-icon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-        <input type="text" class="adm-search-input" id="admGlobalSearch" placeholder="Zoek klant, werkbon, factuur, medewerker…" autocomplete="off">
+        <input type="text" class="adm-search-input" id="admGlobalSearch" data-i18n-ph="nav.searchPh" placeholder="Zoek klant, werkbon, factuur, medewerker…" autocomplete="off">
         <span class="adm-search-kbd">⌘K</span>
         <div class="adm-search-results" id="admSearchResults"></div>
       </div>
@@ -422,7 +425,7 @@
           <div class="adm-topbar-av" id="admTopbarAv">A</div>
           <div class="adm-topbar-user-info">
             <div class="adm-topbar-user-name" id="admTopbarName">Admin</div>
-            <div class="adm-topbar-user-role">Beheerder</div>
+            <div class="adm-topbar-user-role" data-i18n="role.admin">Beheerder</div>
           </div>
         </div>
       </div>
@@ -874,105 +877,106 @@
     if (viewEnabled("facturen")) {
       kpiCards.push(`
   <div class="adm-kpi adm-kpi-link" data-goto="facturen" title="Naar facturen">
-    <div class="adm-kpi-label">Omzet deze maand</div>
+    <div class="adm-kpi-label">${tA("dash.revenueMonth","Omzet deze maand")}</div>
     <div class="adm-kpi-value">${eur0.format(mtdTotal)}</div>
-    <div class="adm-kpi-sub">${trendPct === null ? "Geen omzet vorige maand" : `<span class="adm-trend ${trendPct >= 0 ? "up" : "down"}">${trendPct >= 0 ? "▲" : "▼"} ${Math.abs(trendPct)}%</span> t.o.v. vorige maand`}</div>
+    <div class="adm-kpi-sub">${trendPct === null ? tA("dash.noRevenuePrev","Geen omzet vorige maand") : `<span class="adm-trend ${trendPct >= 0 ? "up" : "down"}">${trendPct >= 0 ? "▲" : "▼"} ${Math.abs(trendPct)}%</span> ${tA("dash.vsPrevMonth","t.o.v. vorige maand")}`}</div>
     <div class="adm-kpi-spark">${admSpark(omzetSerie, "var(--wf-blue)")}</div>
   </div>`);
       kpiCards.push(`
   <div class="adm-kpi adm-kpi-link" data-goto="facturen" title="Naar facturen">
-    <div class="adm-kpi-label">Openstaande facturen</div>
+    <div class="adm-kpi-label">${tA("dash.openInvoices","Openstaande facturen")}</div>
     <div class="adm-kpi-value">${eur0.format(openTotal)}</div>
-    <div class="adm-kpi-sub">${openInv.length} facturen${overdueCount ? ` · <span class="adm-trend down">${overdueCount} vervallen</span>` : ""}</div>
+    <div class="adm-kpi-sub">${openInv.length} ${tA("dash.invoices","facturen")}${overdueCount ? ` · <span class="adm-trend down">${overdueCount} ${tA("dash.overdue","vervallen")}</span>` : ""}</div>
     <div class="adm-kpi-spark">${admSpark(openSerie, "var(--wf-yellow)")}</div>
   </div>`);
     }
     if (viewEnabled("workorders")) kpiCards.push(`
   <div class="adm-kpi adm-kpi-link" data-goto="workorders" title="Naar werkbonnen">
-    <div class="adm-kpi-label">Open werkbonnen</div>
+    <div class="adm-kpi-label">${(window.wfpTerms && window.wfpTerms.t("jobPlural")) ? window.wfpTerms.t("jobPlural") : tA("dash.openWo","Open werkbonnen")}</div>
     <div class="adm-kpi-value">${activeWos.length}</div>
-    <div class="adm-kpi-sub">${lateWos.length ? `<span class="adm-trend down">${lateWos.length} te laat</span>` : "Alles op schema"}</div>
+    <div class="adm-kpi-sub">${lateWos.length ? `<span class="adm-trend down">${lateWos.length} ${tA("dash.late","te laat")}</span>` : tA("dash.onSchedule","Alles op schema")}</div>
     <div class="adm-kpi-spark">${admSpark(woSerie, "var(--wf-blue)")}</div>
   </div>`);
     if (viewEnabled("clocking")) kpiCards.push(`
   <div class="adm-kpi adm-kpi-link" data-goto="clocking" title="Naar prikklok">
-    <div class="adm-kpi-label">Uren deze week</div>
-    <div class="adm-kpi-value">${weekUren} u</div>
-    <div class="adm-kpi-sub">${clockedUsers === 1 ? "1 medewerker klokte" : `${clockedUsers} medewerkers klokten`} · ${dash.clockedIn ?? 0} nu ingeklokt</div>
+    <div class="adm-kpi-label">${tA("dash.hoursWeek","Uren deze week")}</div>
+    <div class="adm-kpi-value">${weekUren} ${tA("emp.unit.h","u")}</div>
+    <div class="adm-kpi-sub">${clockedUsers === 1 ? tA("dash.oneClocked","1 medewerker klokte") : tA("dash.nClocked","{n} medewerkers klokten").replace("{n}", clockedUsers)} · ${dash.clockedIn ?? 0} ${tA("dash.clockedNow","nu ingeklokt")}</div>
     <div class="adm-kpi-spark">${admSpark(urenSerie, "var(--wf-green)")}</div>
   </div>`);
     if (kpiCards.length < 4) kpiCards.unshift(`
   <div class="adm-kpi adm-kpi-link" data-goto="employees" title="Naar medewerkers">
-    <div class="adm-kpi-label">Team</div>
+    <div class="adm-kpi-label">${tA("dash.team","Team")}</div>
     <div class="adm-kpi-value">${dash.team ?? "-"}</div>
-    <div class="adm-kpi-sub">${dash.clockedIn ?? 0} nu ingeklokt</div>
+    <div class="adm-kpi-sub">${dash.clockedIn ?? 0} ${tA("dash.clockedNow","nu ingeklokt")}</div>
   </div>`);
 
     // Werkbonnen per status (donut)
     const stat = k => workorders.filter(w => w.status === k).length;
     const woSegs = [
-      { label: "Open", count: stat("open"), color: "var(--wf-blue)" },
-      { label: "In uitvoering", count: stat("in_progress"), color: "var(--wf-yellow)" },
-      { label: "Afgerond", count: stat("Voltooid") + stat("Afgewerkt"), color: "var(--wf-green)" },
-      { label: "Geannuleerd", count: stat("geannuleerd"), color: "var(--wf-red)" }
+      { label: tA("dash.woseg.open","Open"), count: stat("open"), color: "var(--wf-blue)" },
+      { label: tA("dash.woseg.inprog","In uitvoering"), count: stat("in_progress"), color: "var(--wf-yellow)" },
+      { label: tA("dash.woseg.done","Afgerond"), count: stat("Voltooid") + stat("Afgewerkt"), color: "var(--wf-green)" },
+      { label: tA("dash.woseg.cancelled","Geannuleerd"), count: stat("geannuleerd"), color: "var(--wf-red)" }
     ];
     const woOther = workorders.length - woSegs.reduce((s, x) => s + x.count, 0);
-    if (woOther > 0) woSegs.push({ label: "Overig", count: woOther, color: "var(--gray-400)" });
+    if (woOther > 0) woSegs.push({ label: tA("dash.woseg.other","Overig"), count: woOther, color: "var(--gray-400)" });
 
     // Planning vandaag
     const nameById = {};
-    (dash.teamList || []).forEach(u => { nameById[u.id] = u.name || u.email || "Medewerker"; });
+    (dash.teamList || []).forEach(u => { nameById[u.id] = u.name || u.email || tA("dash.employee","Medewerker"); });
     const planRows = todayShifts.slice(0, 8).map(s => `
       <div class="adm-tl-row">
         <span class="adm-tl-time">${esc(s.start || "")} – ${esc(s.end || "")}</span>
-        <span style="font-weight:500;color:var(--ink);white-space:nowrap">${esc(nameById[s.userId] || "Medewerker")}</span>
+        <span style="font-weight:500;color:var(--ink);white-space:nowrap">${esc(nameById[s.userId] || tA("dash.employee","Medewerker"))}</span>
         ${s.note ? `<span style="color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.note)}</span>` : ""}
       </div>`).join("");
 
     // Recente activiteit (samengesteld uit facturen, werkbonnen, verlof, onkosten)
-    const invLabel = { paid: "betaald", open: "openstaand", overdue: "vervallen", draft: "concept" };
-    const woLabel = { open: "open", in_progress: "in uitvoering", Voltooid: "voltooid", Afgewerkt: "afgewerkt", geannuleerd: "geannuleerd" };
+    const invLabel = { paid: tA("dash.invst.paid","betaald"), open: tA("dash.invst.open","openstaand"), overdue: tA("dash.invst.overdue","vervallen"), draft: tA("dash.invst.draft","concept") };
+    const woLabel = { open: tA("dash.woseg.open","open").toLowerCase(), in_progress: tA("dash.woseg.inprog","in uitvoering").toLowerCase(), Voltooid: tA("dash.woseg.done","voltooid").toLowerCase(), Afgewerkt: tA("dash.woseg.done","afgewerkt").toLowerCase(), geannuleerd: tA("dash.woseg.cancelled","geannuleerd").toLowerCase() };
+    const empLc = tA("dash.employee","medewerker").toLowerCase();
     const acts = [
-      ...invoices.map(i => ({ t: i.createdAt || "", color: i.status === "paid" ? "var(--wf-green)" : i.status === "overdue" ? "var(--wf-red)" : "var(--wf-blue)", text: `Factuur ${i.number || ""} · ${invLabel[i.status] || i.status || ""} · ${eur0.format(Number(i.total || 0))}`, view: "facturen" })),
-      ...workorders.map(w => ({ t: w.createdAt || "", color: "var(--wf-yellow)", text: `Werkbon ${w.number || w.title || ""} · ${woLabel[w.status] || w.status || ""}`, view: "workorders" })),
-      ...((pending.leaves || pending) || []).map(l => ({ t: l.createdAt || "", color: "var(--wf-blue)", text: `Verlofaanvraag van ${uName(l) || "medewerker"}`, view: "leaves" })),
-      ...(expData.expenses || []).filter(e => e.status === "pending" || !e.status).map(e => ({ t: e.createdAt || "", color: "var(--wf-red)", text: `Onkostennota ${eur0.format(Number(e.amount || 0))} van ${uName(e) || "medewerker"}`, view: "expenses" }))
+      ...invoices.map(i => ({ t: i.createdAt || "", color: i.status === "paid" ? "var(--wf-green)" : i.status === "overdue" ? "var(--wf-red)" : "var(--wf-blue)", text: `${tA("dash.act.invoice","Factuur")} ${i.number || ""} · ${invLabel[i.status] || i.status || ""} · ${eur0.format(Number(i.total || 0))}`, view: "facturen" })),
+      ...workorders.map(w => ({ t: w.createdAt || "", color: "var(--wf-yellow)", text: `${tA("dash.act.workorder","Werkbon")} ${w.number || w.title || ""} · ${woLabel[w.status] || w.status || ""}`, view: "workorders" })),
+      ...((pending.leaves || pending) || []).map(l => ({ t: l.createdAt || "", color: "var(--wf-blue)", text: `${tA("dash.act.leaveFrom","Verlofaanvraag van")} ${uName(l) || empLc}`, view: "leaves" })),
+      ...(expData.expenses || []).filter(e => e.status === "pending" || !e.status).map(e => ({ t: e.createdAt || "", color: "var(--wf-red)", text: tA("dash.act.expenseFrom","Onkostennota {a} van {n}").replace("{a}", eur0.format(Number(e.amount || 0))).replace("{n}", uName(e) || empLc), view: "expenses" }))
     ].filter(a => a.t).sort((a, b) => b.t.localeCompare(a.t)).slice(0, 7);
 
     const planCard = viewEnabled("planning") ? `
   <div class="adm-card">
-    <div class="adm-card-header"><h3 class="adm-card-title">Planning vandaag</h3><a href="#" class="adm-btn adm-btn-secondary adm-btn-sm" id="admDashPlanning">Naar planning</a></div>
+    <div class="adm-card-header"><h3 class="adm-card-title">${tA("dash.planToday","Planning vandaag")}</h3><a href="#" class="adm-btn adm-btn-secondary adm-btn-sm" id="admDashPlanning">${tA("dash.toPlanning","Naar planning")}</a></div>
     <div class="adm-card-body">
-      ${planRows || `<div class="adm-empty" style="padding:28px 16px"><div class="adm-empty-text">Nog niets ingepland voor vandaag.</div></div>`}
+      ${planRows || `<div class="adm-empty" style="padding:28px 16px"><div class="adm-empty-text">${tA("dash.nothingPlanned","Nog niets ingepland voor vandaag.")}</div></div>`}
     </div>
   </div>` : "";
     const donutCard = viewEnabled("workorders") ? `
   <div class="adm-card">
-    <div class="adm-card-header"><h3 class="adm-card-title">Werkbonnen per status</h3></div>
+    <div class="adm-card-header"><h3 class="adm-card-title">${tA("dash.woByStatus","Werkbonnen per status")}</h3></div>
     <div class="adm-card-body" style="display:flex;align-items:center;gap:22px;flex-wrap:wrap">
-      <div class="adm-donut-wrap">${admDonut(woSegs)}<div class="adm-donut-center"><div><div class="adm-donut-num">${workorders.length}</div><div class="adm-donut-cap">totaal</div></div></div></div>
+      <div class="adm-donut-wrap">${admDonut(woSegs)}<div class="adm-donut-center"><div><div class="adm-donut-num">${workorders.length}</div><div class="adm-donut-cap">${tA("dash.total","totaal")}</div></div></div></div>
       <div class="adm-legend">
-        ${woSegs.filter(s => s.count > 0).map(s => `<div class="adm-legend-row"><span class="adm-legend-dot" style="background:${s.color}"></span>${esc(s.label)}<span class="adm-legend-n">${s.count}</span></div>`).join("") || `<div style="font-size:12.5px;color:var(--muted)">Nog geen werkbonnen.</div>`}
+        ${woSegs.filter(s => s.count > 0).map(s => `<div class="adm-legend-row"><span class="adm-legend-dot" style="background:${s.color}"></span>${esc(s.label)}<span class="adm-legend-n">${s.count}</span></div>`).join("") || `<div style="font-size:12.5px;color:var(--muted)">${tA("dash.noWo","Nog geen werkbonnen.")}</div>`}
       </div>
     </div>
   </div>` : "";
     const actCard = `
   <div class="adm-card">
-    <div class="adm-card-header"><h3 class="adm-card-title">Recente activiteit</h3></div>
+    <div class="adm-card-header"><h3 class="adm-card-title">${tA("dash.recentActivity","Recente activiteit")}</h3></div>
     <div class="adm-card-body">
-      ${acts.map(a => `<div class="adm-act-row adm-act-link" data-view="${a.view}"><span class="adm-legend-dot" style="background:${a.color}"></span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(a.text)}</span><span class="adm-act-time">${esc(admTimeAgo(a.t))}</span></div>`).join("") || `<div class="adm-empty" style="padding:28px 16px"><div class="adm-empty-text">Nog geen activiteit.</div></div>`}
+      ${acts.map(a => `<div class="adm-act-row adm-act-link" data-view="${a.view}"><span class="adm-legend-dot" style="background:${a.color}"></span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(a.text)}</span><span class="adm-act-time">${esc(admTimeAgo(a.t))}</span></div>`).join("") || `<div class="adm-empty" style="padding:28px 16px"><div class="adm-empty-text">${tA("dash.noActivity","Nog geen activiteit.")}</div></div>`}
     </div>
   </div>`;
     const aiCard = document.getElementById("bodenFab") ? `
   <div class="adm-ai-card">
-    <div class="adm-ai-head"><span class="adm-ai-badge">AI</span> Boden · AI-assistent</div>
-    <p class="adm-ai-text">Stel een vraag over je cijfers, planning of klanten. Boden kijkt enkel naar gegevens waar jij rechten op hebt.</p>
+    <div class="adm-ai-head"><span class="adm-ai-badge">AI</span> ${tA("dash.aiTitle","Boden · AI-assistent")}</div>
+    <p class="adm-ai-text">${tA("dash.aiText","Stel een vraag over je cijfers, planning of klanten. Boden kijkt enkel naar gegevens waar jij rechten op hebt.")}</p>
     <div class="adm-ai-chips">
-      <button class="adm-ai-chip" data-q="Welke facturen zijn vervallen?">Welke facturen zijn vervallen?</button>
-      <button class="adm-ai-chip" data-q="Wat staat er vandaag op de planning?">Wat staat er vandaag gepland?</button>
-      <button class="adm-ai-chip" data-q="Hoeveel werkbonnen staan er open?">Hoeveel werkbonnen staan open?</button>
+      <button class="adm-ai-chip" data-q="${tA("dash.aiQ1","Welke facturen zijn vervallen?")}">${tA("dash.aiQ1","Welke facturen zijn vervallen?")}</button>
+      <button class="adm-ai-chip" data-q="${tA("dash.aiQ2","Wat staat er vandaag gepland?")}">${tA("dash.aiQ2","Wat staat er vandaag gepland?")}</button>
+      <button class="adm-ai-chip" data-q="${tA("dash.aiQ3","Hoeveel werkbonnen staan open?")}">${tA("dash.aiQ3","Hoeveel werkbonnen staan open?")}</button>
     </div>
-    <div style="margin-top:auto"><button class="adm-btn adm-btn-primary adm-btn-sm" id="admAiOpen">Open Boden</button></div>
+    <div style="margin-top:auto"><button class="adm-btn adm-btn-primary adm-btn-sm" id="admAiOpen">${tA("dash.aiOpen","Open Boden")}</button></div>
   </div>` : "";
     const cockpitRows = `
 ${planCard || donutCard ? `<div class="adm-grid-2" style="margin-bottom:18px">${planCard}${donutCard}</div>` : ""}
@@ -989,18 +993,18 @@ ${cockpitRows}
 <div class="adm-grid-2">
   <div class="adm-card">
     <div class="adm-card-header">
-      <h3 class="adm-card-title">Team vandaag</h3>
+      <h3 class="adm-card-title">${tA("dash.teamToday","Team vandaag")}</h3>
     </div>
     <div class="adm-card-body adm-table-wrap">
       <table class="adm-table">
-        <thead><tr><th>Medewerker</th><th>Status</th><th>Ingepland</th></tr></thead>
+        <thead><tr><th>${tA("dash.thEmployee","Medewerker")}</th><th>${tA("dash.thStatus","Status")}</th><th>${tA("dash.thPlanned","Ingepland")}</th></tr></thead>
         <tbody>
           ${(dash.teamList || []).slice(0,8).map(u => `
           <tr class="adm-row-link adm-dash-team" data-id="${esc(u.id||"")}" title="Open medewerker">
             <td><span class="adm-avatar">${esc((u.name||"?")[0])}</span> ${esc(u.name||u.email)}</td>
-            <td>${u.absent ? '<span class="adm-status adm-status-inactive">Afwezig</span>' : u.clockedIn ? '<span class="adm-status adm-status-active">Ingeklokt</span>' : '<span class="adm-status adm-status-pending">Niet geklokt</span>'}</td>
+            <td>${u.absent ? `<span class="adm-status adm-status-inactive">${tA("dash.stAbsent","Afwezig")}</span>` : u.clockedIn ? `<span class="adm-status adm-status-active">${tA("dash.stClockedIn","Ingeklokt")}</span>` : `<span class="adm-status adm-status-pending">${tA("dash.stNotClocked","Niet geklokt")}</span>`}</td>
             <td>${u.planned ? "✓" : "-"}</td>
-          </tr>`).join("") || '<tr><td colspan="3" class="adm-empty">Geen teamleden</td></tr>'}
+          </tr>`).join("") || `<tr><td colspan="3" class="adm-empty">${tA("dash.noTeam","Geen teamleden")}</td></tr>`}
         </tbody>
       </table>
     </div>
@@ -1008,12 +1012,12 @@ ${cockpitRows}
 
   <div class="adm-card">
     <div class="adm-card-header">
-      <h3 class="adm-card-title">Verlof aanvragen <span style="background:var(--wf-yellow-l);color:var(--wf-yellow);border-radius:999px;padding:1px 8px;font-size:11px;font-weight:600;">${(pending.leaves||pending||[]).length}</span></h3>
-      <a href="#" class="adm-btn adm-btn-secondary adm-btn-sm" id="admViewAllLeaves">Alles bekijken</a>
+      <h3 class="adm-card-title">${tA("dash.leaveRequests","Verlof aanvragen")} <span style="background:var(--wf-yellow-l);color:var(--wf-yellow);border-radius:999px;padding:1px 8px;font-size:11px;font-weight:600;">${(pending.leaves||pending||[]).length}</span></h3>
+      <a href="#" class="adm-btn adm-btn-secondary adm-btn-sm" id="admViewAllLeaves">${tA("dash.viewAll","Alles bekijken")}</a>
     </div>
     <div class="adm-card-body adm-table-wrap">
       <table class="adm-table">
-        <thead><tr><th>Medewerker</th><th>Type</th><th>Periode</th><th>Actie</th></tr></thead>
+        <thead><tr><th>${tA("dash.thEmployee","Medewerker")}</th><th>${tA("dash.thType","Type")}</th><th>${tA("dash.thPeriod","Periode")}</th><th>${tA("dash.thAction","Actie")}</th></tr></thead>
         <tbody>
           ${((pending.leaves||pending)||[]).slice(0,5).map(l => `
           <tr>
@@ -1021,10 +1025,10 @@ ${cockpitRows}
             <td>${esc(l.type||"-")}</td>
             <td style="white-space:nowrap">${esc(l.startDate)} – ${esc(l.endDate)}</td>
             <td style="white-space:nowrap">
-              <button class="adm-btn adm-btn-success adm-btn-sm adm-dash-lv-ok" data-id="${esc(l.id)}">Goed</button>
-              <button class="adm-btn adm-btn-danger adm-btn-sm adm-dash-lv-rej" data-id="${esc(l.id)}">Weigeren</button>
+              <button class="adm-btn adm-btn-success adm-btn-sm adm-dash-lv-ok" data-id="${esc(l.id)}">${tA("dash.approve","Goed")}</button>
+              <button class="adm-btn adm-btn-danger adm-btn-sm adm-dash-lv-rej" data-id="${esc(l.id)}">${tA("dash.reject","Weigeren")}</button>
             </td>
-          </tr>`).join("") || '<tr><td colspan="4" class="adm-empty">Geen aanvragen</td></tr>'}
+          </tr>`).join("") || `<tr><td colspan="4" class="adm-empty">${tA("dash.noRequests","Geen aanvragen")}</td></tr>`}
         </tbody>
       </table>
     </div>
@@ -1036,14 +1040,16 @@ ${(() => {
   const overdueInv = invoices.filter(i => i.status === "overdue");
   const openInv    = invoices.filter(i => i.status === "open");
   const expensesPending = (expData.expenses || []).filter(e => e.status === "pending" || !e.status);
+  const eurA = n => new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR"}).format(n);
+  const empA = tA("dash.employee","medewerker").toLowerCase();
   const items = [
-    ...overdueInv.map(i => ({ icon:"<span class=\"adm-dot\" style=\"background:var(--wf-red)\"></span>", text:`Factuur ${i.number} vervallen · ${new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR"}).format(i.total)}`, view:"facturen", urgent:true })),
-    ...expensesPending.slice(0,3).map(e => ({ icon:"<span class=\"adm-dot\" style=\"background:var(--wf-yellow)\"></span>", text:`Onkostennota €${e.amount||0} van ${esc(uName(e)||"medewerker")} wacht op goedkeuring`, view:"expenses", urgent:false })),
-    ...openInv.slice(0,2).map(i => ({ icon:"<span class=\"adm-dot\" style=\"background:var(--wf-blue)\"></span>", text:`Factuur ${i.number} openstaand · ${new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR"}).format(i.total)}`, view:"facturen", urgent:false }))
+    ...overdueInv.map(i => ({ icon:"<span class=\"adm-dot\" style=\"background:var(--wf-red)\"></span>", text:tA("dash.invoiceOverdue","Factuur {n} vervallen · {a}").replace("{n}", i.number).replace("{a}", eurA(i.total)), view:"facturen", urgent:true })),
+    ...expensesPending.slice(0,3).map(e => ({ icon:"<span class=\"adm-dot\" style=\"background:var(--wf-yellow)\"></span>", text:tA("dash.expenseWaiting","Onkostennota {a} van {n} wacht op goedkeuring").replace("{a}", `€${e.amount||0}`).replace("{n}", esc(uName(e)||empA)), view:"expenses", urgent:false })),
+    ...openInv.slice(0,2).map(i => ({ icon:"<span class=\"adm-dot\" style=\"background:var(--wf-blue)\"></span>", text:tA("dash.invoiceOpen","Factuur {n} openstaand · {a}").replace("{n}", i.number).replace("{a}", eurA(i.total)), view:"facturen", urgent:false }))
   ];
   if (!items.length) return "";
   return `<div class="adm-card" style="margin-top:16px">
-  <div class="adm-card-header"><h3 class="adm-card-title">Actie vereist <span style="background:var(--wf-red-l);color:var(--wf-red);border-radius:999px;padding:2px 8px;font-size:11px;font-weight:700;">${items.length}</span></h3></div>
+  <div class="adm-card-header"><h3 class="adm-card-title">${tA("dash.actionRequired","Actie vereist")} <span style="background:var(--wf-red-l);color:var(--wf-red);border-radius:999px;padding:2px 8px;font-size:11px;font-weight:700;">${items.length}</span></h3></div>
   <div class="adm-card-body" style="padding:0">
     ${items.map(it => `
     <div class="adm-action-item" data-view="${it.view}" style="padding:10px 16px;border-bottom:1px solid var(--gray-50);display:flex;align-items:center;gap:10px;cursor:pointer;transition:background .1s;">
@@ -6001,7 +6007,13 @@ ${enrolled.map(e => `
       window.wfpI18n.apply(i18nRoot);
       paintLang();
       document.getElementById("admLangToggle")?.addEventListener("click", () => window.wfpI18n.cycleLang());
-      document.addEventListener("wfp:langchange", () => { window.wfpI18n.apply(i18nRoot); paintLang(); });
+      document.addEventListener("wfp:langchange", () => {
+        window.wfpI18n.apply(i18nRoot);
+        paintLang();
+        // t()-gebaseerde scherminhoud herrenderen (paginatitel + huidige view).
+        document.getElementById("admPageTitle").textContent = (window.wfpTerms && (_currentView === "workorders" ? window.wfpTerms.t("jobPlural") : _currentView === "venues" ? window.wfpTerms.t("venuePlural") : null)) || VIEW_LABELS[_currentView] || _currentView;
+        if (_currentView) switchView(_currentView);
+      });
     }
 
     // Sync user name + topbar from current user
