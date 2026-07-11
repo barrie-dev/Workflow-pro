@@ -1247,3 +1247,37 @@ test("security: generieke users-CRUD kan geen rol/rechten escaleren", () => {
   assert.equal(created.role, "employee", "nieuwe user via generieke CRUD is employee");
   assert.deepEqual(created.permissions, [], "nieuwe user via generieke CRUD heeft geen rechten");
 });
+
+// ── Security: lockout beschermt zonder DoS + constante-tijd bij onbekend account ─
+const authMod = require("../src/lib/auth");
+const { hashPassword: hp } = require("../src/lib/security");
+
+function fakeAuthStore(users) {
+  return {
+    getUserByEmail: e => users.find(u => u.email === e) || null,
+    getUserById: id => users.find(u => u.id === id) || null,
+    update: (c, id, patch) => { const u = users.find(x => x.id === id); Object.assign(u, patch); return u; },
+    audit: () => {}
+  };
+}
+
+test("security: correct wachtwoord tijdens lock logt in (geen lockout-DoS)", () => {
+  const user = { id: "u1", email: "a@x.be", passwordHash: hp("Correct123!"), active: true,
+    failedLoginCount: 5, lockedUntil: new Date(Date.now() + 10 * 60000).toISOString() };
+  const store = fakeAuthStore([user]);
+  assert.ok(authMod.isLocked(user), "account is gelockt");
+  const res = authMod.login(store, "a@x.be", "Correct123!");
+  assert.ok(res && res.token, "legitieme gebruiker met juist wachtwoord raakt niet buitengesloten");
+});
+
+test("security: fout wachtwoord tijdens lock blijft geweigerd (423)", () => {
+  const user = { id: "u1", email: "a@x.be", passwordHash: hp("Correct123!"), active: true,
+    failedLoginCount: 5, lockedUntil: new Date(Date.now() + 10 * 60000).toISOString() };
+  const store = fakeAuthStore([user]);
+  assert.throws(() => authMod.login(store, "a@x.be", "fout"), e => e.status === 423, "gelockt + fout wachtwoord → 423");
+});
+
+test("security: onbekend e-mailadres geeft null (geen enumeratie-shortcut)", () => {
+  const store = fakeAuthStore([]);
+  assert.equal(authMod.login(store, "bestaat-niet@x.be", "wat dan ook"), null);
+});

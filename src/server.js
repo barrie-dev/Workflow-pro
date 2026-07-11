@@ -1164,7 +1164,10 @@ http.createServer(async (req, res) => {
       assertApiKeyWriteAllowed(user, req);
       const key = moduleMatch[1];
       const id = moduleMatch[2];
-      const tenantId = url.searchParams.get("tenantId") || user.tenantId;
+      // Niet-super gebruikers zijn ALTIJD aan hun eigen tenant gebonden; de
+      // query-tenantId telt enkel voor super_admin. Zo kan de entitlement-check
+      // niet omzeild worden door een andere tenant op te geven.
+      const tenantId = user.role === "super_admin" ? (url.searchParams.get("tenantId") || user.tenantId) : user.tenantId;
       // Entitlement-handhaving op moduleniveau (super_admin omzeilt).
       if (user.role !== "super_admin") {
         const cat = moduleByKey(key);
@@ -1192,7 +1195,7 @@ http.createServer(async (req, res) => {
       if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
       assertAdminMfa(user);
       const key = exportMatch[1];
-      const tenantId = url.searchParams.get("tenantId") || user.tenantId;
+      const tenantId = user.role === "super_admin" ? (url.searchParams.get("tenantId") || user.tenantId) : user.tenantId;
       const rows = listModule(store, user, key, tenantId);
       sendCsv(res, `${key}-${new Date().toISOString().slice(0, 10)}.csv`, rows);
       return;

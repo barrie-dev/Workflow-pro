@@ -6,6 +6,11 @@ const BASE32_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 const MAX_FAILED_LOGINS = 5;
 const LOCK_MINUTES = 15;
 
+// Constante-tijd tegen user-enumeratie: bij een onbestaand e-mailadres draaien
+// we tóch een PBKDF2-verificatie tegen deze dummy-hash, zodat de responstijd
+// niet verraadt of het account bestaat.
+const DUMMY_PASSWORD_HASH = hashPassword(crypto.randomBytes(16).toString("hex"));
+
 function sign(payload) {
   const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
   const signature = crypto.createHmac("sha256", config.jwtSecret).update(body).digest("base64url");
@@ -196,9 +201,12 @@ function lockError(user) {
   return error;
 }
 
+function isLocked(user) {
+  return !!(user?.lockedUntil && new Date(user.lockedUntil).getTime() > Date.now());
+}
+
 function assertNotLocked(user) {
-  if (!user?.lockedUntil) return;
-  if (new Date(user.lockedUntil).getTime() > Date.now()) throw lockError(user);
+  if (isLocked(user)) throw lockError(user);
 }
 
 function registerFailedLogin(store, user) {
@@ -225,10 +233,15 @@ function resetLoginFailures(store, user) {
 
 function login(store, email, password) {
   const user = store.getUserByEmail(email);
-  if (!user) return null;
-  assertNotLocked(user);
+  if (!user) { verifyPassword(password, DUMMY_PASSWORD_HASH); return null; } // constante tijd
+  // Lockout beschermt tegen brute-force ZONDER een legitieme gebruiker buiten
+  // te sluiten: een CORRECT wachtwoord mag altijd door (geen lockout-DoS), een
+  // FOUT wachtwoord tijdens een lock blijft geweigerd. De gok-snelheid zelf is
+  // per-IP begrensd door de rate-limiter.
+  const locked = isLocked(user);
   if (!verifyPassword(password, user.passwordHash)) {
     registerFailedLogin(store, user);
+    if (locked) throw lockError(store.getUserById(user.id) || user);
     return null;
   }
   if (user.active === false) return null; // gedeactiveerd / nog niet goedgekeurd
@@ -281,10 +294,11 @@ function verifyTotp(secret, code) {
 
 function loginWithMfa(store, email, password, code) {
   const user = store.getUserByEmail(email);
-  if (!user) return null;
-  assertNotLocked(user);
+  if (!user) { verifyPassword(password, DUMMY_PASSWORD_HASH); return null; } // constante tijd
+  const locked = isLocked(user);
   if (!verifyPassword(password, user.passwordHash)) {
     registerFailedLogin(store, user);
+    if (locked) throw lockError(store.getUserById(user.id) || user);
     return null;
   }
   if (user.active === false) return null; // gedeactiveerd / nog niet goedgekeurd
@@ -569,6 +583,7 @@ module.exports = {
   SUPPORT_HARD_MS,
   login,
   loginWithMfa,
+  isLocked,
   safeUser,
   createMfaSetup,
   verifyMfaSetup,
