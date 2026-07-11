@@ -73,6 +73,18 @@ function isPlaceholder(value) {
 }
 
 function assertProductionConfig() {
+  // Elke klantgerichte omgeving (staging + production) moet echte secrets hebben:
+  // een default/zwakke JWT_SECRET laat sessie-, support- en reset-tokens
+  // vervalsen; een default ENCRYPTION_KEY laat opgeslagen MFA-secrets ontsleutelen.
+  // Staging draagt echte klantdata, dus de secret-check geldt óók daar.
+  if (config.isProdLike) {
+    const secretsMissing = [];
+    if (isPlaceholder(config.jwtSecret) || String(config.jwtSecret).length < 32) secretsMissing.push("JWT_SECRET");
+    if (isPlaceholder(config.encryptionKey) || String(config.encryptionKey).length < 32) secretsMissing.push("ENCRYPTION_KEY");
+    if (secretsMissing.length) {
+      throw new Error(`${config.appEnv}-config blokkeert start (zwakke/default secrets): ${secretsMissing.join(", ")}`);
+    }
+  }
   if (!config.isProduction) return;
   const missing = [];
   const warnings = [];

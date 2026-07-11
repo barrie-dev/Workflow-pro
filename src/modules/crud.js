@@ -18,12 +18,26 @@ function publicRow(key, row) {
   return safe;
 }
 
+// Privilege-gevoelige velden mogen NOOIT via de generieke module-CRUD gezet
+// worden: rol/rechten/platform-vlaggen horen uitsluitend via de dedicated
+// /employees-endpoint te lopen (dat saneert en cl'ampt rollen). Zonder deze
+// strip kan een gebruiker met 'employees'-recht zichzelf tot super_admin
+// promoveren via PATCH /api/modules/users/:id.
+const PRIVILEGED_USER_FIELDS = [
+  "role", "permissions", "protected", "platformScopes",
+  "mfaEnabled", "mfaEnforced", "mfaSecret", "mfaPendingSecret",
+  "recoveryCodes", "passwordHash", "failedLoginCount", "lockedUntil"
+];
+
 function normalizePayload(key, payload) {
   const next = { ...payload };
-  if (key === "users" && payload.password) {
-    assertStrongPassword(payload.password);
-    next.passwordHash = hashPassword(payload.password);
-    delete next.password;
+  if (key === "users") {
+    for (const field of PRIVILEGED_USER_FIELDS) delete next[field];
+    if (payload.password) {
+      assertStrongPassword(payload.password);
+      next.passwordHash = hashPassword(payload.password);
+      delete next.password;
+    }
   }
   if (key === "integrations") {
     const secret = payload.secret || payload.apiKey || payload.encryptedSecret;
@@ -123,9 +137,13 @@ function createModuleRow(store, user, key, tenantId, payload) {
   };
   if (key === "users") {
     row.active = row.active !== false;
-    row.permissions = row.permissions || [];
-    row.mfaEnabled = !!row.mfaEnabled;
-    row.mfaEnforced = !!row.mfaEnforced;
+    // Rol/rechten zijn gestript uit de payload (zie PRIVILEGED_USER_FIELDS):
+    // via de generieke CRUD ontstaat altijd een minst-geprivilegieerde
+    // employee zonder rechten. Rol-toekenning loopt via /employees.
+    row.role = "employee";
+    row.permissions = [];
+    row.mfaEnabled = false;
+    row.mfaEnforced = false;
   }
   if (key === "sales") {
     row.stage = row.stage || "qualified_lead";

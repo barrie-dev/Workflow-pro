@@ -1223,3 +1223,27 @@ test("reminders: bedrijfsbeleid bepaalt frequentie en maximum", () => {
   assert.equal(remDue({ ...base, reminders: sentDaysAgo(10) }, today, reminderPolicy({ intervalDays: 7, maxReminders: 1 })), false);
   assert.equal(remDue({ ...base, reminders: sentDaysAgo(10) }, today, reminderPolicy({ intervalDays: 7, maxReminders: 3 })), true);
 });
+
+// ── Security: privilege-escalatie via generieke module-CRUD geblokkeerd ─────────
+const crudMod = require("../src/modules/crud");
+
+test("security: generieke users-CRUD kan geen rol/rechten escaleren", () => {
+  const rows = { users: [{ id: "u1", tenantId: "t1", name: "A", email: "a@x.be", role: "tenant_admin", permissions: ["employees"] }] };
+  const store = {
+    get: (c, id) => rows[c].find(r => r.id === id),
+    list: (c, t) => rows[c].filter(r => !t || r.tenantId === t),
+    update: (c, id, patch) => { const r = rows[c].find(x => x.id === id); Object.assign(r, patch); return r; },
+    insert: (c, row) => { (rows[c] = rows[c] || []).push(row); return row; },
+    audit: () => {}
+  };
+  const admin = { id: "u1", role: "tenant_admin", tenantId: "t1", permissions: ["employees"], mfaEnabled: true, mfaEnforced: true, mfaSecret: "x" };
+  // Poging tot escalatie via generieke update
+  const updated = crudMod.updateModuleRow(store, admin, "users", "u1", { role: "super_admin", permissions: ["*"], protected: true });
+  assert.equal(updated.role, "tenant_admin", "rol mag niet escaleren via generieke CRUD");
+  assert.deepEqual(updated.permissions, ["employees"], "rechten mogen niet escaleren via generieke CRUD");
+  assert.ok(!updated.protected, "platform-god-vlag mag niet gezet worden");
+  // Aanmaak via generieke CRUD levert een minst-geprivilegieerde employee
+  const created = crudMod.createModuleRow(store, admin, "users", "t1", { name: "B", email: "b@x.be", role: "super_admin", permissions: ["*"] });
+  assert.equal(created.role, "employee", "nieuwe user via generieke CRUD is employee");
+  assert.deepEqual(created.permissions, [], "nieuwe user via generieke CRUD heeft geen rechten");
+});
