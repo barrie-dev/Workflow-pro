@@ -673,14 +673,15 @@
       a.classList.toggle("active", isActive);
       if (isActive) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
     });
-    // Sector-terminologie voor de paginatitel (Werkbonnen/Locaties → sectorwoord).
+    // Sector-terminologie voor de paginatitel (Werkbonnen/Locaties → sectorwoord),
+    // anders de vertaalde nav-naam.
     const termTitle = window.wfpTerms && (view === "workorders" ? window.wfpTerms.t("jobPlural") : view === "venues" ? window.wfpTerms.t("venuePlural") : null);
-    document.getElementById("admPageTitle").textContent = termTitle || VIEW_LABELS[view] || view;
+    document.getElementById("admPageTitle").textContent = termTitle || tA("nav." + view, VIEW_LABELS[view] || view);
 
     const btn = document.getElementById("admPrimaryAction");
     const hasBtn = VIEW_BTN_LABEL[view];
     btn.style.display = hasBtn ? "" : "none";
-    if (hasBtn) btn.textContent = hasBtn;
+    if (hasBtn) btn.textContent = tA("adm.btn." + view, hasBtn);
 
     const content = document.getElementById("admContent");
     content.innerHTML = `<div class="adm-loading">Laden…</div>`;
@@ -704,10 +705,10 @@
     const chip = (mode, label) => `<button class="adm-btn ${_dashMode === mode ? "adm-btn-primary" : "adm-btn-secondary"} adm-btn-sm" data-dashmode="${mode}">${label}</button>`;
     content.innerHTML = `
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px">
-        ${chip("standaard", "Overzicht")}
-        ${chip("personal", "Mijn dashboard")}
-        ${hasOrg ? chip("org", "Organisatie") : ""}
-        ${_dashMode === "personal" ? `<button class="adm-btn adm-btn-secondary adm-btn-sm" id="dashConfigToggle" style="margin-left:auto">Aanpassen</button>` : ""}
+        ${chip("standaard", tA("dash.mode.overview","Overzicht"))}
+        ${chip("personal", tA("dash.mode.personal","Mijn dashboard"))}
+        ${hasOrg ? chip("org", tA("dash.mode.org","Organisatie")) : ""}
+        ${_dashMode === "personal" ? `<button class="adm-btn adm-btn-secondary adm-btn-sm" id="dashConfigToggle" style="margin-left:auto">${tA("dash.mode.customize","Aanpassen")}</button>` : ""}
       </div>
       <div id="dashBody"></div>`;
     content.querySelectorAll("[data-dashmode]").forEach(btn => btn.addEventListener("click", () => { _dashMode = btn.dataset.dashmode; renderDashboard(); }));
@@ -1164,14 +1165,14 @@ ${(() => {
     content.innerHTML = `
 <div class="adm-card">
   <div class="adm-card-header">
-    <h3 class="adm-card-title">${activeCount} actief${inactiveCount ? ` · ${inactiveCount} inactief` : ""}</h3>
+    <h3 class="adm-card-title">${tA("adm.emp.activeCount","{a} actief").replace("{a}", activeCount)}${inactiveCount ? ` · ${tA("adm.emp.inactiveCount","{i} inactief").replace("{i}", inactiveCount)}` : ""}</h3>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-      <input type="search" placeholder="Zoeken…" id="admEmpSearch" style="width:180px">
+      <input type="search" placeholder="${tA("adm.search","Zoeken…")}" id="admEmpSearch" style="width:180px">
       ${inactiveCount ? `<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--gray-500);cursor:pointer;">
-        <input type="checkbox" id="admEmpShowInactive" ${_empShowInactive?"checked":""}> Toon inactief
+        <input type="checkbox" id="admEmpShowInactive" ${_empShowInactive?"checked":""}> ${tA("adm.showInactive","Toon inactief")}
       </label>` : ""}
-      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admEmpImport" title="CSV importeren">CSV Import</button>
-      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admEmpExport" title="Exporteer als CSV">Export</button>
+      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admEmpImport" title="CSV importeren">${tA("adm.csvImport","CSV Import")}</button>
+      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admEmpExport" title="Exporteer als CSV">${tA("adm.export","Export")}</button>
     </div>
   </div>
   <div class="adm-card-body adm-table-wrap" id="admEmpTable">
@@ -1237,20 +1238,20 @@ ${(() => {
   }
 
   function renderEmployeeTable(employees) {
-    if (!employees.length) return `<div class="adm-empty"><div class="adm-empty-text">Geen medewerkers gevonden</div></div>`;
+    if (!employees.length) return `<div class="adm-empty"><div class="adm-empty-text">${tA("adm.emp.none","Geen medewerkers gevonden")}</div></div>`;
     return `<table class="adm-table">
-      <thead><tr><th></th><th>Naam</th><th>E-mail</th><th>Functie</th><th>Rol</th><th>Status</th><th>Acties</th></tr></thead>
+      <thead><tr><th></th><th>${tA("adm.name","Naam")}</th><th>${tA("adm.email","E-mail")}</th><th>${tA("adm.function","Functie")}</th><th>${tA("adm.role","Rol")}</th><th>${tA("adm.status","Status")}</th><th>${tA("adm.actions","Acties")}</th></tr></thead>
       <tbody>${employees.map(u => `
         <tr class="adm-row-link adm-emp-row" data-id="${esc(u.id)}" title="Open medewerker">
           <td><span class="adm-avatar" style="background:${u.active===false?"var(--gray-100)":"var(--wf-purple-l)"};color:${u.active===false?"var(--gray-400)":"var(--wf-purple)"}">${(u.name||u.email||"?")[0].toUpperCase()}</span></td>
           <td><div style="font-weight:600;color:${u.active===false?"var(--gray-400)":"var(--gray-900)"}">${esc(u.name||"-")}</div><div style="font-size:11px;color:var(--gray-400)">${esc(u.phone||"")}</div></td>
           <td style="font-size:12px">${esc(u.email)}</td>
           <td style="font-size:12px;color:var(--gray-500)">${esc(u.function||u.jobTitle||"-")}</td>
-          <td><span class="adm-status ${u.role==="manager"?"adm-status-pending":"adm-status-open"}">${u.role==="manager"?"Manager":u.role==="tenant_admin"?"Admin":"Medewerker"}</span></td>
-          <td>${u.active!==false ? '<span class="adm-status adm-status-active">Actief</span>' : '<span class="adm-status adm-status-inactive">Inactief</span>'}</td>
+          <td><span class="adm-status ${u.role==="manager"?"adm-status-pending":"adm-status-open"}">${u.role==="manager"?tA("role.manager","Manager"):u.role==="tenant_admin"?tA("role.admin","Admin"):tA("dash.employee","Medewerker")}</span></td>
+          <td>${u.active!==false ? `<span class="adm-status adm-status-active">${tA("adm.active","Actief")}</span>` : `<span class="adm-status adm-status-inactive">${tA("adm.inactive","Inactief")}</span>`}</td>
           <td style="white-space:nowrap">
-            <button class="adm-btn adm-btn-secondary adm-btn-sm adm-edit-emp" data-id="${esc(u.id)}">Bewerken</button>
-            <button class="adm-btn adm-btn-sm ${u.active!==false?"adm-btn-warning":"adm-btn-success"} adm-toggle-emp" data-id="${esc(u.id)}" data-active="${u.active!==false}">${u.active!==false?"⏸ Deactiveer":"▶ Activeer"}</button>
+            <button class="adm-btn adm-btn-secondary adm-btn-sm adm-edit-emp" data-id="${esc(u.id)}">${tA("adm.edit","Bewerken")}</button>
+            <button class="adm-btn adm-btn-sm ${u.active!==false?"adm-btn-warning":"adm-btn-success"} adm-toggle-emp" data-id="${esc(u.id)}" data-active="${u.active!==false}">${u.active!==false?"⏸ "+tA("adm.emp.deactivate","Deactiveer"):"▶ "+tA("adm.emp.activate","Activeer")}</button>
           </td>
         </tr>`).join("")}
       </tbody>
