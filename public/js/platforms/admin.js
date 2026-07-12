@@ -5497,7 +5497,7 @@ ${categories.map(cat => `
 
   async function renderSettings() {
     const content = document.getElementById("admContent");
-    content.innerHTML = `<div class="adm-loading">Laden…</div>`;
+    content.innerHTML = `<div class="adm-loading">${tA("adm.loading","Laden…")}</div>`;
     let tenant = {};
     try {
       const res = await api("GET", "/settings");
@@ -5512,7 +5512,7 @@ ${categories.map(cat => `
     if (section && moduleCards[section]) {
       document.getElementById("admPageTitle").textContent = moduleCards[section].title;
       content.innerHTML = `
-        <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admSettingsBack" style="margin-bottom:16px;">‹ Alle instellingen</button>
+        <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admSettingsBack" style="margin-bottom:16px;">‹ ${tA("adm.set.allSettings","Alle instellingen")}</button>
         <div style="max-width:640px;">${moduleCards[section].card}</div>`;
       document.getElementById("admSettingsBack")?.addEventListener("click", () => {
         document.getElementById("admPageTitle").textContent = VIEW_LABELS.settings;
@@ -5525,134 +5525,132 @@ ${categories.map(cat => `
     content.innerHTML = `
 <div class="adm-grid-2">
   <div class="adm-card">
-    <div class="adm-card-header"><h3 class="adm-card-title">Bedrijfsgegevens</h3></div>
+    <div class="adm-card-header"><h3 class="adm-card-title">${tA("adm.set.orgInfo","Bedrijfsgegevens")}</h3></div>
     <div class="adm-card-body">
       <form id="admOrgForm">
-        <div class="adm-form-group"><label>Bedrijfsnaam</label>
-          <input name="name" value="${esc(tenant.name || "")}" placeholder="Naam organisatie">
+        <div class="adm-form-group"><label>${tA("adm.set.companyName","Bedrijfsnaam")}</label>
+          <input name="name" value="${esc(tenant.name || "")}" placeholder="${tA("adm.set.orgNamePh","Naam organisatie")}">
         </div>
-        <div class="adm-form-group"><label>BTW-nummer</label>
+        <div class="adm-form-group"><label>${tA("adm.cust.vatNumber","BTW-nummer")}</label>
           <input name="vatNumber" value="${esc(tenant.vatNumber || "")}" placeholder="BE0000.000.000">
         </div>
-        <div class="adm-form-group"><label>Adres</label>
-          <input name="address" value="${esc(tenant.address || "")}" placeholder="Straat + nr, gemeente">
+        <div class="adm-form-group"><label>${tA("adm.cust.address","Adres")}</label>
+          <input name="address" value="${esc(tenant.address || "")}" placeholder="${tA("adm.set.addressPh","Straat + nr, gemeente")}">
         </div>
         <div class="adm-form-row">
-          <div class="adm-form-group"><label>Contact e-mail</label>
+          <div class="adm-form-group"><label>${tA("adm.set.contactEmail","Contact e-mail")}</label>
             <input name="contactEmail" type="email" value="${esc(tenant.contactEmail || "")}" placeholder="info@bedrijf.be">
           </div>
-          <div class="adm-form-group"><label>Telefoon</label>
+          <div class="adm-form-group"><label>${tA("adm.cust.thPhone","Telefoon")}</label>
             <input name="phone" value="${esc(tenant.phone || "")}" placeholder="+32 ...">
           </div>
         </div>
-        <div class="adm-form-group"><label>Standaard-uurtarief (€)</label>
-          <input name="defaultHourlyRate" type="number" step="1" min="0" value="${tenant.defaultHourlyRate ?? ""}" placeholder="bv. 55 · gebruikt voor werkbonnen zonder eigen tarief">
+        <div class="adm-form-group"><label>${tA("adm.set.hourlyRate","Standaard-uurtarief (€)")}</label>
+          <input name="defaultHourlyRate" type="number" step="1" min="0" value="${tenant.defaultHourlyRate ?? ""}" placeholder="${tA("adm.set.hourlyRatePh","bv. 55 · gebruikt voor werkbonnen zonder eigen tarief")}">
         </div>
         <div id="admOrgMsg" style="display:none;padding:8px 12px;border-radius:8px;font-size:13px;margin-bottom:8px;"></div>
         <label style="display:flex;flex-direction:row;align-items:center;gap:8px;font-size:13px;font-weight:500;color:var(--gray-600);margin:4px 0 12px;cursor:pointer;">
           <input type="checkbox" id="admEmailNotif" style="width:16px;height:16px;flex-shrink:0;" ${tenant.notificationPrefs?.emailEnabled === false ? "" : "checked"}>
-          E-mailnotificaties versturen (belangrijke meldingen naar betrokkenen)
+          ${tA("adm.set.emailNotif","E-mailnotificaties versturen (belangrijke meldingen naar betrokkenen)")}
         </label>
         <div style="display:flex;align-items:center;gap:10px;margin:0 0 12px;flex-wrap:wrap;">
-          <button type="button" class="adm-btn adm-btn-secondary adm-btn-sm" id="admPushToggle">Pushmeldingen op dit toestel</button>
+          <button type="button" class="adm-btn adm-btn-secondary adm-btn-sm" id="admPushToggle">${tA("adm.set.pushOnDevice","Pushmeldingen op dit toestel")}</button>
           <span id="admPushStatus" style="font-size:12px;color:var(--gray-400);"></span>
         </div>
-        <div class="adm-form-actions"><button type="submit" class="adm-btn adm-btn-primary">Opslaan</button></div>
+        <div class="adm-form-actions"><button type="submit" class="adm-btn adm-btn-primary">${tA("adm.save","Opslaan")}</button></div>
       </form>
     </div>
   </div>
   <div class="adm-card">
-    <div class="adm-card-header"><h3 class="adm-card-title">Abonnement &amp; plan</h3></div>
+    <div class="adm-card-header"><h3 class="adm-card-title">${tA("adm.set.subPlan","Abonnement &amp; plan")}</h3></div>
     <div class="adm-card-body">
       <div style="display:flex;flex-direction:column;gap:10px;">
         <div style="display:flex;justify-content:space-between;font-size:13px;">
-          <span style="color:var(--gray-500);">Huidig plan</span>
+          <span style="color:var(--gray-500);">${tA("adm.bill.currentPlanBadge","Huidig plan")}</span>
           <strong style="text-transform:capitalize;">${esc(tenant.plan || "-")}</strong>
         </div>
         <div style="display:flex;justify-content:space-between;font-size:13px;">
-          <span style="color:var(--gray-500);">Status</span>
+          <span style="color:var(--gray-500);">${tA("adm.status","Status")}</span>
           <span class="adm-status adm-status-${tenant.status === "active" ? "active" : tenant.status === "trial" ? "pending" : "inactive"}">${esc(tenant.status || "-")}</span>
         </div>
         <div style="display:flex;justify-content:space-between;font-size:13px;">
-          <span style="color:var(--gray-500);">Facturatie e-mail</span>
+          <span style="color:var(--gray-500);">${tA("adm.set.billingEmail","Facturatie e-mail")}</span>
           <span>${esc(tenant.billingEmail || "-")}</span>
         </div>
         <hr style="border:none;border-top:1px solid var(--gray-100);margin:4px 0;">
-        <button class="adm-btn adm-btn-secondary" id="admSettingsToBilling" style="width:100%;">Factuurgeschiedenis bekijken</button>
+        <button class="adm-btn adm-btn-secondary" id="admSettingsToBilling" style="width:100%;">${tA("adm.set.viewInvoiceHistory","Factuurgeschiedenis bekijken")}</button>
       </div>
     </div>
   </div>
   <div class="adm-card">
-    <div class="adm-card-header"><h3 class="adm-card-title">Beveiliging · MFA</h3></div>
+    <div class="adm-card-header"><h3 class="adm-card-title">${tA("adm.set.securityMfa","Beveiliging · MFA")}</h3></div>
     <div class="adm-card-body">
-      <div id="admMfaStatus" style="margin-bottom:12px;font-size:13px;color:var(--gray-500);">Status laden…</div>
+      <div id="admMfaStatus" style="margin-bottom:12px;font-size:13px;color:var(--gray-500);">${tA("adm.set.statusLoading","Status laden…")}</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="adm-btn adm-btn-primary" id="admMfaSetup">MFA instellen</button>
-        <button class="adm-btn adm-btn-secondary" id="admMfaEnforce">MFA verplichten voor beheerders</button>
-        <button class="adm-btn adm-btn-secondary" id="admMfaDisable" style="display:none;">MFA uitschakelen</button>
+        <button class="adm-btn adm-btn-primary" id="admMfaSetup">${tA("adm.set.mfaSetup","MFA instellen")}</button>
+        <button class="adm-btn adm-btn-secondary" id="admMfaEnforce">${tA("adm.set.mfaEnforce","MFA verplichten voor beheerders")}</button>
+        <button class="adm-btn adm-btn-secondary" id="admMfaDisable" style="display:none;">${tA("adm.set.mfaDisable","MFA uitschakelen")}</button>
       </div>
-      <div style="font-size:11.5px;color:var(--gray-400);margin-top:8px;">MFA verplichten schakelt 2FA in voor álle beheerders. Bij de volgende login is een authenticator-code vereist. Bewaar de getoonde codes goed.</div>
+      <div style="font-size:11.5px;color:var(--gray-400);margin-top:8px;">${tA("adm.set.mfaNote","MFA verplichten schakelt 2FA in voor álle beheerders. Bij de volgende login is een authenticator-code vereist. Bewaar de getoonde codes goed.")}</div>
       <div id="admMfaWizard" style="display:none;margin-top:16px;background:var(--gray-50);border-radius:10px;padding:16px;"></div>
     </div>
   </div>
   <div class="adm-card">
-    <div class="adm-card-header"><h3 class="adm-card-title">Data &amp; Backup</h3></div>
+    <div class="adm-card-header"><h3 class="adm-card-title">${tA("adm.set.dataBackup","Data &amp; Backup")}</h3></div>
     <div class="adm-card-body">
-      <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Er wordt elke dag automatisch een versleutelbare backup van je volledige tenantdata gemaakt. Hieronder bepaal je hoe lang die herstelmomenten bewaard worden.</p>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">${tA("adm.set.backupIntro","Er wordt elke dag automatisch een versleutelbare backup van je volledige tenantdata gemaakt. Hieronder bepaal je hoe lang die herstelmomenten bewaard worden.")}</p>
 
       <div id="admBackupPolicy" style="background:var(--gray-50);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px;">
-        <div style="font-size:13px;color:var(--muted);">Bewaarbeleid laden…</div>
+        <div style="font-size:13px;color:var(--muted);">${tA("adm.set.policyLoading","Bewaarbeleid laden…")}</div>
       </div>
 
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="adm-btn adm-btn-secondary" id="admBackupCreate">Nu een backup maken</button>
-        <button class="adm-btn adm-btn-secondary" id="admBackupList">Bestaande backups</button>
+        <button class="adm-btn adm-btn-secondary" id="admBackupCreate">${tA("adm.set.backupNow","Nu een backup maken")}</button>
+        <button class="adm-btn adm-btn-secondary" id="admBackupList">${tA("adm.set.backupExisting","Bestaande backups")}</button>
       </div>
       <div id="admBackupResult" style="margin-top:12px;"></div>
     </div>
   </div>
   <div class="adm-card">
-    <div class="adm-card-header"><h3 class="adm-card-title">Wachtwoord wijzigen</h3></div>
+    <div class="adm-card-header"><h3 class="adm-card-title">${tA("adm.set.changePassword","Wachtwoord wijzigen")}</h3></div>
     <div class="adm-card-body">
       <form id="admPwForm">
-        <div class="adm-form-group"><label>Huidig wachtwoord</label>
+        <div class="adm-form-group"><label>${tA("adm.set.currentPw","Huidig wachtwoord")}</label>
           <input name="currentPassword" type="password" required autocomplete="current-password">
         </div>
-        <div class="adm-form-group"><label>Nieuw wachtwoord</label>
+        <div class="adm-form-group"><label>${tA("adm.set.newPw","Nieuw wachtwoord")}</label>
           <input name="newPassword" type="password" required autocomplete="new-password" minlength="8">
         </div>
         <div id="admPwMsg" style="display:none;padding:8px 12px;border-radius:8px;font-size:13px;margin-bottom:8px;"></div>
-        <div class="adm-form-actions"><button type="submit" class="adm-btn adm-btn-primary">Wijzigen</button></div>
+        <div class="adm-form-actions"><button type="submit" class="adm-btn adm-btn-primary">${tA("adm.set.change","Wijzigen")}</button></div>
       </form>
     </div>
   </div>
   <div class="adm-card">
-    <div class="adm-card-header"><h3 class="adm-card-title">Support-toegang (GDPR)</h3></div>
+    <div class="adm-card-header"><h3 class="adm-card-title">${tA("adm.set.supportAccess","Support-toegang (GDPR)")}</h3></div>
     <div class="adm-card-body">
       <p style="font-size:13px;color:var(--gray-500);margin-bottom:12px;">
-        Geef je toestemming dan kan een supportmedewerker tijdelijk inloggen en je sessie overnemen om je te helpen.
-        De toegang is tijdgebonden, wordt volledig geaudit, en je ziet een banner zolang een sessie actief is.
-        Je kunt de toestemming op elk moment intrekken · een lopende sessie stopt dan meteen.
+        ${tA("adm.set.supportIntro","Geef je toestemming dan kan een supportmedewerker tijdelijk inloggen en je sessie overnemen om je te helpen. De toegang is tijdgebonden, wordt volledig geaudit, en je ziet een banner zolang een sessie actief is. Je kunt de toestemming op elk moment intrekken · een lopende sessie stopt dan meteen.")}
       </p>
       <div id="admSupportStatus" style="font-size:13px;margin-bottom:12px;"></div>
       <div class="adm-form-group" id="admSupportReasonWrap">
-        <label>Reden / context (optioneel)</label>
-        <input id="admSupportReason" placeholder="bv. hulp bij facturatie-instelling">
+        <label>${tA("adm.set.reasonContext","Reden / context (optioneel)")}</label>
+        <input id="admSupportReason" placeholder="${tA("adm.set.reasonPh","bv. hulp bij facturatie-instelling")}">
         <label style="display:flex;flex-direction:row;align-items:center;gap:8px;margin-top:10px;font-size:13px;font-weight:500;color:var(--gray-600);cursor:pointer;">
           <input type="checkbox" id="admSupportAutoRenew" style="width:16px;height:16px;flex-shrink:0;" checked>
-          Automatisch verlengen · blijft jaarlijks staan, je krijgt jaarlijks een mededeling per e-mail
+          ${tA("adm.set.autoRenew","Automatisch verlengen · blijft jaarlijks staan, je krijgt jaarlijks een mededeling per e-mail")}
         </label>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="adm-btn adm-btn-primary" id="admSupportAllow">Support-toegang toestaan</button>
-        <button class="adm-btn adm-btn-secondary" id="admSupportRevoke" style="display:none;">Toestemming intrekken</button>
+        <button class="adm-btn adm-btn-primary" id="admSupportAllow">${tA("adm.set.supportAllow","Support-toegang toestaan")}</button>
+        <button class="adm-btn adm-btn-secondary" id="admSupportRevoke" style="display:none;">${tA("adm.set.supportRevoke","Toestemming intrekken")}</button>
       </div>
       <div id="admSupportMsg" style="display:none;padding:8px 12px;border-radius:8px;font-size:13px;margin-top:10px;"></div>
     </div>
   </div>
   <div class="adm-card" id="admSsoCard" style="display:none;grid-column:1/-1;">
-    <div class="adm-card-header"><h3 class="adm-card-title">Single Sign-On (SAML) <span style="font-size:11px;background:var(--wf-purple-l);color:var(--wf-purple);border-radius:999px;padding:2px 8px;vertical-align:middle;">Add-on</span></h3></div>
-    <div class="adm-card-body" id="admSsoBody"><div class="adm-loading">Laden…</div></div>
+    <div class="adm-card-header"><h3 class="adm-card-title">${tA("adm.set.sso","Single Sign-On (SAML)")} <span style="font-size:11px;background:var(--wf-purple-l);color:var(--wf-purple);border-radius:999px;padding:2px 8px;vertical-align:middle;">Add-on</span></h3></div>
+    <div class="adm-card-body" id="admSsoBody"><div class="adm-loading">${tA("adm.loading","Laden…")}</div></div>
   </div>
 </div>`;
 
@@ -5667,14 +5665,14 @@ ${categories.map(cat => `
       if (allowed) {
         const renew = sa.autoRenew !== false;
         const review = sa.reviewDueAt ? new Date(sa.reviewDueAt).toLocaleDateString("nl-BE") : null;
-        statusEl.innerHTML = `<span style="display:inline-block;padding:3px 10px;border-radius:999px;background:var(--wf-green-l);color:var(--wf-green);font-weight:600;">Toegestaan</span>`
-          + (sa.allowedBy ? ` <span style="color:var(--gray-500);">door ${esc(sa.allowedBy)}${sa.allowedAt ? " · " + new Date(sa.allowedAt).toLocaleString("nl-BE") : ""}</span>` : "")
-          + `<div style="color:var(--gray-500);margin-top:6px;">${renew ? "Verlengt jaarlijks automatisch" : "Geen automatische verlenging"}${renew && review ? ` · volgende mededeling ${review}` : ""}</div>`;
+        statusEl.innerHTML = `<span style="display:inline-block;padding:3px 10px;border-radius:999px;background:var(--wf-green-l);color:var(--wf-green);font-weight:600;">${tA("adm.set.allowed","Toegestaan")}</span>`
+          + (sa.allowedBy ? ` <span style="color:var(--gray-500);">${tA("adm.set.by","door")} ${esc(sa.allowedBy)}${sa.allowedAt ? " · " + new Date(sa.allowedAt).toLocaleString("nl-BE") : ""}</span>` : "")
+          + `<div style="color:var(--gray-500);margin-top:6px;">${renew ? tA("adm.set.autoRenews","Verlengt jaarlijks automatisch") : tA("adm.set.noAutoRenew","Geen automatische verlenging")}${renew && review ? ` · ${tA("adm.set.nextNotice","volgende mededeling")} ${review}` : ""}</div>`;
         allowBtn.style.display = "none";
         revokeBtn.style.display = "";
         reasonWrap.style.display = "none";
       } else {
-        statusEl.innerHTML = `<span style="display:inline-block;padding:3px 10px;border-radius:999px;background:var(--gray-100);color:var(--gray-600);font-weight:600;">Niet toegestaan</span> <span style="color:var(--gray-500);">support kan niet inloggen</span>`;
+        statusEl.innerHTML = `<span style="display:inline-block;padding:3px 10px;border-radius:999px;background:var(--gray-100);color:var(--gray-600);font-weight:600;">${tA("adm.set.notAllowed","Niet toegestaan")}</span> <span style="color:var(--gray-500);">${tA("adm.set.supportCantLogin","support kan niet inloggen")}</span>`;
         allowBtn.style.display = "";
         revokeBtn.style.display = "none";
         reasonWrap.style.display = "";
@@ -5692,14 +5690,14 @@ ${categories.map(cat => `
       try {
         const r = await api("POST", "/support-access", { allowed: true, reason, autoRenew });
         renderSupportConsent(r.tenant?.supportAccess || { allowed: true });
-        admSupportMsg("Support-toegang toegestaan ✓", true);
+        admSupportMsg(tA("adm.set.supportAllowedToast","Support-toegang toegestaan ✓"), true);
       } catch (e) { admSupportMsg(e.message, false); }
     });
     document.getElementById("admSupportRevoke")?.addEventListener("click", async () => {
       try {
         const r = await api("POST", "/support-access/end", {});
         renderSupportConsent(r.tenant?.supportAccess || { allowed: false });
-        admSupportMsg("Toestemming ingetrokken. Een lopende sessie is gestopt.", true);
+        admSupportMsg(tA("adm.set.supportRevokedToast","Toestemming ingetrokken. Een lopende sessie is gestopt."), true);
       } catch (e) { admSupportMsg(e.message, false); }
     });
     renderSupportConsent(tenant.supportAccess || { allowed: false });
@@ -5717,34 +5715,33 @@ ${categories.map(cat => `
       function paint(cfg) {
         body.innerHTML = `
           <p style="font-size:13px;color:var(--gray-500);margin-bottom:12px;">
-            Laat je medewerkers inloggen via jullie identiteitsprovider (Azure AD, Okta, Google Workspace…).
-            Configureer hieronder de IdP-gegevens en geef onderstaande SP-URL's in bij je IdP.
+            ${tA("adm.set.ssoIntro","Laat je medewerkers inloggen via jullie identiteitsprovider (Azure AD, Okta, Google Workspace…). Configureer hieronder de IdP-gegevens en geef onderstaande SP-URL's in bij je IdP.")}
           </p>
           <div style="background:var(--gray-50);border-radius:8px;padding:10px 12px;font-size:12px;margin-bottom:14px;word-break:break-all;">
             <div><strong>ACS / Reply URL:</strong> ${esc(cfg.acsUrl)}</div>
             <div><strong>Entity ID / Issuer:</strong> ${esc(cfg.issuer)}</div>
-            <div><strong>SP-metadata:</strong> <a href="${esc(cfg.metadataUrl)}" target="_blank" rel="noopener">${esc(cfg.metadataUrl)}</a></div>
+            <div><strong>${tA("adm.set.ssoSpMeta","SP-metadata")}:</strong> <a href="${esc(cfg.metadataUrl)}" target="_blank" rel="noopener">${esc(cfg.metadataUrl)}</a></div>
           </div>
           <form id="admSsoForm">
             <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:12px;cursor:pointer;">
-              <input type="checkbox" name="enabled" ${cfg.enabled ? "checked" : ""}> SSO inschakelen voor deze organisatie
+              <input type="checkbox" name="enabled" ${cfg.enabled ? "checked" : ""}> ${tA("adm.set.ssoEnable","SSO inschakelen voor deze organisatie")}
             </label>
-            <div class="adm-form-group"><label>IdP login-URL (SSO endpoint)</label>
+            <div class="adm-form-group"><label>${tA("adm.set.ssoLoginUrl","IdP login-URL (SSO endpoint)")}</label>
               <input name="entryPoint" value="${esc(cfg.entryPoint || "")}" placeholder="https://login.microsoftonline.com/.../saml2"></div>
-            <div class="adm-form-group"><label>IdP X.509-certificaat (PEM)</label>
+            <div class="adm-form-group"><label>${tA("adm.set.ssoCert","IdP X.509-certificaat (PEM)")}</label>
               <textarea name="idpCert" rows="4" placeholder="-----BEGIN CERTIFICATE-----" style="font-family:monospace;font-size:11px;">${esc(cfg.idpCert || "")}</textarea></div>
-            <div class="adm-form-group"><label>E-maildomeinen (komma-gescheiden)</label>
+            <div class="adm-form-group"><label>${tA("adm.set.ssoDomains","E-maildomeinen (komma-gescheiden)")}</label>
               <input name="domains" value="${esc((cfg.domains || []).join(", "))}" placeholder="bedrijf.be, bedrijf.com"></div>
             <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin:8px 0;cursor:pointer;">
-              <input type="checkbox" name="jitEnabled" ${cfg.jit && cfg.jit.enabled ? "checked" : ""}> Just-in-time provisioning (account automatisch aanmaken bij eerste SSO-login)
+              <input type="checkbox" name="jitEnabled" ${cfg.jit && cfg.jit.enabled ? "checked" : ""}> ${tA("adm.set.ssoJit","Just-in-time provisioning (account automatisch aanmaken bij eerste SSO-login)")}
             </label>
-            <div class="adm-form-group"><label>Standaardrol bij JIT</label>
+            <div class="adm-form-group"><label>${tA("adm.set.ssoJitRole","Standaardrol bij JIT")}</label>
               <select name="jitRole">
-                <option value="employee" ${cfg.jit && cfg.jit.defaultRole === "employee" ? "selected" : ""}>Medewerker</option>
-                <option value="manager" ${cfg.jit && cfg.jit.defaultRole === "manager" ? "selected" : ""}>Manager</option>
+                <option value="employee" ${cfg.jit && cfg.jit.defaultRole === "employee" ? "selected" : ""}>${tA("role.employee","Medewerker")}</option>
+                <option value="manager" ${cfg.jit && cfg.jit.defaultRole === "manager" ? "selected" : ""}>${tA("role.manager","Manager")}</option>
               </select></div>
             <div id="admSsoMsg" style="display:none;padding:8px 12px;border-radius:8px;font-size:13px;margin-bottom:8px;"></div>
-            <div class="adm-form-actions"><button type="submit" class="adm-btn adm-btn-primary">SSO-instellingen opslaan</button></div>
+            <div class="adm-form-actions"><button type="submit" class="adm-btn adm-btn-primary">${tA("adm.set.ssoSave","SSO-instellingen opslaan")}</button></div>
           </form>`;
         document.getElementById("admSsoForm").addEventListener("submit", async e => {
           e.preventDefault();
@@ -5760,7 +5757,7 @@ ${categories.map(cat => `
           try {
             const r = await api("PUT", "/sso/config", payload);
             msg.style.cssText = "display:block;background:var(--wf-green-l);color:var(--wf-green);padding:8px 12px;border-radius:8px;font-size:13px;margin-bottom:8px;";
-            msg.textContent = "SSO-instellingen opgeslagen ✓";
+            msg.textContent = tA("adm.set.ssoSavedToast","SSO-instellingen opgeslagen ✓");
             paint(r.sso);
           } catch (err) {
             msg.style.cssText = "display:block;background:var(--wf-red-l);color:var(--wf-red);padding:8px 12px;border-radius:8px;font-size:13px;margin-bottom:8px;";
@@ -5782,7 +5779,7 @@ ${categories.map(cat => `
       try {
         await api("PATCH", "/settings", body);
         msgEl.style.cssText = "display:block;background:var(--wf-green-l);color:var(--wf-green);padding:8px 12px;border-radius:8px;font-size:13px;margin-bottom:8px;";
-        msgEl.textContent = "Instellingen opgeslagen ✓";
+        msgEl.textContent = tA("adm.set.savedToast","Instellingen opgeslagen ✓");
         setTimeout(() => { msgEl.style.display = "none"; }, 3000);
       } catch (err) {
         msgEl.style.cssText = "display:block;background:var(--wf-red-l);color:var(--wf-red);padding:8px 12px;border-radius:8px;font-size:13px;margin-bottom:8px;";
@@ -5799,29 +5796,29 @@ ${categories.map(cat => `
       if (!btn || !status) return;
       if (!window.wfpPush) {
         btn.disabled = true;
-        status.textContent = "Push niet beschikbaar";
+        status.textContent = tA("adm.set.pushUnavail","Push niet beschikbaar");
         return;
       }
       async function paint() {
         const s = await window.wfpPush.status();
         if (!s.supported) {
           btn.disabled = true;
-          status.textContent = "Browser ondersteunt geen push";
+          status.textContent = tA("adm.set.pushNoSupport","Browser ondersteunt geen push");
           return;
         }
-        btn.textContent = s.subscribed ? "Pushmeldingen uitschakelen" : "Pushmeldingen inschakelen";
-        status.textContent = s.subscribed ? "Actief op dit toestel" : (s.permission === "denied" ? "Geblokkeerd in browser" : "Niet actief");
+        btn.textContent = s.subscribed ? tA("adm.set.pushDisable","Pushmeldingen uitschakelen") : tA("adm.set.pushEnable","Pushmeldingen inschakelen");
+        status.textContent = s.subscribed ? tA("adm.set.pushActive","Actief op dit toestel") : (s.permission === "denied" ? tA("adm.set.pushBlocked","Geblokkeerd in browser") : tA("adm.set.pushInactive","Niet actief"));
       }
       btn.addEventListener("click", async () => {
         btn.disabled = true;
-        status.textContent = "Bezig...";
+        status.textContent = tA("adm.set.pushBusy","Bezig...");
         try {
           const s = await window.wfpPush.status();
           if (s.subscribed) await window.wfpPush.disable();
           else await window.wfpPush.enable();
           await paint();
         } catch (err) {
-          status.textContent = err.message || "Push kon niet worden aangepast";
+          status.textContent = err.message || tA("adm.set.pushFailed","Push kon niet worden aangepast");
         } finally {
           btn.disabled = false;
         }
@@ -5839,7 +5836,7 @@ ${categories.map(cat => `
       try {
         await api("POST", "/auth/change-password", { currentPassword, newPassword });
         msgEl.style.cssText = "display:block;background:var(--wf-green-l);color:var(--wf-green);padding:8px 12px;border-radius:8px;font-size:13px;margin-bottom:8px;";
-        msgEl.textContent = "Wachtwoord gewijzigd ✓";
+        msgEl.textContent = tA("adm.set.pwChanged","Wachtwoord gewijzigd ✓");
         e.target.reset();
         setTimeout(() => { msgEl.style.display = "none"; }, 3000);
       } catch (err) {
@@ -5857,11 +5854,11 @@ ${categories.map(cat => `
         const disableBtn = document.getElementById("admMfaDisable");
         const setupBtn = document.getElementById("admMfaSetup");
         if (u.mfaEnabled) {
-          if (statusEl) statusEl.innerHTML = `<span style="color:var(--wf-green);font-weight:600;">MFA actief</span> · uw account is beveiligd met 2FA.`;
+          if (statusEl) statusEl.innerHTML = `<span style="color:var(--wf-green);font-weight:600;">${tA("adm.set.mfaActive","MFA actief")}</span> · ${tA("adm.set.mfaActiveNote","uw account is beveiligd met 2FA.")}`;
           if (disableBtn) disableBtn.style.display = "";
-          if (setupBtn) setupBtn.textContent = "MFA opnieuw instellen";
+          if (setupBtn) setupBtn.textContent = tA("adm.set.mfaResetup","MFA opnieuw instellen");
         } else {
-          if (statusEl) statusEl.innerHTML = `<span style="color:var(--wf-yellow);font-weight:600;">MFA niet actief</span> · wij raden sterk aan om MFA in te schakelen.`;
+          if (statusEl) statusEl.innerHTML = `<span style="color:var(--wf-yellow);font-weight:600;">${tA("adm.set.mfaInactive","MFA niet actief")}</span> · ${tA("adm.set.mfaInactiveNote","wij raden sterk aan om MFA in te schakelen.")}`;
         }
       } catch(_){}
     })();
@@ -5870,82 +5867,82 @@ ${categories.map(cat => `
       const wizard = document.getElementById("admMfaWizard");
       if (!wizard) return;
       wizard.style.display = "block";
-      wizard.innerHTML = `<div style="font-size:13px;color:var(--gray-500);">Setup laden…</div>`;
+      wizard.innerHTML = `<div style="font-size:13px;color:var(--gray-500);">${tA("adm.set.mfaSetupLoading","Setup laden…")}</div>`;
       try {
         const data = await api("POST", "/me/mfa/setup");
         const setup = data.setup || {};
         wizard.innerHTML = `
-<div style="font-size:14px;font-weight:600;margin-bottom:12px;">MFA instellen · stap 1 van 2</div>
-<p style="font-size:13px;color:var(--gray-500);margin-bottom:10px;">Voeg dit account toe in Google Authenticator, Authy of een andere TOTP-app via <strong>handmatige invoer</strong>:</p>
+<div style="font-size:14px;font-weight:600;margin-bottom:12px;">${tA("adm.set.mfaStep1","MFA instellen · stap 1 van 2")}</div>
+<p style="font-size:13px;color:var(--gray-500);margin-bottom:10px;">${tA("adm.set.mfaAddApp","Voeg dit account toe in Google Authenticator, Authy of een andere TOTP-app via <strong>handmatige invoer</strong>:")}</p>
 <div style="margin-bottom:14px;">
-  <div style="font-size:11px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.4px;">Geheime sleutel</div>
+  <div style="font-size:11px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.4px;">${tA("adm.set.mfaSecret","Geheime sleutel")}</div>
   <div style="font-family:monospace;background:var(--gray-100);padding:10px 12px;border-radius:8px;font-size:15px;margin-top:4px;word-break:break-all;letter-spacing:1px;text-align:center;">${esc(setup.secret||"")}</div>
-  <div style="font-size:11px;color:var(--gray-400);margin-top:6px;">Type: tijdgebaseerd (TOTP) · 6 cijfers · 30s. Accountnaam: je e-mailadres.</div>
+  <div style="font-size:11px;color:var(--gray-400);margin-top:6px;">${tA("adm.set.mfaSecretNote","Type: tijdgebaseerd (TOTP) · 6 cijfers · 30s. Accountnaam: je e-mailadres.")}</div>
 </div>
-<div style="font-size:14px;font-weight:600;margin-bottom:8px;">Stap 2: bevestig met code</div>
+<div style="font-size:14px;font-weight:600;margin-bottom:8px;">${tA("adm.set.mfaStep2","Stap 2: bevestig met code")}</div>
 <div style="display:flex;gap:8px;">
-  <input id="admMfaCode" type="text" inputmode="numeric" maxlength="6" placeholder="6-cijferige code"
+  <input id="admMfaCode" type="text" inputmode="numeric" maxlength="6" placeholder="${tA("adm.set.mfaCodePh","6-cijferige code")}"
     style="flex:1;12px;font-size:16px;letter-spacing:4px;text-align:center">
-  <button class="adm-btn adm-btn-primary" id="admMfaVerify">Bevestigen</button>
+  <button class="adm-btn adm-btn-primary" id="admMfaVerify">${tA("adm.set.mfaConfirm","Bevestigen")}</button>
 </div>
 <div id="admMfaErr" style="display:none;color:var(--wf-red);font-size:12px;margin-top:6px;"></div>`;
         document.getElementById("admMfaVerify")?.addEventListener("click", async () => {
           const code = document.getElementById("admMfaCode")?.value?.trim();
           const errEl = document.getElementById("admMfaErr");
-          if (!code || code.length !== 6) { if(errEl){errEl.textContent="Vul een 6-cijferige code in.";errEl.style.display="";} return; }
+          if (!code || code.length !== 6) { if(errEl){errEl.textContent=tA("adm.set.mfaCodeReq","Vul een 6-cijferige code in.");errEl.style.display="";} return; }
           try {
             await api("POST", "/me/mfa/verify", { token: code });
-            wizard.innerHTML = `<div style="color:var(--wf-green);font-weight:600;font-size:14px;">MFA is nu actief! Uw account is beveiligd met 2FA.</div>`;
+            wizard.innerHTML = `<div style="color:var(--wf-green);font-weight:600;font-size:14px;">${tA("adm.set.mfaNowActive","MFA is nu actief! Uw account is beveiligd met 2FA.")}</div>`;
             const statusEl = document.getElementById("admMfaStatus");
-            if (statusEl) statusEl.innerHTML = `<span style="color:var(--wf-green);font-weight:600;">MFA actief</span>`;
+            if (statusEl) statusEl.innerHTML = `<span style="color:var(--wf-green);font-weight:600;">${tA("adm.set.mfaActive","MFA actief")}</span>`;
             const disableBtn = document.getElementById("admMfaDisable");
             if (disableBtn) disableBtn.style.display = "";
           } catch(err) {
-            if(errEl){errEl.textContent="Ongeldige code. Probeer opnieuw.";errEl.style.display="";}
+            if(errEl){errEl.textContent=tA("adm.set.mfaInvalidCode","Ongeldige code. Probeer opnieuw.");errEl.style.display="";}
           }
         });
-      } catch(e) { wizard.innerHTML = `<div style="color:var(--wf-red);font-size:13px;">Fout: ${e.message}</div>`; }
+      } catch(e) { wizard.innerHTML = `<div style="color:var(--wf-red);font-size:13px;">${tA("adm.error","Fout")}: ${e.message}</div>`; }
     });
 
     // MFA verplichten voor alle beheerders
     document.getElementById("admMfaEnforce")?.addEventListener("click", async () => {
-      if (!confirm("MFA verplicht maken voor álle beheerders van deze organisatie?\n\nBij de volgende login is een authenticator-code vereist. Bewaar de getoonde secrets en recovery codes zorgvuldig · ze worden maar één keer getoond.")) return;
+      if (!confirm(tA("adm.set.mfaEnforceConfirm","MFA verplicht maken voor álle beheerders van deze organisatie?\n\nBij de volgende login is een authenticator-code vereist. Bewaar de getoonde secrets en recovery codes zorgvuldig · ze worden maar één keer getoond."))) return;
       const wizard = document.getElementById("admMfaWizard");
       if (!wizard) return;
       wizard.style.display = "block";
-      wizard.innerHTML = `<div style="font-size:13px;color:var(--gray-500);">MFA inschakelen…</div>`;
+      wizard.innerHTML = `<div style="font-size:13px;color:var(--gray-500);">${tA("adm.set.mfaEnabling","MFA inschakelen…")}</div>`;
       try {
         const d = await api("POST", "/admin/mfa/enforce");
         const enrolled = d.enrolled || [];
         if (!enrolled.length) {
-          wizard.innerHTML = `<div style="color:var(--wf-green);font-weight:600;font-size:14px;">Alle beheerders hebben al MFA actief.</div>`;
+          wizard.innerHTML = `<div style="color:var(--wf-green);font-weight:600;font-size:14px;">${tA("adm.set.mfaAllActive","Alle beheerders hebben al MFA actief.")}</div>`;
           return;
         }
         wizard.innerHTML = `
-<div style="font-size:14px;font-weight:600;margin-bottom:4px;color:var(--gray-900);">MFA verplicht · ${enrolled.length} beheerder(s) ingeschreven</div>
+<div style="font-size:14px;font-weight:600;margin-bottom:4px;color:var(--gray-900);">${tA("adm.set.mfaEnforced","MFA verplicht · {n} beheerder(s) ingeschreven").replace("{n}", enrolled.length)}</div>
 <div style="font-size:12px;color:var(--wf-yellow);background:var(--wf-yellow-l);border:1px solid var(--wf-yellow-l);border-radius:8px;padding:10px 12px;margin:10px 0;">
-  Bewaar onderstaande gegevens nu. Ze worden niet opnieuw getoond. Voeg de sleutel toe aan een authenticator-app (Google Authenticator, Authy…).
+  ${tA("adm.set.mfaSaveNow","Bewaar onderstaande gegevens nu. Ze worden niet opnieuw getoond. Voeg de sleutel toe aan een authenticator-app (Google Authenticator, Authy…).")}
 </div>
 ${enrolled.map(e => `
   <div style="border:1px solid var(--gray-200);border-radius:10px;padding:12px;margin-bottom:10px;">
     <div style="font-weight:600;font-size:13px;color:var(--gray-900);margin-bottom:6px;">${esc(e.name||e.email)} <span style="color:var(--gray-400);font-weight:400;">· ${esc(e.email)}</span></div>
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
       <div style="flex:1;min-width:180px;">
-        <div style="font-size:11px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.4px;">Geheime sleutel</div>
+        <div style="font-size:11px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.4px;">${tA("adm.set.mfaSecret","Geheime sleutel")}</div>
         <div style="font-family:monospace;background:var(--gray-100);padding:6px 10px;border-radius:6px;font-size:12px;word-break:break-all;margin:3px 0 8px;">${esc(e.secret||"")}</div>
-        <div style="font-size:11px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.4px;">Recovery codes</div>
+        <div style="font-size:11px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.4px;">${tA("adm.set.mfaRecovery","Recovery codes")}</div>
         <div style="font-family:monospace;font-size:11.5px;color:var(--gray-700);line-height:1.7;">${(e.recoveryCodes||[]).map(c=>esc(c)).join(" &nbsp; ")}</div>
       </div>
     </div>
   </div>`).join("")}
-<button class="adm-btn adm-btn-primary adm-btn-sm" id="admMfaEnforceDone" style="margin-top:4px;">Ik heb alles opgeslagen</button>`;
+<button class="adm-btn adm-btn-primary adm-btn-sm" id="admMfaEnforceDone" style="margin-top:4px;">${tA("adm.set.mfaSavedAll","Ik heb alles opgeslagen")}</button>`;
         document.getElementById("admMfaEnforceDone")?.addEventListener("click", () => {
           wizard.style.display = "none";
           const statusEl = document.getElementById("admMfaStatus");
-          if (statusEl) statusEl.innerHTML = `<span style="color:var(--wf-green);font-weight:600;">MFA verplicht voor beheerders</span>`;
-          window.showToast && window.showToast("MFA verplicht ingesteld voor beheerders", "success");
+          if (statusEl) statusEl.innerHTML = `<span style="color:var(--wf-green);font-weight:600;">${tA("adm.set.mfaEnforcedAdmins","MFA verplicht voor beheerders")}</span>`;
+          window.showToast && window.showToast(tA("adm.set.mfaEnforcedToast","MFA verplicht ingesteld voor beheerders"), "success");
         });
-      } catch(e) { wizard.innerHTML = `<div style="color:var(--wf-red);font-size:13px;">Fout: ${e.message}</div>`; }
+      } catch(e) { wizard.innerHTML = `<div style="color:var(--wf-red);font-size:13px;">${tA("adm.error","Fout")}: ${e.message}</div>`; }
     });
 
     // Bewaarbeleid (retention) laden + bewerken
@@ -5954,15 +5951,15 @@ ${enrolled.map(e => `
     // Backup
     document.getElementById("admBackupCreate")?.addEventListener("click", async () => {
       const resultEl = document.getElementById("admBackupResult");
-      if(resultEl) resultEl.innerHTML = `<div style="font-size:13px;color:var(--gray-500);">Backup aanmaken…</div>`;
+      if(resultEl) resultEl.innerHTML = `<div style="font-size:13px;color:var(--gray-500);">${tA("adm.set.backupCreating","Backup aanmaken…")}</div>`;
       try {
         const d = await api("POST", "/admin/backups");
         const backup = d.backup || {};
         if (resultEl) resultEl.innerHTML = `
 <div style="background:var(--wf-green-l);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--wf-green);">
-  Backup aangemaakt: <strong>${esc(backup.id||"")}</strong><br>
+  ${tA("adm.set.backupCreated","Backup aangemaakt")}: <strong>${esc(backup.id||"")}</strong><br>
   <span style="font-size:11px;">${new Date(backup.createdAt||Date.now()).toLocaleString("nl-BE")}</span>
-  <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admBackupDownload" style="margin-top:8px;display:block;" data-id="${esc(backup.id||"")}">Download JSON</button>
+  <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admBackupDownload" style="margin-top:8px;display:block;" data-id="${esc(backup.id||"")}">${tA("adm.set.downloadJson","Download JSON")}</button>
 </div>`;
         document.getElementById("admBackupDownload")?.addEventListener("click", async () => {
           try {
@@ -5970,9 +5967,9 @@ ${enrolled.map(e => `
             const blob = new Blob([JSON.stringify(pv, null, 2)], { type: "application/json" });
             const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
             a.download = `backup-${backup.id}.json`; a.click();
-          } catch(e2) { window.showToast("Download fout: "+e2.message, "error"); }
+          } catch(e2) { window.showToast(tA("adm.set.downloadError","Download fout")+": "+e2.message, "error"); }
         });
-      } catch(e) { if(resultEl) resultEl.innerHTML = `<div style="color:var(--wf-red);font-size:13px;">Fout: ${e.message}</div>`; }
+      } catch(e) { if(resultEl) resultEl.innerHTML = `<div style="color:var(--wf-red);font-size:13px;">${tA("adm.error","Fout")}: ${e.message}</div>`; }
     });
 
     document.getElementById("admBackupList")?.addEventListener("click", async () => {
@@ -5987,8 +5984,8 @@ ${enrolled.map(e => `
     <span style="color:var(--gray-500);">${b.createdAt?new Date(b.createdAt).toLocaleString("nl-BE"):""}</span>
     <span style="color:var(--gray-500);">${b.tenantCount||0} tenants</span>
   </div>`).join("")}
-</div>` : `<div style="font-size:13px;color:var(--gray-400);margin-top:8px;">Geen backups gevonden</div>`;
-      } catch(e) { if(resultEl) resultEl.innerHTML = `<div style="color:var(--wf-red);font-size:13px;">Fout: ${e.message}</div>`; }
+</div>` : `<div style="font-size:13px;color:var(--gray-400);margin-top:8px;">${tA("adm.set.noBackups","Geen backups gevonden")}</div>`;
+      } catch(e) { if(resultEl) resultEl.innerHTML = `<div style="color:var(--wf-red);font-size:13px;">${tA("adm.error","Fout")}: ${e.message}</div>`; }
     });
   }
 
@@ -5999,34 +5996,34 @@ ${enrolled.map(e => `
     if (!box) return;
     let d;
     try { d = await api("GET", "/admin/backup-policy"); }
-    catch (e) { box.innerHTML = `<div style="color:var(--wf-red);font-size:13px;">Bewaarbeleid laden mislukt: ${esc(e.message)}</div>`; return; }
+    catch (e) { box.innerHTML = `<div style="color:var(--wf-red);font-size:13px;">${tA("adm.set.policyLoadFail","Bewaarbeleid laden mislukt")}: ${esc(e.message)}</div>`; return; }
     const p = d.policy || {};
     const c = d.counts || { total:0, toKeep:0, toPrune:0 };
-    const yrs = days => days < 365 ? `${days} dagen` : (days % 365 === 0 ? `${days/365} jaar` : `${Math.round(days/365*10)/10} jaar`);
+    const yrs = days => days < 365 ? `${days} ${tA("adm.set.days","dagen")}` : (days % 365 === 0 ? `${days/365} ${tA("adm.set.years","jaar")}` : `${Math.round(days/365*10)/10} ${tA("adm.set.years","jaar")}`);
     const item = (label, val) => `<div><div style="font-size:11px;color:var(--muted);margin-bottom:2px;">${label}</div><div style="font-size:14px;font-weight:600;color:var(--ink);">${val}</div></div>`;
     box.innerHTML = `
 <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
-  <div style="font-size:14px;font-weight:600;color:var(--ink);">Bewaarbeleid</div>
-  <div style="font-size:12px;color:var(--muted);">${c.total} backup(s) · ${c.toKeep} behouden${c.toPrune?` · <span style="color:var(--wf-yellow);">${c.toPrune} buiten termijn</span>`:""}</div>
+  <div style="font-size:14px;font-weight:600;color:var(--ink);">${tA("adm.set.retentionPolicy","Bewaarbeleid")}</div>
+  <div style="font-size:12px;color:var(--muted);">${c.total} backup(s) · ${c.toKeep} ${tA("adm.set.kept","behouden")}${c.toPrune?` · <span style="color:var(--wf-yellow);">${c.toPrune} ${tA("adm.set.outOfTerm","buiten termijn")}</span>`:""}</div>
 </div>
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;">
-  ${item("Bewaartermijn", yrs(p.retentionDays))}
-  ${item("Frequentie", p.frequency === "weekly" ? "Wekelijks" : "Dagelijks")}
-  ${item("Minimaal behouden", p.keepMinimum)}
-  ${item("Legal hold", p.legalHold ? '<span style="color:var(--wf-yellow);">Actief</span>' : "Uit")}
+  ${item(tA("adm.set.retentionTerm","Bewaartermijn"), yrs(p.retentionDays))}
+  ${item(tA("adm.set.frequency","Frequentie"), p.frequency === "weekly" ? tA("adm.set.weekly","Wekelijks") : tA("adm.set.daily","Dagelijks"))}
+  ${item(tA("adm.set.keepMin","Minimaal behouden"), p.keepMinimum)}
+  ${item(tA("adm.set.legalHold","Legal hold"), p.legalHold ? `<span style="color:var(--wf-yellow);">${tA("adm.active","Actief")}</span>` : tA("adm.set.off","Uit"))}
 </div>
 <div style="margin-top:12px;font-size:11.5px;color:var(--gray-400);display:flex;align-items:center;gap:6px;">
   <span style="display:inline-flex;width:15px;height:15px;"></span>
-  Dit beleid wordt centraal beheerd door Monargo. Wil je het aanpassen, neem contact op met support.
+  ${tA("adm.set.policyManaged","Dit beleid wordt centraal beheerd door Monargo. Wil je het aanpassen, neem contact op met support.")}
 </div>
 <details style="margin-top:14px;">
-  <summary style="font-size:12px;color:var(--wf-blue);cursor:pointer;">Wettelijke bewaartermijnen (België) · info</summary>
+  <summary style="font-size:12px;color:var(--wf-blue);cursor:pointer;">${tA("adm.set.legalTermsInfo","Wettelijke bewaartermijnen (België) · info")}</summary>
   <div style="font-size:12px;color:var(--muted);margin-top:8px;line-height:1.6;">
-    Deze backups zijn <strong>herstelmomenten (disaster recovery)</strong>, geen wettelijk archief. De wettelijke bewaarplicht rust op je live-data:
+    ${tA("adm.set.legalTermsBody","Deze backups zijn <strong>herstelmomenten (disaster recovery)</strong>, geen wettelijk archief. De wettelijke bewaarplicht rust op je live-data:")}
     <ul style="margin:6px 0 0;padding-left:18px;">
       ${(d.legalReference||[]).map(r=>`<li>${esc(r.label)}: <strong>${yrs(r.days)}</strong> <span style="color:var(--gray-400);">- ${esc(r.note)}</span></li>`).join("")}
     </ul>
-    <div style="margin-top:8px;">Conform GDPR art. 5(1)(e) (opslagbeperking) worden backups buiten de termijn automatisch en veilig opgeruimd; de ${esc(p.keepMinimum)} nieuwste blijven altijd bewaard.</div>
+    <div style="margin-top:8px;">${tA("adm.set.gdprNote","Conform GDPR art. 5(1)(e) (opslagbeperking) worden backups buiten de termijn automatisch en veilig opgeruimd; de {n} nieuwste blijven altijd bewaard.").replace("{n}", esc(p.keepMinimum))}</div>
   </div>
 </details>`;
   }
