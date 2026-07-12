@@ -258,6 +258,12 @@
     const map = { aangevraagd: "adm.lstatus.requested", goedgekeurd: "adm.lstatus.approved", geweigerd: "adm.lstatus.rejected" };
     return map[k] ? tA(map[k], s || "") : (s || "");
   }
+  // Voertuigstatus vertalen.
+  function tVehStatus(s) {
+    const k = String(s || "active").toLowerCase();
+    const map = { active: "adm.veh.stActive", actief: "adm.veh.stActive", maintenance: "adm.veh.stMaint", inactive: "adm.veh.stInactive", inactief: "adm.veh.stInactive" };
+    return map[k] ? tA(map[k], s || "actief") : (s || "actief");
+  }
   // Gelokaliseerde maand-/dagnamen voor de verlofkalender.
   function monthNames() {
     const lang = (window.wfpI18n && window.wfpI18n.lang) || "nl";
@@ -3637,13 +3643,13 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
       content.innerHTML = `
 <div class="adm-card">
   <div class="adm-card-header">
-    <h3 class="adm-card-title">Klanten <span style="background:var(--wf-purple-l);color:var(--wf-purple);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${rows.length}</span></h3>
-    <input id="custSearch" placeholder="Zoek naam, e-mail…" style="font-size:12px;min-width:200px">
+    <h3 class="adm-card-title">${tA("nav.customers","Klanten")} <span style="background:var(--wf-purple-l);color:var(--wf-purple);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${rows.length}</span></h3>
+    <input id="custSearch" placeholder="${tA("adm.cust.searchPh","Zoek naam, e-mail…")}" style="font-size:12px;min-width:200px">
   </div>
   ${rows.length === 0
-    ? `<div class="adm-empty"><div class="adm-empty-text">Nog geen klanten</div><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewCust" style="margin-top:12px">+ Eerste klant aanmaken</button></div>`
+    ? `<div class="adm-empty"><div class="adm-empty-text">${tA("adm.cust.empty","Nog geen klanten")}</div><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewCust" style="margin-top:12px">+ ${tA("adm.cust.emptyBtn","Eerste klant aanmaken")}</button></div>`
     : `<div class="adm-table-wrap"><table class="adm-table">
-        <thead><tr><th>Naam</th><th>Contactpersoon</th><th>E-mail</th><th>Telefoon</th><th>BTW-nr</th><th>Acties</th></tr></thead>
+        <thead><tr><th>${tA("adm.cust.thName","Naam")}</th><th>${tA("adm.cust.thContact","Contactpersoon")}</th><th>${tA("adm.email","E-mail")}</th><th>${tA("adm.cust.thPhone","Telefoon")}</th><th>${tA("adm.cust.thVat","BTW-nr")}</th><th>${tA("adm.actions","Acties")}</th></tr></thead>
         <tbody id="custTbody">${buildCustRows(rows)}</tbody>
       </table></div>`}
 </div>`;
@@ -3662,7 +3668,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
         wireCustButtons();
       });
       wireCustButtons();
-    } catch(e) { content.innerHTML = `<div style="padding:20px;color:var(--wf-red)">Fout: ${e.message}</div>`; }
+    } catch(e) { content.innerHTML = `<div style="padding:20px;color:var(--wf-red)">${tA("adm.error","Fout")}: ${e.message}</div>`; }
   }
   function buildCustRows(rows) {
     return rows.map(c => `<tr style="cursor:pointer;" class="cust-detail-row" data-id="${c.id}">
@@ -3672,15 +3678,15 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
       <td>${esc(c.phone||"-")}</td>
       <td style="font-family:monospace;font-size:12px">${esc(c.vatNumber||"-")}</td>
       <td style="white-space:nowrap">
-        <button class="adm-btn adm-btn-primary adm-btn-sm cust-view" data-id="${c.id}">Detail</button>
-        <button class="adm-btn adm-btn-secondary adm-btn-sm cust-edit" data-id="${c.id}">Bewerken</button>
+        <button class="adm-btn adm-btn-primary adm-btn-sm cust-view" data-id="${c.id}">${tA("adm.cust.detail","Detail")}</button>
+        <button class="adm-btn adm-btn-secondary adm-btn-sm cust-edit" data-id="${c.id}">${tA("adm.edit","Bewerken")}</button>
       </td>
     </tr>`).join("");
   }
 
   async function renderCustomerDetail(customerId) {
     const content = document.getElementById("admContent");
-    content.innerHTML = `<div class="adm-loading">Laden…</div>`;
+    content.innerHTML = `<div class="adm-loading">${tA("adm.loading","Laden…")}</div>`;
     try {
       const [custData, woData, invData, qData] = await Promise.all([
         api("GET", "/customers"),
@@ -3689,7 +3695,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
         api("GET", "/offertes").catch(() => ({ quotes: [] }))
       ]);
       const customer  = (custData.customers || []).find(c => c.id === customerId);
-      if (!customer) { content.innerHTML = `<div class="adm-empty">Klant niet gevonden</div>`; return; }
+      if (!customer) { content.innerHTML = `<div class="adm-empty">${tA("adm.cust.notFound","Klant niet gevonden")}</div>`; return; }
 
       const custWOs    = (woData.workorders || []).filter(w => w.customerId === customerId || w.clientName === customer.name);
       const custInvs   = (invData.invoices || []).filter(i => i.customerId === customerId || i.customerName === customer.name);
@@ -3709,9 +3715,9 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
         if (!body) return;
         if (_custTab === "offertes") {
           body.innerHTML = custQuotes.length ? `<table class="adm-table">
-            <thead><tr><th>Nr.</th><th>Datum</th><th>Bedrag</th><th>Status</th><th>Vervolg</th></tr></thead>
+            <thead><tr><th>${tA("adm.thNr","Nr.")}</th><th>${tA("adm.date","Datum")}</th><th>${tA("adm.amount","Bedrag")}</th><th>${tA("adm.status","Status")}</th><th>${tA("adm.cust.thFollowup","Vervolg")}</th></tr></thead>
             <tbody>${custQuotes.map(q => {
-              const st = QUOTE_STATUS[q.status] || { label: q.status, css: "adm-status-pending" };
+              const st = quoteStat(q.status);
               const accepted = q.status === "aanvaard";
               return `<tr>
                 <td style="font-family:monospace;font-weight:600">${esc(q.number || "-")}</td>
@@ -3719,46 +3725,46 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
                 <td style="font-weight:600">${fmtEurCD(q.total)}</td>
                 <td><span class="adm-status ${st.css}">${st.label}</span></td>
                 <td style="display:flex;gap:4px;white-space:nowrap;">
-                  ${q.workorderId ? `<span style="font-size:11px;color:var(--gray-400)">→ werkbon</span>`
-                    : accepted ? `<button class="adm-btn adm-btn-secondary adm-btn-sm q-cust-towo" data-id="${q.id}">→ Werkbon</button>` : ""}
-                  ${q.invoiceId ? `<span style="font-size:11px;color:var(--gray-400)">→ gefactureerd</span>`
-                    : accepted ? `<button class="adm-btn adm-btn-success adm-btn-sm q-cust-toinv" data-id="${q.id}">→ Factuur</button>` : ""}
+                  ${q.workorderId ? `<span style="font-size:11px;color:var(--gray-400)">→ ${tA("adm.cust.toWo","werkbon")}</span>`
+                    : accepted ? `<button class="adm-btn adm-btn-secondary adm-btn-sm q-cust-towo" data-id="${q.id}">→ ${(window.wfpTerms && window.wfpTerms.t("jobSingular")) || tA("emp.wo.default","Werkbon")}</button>` : ""}
+                  ${q.invoiceId ? `<span style="font-size:11px;color:var(--gray-400)">→ ${tA("adm.cust.invoiced","gefactureerd")}</span>`
+                    : accepted ? `<button class="adm-btn adm-btn-success adm-btn-sm q-cust-toinv" data-id="${q.id}">→ ${tA("adm.wo.toInvoice","Factuur")}</button>` : ""}
                 </td>
               </tr>`;
             }).join("")}</tbody>
-          </table>` : `<div class="adm-empty"><div class="adm-empty-text">Geen offertes voor deze klant</div></div>`;
+          </table>` : `<div class="adm-empty"><div class="adm-empty-text">${tA("adm.cust.noQuotes","Geen offertes voor deze klant")}</div></div>`;
           const convert = async (id, target, label) => {
-            if (!confirm(`Offerte omzetten naar ${label}?`)) return;
+            if (!confirm(tA("adm.cust.convertConfirm","Offerte omzetten naar {t}?").replace("{t}", label))) return;
             try {
               const d = await api("POST", `/offertes/${id}/convert`, { target });
-              window.showToast && window.showToast(`${label} ${(d.workorder?.number || d.invoice?.number || "")} aangemaakt`, "success");
+              window.showToast && window.showToast(`${label} ${(d.workorder?.number || d.invoice?.number || "")} ${tA("adm.created","aangemaakt")}`, "success");
               renderCustomerDetail(customerId);
-            } catch (err) { window.showToast && window.showToast(err.message || "Omzetten mislukt", "error"); }
+            } catch (err) { window.showToast && window.showToast(err.message || tA("adm.cust.convertFail","Omzetten mislukt"), "error"); }
           };
-          body.querySelectorAll(".q-cust-towo").forEach(b => b.addEventListener("click", () => convert(b.dataset.id, "workorder", "werkbon")));
-          body.querySelectorAll(".q-cust-toinv").forEach(b => b.addEventListener("click", () => convert(b.dataset.id, "invoice", "factuur")));
+          body.querySelectorAll(".q-cust-towo").forEach(b => b.addEventListener("click", () => convert(b.dataset.id, "workorder", (window.wfpTerms && window.wfpTerms.t("jobSingular")) || tA("adm.cust.toWo","werkbon"))));
+          body.querySelectorAll(".q-cust-toinv").forEach(b => b.addEventListener("click", () => convert(b.dataset.id, "invoice", tA("adm.cust.invoiceLc","factuur"))));
           return;
         }
         if (_custTab === "werkbonnen") {
           body.innerHTML = custWOs.length ? `<table class="adm-table">
-            <thead><tr><th>#</th><th>Titel</th><th>Medewerker</th><th>Status</th><th>Datum</th><th>Acties</th></tr></thead>
+            <thead><tr><th>#</th><th>${tA("adm.thTitle","Titel")}</th><th>${tA("adm.thEmployee","Medewerker")}</th><th>${tA("adm.status","Status")}</th><th>${tA("adm.date","Datum")}</th><th>${tA("adm.actions","Acties")}</th></tr></thead>
             <tbody>${custWOs.map(w => `<tr>
               <td style="font-family:monospace">${w.number||w.id.slice(-4)}</td>
               <td>${esc(w.title||"-")}</td>
               <td>${esc(uName(w)||"-")}</td>
-              <td><span class="adm-status adm-status-${(w.status||"").toLowerCase().replace(/\s/g,"-")}">${esc(w.status||"-")}</span></td>
+              <td><span class="adm-status adm-status-${(w.status||"").toLowerCase().replace(/\s/g,"-")}">${esc(tWoStatus(w.status))}</span></td>
               <td>${w.scheduledDate||w.createdAt?.slice(0,10)||"-"}</td>
-              <td><button class="adm-btn adm-btn-secondary adm-btn-sm wo-from-cust" data-id="${w.id}">Bewerk</button></td>
+              <td><button class="adm-btn adm-btn-secondary adm-btn-sm wo-from-cust" data-id="${w.id}">${tA("adm.editShort","Bewerk")}</button></td>
             </tr>`).join("")}</tbody>
-          </table>` : `<div class="adm-empty"><div class="adm-empty-text">Geen werkbonnen voor deze klant</div></div>`;
+          </table>` : `<div class="adm-empty"><div class="adm-empty-text">${tA("adm.cust.noWos","Geen werkbonnen voor deze klant")}</div></div>`;
           body.querySelectorAll(".wo-from-cust").forEach(btn => {
             btn.addEventListener("click", () => openWorkorderDrawer(custWOs.find(w => w.id === btn.dataset.id)));
           });
         } else {
           body.innerHTML = custInvs.length ? `<table class="adm-table">
-            <thead><tr><th>Nr.</th><th>Datum</th><th>Vervaldatum</th><th>Bedrag</th><th>Status</th><th>Acties</th></tr></thead>
+            <thead><tr><th>${tA("adm.thNr","Nr.")}</th><th>${tA("adm.date","Datum")}</th><th>${tA("adm.inv.due","Vervaldatum")}</th><th>${tA("adm.amount","Bedrag")}</th><th>${tA("adm.status","Status")}</th><th>${tA("adm.actions","Acties")}</th></tr></thead>
             <tbody>${custInvs.map(inv => {
-              const st = INV_STATUS[inv.status]||{label:inv.status,css:"adm-status-pending"};
+              const st = invStat(inv.status);
               return `<tr>
                 <td style="font-family:monospace;font-weight:600">${esc(inv.number||"-")}</td>
                 <td>${inv.invoiceDate?new Date(inv.invoiceDate).toLocaleDateString("nl-BE"):"-"}</td>
@@ -3766,18 +3772,18 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
                 <td style="font-weight:600">${fmtEurCD(inv.total)}</td>
                 <td><span class="adm-status ${st.css}">${st.label}</span></td>
                 <td style="display:flex;gap:4px;">
-                  <button class="adm-btn adm-btn-secondary adm-btn-sm inv-from-cust" data-id="${inv.id}">Bewerken</button>
-                  ${["open","overdue"].includes(inv.status)?`<button class="adm-btn adm-btn-success adm-btn-sm inv-paid-cust" data-id="${inv.id}">Betaald</button>`:""}
+                  <button class="adm-btn adm-btn-secondary adm-btn-sm inv-from-cust" data-id="${inv.id}">${tA("adm.edit","Bewerken")}</button>
+                  ${["open","overdue"].includes(inv.status)?`<button class="adm-btn adm-btn-success adm-btn-sm inv-paid-cust" data-id="${inv.id}">${tA("adm.inv.st.paid","Betaald")}</button>`:""}
                 </td>
               </tr>`;
             }).join("")}</tbody>
-          </table>` : `<div class="adm-empty"><div class="adm-empty-text">Geen facturen voor deze klant</div></div>`;
+          </table>` : `<div class="adm-empty"><div class="adm-empty-text">${tA("adm.cust.noInvs","Geen facturen voor deze klant")}</div></div>`;
           body.querySelectorAll(".inv-from-cust").forEach(btn => {
             btn.addEventListener("click", () => openFactuurDrawer(custInvs.find(i => i.id === btn.dataset.id)));
           });
           body.querySelectorAll(".inv-paid-cust").forEach(btn => {
             btn.addEventListener("click", async () => {
-              if (!confirm("Factuur als betaald markeren?")) return;
+              if (!confirm(tA("adm.inv.markPaidConfirm","Factuur als betaald markeren?"))) return;
               await api("PATCH", `/facturen/${btn.dataset.id}`, { status: "paid" });
               renderCustomerDetail(customerId);
             });
@@ -3788,33 +3794,33 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
       content.innerHTML = `
 <!-- Back header -->
 <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-  <button class="adm-btn adm-btn-secondary adm-btn-sm" id="custDetailBack">← Terug</button>
+  <button class="adm-btn adm-btn-secondary adm-btn-sm" id="custDetailBack">← ${tA("adm.back","Terug")}</button>
   <h2 style="font-size:18px;font-weight:600;color:var(--gray-900);margin:0;">${esc(customer.name)}</h2>
-  <button class="adm-btn adm-btn-secondary adm-btn-sm" id="custDetailEdit">Bewerk</button>
+  <button class="adm-btn adm-btn-secondary adm-btn-sm" id="custDetailEdit">${tA("adm.editShort","Bewerk")}</button>
 </div>
 
 <!-- KPIs -->
 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
-  <div class="adm-kpi adm-kpi-purple"><div class="adm-kpi-label">Werkbonnen</div><div class="adm-kpi-value">${custWOs.length}</div><div class="adm-kpi-sub">${custWOs.filter(w=>!["Voltooid","Afgewerkt","done"].includes(w.status)).length} open</div></div>
-  <div class="adm-kpi adm-kpi-blue"><div class="adm-kpi-label">Facturen</div><div class="adm-kpi-value">${custInvs.length}</div><div class="adm-kpi-sub">${custInvs.filter(i=>["open","overdue"].includes(i.status)).length} openstaand</div></div>
-  <div class="adm-kpi adm-kpi-green"><div class="adm-kpi-label">Betaald</div><div class="adm-kpi-value" style="font-size:17px">${fmtEurCD(paidInvAmt)}</div></div>
-  <div class="adm-kpi ${openInvAmt>0?"adm-kpi-amber":"adm-kpi-blue"}"><div class="adm-kpi-label">Openstaand</div><div class="adm-kpi-value" style="font-size:17px">${fmtEurCD(openInvAmt)}</div></div>
+  <div class="adm-kpi adm-kpi-purple"><div class="adm-kpi-label">${(window.wfpTerms && window.wfpTerms.t("jobPlural")) || tA("nav.workorders","Werkbonnen")}</div><div class="adm-kpi-value">${custWOs.length}</div><div class="adm-kpi-sub">${custWOs.filter(w=>!["Voltooid","Afgewerkt","done"].includes(w.status)).length} ${tA("dash.woseg.open","Open").toLowerCase()}</div></div>
+  <div class="adm-kpi adm-kpi-blue"><div class="adm-kpi-label">${tA("nav.facturen","Facturen")}</div><div class="adm-kpi-value">${custInvs.length}</div><div class="adm-kpi-sub">${custInvs.filter(i=>["open","overdue"].includes(i.status)).length} ${tA("adm.cust.outstanding","openstaand")}</div></div>
+  <div class="adm-kpi adm-kpi-green"><div class="adm-kpi-label">${tA("adm.inv.st.paid","Betaald")}</div><div class="adm-kpi-value" style="font-size:17px">${fmtEurCD(paidInvAmt)}</div></div>
+  <div class="adm-kpi ${openInvAmt>0?"adm-kpi-amber":"adm-kpi-blue"}"><div class="adm-kpi-label">${tA("adm.cust.outstandingCap","Openstaand")}</div><div class="adm-kpi-value" style="font-size:17px">${fmtEurCD(openInvAmt)}</div></div>
 </div>
 
 <div class="adm-grid-2">
   <!-- Info card -->
   <div class="adm-card">
-    <div class="adm-card-header"><h3 class="adm-card-title">Contactgegevens</h3></div>
+    <div class="adm-card-header"><h3 class="adm-card-title">${tA("adm.cust.contactInfo","Contactgegevens")}</h3></div>
     <div class="adm-card-body" style="display:flex;flex-direction:column;gap:8px;">
-      ${customer.contactName?`<div style="font-size:13px;"><span style="color:var(--gray-400);min-width:110px;display:inline-block">Contactpersoon</span>${esc(customer.contactName)}</div>`:""}
-      ${customer.email?`<div style="font-size:13px;"><span style="color:var(--gray-400);min-width:110px;display:inline-block">E-mail</span><a href="mailto:${esc(customer.email)}" style="color:var(--wf-purple)">${esc(customer.email)}</a></div>`:""}
-      ${customer.phone?`<div style="font-size:13px;"><span style="color:var(--gray-400);min-width:110px;display:inline-block">Telefoon</span>${esc(customer.phone)}</div>`:""}
-      ${customer.vatNumber?`<div style="font-size:13px;"><span style="color:var(--gray-400);min-width:110px;display:inline-block">BTW-nummer</span><span style="font-family:monospace">${esc(customer.vatNumber)}</span></div>`:""}
-      ${customer.address?`<div style="font-size:13px;"><span style="color:var(--gray-400);min-width:110px;display:inline-block">Adres</span>${esc(customer.address)}</div>`:""}
-      ${customer.notes?`<div style="font-size:13px;margin-top:4px;"><span style="color:var(--gray-400);display:block;margin-bottom:2px;">Notities</span><span style="color:var(--gray-500)">${esc(customer.notes)}</span></div>`:""}
+      ${customer.contactName?`<div style="font-size:13px;"><span style="color:var(--gray-400);min-width:110px;display:inline-block">${tA("adm.cust.thContact","Contactpersoon")}</span>${esc(customer.contactName)}</div>`:""}
+      ${customer.email?`<div style="font-size:13px;"><span style="color:var(--gray-400);min-width:110px;display:inline-block">${tA("adm.email","E-mail")}</span><a href="mailto:${esc(customer.email)}" style="color:var(--wf-purple)">${esc(customer.email)}</a></div>`:""}
+      ${customer.phone?`<div style="font-size:13px;"><span style="color:var(--gray-400);min-width:110px;display:inline-block">${tA("adm.cust.thPhone","Telefoon")}</span>${esc(customer.phone)}</div>`:""}
+      ${customer.vatNumber?`<div style="font-size:13px;"><span style="color:var(--gray-400);min-width:110px;display:inline-block">${tA("adm.cust.vatNumber","BTW-nummer")}</span><span style="font-family:monospace">${esc(customer.vatNumber)}</span></div>`:""}
+      ${customer.address?`<div style="font-size:13px;"><span style="color:var(--gray-400);min-width:110px;display:inline-block">${tA("adm.cust.address","Adres")}</span>${esc(customer.address)}</div>`:""}
+      ${customer.notes?`<div style="font-size:13px;margin-top:4px;"><span style="color:var(--gray-400);display:block;margin-bottom:2px;">${tA("adm.cust.notes","Notities")}</span><span style="color:var(--gray-500)">${esc(customer.notes)}</span></div>`:""}
       <div style="margin-top:8px;display:flex;gap:8px;">
-        <button class="adm-btn adm-btn-primary adm-btn-sm" id="custNewWO">+ Werkbon</button>
-        <button class="adm-btn adm-btn-secondary adm-btn-sm" id="custNewInv">Factuur</button>
+        <button class="adm-btn adm-btn-primary adm-btn-sm" id="custNewWO">+ ${(window.wfpTerms && window.wfpTerms.t("jobSingular")) || tA("emp.wo.default","Werkbon")}</button>
+        <button class="adm-btn adm-btn-secondary adm-btn-sm" id="custNewInv">${tA("adm.cust.invoiceCap","Factuur")}</button>
       </div>
     </div>
   </div>
@@ -3823,9 +3829,9 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
   <div class="adm-card">
     <div class="adm-card-header" style="flex-direction:column;gap:0;padding-bottom:0;" id="custDetailTabs">
       <div style="display:flex;gap:0;border-bottom:1px solid var(--gray-100);width:100%;">
-        <button class="cdt-tab" data-tab="offertes" style="background:none;border:none;cursor:pointer;padding:10px 16px;font-size:13px;color:var(--gray-700);border-bottom:2px solid transparent;">Offertes (${custQuotes.length})</button>
-        <button class="cdt-tab" data-tab="werkbonnen" style="background:none;border:none;cursor:pointer;padding:10px 16px;font-size:13px;color:var(--gray-700);border-bottom:2px solid var(--wf-purple);font-weight:600;">Werkbonnen (${custWOs.length})</button>
-        <button class="cdt-tab" data-tab="facturen" style="background:none;border:none;cursor:pointer;padding:10px 16px;font-size:13px;color:var(--gray-700);border-bottom:2px solid transparent;">Facturen (${custInvs.length})</button>
+        <button class="cdt-tab" data-tab="offertes" style="background:none;border:none;cursor:pointer;padding:10px 16px;font-size:13px;color:var(--gray-700);border-bottom:2px solid transparent;">${tA("nav.offertes","Offertes")} (${custQuotes.length})</button>
+        <button class="cdt-tab" data-tab="werkbonnen" style="background:none;border:none;cursor:pointer;padding:10px 16px;font-size:13px;color:var(--gray-700);border-bottom:2px solid var(--wf-purple);font-weight:600;">${(window.wfpTerms && window.wfpTerms.t("jobPlural")) || tA("nav.workorders","Werkbonnen")} (${custWOs.length})</button>
+        <button class="cdt-tab" data-tab="facturen" style="background:none;border:none;cursor:pointer;padding:10px 16px;font-size:13px;color:var(--gray-700);border-bottom:2px solid transparent;">${tA("nav.facturen","Facturen")} (${custInvs.length})</button>
       </div>
     </div>
     <div class="adm-card-body adm-table-wrap" id="custDetailBody"></div>
@@ -3859,34 +3865,34 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
         t.addEventListener("click", () => { _custTab = t.dataset.tab; renderTabs(); });
       });
       renderTabs();
-    } catch(e) { content.innerHTML = `<div style="padding:20px;color:var(--wf-red)">Fout: ${e.message}</div>`; }
+    } catch(e) { content.innerHTML = `<div style="padding:20px;color:var(--wf-red)">${tA("adm.error","Fout")}: ${e.message}</div>`; }
   }
   function openCustomerDrawer(customer) {
-    document.getElementById("admDrawerTitle").textContent = customer ? "Klant bewerken" : "Nieuwe klant";
+    document.getElementById("admDrawerTitle").textContent = customer ? tA("adm.cust.editTitle","Klant bewerken") : tA("adm.cust.newTitle","Nieuwe klant");
     document.getElementById("admDrawerBody").innerHTML = `
 <form id="custForm">
-  <div class="adm-form-group"><label>Naam *</label><input name="name" value="${esc(customer?.name||"")}" required placeholder="Bedrijfsnaam BV"></div>
+  <div class="adm-form-group"><label>${tA("adm.cust.thName","Naam")} *</label><input name="name" value="${esc(customer?.name||"")}" required placeholder="${tA("adm.cust.namePh","Bedrijfsnaam BV")}"></div>
   <div class="adm-form-row">
-    <div class="adm-form-group"><label>Contactpersoon</label><input name="contactName" value="${esc(customer?.contactName||"")}" placeholder="Jan Janssen"></div>
+    <div class="adm-form-group"><label>${tA("adm.cust.thContact","Contactpersoon")}</label><input name="contactName" value="${esc(customer?.contactName||"")}" placeholder="${tA("adm.cust.contactPh","Jan Janssen")}"></div>
     <div class="adm-form-group">
-      <label>BTW-nummer
-        <button type="button" id="kboLookupBtn" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--wf-purple);font-weight:600;margin-left:6px;padding:1px 6px;border:1px solid var(--wf-purple-l);border-radius:4px;">KBO opzoeken</button>
+      <label>${tA("adm.cust.vatNumber","BTW-nummer")}
+        <button type="button" id="kboLookupBtn" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--wf-purple);font-weight:600;margin-left:6px;padding:1px 6px;border:1px solid var(--wf-purple-l);border-radius:4px;">${tA("adm.cust.kboLookup","KBO opzoeken")}</button>
       </label>
       <input name="vatNumber" id="custVatInput" value="${esc(customer?.vatNumber||"")}" placeholder="BE0000.000.000">
       <div id="kboResult" style="display:none;margin-top:6px;background:var(--wf-green-l);border-radius:6px;padding:8px;font-size:12px;color:var(--wf-green);"></div>
     </div>
   </div>
   <div class="adm-form-row">
-    <div class="adm-form-group"><label>E-mail</label><input name="email" type="email" value="${esc(customer?.email||"")}"></div>
-    <div class="adm-form-group"><label>Telefoon</label><input name="phone" value="${esc(customer?.phone||"")}"></div>
+    <div class="adm-form-group"><label>${tA("adm.email","E-mail")}</label><input name="email" type="email" value="${esc(customer?.email||"")}"></div>
+    <div class="adm-form-group"><label>${tA("adm.cust.thPhone","Telefoon")}</label><input name="phone" value="${esc(customer?.phone||"")}"></div>
   </div>
-  <div class="adm-form-group"><label>Adres</label><input name="address" value="${esc(customer?.address||"")}"></div>
-  <div class="adm-form-group"><label>Notities</label><textarea name="notes" rows="3" style="width:100%">${esc(customer?.notes||"")}</textarea></div>
+  <div class="adm-form-group"><label>${tA("adm.cust.address","Adres")}</label><input name="address" value="${esc(customer?.address||"")}"></div>
+  <div class="adm-form-group"><label>${tA("adm.cust.notes","Notities")}</label><textarea name="notes" rows="3" style="width:100%">${esc(customer?.notes||"")}</textarea></div>
   <div id="custFormErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:8px;font-size:12px;margin-bottom:8px;"></div>
   <div class="adm-form-actions">
-    <button type="button" class="adm-btn adm-btn-secondary" id="custCancel">Annuleren</button>
-    ${customer ? `<button type="button" class="adm-btn adm-btn-danger adm-btn-sm" id="custDelete">Verwijderen</button>` : ""}
-    <button type="submit" class="adm-btn adm-btn-primary">${customer ? "Opslaan" : "Aanmaken"}</button>
+    <button type="button" class="adm-btn adm-btn-secondary" id="custCancel">${tA("adm.cancel","Annuleren")}</button>
+    ${customer ? `<button type="button" class="adm-btn adm-btn-danger adm-btn-sm" id="custDelete">${tA("adm.delete","Verwijderen")}</button>` : ""}
+    <button type="submit" class="adm-btn adm-btn-primary">${customer ? tA("adm.save","Opslaan") : tA("adm.createBtn","Aanmaken")}</button>
   </div>
 </form>`;
     openDrawer();
@@ -3899,15 +3905,15 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
       const nameInput = document.querySelector("#custForm [name=name]");
       const resultEl = document.getElementById("kboResult");
       const query = (vatInput?.value?.trim()) || (nameInput?.value?.trim());
-      if (!query) { window.showToast&&window.showToast("Vul BTW-nummer of naam in","info"); return; }
-      btn.textContent = "Laden…"; btn.disabled = true;
+      if (!query) { window.showToast&&window.showToast(tA("adm.cust.kboPrompt","Vul BTW-nummer of naam in"),"info"); return; }
+      btn.textContent = tA("adm.loading","Laden…"); btn.disabled = true;
       try {
         const d = await api("POST", "/kbo/lookup", { vat: query, name: query });
         const c = d.company || {};
         if (resultEl) {
           resultEl.style.display = "";
-          resultEl.innerHTML = `<strong>${esc(c.name||"Onbekend")}</strong><br>${esc(c.vatNumber||"")} · ${esc(c.address||"")}
-            <button type="button" id="kboApplyBtn" style="background:none;border:none;cursor:pointer;color:var(--wf-purple);font-size:11px;font-weight:600;margin-left:8px;">↗ Toepassen</button>`;
+          resultEl.innerHTML = `<strong>${esc(c.name||tA("adm.unknown","Onbekend"))}</strong><br>${esc(c.vatNumber||"")} · ${esc(c.address||"")}
+            <button type="button" id="kboApplyBtn" style="background:none;border:none;cursor:pointer;color:var(--wf-purple);font-size:11px;font-weight:600;margin-left:8px;">↗ ${tA("adm.cust.kboApply","Toepassen")}</button>`;
           document.getElementById("kboApplyBtn")?.addEventListener("click", () => {
             if (nameInput && c.name) nameInput.value = c.name;
             if (vatInput && c.vatNumber) vatInput.value = c.vatNumber;
@@ -3918,12 +3924,12 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
             if (resultEl) { resultEl.style.display="none"; }
           });
         }
-      } catch(e) { window.showToast&&window.showToast("KBO fout: "+e.message,"error"); }
-      finally { btn.textContent="KBO opzoeken"; btn.disabled=false; }
+      } catch(e) { window.showToast&&window.showToast(tA("adm.cust.kboError","KBO fout")+": "+e.message,"error"); }
+      finally { btn.textContent=tA("adm.cust.kboLookup","KBO opzoeken"); btn.disabled=false; }
     });
 
     document.getElementById("custDelete")?.addEventListener("click", async () => {
-      if (!confirm(`Klant "${customer.name}" verwijderen?`)) return;
+      if (!confirm(tA("adm.cust.deleteConfirm",'Klant "{n}" verwijderen?').replace("{n}", customer.name))) return;
       try {
         await api("DELETE", `/customers/${customer.id}`);
         closeDrawer(); renderCustomers();
@@ -3956,13 +3962,13 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
       content.innerHTML = `
 <div class="adm-card">
   <div class="adm-card-header">
-    <h3 class="adm-card-title">Locaties / Werven <span style="background:var(--wf-purple-l);color:var(--wf-purple);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${rows.length}</span></h3>
-    <input id="venSearch" placeholder="Zoek locatie…" style="font-size:12px;min-width:180px">
+    <h3 class="adm-card-title">${(window.wfpTerms && window.wfpTerms.t("venuePlural")) || tA("nav.venues","Locaties / Werven")} <span style="background:var(--wf-purple-l);color:var(--wf-purple);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${rows.length}</span></h3>
+    <input id="venSearch" placeholder="${tA("adm.ven.searchPh","Zoek locatie…")}" style="font-size:12px;min-width:180px">
   </div>
   ${rows.length === 0
-    ? `<div class="adm-empty"><div class="adm-empty-text">Nog geen locaties</div><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewVen" style="margin-top:12px">+ Eerste locatie aanmaken</button></div>`
+    ? `<div class="adm-empty"><div class="adm-empty-text">${tA("adm.ven.empty","Nog geen locaties")}</div><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewVen" style="margin-top:12px">+ ${tA("adm.ven.emptyBtn","Eerste locatie aanmaken")}</button></div>`
     : `<div class="adm-table-wrap"><table class="adm-table">
-        <thead><tr><th>Naam</th><th>Adres</th><th>Contactpersoon</th><th>Telefoon</th><th>Actief</th><th>Acties</th></tr></thead>
+        <thead><tr><th>${tA("adm.cust.thName","Naam")}</th><th>${tA("adm.cust.address","Adres")}</th><th>${tA("adm.cust.thContact","Contactpersoon")}</th><th>${tA("adm.cust.thPhone","Telefoon")}</th><th>${tA("adm.active","Actief")}</th><th>${tA("adm.actions","Acties")}</th></tr></thead>
         <tbody id="venTbody">${buildVenRows(rows)}</tbody>
       </table></div>`}
 </div>`;
@@ -3980,41 +3986,41 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
         wireVenRows();
       });
       wireVenRows();
-    } catch(e) { content.innerHTML = `<div style="padding:20px;color:var(--wf-red)">Fout: ${e.message}</div>`; }
+    } catch(e) { content.innerHTML = `<div style="padding:20px;color:var(--wf-red)">${tA("adm.error","Fout")}: ${e.message}</div>`; }
   }
   function buildVenRows(rows) {
-    return rows.map(v => `<tr class="adm-row-link ven-row" data-id="${v.id}" title="Open locatie">
+    return rows.map(v => `<tr class="adm-row-link ven-row" data-id="${v.id}" title="${tA("adm.ven.open","Open locatie")}">
       <td><strong>${esc(v.name)}</strong></td>
       <td>${esc(v.address||"-")}</td>
       <td>${esc(v.contactName||"-")}</td>
       <td>${esc(v.phone||"-")}</td>
-      <td>${v.active !== false ? '<span class="adm-status adm-status-active">Actief</span>' : '<span class="adm-status adm-status-inactive">Inactief</span>'}</td>
-      <td><button class="adm-btn adm-btn-secondary adm-btn-sm ven-edit" data-id="${v.id}">Bewerk</button></td>
+      <td>${v.active !== false ? `<span class="adm-status adm-status-active">${tA("adm.active","Actief")}</span>` : `<span class="adm-status adm-status-inactive">${tA("adm.inactive","Inactief")}</span>`}</td>
+      <td><button class="adm-btn adm-btn-secondary adm-btn-sm ven-edit" data-id="${v.id}">${tA("adm.editShort","Bewerk")}</button></td>
     </tr>`).join("");
   }
   function openVenueDrawer(venue) {
-    document.getElementById("admDrawerTitle").textContent = venue ? "Locatie bewerken" : "Nieuwe locatie";
+    document.getElementById("admDrawerTitle").textContent = venue ? tA("adm.ven.editTitle","Locatie bewerken") : tA("adm.ven.newTitle","Nieuwe locatie");
     document.getElementById("admDrawerBody").innerHTML = `
 <form id="venForm">
-  <div class="adm-form-group"><label>Naam *</label><input name="name" value="${esc(venue?.name||"")}" required placeholder="Werf Brussel Noord"></div>
-  <div class="adm-form-group"><label>Adres</label><input name="address" value="${esc(venue?.address||"")}" placeholder="Straat 1, 1000 Brussel"></div>
+  <div class="adm-form-group"><label>${tA("adm.cust.thName","Naam")} *</label><input name="name" value="${esc(venue?.name||"")}" required placeholder="${tA("adm.ven.namePh","Werf Brussel Noord")}"></div>
+  <div class="adm-form-group"><label>${tA("adm.cust.address","Adres")}</label><input name="address" value="${esc(venue?.address||"")}" placeholder="${tA("adm.ven.addrPh","Straat 1, 1000 Brussel")}"></div>
   <div class="adm-form-row">
-    <div class="adm-form-group"><label>Contactpersoon</label><input name="contactName" value="${esc(venue?.contactName||"")}"></div>
-    <div class="adm-form-group"><label>Telefoon</label><input name="phone" value="${esc(venue?.phone||"")}"></div>
+    <div class="adm-form-group"><label>${tA("adm.cust.thContact","Contactpersoon")}</label><input name="contactName" value="${esc(venue?.contactName||"")}"></div>
+    <div class="adm-form-group"><label>${tA("adm.cust.thPhone","Telefoon")}</label><input name="phone" value="${esc(venue?.phone||"")}"></div>
   </div>
-  <div class="adm-form-group"><label>Notities</label><textarea name="notes" rows="3" style="width:100%">${esc(venue?.notes||"")}</textarea></div>
-  <div class="adm-form-group"><label><input type="checkbox" name="active" value="true" ${venue?.active !== false ? "checked" : ""}> Actieve locatie</label></div>
+  <div class="adm-form-group"><label>${tA("adm.cust.notes","Notities")}</label><textarea name="notes" rows="3" style="width:100%">${esc(venue?.notes||"")}</textarea></div>
+  <div class="adm-form-group"><label><input type="checkbox" name="active" value="true" ${venue?.active !== false ? "checked" : ""}> ${tA("adm.ven.activeVenue","Actieve locatie")}</label></div>
   <div id="venFormErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:8px;font-size:12px;margin-bottom:8px;"></div>
   <div class="adm-form-actions">
-    <button type="button" class="adm-btn adm-btn-secondary" id="venCancel">Annuleren</button>
-    ${venue ? `<button type="button" class="adm-btn adm-btn-danger adm-btn-sm" id="venDelete">Verwijderen</button>` : ""}
-    <button type="submit" class="adm-btn adm-btn-primary">${venue ? "Opslaan" : "Aanmaken"}</button>
+    <button type="button" class="adm-btn adm-btn-secondary" id="venCancel">${tA("adm.cancel","Annuleren")}</button>
+    ${venue ? `<button type="button" class="adm-btn adm-btn-danger adm-btn-sm" id="venDelete">${tA("adm.delete","Verwijderen")}</button>` : ""}
+    <button type="submit" class="adm-btn adm-btn-primary">${venue ? tA("adm.save","Opslaan") : tA("adm.createBtn","Aanmaken")}</button>
   </div>
 </form>`;
     openDrawer();
     document.getElementById("venCancel").addEventListener("click", closeDrawer);
     document.getElementById("venDelete")?.addEventListener("click", async () => {
-      if (!confirm(`Locatie "${venue.name}" verwijderen?`)) return;
+      if (!confirm(tA("adm.ven.deleteConfirm",'Locatie "{n}" verwijderen?').replace("{n}", venue.name))) return;
       try {
         await api("DELETE", `/venues/${venue.id}`);
         closeDrawer(); renderVenues();
@@ -4053,22 +4059,22 @@ ${alerts.length ? `<div style="background:var(--wf-yellow-l);border:1px solid va
 </div>` : ""}
 <div class="adm-card">
   <div class="adm-card-header">
-    <h3 class="adm-card-title">Voertuigen <span style="background:var(--wf-purple-l);color:var(--wf-purple);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${vehicles.length}</span></h3>
+    <h3 class="adm-card-title">${tA("nav.vehicles","Voertuigen")} <span style="background:var(--wf-purple-l);color:var(--wf-purple);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${vehicles.length}</span></h3>
   </div>
   ${vehicles.length === 0
-    ? `<div class="adm-empty"><div class="adm-empty-text">Nog geen voertuigen</div><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewVeh" style="margin-top:12px">+ Eerste voertuig aanmaken</button></div>`
+    ? `<div class="adm-empty"><div class="adm-empty-text">${tA("adm.veh.empty","Nog geen voertuigen")}</div><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewVeh" style="margin-top:12px">+ ${tA("adm.veh.emptyBtn","Eerste voertuig aanmaken")}</button></div>`
     : `<div class="adm-table-wrap"><table class="adm-table">
-        <thead><tr><th>Naam / Kenteken</th><th>Merk / Model</th><th>Chauffeur</th><th>KM-stand</th><th>Status</th><th>Volgende service</th><th>Acties</th></tr></thead>
-        <tbody>${vehicles.map(v => `<tr class="adm-row-link veh-row" data-id="${v.id}" title="Open voertuig">
+        <thead><tr><th>${tA("adm.veh.thNamePlate","Naam / Kenteken")}</th><th>${tA("adm.veh.thBrandModel","Merk / Model")}</th><th>${tA("adm.veh.thDriver","Chauffeur")}</th><th>${tA("adm.veh.thMileage","KM-stand")}</th><th>${tA("adm.status","Status")}</th><th>${tA("adm.veh.thNextService","Volgende service")}</th><th>${tA("adm.actions","Acties")}</th></tr></thead>
+        <tbody>${vehicles.map(v => `<tr class="adm-row-link veh-row" data-id="${v.id}" title="${tA("adm.veh.open","Open voertuig")}">
           <td><strong>${esc(v.name||v.plate||"-")}</strong><br><span style="font-size:11px;color:var(--gray-400);font-family:monospace">${esc(v.plate||"")}</span></td>
           <td>${esc(v.brand||"")} ${esc(v.model||"")}</td>
           <td>${esc(v.driverName||v.driverId||"-")}</td>
           <td>${v.mileage ? Number(v.mileage).toLocaleString("nl-BE") + " km" : "-"}</td>
-          <td><span class="adm-status adm-status-${v.status||"active"}">${esc(v.status||"actief")}</span></td>
+          <td><span class="adm-status adm-status-${v.status||"active"}">${esc(tVehStatus(v.status))}</span></td>
           <td>${v.nextService ? new Date(v.nextService).toLocaleDateString("nl-BE") : "-"}</td>
           <td>
-            <button class="adm-btn adm-btn-secondary adm-btn-sm veh-edit" data-id="${v.id}">Bewerken</button>
-            <button class="adm-btn adm-btn-secondary adm-btn-sm veh-km" data-id="${v.id}">KM log</button>
+            <button class="adm-btn adm-btn-secondary adm-btn-sm veh-edit" data-id="${v.id}">${tA("adm.edit","Bewerken")}</button>
+            <button class="adm-btn adm-btn-secondary adm-btn-sm veh-km" data-id="${v.id}">${tA("adm.veh.kmLog","KM log")}</button>
           </td>
         </tr>`).join("")}</tbody>
       </table></div>`}
@@ -4079,39 +4085,39 @@ ${alerts.length ? `<div style="background:var(--wf-yellow-l);border:1px solid va
       }));
       document.querySelectorAll(".veh-edit").forEach(b => b.addEventListener("click", () => openVehicleDrawer(vehicles.find(x => x.id === b.dataset.id))));
       document.querySelectorAll(".veh-km").forEach(b => b.addEventListener("click", () => openMileageDrawer(b.dataset.id)));
-    } catch(e) { content.innerHTML = `<div style="padding:20px;color:var(--wf-red)">Fout: ${e.message}</div>`; }
+    } catch(e) { content.innerHTML = `<div style="padding:20px;color:var(--wf-red)">${tA("adm.error","Fout")}: ${e.message}</div>`; }
   }
   function openVehicleDrawer(vehicle) {
-    document.getElementById("admDrawerTitle").textContent = vehicle ? "Voertuig bewerken" : "Nieuw voertuig";
+    document.getElementById("admDrawerTitle").textContent = vehicle ? tA("adm.veh.editTitle","Voertuig bewerken") : tA("adm.veh.newTitle","Nieuw voertuig");
     document.getElementById("admDrawerBody").innerHTML = `
 <form id="vehForm">
   <div class="adm-form-row">
-    <div class="adm-form-group"><label>Naam / Code *</label><input name="name" value="${esc(vehicle?.name||"")}" required placeholder="Bestelwagen 1"></div>
-    <div class="adm-form-group"><label>Kenteken</label><input name="plate" value="${esc(vehicle?.plate||"")}" placeholder="1-ABC-234" style="text-transform:uppercase"></div>
+    <div class="adm-form-group"><label>${tA("adm.veh.nameCode","Naam / Code")} *</label><input name="name" value="${esc(vehicle?.name||"")}" required placeholder="${tA("adm.veh.namePh","Bestelwagen 1")}"></div>
+    <div class="adm-form-group"><label>${tA("adm.veh.plate","Kenteken")}</label><input name="plate" value="${esc(vehicle?.plate||"")}" placeholder="1-ABC-234" style="text-transform:uppercase"></div>
   </div>
   <div class="adm-form-row">
-    <div class="adm-form-group"><label>Merk</label><input name="brand" value="${esc(vehicle?.brand||"")}" placeholder="Ford"></div>
-    <div class="adm-form-group"><label>Model</label><input name="model" value="${esc(vehicle?.model||"")}" placeholder="Transit"></div>
+    <div class="adm-form-group"><label>${tA("adm.veh.brand","Merk")}</label><input name="brand" value="${esc(vehicle?.brand||"")}" placeholder="Ford"></div>
+    <div class="adm-form-group"><label>${tA("adm.veh.model","Model")}</label><input name="model" value="${esc(vehicle?.model||"")}" placeholder="Transit"></div>
   </div>
   <div class="adm-form-row">
-    <div class="adm-form-group"><label>Bouwjaar</label><input name="year" type="number" value="${esc(vehicle?.year||"")}" placeholder="2022"></div>
-    <div class="adm-form-group"><label>Huidige KM-stand</label><input name="mileage" type="number" value="${esc(vehicle?.mileage||"")}" placeholder="50000"></div>
+    <div class="adm-form-group"><label>${tA("adm.veh.year","Bouwjaar")}</label><input name="year" type="number" value="${esc(vehicle?.year||"")}" placeholder="2022"></div>
+    <div class="adm-form-group"><label>${tA("adm.veh.curMileage","Huidige KM-stand")}</label><input name="mileage" type="number" value="${esc(vehicle?.mileage||"")}" placeholder="50000"></div>
   </div>
   <div class="adm-form-row">
-    <div class="adm-form-group"><label>Status</label>
+    <div class="adm-form-group"><label>${tA("adm.status","Status")}</label>
       <select name="status">
-        <option value="active" ${vehicle?.status==="active"?"selected":""}>Actief</option>
-        <option value="maintenance" ${vehicle?.status==="maintenance"?"selected":""}>In onderhoud</option>
-        <option value="inactive" ${vehicle?.status==="inactive"?"selected":""}>Inactief</option>
+        <option value="active" ${vehicle?.status==="active"?"selected":""}>${tA("adm.veh.stActive","Actief")}</option>
+        <option value="maintenance" ${vehicle?.status==="maintenance"?"selected":""}>${tA("adm.veh.stMaint","In onderhoud")}</option>
+        <option value="inactive" ${vehicle?.status==="inactive"?"selected":""}>${tA("adm.veh.stInactive","Inactief")}</option>
       </select>
     </div>
-    <div class="adm-form-group"><label>Volgende service (datum)</label><input name="nextService" type="date" value="${esc(vehicle?.nextService||"")}"></div>
+    <div class="adm-form-group"><label>${tA("adm.veh.nextServiceDate","Volgende service (datum)")}</label><input name="nextService" type="date" value="${esc(vehicle?.nextService||"")}"></div>
   </div>
   <div class="adm-form-actions" style="justify-content:space-between;">
-    ${vehicle ? `<button type="button" class="adm-btn adm-btn-danger adm-btn-sm" id="vehDelete">Verwijderen</button>` : `<span></span>`}
+    ${vehicle ? `<button type="button" class="adm-btn adm-btn-danger adm-btn-sm" id="vehDelete">${tA("adm.delete","Verwijderen")}</button>` : `<span></span>`}
     <div style="display:flex;gap:8px;">
-      <button type="button" class="adm-btn adm-btn-secondary" id="vehCancel">Annuleren</button>
-      <button type="submit" class="adm-btn adm-btn-primary">${vehicle ? "Opslaan" : "Aanmaken"}</button>
+      <button type="button" class="adm-btn adm-btn-secondary" id="vehCancel">${tA("adm.cancel","Annuleren")}</button>
+      <button type="submit" class="adm-btn adm-btn-primary">${vehicle ? tA("adm.save","Opslaan") : tA("adm.createBtn","Aanmaken")}</button>
     </div>
   </div>
 </form>`;
@@ -4119,7 +4125,7 @@ ${alerts.length ? `<div style="background:var(--wf-yellow-l);border:1px solid va
     document.getElementById("vehCancel").addEventListener("click", closeDrawer);
     if (vehicle) {
       document.getElementById("vehDelete").addEventListener("click", async () => {
-        if (!confirm(`Voertuig "${vehicle.name||vehicle.plate}" permanent verwijderen?`)) return;
+        if (!confirm(tA("adm.veh.deleteConfirm",'Voertuig "{n}" permanent verwijderen?').replace("{n}", vehicle.name||vehicle.plate))) return;
         try { await api("DELETE", `/vehicles/${vehicle.id}`); closeDrawer(); renderVehicles(); }
         catch(err) { window.showToast(err.message, "error"); }
       });
@@ -4137,18 +4143,18 @@ ${alerts.length ? `<div style="background:var(--wf-yellow-l);border:1px solid va
     });
   }
   function openMileageDrawer(vehicleId) {
-    document.getElementById("admDrawerTitle").textContent = "KM-registratie";
+    document.getElementById("admDrawerTitle").textContent = tA("adm.veh.kmTitle","KM-registratie");
     document.getElementById("admDrawerBody").innerHTML = `
 <form id="kmForm">
-  <div class="adm-form-group"><label>Datum *</label><input name="date" type="date" value="${new Date().toISOString().slice(0,10)}" required></div>
+  <div class="adm-form-group"><label>${tA("adm.date","Datum")} *</label><input name="date" type="date" value="${new Date().toISOString().slice(0,10)}" required></div>
   <div class="adm-form-row">
-    <div class="adm-form-group"><label>KM bij vertrek</label><input name="startKm" type="number" placeholder="50000" required></div>
-    <div class="adm-form-group"><label>KM bij aankomst</label><input name="endKm" type="number" placeholder="50250"></div>
+    <div class="adm-form-group"><label>${tA("adm.veh.kmStart","KM bij vertrek")}</label><input name="startKm" type="number" placeholder="50000" required></div>
+    <div class="adm-form-group"><label>${tA("adm.veh.kmEnd","KM bij aankomst")}</label><input name="endKm" type="number" placeholder="50250"></div>
   </div>
-  <div class="adm-form-group"><label>Doel / Notitie</label><input name="note" placeholder="Werf Brussel · materiaal levering"></div>
+  <div class="adm-form-group"><label>${tA("adm.veh.kmNote","Doel / Notitie")}</label><input name="note" placeholder="${tA("adm.veh.kmNotePh","Werf Brussel · materiaal levering")}"></div>
   <div class="adm-form-actions">
-    <button type="button" class="adm-btn adm-btn-secondary" id="kmCancel">Annuleren</button>
-    <button type="submit" class="adm-btn adm-btn-primary">Opslaan</button>
+    <button type="button" class="adm-btn adm-btn-secondary" id="kmCancel">${tA("adm.cancel","Annuleren")}</button>
+    <button type="submit" class="adm-btn adm-btn-primary">${tA("adm.save","Opslaan")}</button>
   </div>
 </form>`;
     openDrawer();
@@ -4175,22 +4181,22 @@ ${alerts.length ? `<div style="background:var(--wf-yellow-l);border:1px solid va
       const totalValue = items.reduce((s, i) => s + (Number(i.quantity||0) * Number(i.unitPrice||0)), 0);
       content.innerHTML = `
 <div class="adm-kpis" style="margin-bottom:16px">
-  <div class="adm-kpi adm-kpi-blue"><div class="adm-kpi-label">Artikelen</div><div class="adm-kpi-value">${items.length}</div></div>
-  <div class="adm-kpi adm-kpi-${alerts.length>0?"red":"green"}"><div class="adm-kpi-label">Lage voorraad alerts</div><div class="adm-kpi-value">${alerts.length}</div></div>
-  <div class="adm-kpi adm-kpi-purple"><div class="adm-kpi-label">Totale stockwaarde</div><div class="adm-kpi-value" style="font-size:18px">${new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR"}).format(totalValue)}</div></div>
+  <div class="adm-kpi adm-kpi-blue"><div class="adm-kpi-label">${tA("adm.stock.items","Artikelen")}</div><div class="adm-kpi-value">${items.length}</div></div>
+  <div class="adm-kpi adm-kpi-${alerts.length>0?"red":"green"}"><div class="adm-kpi-label">${tA("adm.stock.lowAlerts","Lage voorraad alerts")}</div><div class="adm-kpi-value">${alerts.length}</div></div>
+  <div class="adm-kpi adm-kpi-purple"><div class="adm-kpi-label">${tA("adm.stock.totalValue","Totale stockwaarde")}</div><div class="adm-kpi-value" style="font-size:18px">${new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR"}).format(totalValue)}</div></div>
 </div>
 ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(--wf-red-l);border-radius:10px;padding:12px 16px;margin-bottom:14px;font-size:13px;color:var(--wf-red)">
-  Lage voorraad: ${alerts.map(a=>esc(a.name||a.itemId)).join(", ")}
+  ${tA("adm.stock.lowStock","Lage voorraad")}: ${alerts.map(a=>esc(a.name||a.itemId)).join(", ")}
 </div>` : ""}
 <div class="adm-card">
   <div class="adm-card-header">
-    <h3 class="adm-card-title">Stockbeheer</h3>
-    <input id="stSearch" placeholder="Zoek artikel…" style="font-size:12px;min-width:160px">
+    <h3 class="adm-card-title">${tA("nav.stock","Stockbeheer")}</h3>
+    <input id="stSearch" placeholder="${tA("adm.stock.searchPh","Zoek artikel…")}" style="font-size:12px;min-width:160px">
   </div>
   ${items.length === 0
-    ? `<div class="adm-empty"><div class="adm-empty-text">Nog geen stockartikelen</div><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewStock" style="margin-top:12px">+ Eerste artikel aanmaken</button></div>`
+    ? `<div class="adm-empty"><div class="adm-empty-text">${tA("adm.stock.empty","Nog geen stockartikelen")}</div><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewStock" style="margin-top:12px">+ ${tA("adm.stock.emptyBtn","Eerste artikel aanmaken")}</button></div>`
     : `<div class="adm-table-wrap"><table class="adm-table">
-        <thead><tr><th>Artikel</th><th>SKU</th><th>Categorie</th><th>Hoeveelheid</th><th>Eenheid</th><th>Min. stock</th><th>Prijs/stuk</th><th>Acties</th></tr></thead>
+        <thead><tr><th>${tA("adm.stock.thItem","Artikel")}</th><th>${tA("adm.stock.thSku","SKU")}</th><th>${tA("adm.stock.thCategory","Categorie")}</th><th>${tA("adm.stock.thQty","Hoeveelheid")}</th><th>${tA("adm.stock.thUnit","Eenheid")}</th><th>${tA("adm.stock.thMin","Min. stock")}</th><th>${tA("adm.stock.thPrice","Prijs/stuk")}</th><th>${tA("adm.actions","Acties")}</th></tr></thead>
         <tbody id="stTbody">${buildStockRows(items)}</tbody>
       </table></div>`}
 </div>`;
@@ -4201,13 +4207,13 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
         wireStockBtns(items);
       });
       wireStockBtns(items);
-    } catch(e) { content.innerHTML = `<div style="padding:20px;color:var(--wf-red)">Fout: ${e.message}</div>`; }
+    } catch(e) { content.innerHTML = `<div style="padding:20px;color:var(--wf-red)">${tA("adm.error","Fout")}: ${e.message}</div>`; }
   }
   function buildStockRows(rows) {
     return rows.map(i => {
       const low = i.minQuantity && Number(i.quantity||0) <= Number(i.minQuantity||0);
-      return `<tr class="adm-row-link st-row" data-id="${i.id}" title="Open artikel" style="${low?"background:var(--wf-red-l)":""}">
-        <td><strong>${esc(i.name)}</strong>${low?` <span style="background:var(--wf-red-l);color:var(--wf-red);border-radius:4px;padding:1px 5px;font-size:10px">LAAG</span>`:""}</td>
+      return `<tr class="adm-row-link st-row" data-id="${i.id}" title="${tA("adm.stock.open","Open artikel")}" style="${low?"background:var(--wf-red-l)":""}">
+        <td><strong>${esc(i.name)}</strong>${low?` <span style="background:var(--wf-red-l);color:var(--wf-red);border-radius:4px;padding:1px 5px;font-size:10px">${tA("adm.stock.low","LAAG")}</span>`:""}</td>
         <td style="font-family:monospace;font-size:12px">${esc(i.sku||"-")}</td>
         <td>${esc(i.category||"-")}</td>
         <td style="font-weight:600;color:${low?"var(--wf-red)":"var(--gray-900)"}">${esc(i.quantity??0)}</td>
@@ -4215,8 +4221,8 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
         <td>${esc(i.minQuantity||"-")}</td>
         <td>${i.unitPrice ? new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR"}).format(i.unitPrice) : "-"}</td>
         <td>
-          <button class="adm-btn adm-btn-secondary adm-btn-sm st-edit" data-id="${i.id}">Bewerken</button>
-          <button class="adm-btn adm-btn-secondary adm-btn-sm st-mut" data-id="${i.id}">± Mutatie</button>
+          <button class="adm-btn adm-btn-secondary adm-btn-sm st-edit" data-id="${i.id}">${tA("adm.edit","Bewerken")}</button>
+          <button class="adm-btn adm-btn-secondary adm-btn-sm st-mut" data-id="${i.id}">± ${tA("adm.stock.mutation","Mutatie")}</button>
         </td>
       </tr>`;
     }).join("");
@@ -4230,27 +4236,27 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
     document.querySelectorAll(".st-mut").forEach(b => b.addEventListener("click", () => openMutationDrawer(b.dataset.id)));
   }
   function openStockDrawer(item) {
-    document.getElementById("admDrawerTitle").textContent = item ? "Artikel bewerken" : "Nieuw artikel";
+    document.getElementById("admDrawerTitle").textContent = item ? tA("adm.stock.editTitle","Artikel bewerken") : tA("adm.stock.newTitle","Nieuw artikel");
     document.getElementById("admDrawerBody").innerHTML = `
 <form id="stForm">
-  <div class="adm-form-group"><label>Naam *</label><input name="name" value="${esc(item?.name||"")}" required placeholder="Kabel 3x2.5mm²"></div>
+  <div class="adm-form-group"><label>${tA("adm.cust.thName","Naam")} *</label><input name="name" value="${esc(item?.name||"")}" required placeholder="Kabel 3x2.5mm²"></div>
   <div class="adm-form-row">
-    <div class="adm-form-group"><label>SKU / Code</label><input name="sku" value="${esc(item?.sku||"")}" placeholder="KAB-325"></div>
-    <div class="adm-form-group"><label>Categorie</label><input name="category" value="${esc(item?.category||"")}" placeholder="Kabels"></div>
+    <div class="adm-form-group"><label>${tA("adm.stock.skuCode","SKU / Code")}</label><input name="sku" value="${esc(item?.sku||"")}" placeholder="KAB-325"></div>
+    <div class="adm-form-group"><label>${tA("adm.stock.thCategory","Categorie")}</label><input name="category" value="${esc(item?.category||"")}" placeholder="Kabels"></div>
   </div>
   <div class="adm-form-row">
-    <div class="adm-form-group"><label>Hoeveelheid</label><input name="quantity" type="number" step="0.01" value="${esc(item?.quantity??0)}"></div>
-    <div class="adm-form-group"><label>Eenheid</label><input name="unit" value="${esc(item?.unit||"st")}" placeholder="st / m / kg"></div>
+    <div class="adm-form-group"><label>${tA("adm.stock.thQty","Hoeveelheid")}</label><input name="quantity" type="number" step="0.01" value="${esc(item?.quantity??0)}"></div>
+    <div class="adm-form-group"><label>${tA("adm.stock.thUnit","Eenheid")}</label><input name="unit" value="${esc(item?.unit||"st")}" placeholder="st / m / kg"></div>
   </div>
   <div class="adm-form-row">
-    <div class="adm-form-group"><label>Minimale voorraad</label><input name="minQuantity" type="number" value="${esc(item?.minQuantity||"")}"></div>
-    <div class="adm-form-group"><label>Prijs per eenheid (€)</label><input name="unitPrice" type="number" step="0.01" value="${esc(item?.unitPrice||"")}"></div>
+    <div class="adm-form-group"><label>${tA("adm.stock.minStock","Minimale voorraad")}</label><input name="minQuantity" type="number" value="${esc(item?.minQuantity||"")}"></div>
+    <div class="adm-form-group"><label>${tA("adm.stock.unitPrice","Prijs per eenheid (€)")}</label><input name="unitPrice" type="number" step="0.01" value="${esc(item?.unitPrice||"")}"></div>
   </div>
   <div class="adm-form-actions" style="justify-content:space-between;">
-    ${item ? `<button type="button" class="adm-btn adm-btn-danger adm-btn-sm" id="stDelete">Verwijderen</button>` : `<span></span>`}
+    ${item ? `<button type="button" class="adm-btn adm-btn-danger adm-btn-sm" id="stDelete">${tA("adm.delete","Verwijderen")}</button>` : `<span></span>`}
     <div style="display:flex;gap:8px;">
-      <button type="button" class="adm-btn adm-btn-secondary" id="stCancel">Annuleren</button>
-      <button type="submit" class="adm-btn adm-btn-primary">${item ? "Opslaan" : "Aanmaken"}</button>
+      <button type="button" class="adm-btn adm-btn-secondary" id="stCancel">${tA("adm.cancel","Annuleren")}</button>
+      <button type="submit" class="adm-btn adm-btn-primary">${item ? tA("adm.save","Opslaan") : tA("adm.createBtn","Aanmaken")}</button>
     </div>
   </div>
 </form>`;
@@ -4258,7 +4264,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
     document.getElementById("stCancel").addEventListener("click", closeDrawer);
     if (item) {
       document.getElementById("stDelete").addEventListener("click", async () => {
-        if (!confirm(`Artikel "${item.name}" permanent verwijderen? Alle stockhistorie gaat verloren.`)) return;
+        if (!confirm(tA("adm.stock.deleteConfirm",'Artikel "{n}" permanent verwijderen? Alle stockhistorie gaat verloren.').replace("{n}", item.name))) return;
         try { await api("DELETE", `/stock/${item.id}`); closeDrawer(); renderStock(); }
         catch(err) { window.showToast(err.message, "error"); }
       });
@@ -4277,16 +4283,16 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
     });
   }
   function openMutationDrawer(itemId) {
-    document.getElementById("admDrawerTitle").textContent = "Stockmutatie";
+    document.getElementById("admDrawerTitle").textContent = tA("adm.stock.mutTitle","Stockmutatie");
     document.getElementById("admDrawerBody").innerHTML = `
 <form id="mutForm">
-  <p style="font-size:13px;color:var(--gray-500);margin-bottom:12px">Pas de voorraad aan met een positieve (aanvulling) of negatieve (gebruik) waarde.</p>
-  <div class="adm-form-group"><label>Hoeveelheid (+ aanvulling / − gebruik) *</label><input name="delta" type="number" step="0.01" required placeholder="bv. -5 of +20"></div>
-  <div class="adm-form-group"><label>Reden</label><input name="reason" placeholder="Gebruikt op werf Brussel"></div>
-  <div class="adm-form-group"><label>Datum</label><input name="date" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
+  <p style="font-size:13px;color:var(--gray-500);margin-bottom:12px">${tA("adm.stock.mutHint","Pas de voorraad aan met een positieve (aanvulling) of negatieve (gebruik) waarde.")}</p>
+  <div class="adm-form-group"><label>${tA("adm.stock.mutQty","Hoeveelheid (+ aanvulling / − gebruik)")} *</label><input name="delta" type="number" step="0.01" required placeholder="${tA("adm.stock.mutQtyPh","bv. -5 of +20")}"></div>
+  <div class="adm-form-group"><label>${tA("adm.stock.reason","Reden")}</label><input name="reason" placeholder="${tA("adm.stock.reasonPh","Gebruikt op werf Brussel")}"></div>
+  <div class="adm-form-group"><label>${tA("adm.date","Datum")}</label><input name="date" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
   <div class="adm-form-actions">
-    <button type="button" class="adm-btn adm-btn-secondary" id="mutCancel">Annuleren</button>
-    <button type="submit" class="adm-btn adm-btn-primary">Verwerken</button>
+    <button type="button" class="adm-btn adm-btn-secondary" id="mutCancel">${tA("adm.cancel","Annuleren")}</button>
+    <button type="submit" class="adm-btn adm-btn-primary">${tA("adm.stock.process","Verwerken")}</button>
   </div>
 </form>`;
     openDrawer();
@@ -4410,21 +4416,30 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
   // ── Facturen (klantfacturen) ───────────────────────────────
   const fmtEurInv = n => new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR"}).format(Number(n||0));
   const INV_STATUS = {
-    open:    { label:"Open",     css:"adm-status-open" },
-    paid:    { label:"Betaald",  css:"adm-status-goedgekeurd" },
-    overdue: { label:"Vervallen",css:"adm-status-inactive" },
-    draft:   { label:"Concept",  css:"adm-status-pending" },
-    sent:    { label:"Verstuurd",css:"adm-status-pending" }
+    open:    { key:"adm.inv.st.open",    label:"Open",     css:"adm-status-open" },
+    paid:    { key:"adm.inv.st.paid",    label:"Betaald",  css:"adm-status-goedgekeurd" },
+    overdue: { key:"adm.inv.st.overdue", label:"Vervallen",css:"adm-status-inactive" },
+    draft:   { key:"adm.inv.st.draft",   label:"Concept",  css:"adm-status-pending" },
+    sent:    { key:"adm.inv.st.sent",    label:"Verstuurd",css:"adm-status-pending" }
   };
+  // Vertaalde factuurstatus (label uit i18n, css uit de map).
+  function invStat(s) {
+    const base = INV_STATUS[s] || { label: s, css: "adm-status-pending" };
+    return { label: base.key ? tA(base.key, base.label) : base.label, css: base.css };
+  }
 
   // ── Offertes ───────────────────────────────────────────────
   const QUOTE_STATUS = {
-    concept:   { label:"Concept",   css:"adm-status-pending" },
-    verzonden: { label:"Verzonden", css:"adm-status-open" },
-    aanvaard:  { label:"Aanvaard",  css:"adm-status-goedgekeurd" },
-    geweigerd: { label:"Geweigerd", css:"adm-status-geweigerd" },
-    verlopen:  { label:"Verlopen",  css:"adm-status-inactive" }
+    concept:   { key:"adm.quote.st.concept",   label:"Concept",   css:"adm-status-pending" },
+    verzonden: { key:"adm.quote.st.verzonden", label:"Verzonden", css:"adm-status-open" },
+    aanvaard:  { key:"adm.quote.st.aanvaard",  label:"Aanvaard",  css:"adm-status-goedgekeurd" },
+    geweigerd: { key:"adm.quote.st.geweigerd", label:"Geweigerd", css:"adm-status-geweigerd" },
+    verlopen:  { key:"adm.quote.st.verlopen",  label:"Verlopen",  css:"adm-status-inactive" }
   };
+  function quoteStat(s) {
+    const base = QUOTE_STATUS[s] || { label: s, css: "adm-status-pending" };
+    return { label: base.key ? tA(base.key, base.label) : base.label, css: base.css };
+  }
 
   async function renderOffertes() {
     const content = document.getElementById("admContent");
@@ -4453,7 +4468,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
     <h3 class="adm-card-title">Offertes <span style="background:var(--wf-yellow-l);color:var(--wf-yellow);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${filtered.length}</span></h3>
     <select id="qStatusFilter">
       <option value="">Alle statussen</option>
-      ${["concept","verzonden","aanvaard","geweigerd","verlopen"].map(s=>`<option value="${s}" ${filterSel===s?"selected":""}>${QUOTE_STATUS[s].label}</option>`).join("")}
+      ${["concept","verzonden","aanvaard","geweigerd","verlopen"].map(s=>`<option value="${s}" ${filterSel===s?"selected":""}>${quoteStat(s).label}</option>`).join("")}
     </select>
   </div>
   ${filtered.length === 0
@@ -4461,7 +4476,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
     : `<div class="adm-table-wrap"><table class="adm-table">
         <thead><tr><th>Nr.</th><th>Datum</th><th>Klant</th><th>Geldig tot</th><th>Bedrag</th><th>Status</th><th>Acties</th></tr></thead>
         <tbody>${filtered.slice().sort((a,b)=>(b.quoteDate||"").localeCompare(a.quoteDate||"")).map(q => {
-          const st = QUOTE_STATUS[q.status] || { label:q.status, css:"adm-status-pending" };
+          const st = quoteStat(q.status);
           const canConvert = q.status === "aanvaard";
           return `<tr class="adm-row-link q-row" data-id="${q.id}" title="Open offerte">
             <td style="font-family:monospace;font-weight:600">${esc(q.number||"")}</td>
@@ -4511,7 +4526,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
         try { const d = await api("POST", `/offertes/${b.dataset.id}/convert`, { target:"workorder" }); window.showToast && window.showToast("Werkbon "+(d.workorder?.number||"")+" aangemaakt","success"); renderOffertes(); }
         catch(e){ window.showToast && window.showToast("Fout: "+e.message,"error"); }
       }));
-    } catch(e) { content.innerHTML = `<div style="padding:20px;color:var(--wf-red)">Fout: ${e.message}</div>`; }
+    } catch(e) { content.innerHTML = `<div style="padding:20px;color:var(--wf-red)">${tA("adm.error","Fout")}: ${e.message}</div>`; }
   }
 
   async function openOfferteDrawer(quote) {
@@ -4680,7 +4695,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
     : `<div class="adm-table-wrap"><table class="adm-table">
         <thead><tr><th>Nr.</th><th>Datum</th><th>Klant</th><th>Vervaldatum</th><th>Bedrag</th><th>Status</th><th>Acties</th></tr></thead>
         <tbody>${filtered.slice().sort((a,b) => (b.invoiceDate||"").localeCompare(a.invoiceDate||"")).map(inv => {
-          const st = INV_STATUS[inv.status] || { label: inv.status, css: "adm-status-pending" };
+          const st = invStat(inv.status);
           return `<tr class="adm-row-link inv-row" data-id="${inv.id}" title="Open factuur">
             <td style="font-family:monospace;font-weight:600">${esc(inv.number||inv.id.slice(-6))}</td>
             <td>${inv.invoiceDate ? new Date(inv.invoiceDate).toLocaleDateString("nl-BE") : "-"}</td>
@@ -4778,7 +4793,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
           renderFacturen();
         });
       });
-    } catch(e) { content.innerHTML = `<div style="padding:20px;color:var(--wf-red)">Fout: ${e.message}</div>`; }
+    } catch(e) { content.innerHTML = `<div style="padding:20px;color:var(--wf-red)">${tA("adm.error","Fout")}: ${e.message}</div>`; }
   }
 
   async function openFactuurDrawer(invoice, prefill = {}) {
@@ -5073,7 +5088,7 @@ ${phases.map(p => {
         } catch(e) { window.showToast && window.showToast("Fout: "+e.message, "error"); }
         btn.disabled = false; btn.textContent = "Demodata wissen";
       });
-    } catch(e) { content.innerHTML = `<div style="padding:20px;color:var(--wf-red)">Fout: ${e.message}</div>`; }
+    } catch(e) { content.innerHTML = `<div style="padding:20px;color:var(--wf-red)">${tA("adm.error","Fout")}: ${e.message}</div>`; }
   }
 
   // ── Facturatie ─────────────────────────────────────────────
@@ -5270,7 +5285,7 @@ ${billing.status === "trial" ? (() => {
         body.querySelectorAll(".addon-request").forEach(btn => btn.addEventListener("click", () =>
           window.showToast && window.showToast(`Bedankt! Vraag '${btn.dataset.addon}' aan via je accountmanager of support · wij activeren het voor je organisatie.`, "info")));
       })();
-    } catch(e) { content.innerHTML = `<div style="padding:20px;color:var(--wf-red)">Fout: ${e.message}</div>`; }
+    } catch(e) { content.innerHTML = `<div style="padding:20px;color:var(--wf-red)">${tA("adm.error","Fout")}: ${e.message}</div>`; }
   }
 
   // ── Settings ───────────────────────────────────────────────
