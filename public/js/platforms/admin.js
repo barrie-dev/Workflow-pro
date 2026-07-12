@@ -4458,39 +4458,39 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
 
       content.innerHTML = `
 <div class="adm-kpis" style="margin-bottom:16px">
-  <div class="adm-kpi adm-kpi-amber"><div class="adm-kpi-label">Openstaand</div><div class="adm-kpi-value" style="font-size:18px">${fmtEurInv(openVal)}</div><div class="adm-kpi-sub">${openCount} verzonden</div></div>
-  <div class="adm-kpi adm-kpi-green"><div class="adm-kpi-label">Aanvaard</div><div class="adm-kpi-value" style="font-size:18px">${fmtEurInv(acceptedVal)}</div><div class="adm-kpi-sub">${rows.filter(r=>r.status==="aanvaard").length} offertes</div></div>
-  <div class="adm-kpi adm-kpi-blue"><div class="adm-kpi-label">Conversie</div><div class="adm-kpi-value">${rows.length?Math.round(rows.filter(r=>r.status==="aanvaard").length/rows.length*100):0}%</div><div class="adm-kpi-sub">aanvaard / totaal</div></div>
-  <div class="adm-kpi adm-kpi-purple"><div class="adm-kpi-label">Totaal offertes</div><div class="adm-kpi-value">${rows.length}</div><div class="adm-kpi-sub">alle statussen</div></div>
+  <div class="adm-kpi adm-kpi-amber"><div class="adm-kpi-label">${tA("adm.cust.outstandingCap","Openstaand")}</div><div class="adm-kpi-value" style="font-size:18px">${fmtEurInv(openVal)}</div><div class="adm-kpi-sub">${openCount} ${tA("adm.quote.st.verzonden","Verzonden").toLowerCase()}</div></div>
+  <div class="adm-kpi adm-kpi-green"><div class="adm-kpi-label">${tA("adm.quote.st.aanvaard","Aanvaard")}</div><div class="adm-kpi-value" style="font-size:18px">${fmtEurInv(acceptedVal)}</div><div class="adm-kpi-sub">${rows.filter(r=>r.status==="aanvaard").length} ${tA("nav.offertes","Offertes").toLowerCase()}</div></div>
+  <div class="adm-kpi adm-kpi-blue"><div class="adm-kpi-label">${tA("adm.quote.conversion","Conversie")}</div><div class="adm-kpi-value">${rows.length?Math.round(rows.filter(r=>r.status==="aanvaard").length/rows.length*100):0}%</div><div class="adm-kpi-sub">${tA("adm.quote.convSub","aanvaard / totaal")}</div></div>
+  <div class="adm-kpi adm-kpi-purple"><div class="adm-kpi-label">${tA("adm.quote.totalQuotes","Totaal offertes")}</div><div class="adm-kpi-value">${rows.length}</div><div class="adm-kpi-sub">${tA("adm.quote.allStatuses","alle statussen")}</div></div>
 </div>
 <div class="adm-card">
   <div class="adm-card-header">
-    <h3 class="adm-card-title">Offertes <span style="background:var(--wf-yellow-l);color:var(--wf-yellow);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${filtered.length}</span></h3>
+    <h3 class="adm-card-title">${tA("nav.offertes","Offertes")} <span style="background:var(--wf-yellow-l);color:var(--wf-yellow);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${filtered.length}</span></h3>
     <select id="qStatusFilter">
-      <option value="">Alle statussen</option>
+      <option value="">${tA("adm.allStatuses","Alle statussen")}</option>
       ${["concept","verzonden","aanvaard","geweigerd","verlopen"].map(s=>`<option value="${s}" ${filterSel===s?"selected":""}>${quoteStat(s).label}</option>`).join("")}
     </select>
   </div>
   ${filtered.length === 0
-    ? `<div class="adm-empty"><div class="adm-empty-text">Nog geen offertes</div><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewQuote" style="margin-top:12px">+ Eerste offerte aanmaken</button></div>`
+    ? `<div class="adm-empty"><div class="adm-empty-text">${tA("adm.quote.empty","Nog geen offertes")}</div><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewQuote" style="margin-top:12px">+ ${tA("adm.quote.emptyBtn","Eerste offerte aanmaken")}</button></div>`
     : `<div class="adm-table-wrap"><table class="adm-table">
-        <thead><tr><th>Nr.</th><th>Datum</th><th>Klant</th><th>Geldig tot</th><th>Bedrag</th><th>Status</th><th>Acties</th></tr></thead>
+        <thead><tr><th>${tA("adm.thNr","Nr.")}</th><th>${tA("adm.date","Datum")}</th><th>${tA("adm.thCustomer","Klant")}</th><th>${tA("adm.quote.validUntil","Geldig tot")}</th><th>${tA("adm.amount","Bedrag")}</th><th>${tA("adm.status","Status")}</th><th>${tA("adm.actions","Acties")}</th></tr></thead>
         <tbody>${filtered.slice().sort((a,b)=>(b.quoteDate||"").localeCompare(a.quoteDate||"")).map(q => {
           const st = quoteStat(q.status);
           const canConvert = q.status === "aanvaard";
-          return `<tr class="adm-row-link q-row" data-id="${q.id}" title="Open offerte">
+          return `<tr class="adm-row-link q-row" data-id="${q.id}" title="${tA("adm.quote.open","Open offerte")}">
             <td style="font-family:monospace;font-weight:600">${esc(q.number||"")}</td>
             <td>${q.quoteDate?new Date(q.quoteDate).toLocaleDateString("nl-BE"):"-"}</td>
             <td><strong>${esc(q.customerName||"-")}</strong></td>
             <td style="${q.status==="verlopen"?"color:var(--wf-red);font-weight:600":""}">${q.validUntil?new Date(q.validUntil).toLocaleDateString("nl-BE"):"-"}</td>
             <td style="font-weight:600">${fmtEurInv(q.total)}</td>
-            <td><span class="adm-status ${st.css}">${st.label}</span>${q.invoiceId?`<div style="font-size:10px;color:var(--gray-400)">→ gefactureerd</div>`:""}</td>
+            <td><span class="adm-status ${st.css}">${st.label}</span>${q.invoiceId?`<div style="font-size:10px;color:var(--gray-400)">→ ${tA("adm.cust.invoiced","gefactureerd")}</div>`:""}</td>
             <td style="white-space:nowrap;display:flex;gap:5px;flex-wrap:wrap;">
-              <button class="adm-btn adm-btn-secondary adm-btn-sm q-edit" data-id="${q.id}" title="Bewerk">Bewerken</button>
-              <button class="adm-btn adm-btn-secondary adm-btn-sm q-pdf" data-id="${q.id}" title="PDF / Afdrukken"><svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg></button>
-              ${["concept","verzonden"].includes(q.status)?`<button class="adm-btn adm-btn-secondary adm-btn-sm q-send" data-id="${q.id}" title="Versturen + link"><svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>`:""}
-              ${canConvert && !q.invoiceId?`<button class="adm-btn adm-btn-success adm-btn-sm q-toinv" data-id="${q.id}" title="Naar factuur">→ Factuur</button>`:""}
-              ${canConvert && !q.workorderId?`<button class="adm-btn adm-btn-secondary adm-btn-sm q-towo" data-id="${q.id}" title="Naar werkbon">→ Werkbon</button>`:""}
+              <button class="adm-btn adm-btn-secondary adm-btn-sm q-edit" data-id="${q.id}" title="${tA("adm.editShort","Bewerk")}">${tA("adm.edit","Bewerken")}</button>
+              <button class="adm-btn adm-btn-secondary adm-btn-sm q-pdf" data-id="${q.id}" title="${tA("adm.pdfPrint","PDF / Afdrukken")}"><svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg></button>
+              ${["concept","verzonden"].includes(q.status)?`<button class="adm-btn adm-btn-secondary adm-btn-sm q-send" data-id="${q.id}" title="${tA("adm.quote.sendLink","Versturen + link")}"><svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>`:""}
+              ${canConvert && !q.invoiceId?`<button class="adm-btn adm-btn-success adm-btn-sm q-toinv" data-id="${q.id}" title="${tA("adm.quote.toInvoice","Naar factuur")}">→ ${tA("adm.wo.toInvoice","Factuur")}</button>`:""}
+              ${canConvert && !q.workorderId?`<button class="adm-btn adm-btn-secondary adm-btn-sm q-towo" data-id="${q.id}" title="${tA("adm.quote.toWo","Naar werkbon")}">→ ${(window.wfpTerms && window.wfpTerms.t("jobSingular")) || tA("emp.wo.default","Werkbon")}</button>`:""}
             </td>
           </tr>`;
         }).join("")}</tbody>
@@ -4512,19 +4512,19 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
           const d = await api("POST", `/offertes/${b.dataset.id}/send`, {});
           const url = d.acceptUrl || "";
           try { await navigator.clipboard.writeText(url); } catch(_){}
-          window.showToast && window.showToast("Offerte verzonden ✓ · accepteer-link gekopieerd", "success");
+          window.showToast && window.showToast(tA("adm.quote.sentToast","Offerte verzonden ✓ · accepteer-link gekopieerd"), "success");
           renderOffertes();
-        } catch(e){ window.showToast && window.showToast("Fout: "+e.message, "error"); }
+        } catch(e){ window.showToast && window.showToast(tA("adm.error","Fout")+": "+e.message, "error"); }
       }));
       content.querySelectorAll(".q-toinv").forEach(b => b.addEventListener("click", async () => {
-        if(!confirm("Offerte omzetten naar factuur?")) return;
-        try { const d = await api("POST", `/offertes/${b.dataset.id}/convert`, { target:"invoice" }); window.showToast && window.showToast("Factuur "+(d.invoice?.number||"")+" aangemaakt","success"); renderOffertes(); }
-        catch(e){ window.showToast && window.showToast("Fout: "+e.message,"error"); }
+        if(!confirm(tA("adm.quote.toInvConfirm","Offerte omzetten naar factuur?"))) return;
+        try { const d = await api("POST", `/offertes/${b.dataset.id}/convert`, { target:"invoice" }); window.showToast && window.showToast(tA("adm.wo.toInvoice","Factuur")+" "+(d.invoice?.number||"")+" "+tA("adm.created","aangemaakt"),"success"); renderOffertes(); }
+        catch(e){ window.showToast && window.showToast(tA("adm.error","Fout")+": "+e.message,"error"); }
       }));
       content.querySelectorAll(".q-towo").forEach(b => b.addEventListener("click", async () => {
-        if(!confirm("Offerte omzetten naar werkbon?")) return;
-        try { const d = await api("POST", `/offertes/${b.dataset.id}/convert`, { target:"workorder" }); window.showToast && window.showToast("Werkbon "+(d.workorder?.number||"")+" aangemaakt","success"); renderOffertes(); }
-        catch(e){ window.showToast && window.showToast("Fout: "+e.message,"error"); }
+        if(!confirm(tA("adm.quote.toWoConfirm","Offerte omzetten naar werkbon?"))) return;
+        try { const d = await api("POST", `/offertes/${b.dataset.id}/convert`, { target:"workorder" }); window.showToast && window.showToast(((window.wfpTerms && window.wfpTerms.t("jobSingular")) || tA("emp.wo.default","Werkbon"))+" "+(d.workorder?.number||"")+" "+tA("adm.created","aangemaakt"),"success"); renderOffertes(); }
+        catch(e){ window.showToast && window.showToast(tA("adm.error","Fout")+": "+e.message,"error"); }
       }));
     } catch(e) { content.innerHTML = `<div style="padding:20px;color:var(--wf-red)">${tA("adm.error","Fout")}: ${e.message}</div>`; }
   }
@@ -4536,10 +4536,10 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
     const valid30 = new Date(Date.now()+30*86400000).toISOString().slice(0,10);
     const lines0 = quote?.lines || [{ description:"", qty:1, unitPrice:0, vatRate:21 }];
     const isEdit = !!quote;
-    document.getElementById("admDrawerTitle").textContent = isEdit ? `Offerte ${quote.number}` : "Nieuwe offerte";
+    document.getElementById("admDrawerTitle").textContent = isEdit ? `${tA("adm.quote.singular","Offerte")} ${quote.number}` : tA("adm.quote.newTitle","Nieuwe offerte");
 
     const lineRow = (l) => `<div class="q-line-row" style="display:grid;grid-template-columns:1fr 60px 90px 60px 24px;gap:6px;align-items:center;margin-bottom:8px;">
-        <input placeholder="Omschrijving" value="${esc(l.description||"")}" class="q-line-desc" ${isEdit?"disabled":""}>
+        <input placeholder="${tA("adm.quote.description","Omschrijving")}" value="${esc(l.description||"")}" class="q-line-desc" ${isEdit?"disabled":""}>
         <input type="number" min="1" value="${l.qty||1}" class="q-line-qty" style="text-align:right" ${isEdit?"disabled":""}>
         <input type="number" min="0" step="0.01" value="${Number(l.unitPrice||0).toFixed(2)}" class="q-line-price" style="text-align:right" ${isEdit?"disabled":""}>
         <select class="q-line-vat" style="font-size:12px" ${isEdit?"disabled":""}>
@@ -4550,39 +4550,39 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
 
     document.getElementById("admDrawerBody").innerHTML = `
 <form id="qForm">
-  <div class="adm-form-group"><label>Klant *</label>
+  <div class="adm-form-group"><label>${tA("adm.thCustomer","Klant")} *</label>
     <select name="customerId" id="qCustSel" style="width:100%" ${isEdit?"disabled":""}>
-      <option value="">- Handmatig invullen -</option>
+      <option value="">${tA("adm.quote.manualFill","- Handmatig invullen -")}</option>
       ${customers.map(c=>`<option value="${c.id}" ${quote?.customerId===c.id?"selected":""}>${esc(c.name)}</option>`).join("")}
     </select>
   </div>
-  <div class="adm-form-group"><label>Klantnaam *</label>
-    <input name="customerName" value="${esc(quote?.customerName||"")}" placeholder="Bedrijfsnaam NV" required ${isEdit?"disabled":""}>
+  <div class="adm-form-group"><label>${tA("adm.quote.customerName","Klantnaam")} *</label>
+    <input name="customerName" value="${esc(quote?.customerName||"")}" placeholder="${tA("adm.quote.companyPh","Bedrijfsnaam NV")}" required ${isEdit?"disabled":""}>
   </div>
   <div class="adm-form-row">
-    <div class="adm-form-group"><label>BTW-nummer</label><input name="customerVatNumber" value="${esc(quote?.customerVatNumber||"")}" placeholder="BE0000.000.000" ${isEdit?"disabled":""}></div>
-    <div class="adm-form-group"><label>Adres</label><input name="customerAddress" value="${esc(quote?.customerAddress||"")}" placeholder="Straat, gemeente" ${isEdit?"disabled":""}></div>
+    <div class="adm-form-group"><label>${tA("adm.cust.vatNumber","BTW-nummer")}</label><input name="customerVatNumber" value="${esc(quote?.customerVatNumber||"")}" placeholder="BE0000.000.000" ${isEdit?"disabled":""}></div>
+    <div class="adm-form-group"><label>${tA("adm.cust.address","Adres")}</label><input name="customerAddress" value="${esc(quote?.customerAddress||"")}" placeholder="${tA("adm.quote.addrPh","Straat, gemeente")}" ${isEdit?"disabled":""}></div>
   </div>
   <div class="adm-form-row">
-    <div class="adm-form-group"><label>Offertedatum</label><input type="date" name="quoteDate" value="${quote?.quoteDate||today}" ${isEdit?"disabled":""}></div>
-    <div class="adm-form-group"><label>Geldig tot</label><input type="date" name="validUntil" value="${quote?.validUntil||valid30}" ${isEdit?"disabled":""}></div>
+    <div class="adm-form-group"><label>${tA("adm.quote.quoteDate","Offertedatum")}</label><input type="date" name="quoteDate" value="${quote?.quoteDate||today}" ${isEdit?"disabled":""}></div>
+    <div class="adm-form-group"><label>${tA("adm.quote.validUntil","Geldig tot")}</label><input type="date" name="validUntil" value="${quote?.validUntil||valid30}" ${isEdit?"disabled":""}></div>
   </div>
-  <div class="adm-form-section">Offerteregels</div>
+  <div class="adm-form-section">${tA("adm.quote.lines","Offerteregels")}</div>
   <div id="qLines">${lines0.map(lineRow).join("")}</div>
-  ${!isEdit?`<button type="button" class="adm-btn adm-btn-secondary adm-btn-sm" id="qAddLine" style="margin-bottom:16px;">+ Regel toevoegen</button>`:""}
+  ${!isEdit?`<button type="button" class="adm-btn adm-btn-secondary adm-btn-sm" id="qAddLine" style="margin-bottom:16px;">+ ${tA("adm.quote.addLine","Regel toevoegen")}</button>`:""}
   <div style="background:var(--gray-50);border-radius:10px;padding:12px;margin-bottom:16px;">
-    <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--gray-500);margin-bottom:4px;"><span>Subtotaal</span><span id="qSubtotal">€0,00</span></div>
-    <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--gray-500);margin-bottom:4px;"><span>BTW</span><span id="qVat">€0,00</span></div>
-    <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:600;border-top:1px solid var(--gray-200);padding-top:8px;margin-top:4px;"><span>Totaal</span><span id="qTotal">€0,00</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--gray-500);margin-bottom:4px;"><span>${tA("adm.subtotal","Subtotaal")}</span><span id="qSubtotal">€0,00</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--gray-500);margin-bottom:4px;"><span>${tA("adm.vat","BTW")}</span><span id="qVat">€0,00</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:600;border-top:1px solid var(--gray-200);padding-top:8px;margin-top:4px;"><span>${tA("adm.total","Totaal")}</span><span id="qTotal">€0,00</span></div>
   </div>
-  <div class="adm-form-group"><label>Opmerkingen</label>
+  <div class="adm-form-group"><label>${tA("adm.quote.notes","Opmerkingen")}</label>
     <textarea name="notes" rows="2" style="width:100%" ${isEdit?"disabled":""}>${esc(quote?.notes||"")}</textarea>
   </div>
   <div id="qFormErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:8px;font-size:12px;margin-bottom:8px;"></div>
   <div class="adm-form-actions" style="flex-wrap:wrap;gap:8px;">
-    <button type="button" class="adm-btn adm-btn-secondary" id="qCancel">Sluiten</button>
-    ${isEdit && !["aanvaard"].includes(quote.status)?`<button type="button" class="adm-btn adm-btn-danger adm-btn-sm" id="qDelete">Verwijderen</button>`:""}
-    ${!isEdit?`<button type="submit" class="adm-btn adm-btn-primary">Aanmaken</button>`:""}
+    <button type="button" class="adm-btn adm-btn-secondary" id="qCancel">${tA("adm.close","Sluiten")}</button>
+    ${isEdit && !["aanvaard"].includes(quote.status)?`<button type="button" class="adm-btn adm-btn-danger adm-btn-sm" id="qDelete">${tA("adm.delete","Verwijderen")}</button>`:""}
+    ${!isEdit?`<button type="submit" class="adm-btn adm-btn-primary">${tA("adm.createBtn","Aanmaken")}</button>`:""}
   </div>
 </form>`;
 
@@ -4612,7 +4612,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
     openDrawer();
     document.getElementById("qCancel").addEventListener("click", closeDrawer);
     document.getElementById("qDelete")?.addEventListener("click", async () => {
-      if(!confirm(`Offerte ${quote.number} verwijderen?`)) return;
+      if(!confirm(tA("adm.quote.deleteConfirm","Offerte {n} verwijderen?").replace("{n}", quote.number))) return;
       try { await api("DELETE", `/offertes/${quote.id}`); closeDrawer(); renderOffertes(); }
       catch(err){ const e=document.getElementById("qFormErr"); if(e){e.textContent=err.message;e.style.display="";} }
     });
@@ -4626,7 +4626,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
         unitPrice:Number(r.querySelector(".q-line-price").value||0),
         vatRate:Number(r.querySelector(".q-line-vat").value||21)
       }));
-      try { await api("POST", "/offertes", body); closeDrawer(); renderOffertes(); window.showToast && window.showToast("Offerte aangemaakt","success"); }
+      try { await api("POST", "/offertes", body); closeDrawer(); renderOffertes(); window.showToast && window.showToast(tA("adm.quote.createdToast","Offerte aangemaakt"),"success"); }
       catch(err){ if(errEl){errEl.textContent=err.message;errEl.style.display="";} }
     });
   }
@@ -4656,47 +4656,47 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
       content.innerHTML = `
 <div class="adm-kpis" style="margin-bottom:16px">
   <div class="adm-kpi adm-kpi-green">
-    <div class="adm-kpi-label">Betaald</div>
+    <div class="adm-kpi-label">${tA("adm.inv.st.paid","Betaald")}</div>
     <div class="adm-kpi-value" style="font-size:18px">${fmtEurInv(totalRevenue)}</div>
-    <div class="adm-kpi-sub">${rows.filter(r=>r.status==="paid").length} facturen</div>
+    <div class="adm-kpi-sub">${rows.filter(r=>r.status==="paid").length} ${tA("nav.facturen","Facturen").toLowerCase()}</div>
   </div>
   <div class="adm-kpi adm-kpi-blue">
-    <div class="adm-kpi-label">Openstaand</div>
+    <div class="adm-kpi-label">${tA("adm.cust.outstandingCap","Openstaand")}</div>
     <div class="adm-kpi-value" style="font-size:18px">${fmtEurInv(openAmount)}</div>
-    <div class="adm-kpi-sub">${rows.filter(r=>r.status==="open").length} facturen</div>
+    <div class="adm-kpi-sub">${rows.filter(r=>r.status==="open").length} ${tA("nav.facturen","Facturen").toLowerCase()}</div>
   </div>
   <div class="adm-kpi ${overdueAmount>0?"adm-kpi-red":"adm-kpi-amber"}">
-    <div class="adm-kpi-label">Vervallen</div>
+    <div class="adm-kpi-label">${tA("adm.inv.st.overdue","Vervallen")}</div>
     <div class="adm-kpi-value" style="font-size:18px">${fmtEurInv(overdueAmount)}</div>
-    <div class="adm-kpi-sub">${rows.filter(r=>r.status==="overdue").length} facturen</div>
+    <div class="adm-kpi-sub">${rows.filter(r=>r.status==="overdue").length} ${tA("nav.facturen","Facturen").toLowerCase()}</div>
   </div>
   <div class="adm-kpi adm-kpi-purple">
-    <div class="adm-kpi-label">Totaal facturen</div>
+    <div class="adm-kpi-label">${tA("adm.inv.totalInvoices","Totaal facturen")}</div>
     <div class="adm-kpi-value">${rows.length}</div>
-    <div class="adm-kpi-sub">Alle statussen</div>
+    <div class="adm-kpi-sub">${tA("adm.allStatuses","Alle statussen")}</div>
   </div>
 </div>
 
 <div class="adm-card">
   <div class="adm-card-header">
-    <h3 class="adm-card-title">Facturen <span style="background:var(--wf-purple-l);color:var(--wf-purple);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${filtered.length}</span></h3>
+    <h3 class="adm-card-title">${tA("nav.facturen","Facturen")} <span style="background:var(--wf-purple-l);color:var(--wf-purple);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${filtered.length}</span></h3>
     <div style="display:flex;gap:8px;align-items:center;">
       <select id="invStatusFilter">
-        <option value="">Alle statussen</option>
-        <option value="open" ${filterSel==="open"?"selected":""}>Open</option>
-        <option value="paid" ${filterSel==="paid"?"selected":""}>Betaald</option>
-        <option value="overdue" ${filterSel==="overdue"?"selected":""}>Vervallen</option>
-        <option value="draft" ${filterSel==="draft"?"selected":""}>Concept</option>
+        <option value="">${tA("adm.allStatuses","Alle statussen")}</option>
+        <option value="open" ${filterSel==="open"?"selected":""}>${tA("adm.inv.st.open","Open")}</option>
+        <option value="paid" ${filterSel==="paid"?"selected":""}>${tA("adm.inv.st.paid","Betaald")}</option>
+        <option value="overdue" ${filterSel==="overdue"?"selected":""}>${tA("adm.inv.st.overdue","Vervallen")}</option>
+        <option value="draft" ${filterSel==="draft"?"selected":""}>${tA("adm.inv.st.draft","Concept")}</option>
       </select>
     </div>
   </div>
   ${filtered.length === 0
-    ? `<div class="adm-empty"><div class="adm-empty-text">Nog geen facturen</div><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewInv" style="margin-top:12px">+ Eerste factuur aanmaken</button></div>`
+    ? `<div class="adm-empty"><div class="adm-empty-text">${tA("adm.inv.empty","Nog geen facturen")}</div><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewInv" style="margin-top:12px">+ ${tA("adm.inv.emptyBtn","Eerste factuur aanmaken")}</button></div>`
     : `<div class="adm-table-wrap"><table class="adm-table">
-        <thead><tr><th>Nr.</th><th>Datum</th><th>Klant</th><th>Vervaldatum</th><th>Bedrag</th><th>Status</th><th>Acties</th></tr></thead>
+        <thead><tr><th>${tA("adm.thNr","Nr.")}</th><th>${tA("adm.date","Datum")}</th><th>${tA("adm.thCustomer","Klant")}</th><th>${tA("adm.inv.due","Vervaldatum")}</th><th>${tA("adm.amount","Bedrag")}</th><th>${tA("adm.status","Status")}</th><th>${tA("adm.actions","Acties")}</th></tr></thead>
         <tbody>${filtered.slice().sort((a,b) => (b.invoiceDate||"").localeCompare(a.invoiceDate||"")).map(inv => {
           const st = invStat(inv.status);
-          return `<tr class="adm-row-link inv-row" data-id="${inv.id}" title="Open factuur">
+          return `<tr class="adm-row-link inv-row" data-id="${inv.id}" title="${tA("adm.inv.open","Open factuur")}">
             <td style="font-family:monospace;font-weight:600">${esc(inv.number||inv.id.slice(-6))}</td>
             <td>${inv.invoiceDate ? new Date(inv.invoiceDate).toLocaleDateString("nl-BE") : "-"}</td>
             <td><strong>${esc(inv.customerName||"-")}</strong>${inv.customerVatNumber?`<div style="font-size:11px;color:var(--gray-400)">${esc(inv.customerVatNumber)}</div>`:""}</td>
@@ -4704,14 +4704,14 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
             <td style="font-weight:600">${fmtEurInv(inv.total)}</td>
             <td><span class="adm-status ${st.css}">${st.label}</span></td>
             <td style="white-space:nowrap;display:flex;gap:6px;">
-              <button class="adm-btn adm-btn-secondary adm-btn-sm inv-edit" data-id="${inv.id}">Bewerken</button>
-              <button class="adm-btn adm-btn-secondary adm-btn-sm inv-pdf" data-id="${inv.id}" title="PDF / Afdrukken"><svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg></button>
+              <button class="adm-btn adm-btn-secondary adm-btn-sm inv-edit" data-id="${inv.id}">${tA("adm.edit","Bewerken")}</button>
+              <button class="adm-btn adm-btn-secondary adm-btn-sm inv-pdf" data-id="${inv.id}" title="${tA("adm.pdfPrint","PDF / Afdrukken")}"><svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg></button>
               ${inv.peppolStatus === "delivered" || inv.peppolStatus === "sent"
                 ? `<span class="adm-status adm-status-active" title="Peppol: ${esc(inv.peppolReference||"")}">Peppol ✓</span>`
-                : (subEnabled("invoices","peppol") ? `<button class="adm-btn adm-btn-secondary adm-btn-sm inv-peppol" data-id="${inv.id}" title="Verstuur via Peppol e-facturatie">Peppol</button>` : "")}
-              <button class="adm-btn adm-btn-secondary adm-btn-sm inv-ubl" data-id="${inv.id}" title="UBL-XML downloaden">UBL</button>
-              ${["open","overdue"].includes(inv.status) && subEnabled("invoices","online-payment") ? `<button class="adm-btn adm-btn-secondary adm-btn-sm inv-paylink" data-id="${inv.id}" title="Betaallink genereren">Link</button>` : ""}
-              ${["open","overdue"].includes(inv.status) ? `<button class="adm-btn adm-btn-success adm-btn-sm inv-paid" data-id="${inv.id}" title="Markeer als betaald">Betaald</button>` : ""}
+                : (subEnabled("invoices","peppol") ? `<button class="adm-btn adm-btn-secondary adm-btn-sm inv-peppol" data-id="${inv.id}" title="${tA("adm.inv.peppolSend","Verstuur via Peppol e-facturatie")}">Peppol</button>` : "")}
+              <button class="adm-btn adm-btn-secondary adm-btn-sm inv-ubl" data-id="${inv.id}" title="${tA("adm.inv.ublDownload","UBL-XML downloaden")}">UBL</button>
+              ${["open","overdue"].includes(inv.status) && subEnabled("invoices","online-payment") ? `<button class="adm-btn adm-btn-secondary adm-btn-sm inv-paylink" data-id="${inv.id}" title="${tA("adm.inv.payLinkGen","Betaallink genereren")}">${tA("adm.inv.link","Link")}</button>` : ""}
+              ${["open","overdue"].includes(inv.status) ? `<button class="adm-btn adm-btn-success adm-btn-sm inv-paid" data-id="${inv.id}" title="${tA("adm.inv.markPaid","Markeer als betaald")}">${tA("adm.inv.st.paid","Betaald")}</button>` : ""}
             </td>
           </tr>`;
         }).join("")}</tbody>
@@ -4746,16 +4746,16 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
       });
       document.querySelectorAll(".inv-peppol").forEach(btn => {
         btn.addEventListener("click", async () => {
-          btn.disabled = true; const old = btn.textContent; btn.textContent = "Versturen…";
+          btn.disabled = true; const old = btn.textContent; btn.textContent = tA("adm.inv.sending","Versturen…");
           try {
             const d = await api("POST", `/facturen/${btn.dataset.id}/peppol`, {});
             const via = d.provider === "mock" ? "mock-transport" : d.provider;
-            window.showToast && window.showToast(`Verstuurd via Peppol (${via}) · status: ${d.status} · ref ${d.reference}`, "success");
+            window.showToast && window.showToast(tA("adm.inv.peppolSent","Verstuurd via Peppol ({via}) · status: {status} · ref {ref}").replace("{via}",via).replace("{status}",d.status).replace("{ref}",d.reference), "success");
             renderFacturen();
           } catch(e) {
             const extra = (e.errors && e.errors.length) ? "\n\n• " + e.errors.join("\n• ") : "";
             window.showToast && window.showToast("Peppol: " + e.message, "error");
-            if (extra) window.showToast("Peppol-validatie:" + extra, "warning");
+            if (extra) window.showToast(tA("adm.inv.peppolValidation","Peppol-validatie:") + extra, "warning");
             btn.disabled = false; btn.textContent = old;
           }
         });
@@ -4770,7 +4770,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
             const inv = rows.find(i => i.id === btn.dataset.id);
             const blob = new Blob([xml], { type: "application/xml" });
             const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = (inv?.number || btn.dataset.id) + ".xml"; a.click();
-          } catch(e) { window.showToast && window.showToast("UBL-download fout: "+e.message, "error"); }
+          } catch(e) { window.showToast && window.showToast(tA("adm.inv.ublError","UBL-download fout")+": "+e.message, "error"); }
         });
       });
       document.querySelectorAll(".inv-paylink").forEach(btn => {
@@ -4781,14 +4781,14 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
             let copied = false;
             try { await navigator.clipboard.writeText(d.url); copied = true; } catch(_){}
             const via = d.provider === "stripe" ? "Stripe" : "demo";
-            window.showToast && window.showToast(`Betaallink (${via}) ${copied?"gekopieerd":"aangemaakt"}: ${d.url}`, "success");
-          } catch(e) { window.showToast && window.showToast("Fout: "+e.message, "error"); }
+            window.showToast && window.showToast(tA("adm.inv.payLink","Betaallink")+` (${via}) ${copied?tA("adm.inv.copied","gekopieerd"):tA("adm.created","aangemaakt")}: ${d.url}`, "success");
+          } catch(e) { window.showToast && window.showToast(tA("adm.error","Fout")+": "+e.message, "error"); }
           btn.disabled = false; btn.textContent = old;
         });
       });
       document.querySelectorAll(".inv-paid").forEach(btn => {
         btn.addEventListener("click", async () => {
-          if (!confirm(`Factuur als betaald markeren?`)) return;
+          if (!confirm(tA("adm.inv.markPaidConfirm","Factuur als betaald markeren?"))) return;
           await api("PATCH", `/facturen/${btn.dataset.id}`, { status: "paid" });
           renderFacturen();
         });
@@ -4801,7 +4801,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
     let customers = [];
     try { const d = await api("GET", "/customers"); customers = d.customers || []; } catch(_){}
 
-    document.getElementById("admDrawerTitle").textContent = invoice ? `Factuur ${invoice.number}` : "Nieuwe factuur";
+    document.getElementById("admDrawerTitle").textContent = invoice ? `${tA("adm.inv.singular","Factuur")} ${invoice.number}` : tA("adm.inv.newTitle","Nieuwe factuur");
     const today = new Date().toISOString().slice(0, 10);
     const due30 = new Date(Date.now() + 30*86400000).toISOString().slice(0, 10);
 
@@ -4810,95 +4810,95 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
     document.getElementById("admDrawerBody").innerHTML = `
 <form id="invForm">
   <div class="adm-form-group">
-    <label>Klant *</label>
+    <label>${tA("adm.thCustomer","Klant")} *</label>
     <select name="customerId" id="invCustSel" style="width:100%">
-      <option value="">- Handmatig invullen -</option>
+      <option value="">${tA("adm.quote.manualFill","- Handmatig invullen -")}</option>
       ${customers.map(c => `<option value="${c.id}" ${invoice?.customerId===c.id?"selected":""}>${esc(c.name)}</option>`).join("")}
     </select>
   </div>
   <div class="adm-form-group" id="invCustNameWrap">
-    <label>Klantnaam *</label>
-    <input name="customerName" id="invCustName" value="${esc(invoice?.customerName||prefill.prefillCustomerName||"")}" placeholder="Bedrijfsnaam NV" required>
+    <label>${tA("adm.quote.customerName","Klantnaam")} *</label>
+    <input name="customerName" id="invCustName" value="${esc(invoice?.customerName||prefill.prefillCustomerName||"")}" placeholder="${tA("adm.quote.companyPh","Bedrijfsnaam NV")}" required>
   </div>
   <div class="adm-form-row">
     <div class="adm-form-group">
-      <label>BTW-nummer klant</label>
+      <label>${tA("adm.inv.custVat","BTW-nummer klant")}</label>
       <input name="customerVatNumber" value="${esc(invoice?.customerVatNumber||prefill.prefillCustomerVat||"")}" placeholder="BE0000.000.000">
     </div>
     <div class="adm-form-group">
-      <label>Adres klant</label>
-      <input name="customerAddress" value="${esc(invoice?.customerAddress||prefill.prefillCustomerAddress||"")}" placeholder="Straat, gemeente">
+      <label>${tA("adm.inv.custAddr","Adres klant")}</label>
+      <input name="customerAddress" value="${esc(invoice?.customerAddress||prefill.prefillCustomerAddress||"")}" placeholder="${tA("adm.quote.addrPh","Straat, gemeente")}">
     </div>
   </div>
   <div class="adm-form-row">
     <div class="adm-form-group">
-      <label>Factuurdatum</label>
+      <label>${tA("adm.inv.invDate","Factuurdatum")}</label>
       <input type="date" name="invoiceDate" value="${invoice?.invoiceDate||today}">
     </div>
     <div class="adm-form-group">
-      <label>Vervaldatum</label>
+      <label>${tA("adm.inv.due","Vervaldatum")}</label>
       <input type="date" name="dueDate" value="${invoice?.dueDate||due30}">
     </div>
   </div>
   <div class="adm-form-row">
     <div class="adm-form-group">
-      <label>BTW-regime</label>
+      <label>${tA("adm.inv.vatRegime","BTW-regime")}</label>
       <select name="vatRegime" id="invVatRegime" ${invoice?"disabled":""}>
-        <option value="binnen" ${(invoice?.vatRegime&&invoice.vatRegime!=="binnen")?"":"selected"}>Binnenland (btw per regel)</option>
-        <option value="intracom" ${invoice?.vatRegime==="intracom"?"selected":""}>Intracommunautair · btw verlegd (0%)</option>
-        <option value="medecontractant" ${invoice?.vatRegime==="medecontractant"?"selected":""}>Medecontractant (bouw, KB nr. 1 art. 20) · btw verlegd (0%)</option>
+        <option value="binnen" ${(invoice?.vatRegime&&invoice.vatRegime!=="binnen")?"":"selected"}>${tA("adm.inv.vatDomestic","Binnenland (btw per regel)")}</option>
+        <option value="intracom" ${invoice?.vatRegime==="intracom"?"selected":""}>${tA("adm.inv.vatIntracom","Intracommunautair · btw verlegd (0%)")}</option>
+        <option value="medecontractant" ${invoice?.vatRegime==="medecontractant"?"selected":""}>${tA("adm.inv.vatMedecon","Medecontractant (bouw, KB nr. 1 art. 20) · btw verlegd (0%)")}</option>
       </select>
     </div>
-    <div class="adm-form-group" style="align-self:flex-end;padding-bottom:7px;font-size:11.5px;color:var(--gray-500);">Bij 'btw verlegd' wordt 0% btw toegepast met de wettelijke vermelding op de factuur.</div>
+    <div class="adm-form-group" style="align-self:flex-end;padding-bottom:7px;font-size:11.5px;color:var(--gray-500);">${tA("adm.inv.vatHint","Bij 'btw verlegd' wordt 0% btw toegepast met de wettelijke vermelding op de factuur.")}</div>
   </div>
   ${invoice?.structuredComm ? `<div style="background:var(--wf-blue-l);border:1px solid var(--wf-blue-l);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:12.5px;">
-    <span style="color:var(--gray-500);">Gestructureerde mededeling:</span> <strong style="font-family:monospace;font-size:13px;">${esc(invoice.structuredComm)}</strong>
+    <span style="color:var(--gray-500);">${tA("adm.inv.structComm","Gestructureerde mededeling")}:</span> <strong style="font-family:monospace;font-size:13px;">${esc(invoice.structuredComm)}</strong>
     ${invoice.vatNote ? `<div style="color:var(--wf-yellow);margin-top:4px;"><${esc(invoice.vatNote)}</div>` : ""}
   </div>` : ""}
 
-  <div class="adm-form-section">Factuurregels</div>
+  <div class="adm-form-section">${tA("adm.inv.lines","Factuurregels")}</div>
   <div id="invLines">
     ${existingLines.map((l, i) => renderInvLine(l, i)).join("")}
   </div>
-  <button type="button" class="adm-btn adm-btn-secondary adm-btn-sm" id="invAddLine" style="margin-bottom:16px;">+ Regel toevoegen</button>
+  <button type="button" class="adm-btn adm-btn-secondary adm-btn-sm" id="invAddLine" style="margin-bottom:16px;">+ ${tA("adm.quote.addLine","Regel toevoegen")}</button>
 
   <div style="background:var(--gray-50);border-radius:10px;padding:12px;margin-bottom:16px;" id="invTotals">
     <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--gray-500);margin-bottom:4px;">
-      <span>Subtotaal</span><span id="invSubtotal">€0,00</span>
+      <span>${tA("adm.subtotal","Subtotaal")}</span><span id="invSubtotal">€0,00</span>
     </div>
     <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--gray-500);margin-bottom:4px;">
-      <span>BTW</span><span id="invVat">€0,00</span>
+      <span>${tA("adm.vat","BTW")}</span><span id="invVat">€0,00</span>
     </div>
     <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:600;color:var(--gray-900);border-top:1px solid var(--gray-200);padding-top:8px;margin-top:4px;">
-      <span>Totaal</span><span id="invTotal">€0,00</span>
+      <span>${tA("adm.total","Totaal")}</span><span id="invTotal">€0,00</span>
     </div>
   </div>
 
   <div class="adm-form-group">
-    <label>Opmerkingen</label>
+    <label>${tA("adm.quote.notes","Opmerkingen")}</label>
     <textarea name="notes" rows="2" style="width:100%">${esc(invoice?.notes||prefill.prefillNotes||"")}</textarea>
   </div>
   ${prefill.workorderId ? `<input type="hidden" name="workorderId" value="${esc(prefill.workorderId)}">` : ""}
   <div id="invFormErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:8px;font-size:12px;margin-bottom:8px;"></div>
   <div class="adm-form-actions">
-    <button type="button" class="adm-btn adm-btn-secondary" id="invCancel">Annuleren</button>
-    ${invoice && invoice.status !== "paid" ? `<button type="button" class="adm-btn adm-btn-danger adm-btn-sm" id="invDelete">Verwijderen</button>` : ""}
-    ${!invoice ? `<button type="submit" class="adm-btn adm-btn-primary">Aanmaken</button>` : ""}
+    <button type="button" class="adm-btn adm-btn-secondary" id="invCancel">${tA("adm.cancel","Annuleren")}</button>
+    ${invoice && invoice.status !== "paid" ? `<button type="button" class="adm-btn adm-btn-danger adm-btn-sm" id="invDelete">${tA("adm.delete","Verwijderen")}</button>` : ""}
+    ${!invoice ? `<button type="submit" class="adm-btn adm-btn-primary">${tA("adm.createBtn","Aanmaken")}</button>` : ""}
   </div>
 </form>`;
 
     function renderInvLine(l, i) {
       return `<div class="inv-line-row" style="display:grid;grid-template-columns:1fr 60px 90px 60px 24px;gap:6px;align-items:center;margin-bottom:8px;" data-idx="${i}">
-        <input placeholder="Omschrijving" value="${esc(l.description||"")}" class="inv-line-desc">
+        <input placeholder="${tA("adm.quote.description","Omschrijving")}" value="${esc(l.description||"")}" class="inv-line-desc">
         <input type="number" min="1" placeholder="Qty" value="${l.qty||1}" class="inv-line-qty" style="text-align:right">
-        <input type="number" min="0" step="0.01" placeholder="Prijs" value="${Number(l.unitPrice||0).toFixed(2)}" class="inv-line-price" style="text-align:right">
+        <input type="number" min="0" step="0.01" placeholder="${tA("adm.inv.price","Prijs")}" value="${Number(l.unitPrice||0).toFixed(2)}" class="inv-line-price" style="text-align:right">
         <select class="inv-line-vat" style="font-size:12px">
           <option value="0" ${l.vatRate==0?"selected":""}>0%</option>
           <option value="6" ${l.vatRate==6?"selected":""}>6%</option>
           <option value="12" ${l.vatRate==12?"selected":""}>12%</option>
           <option value="21" ${(l.vatRate==21||l.vatRate==null||l.vatRate==undefined)?"selected":""}>21%</option>
         </select>
-        <button type="button" class="inv-line-del" style="background:none;border:none;cursor:pointer;color:var(--gray-400);font-size:16px;padding:0;" title="Verwijder">&times;</button>
+        <button type="button" class="inv-line-del" style="background:none;border:none;cursor:pointer;color:var(--gray-400);font-size:16px;padding:0;" title="${tA("adm.delete","Verwijderen")}">&times;</button>
       </div>`;
     }
 
@@ -4958,7 +4958,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
     document.getElementById("invCancel").addEventListener("click", closeDrawer);
 
     document.getElementById("invDelete")?.addEventListener("click", async () => {
-      if (!confirm(`Factuur ${invoice.number} verwijderen?`)) return;
+      if (!confirm(tA("adm.inv.deleteConfirm","Factuur {n} verwijderen?").replace("{n}", invoice.number))) return;
       try {
         await api("DELETE", `/facturen/${invoice.id}`);
         closeDrawer(); renderFacturen();
@@ -4984,7 +4984,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
       try {
         await api("POST", "/facturen", body);
         closeDrawer(); renderFacturen();
-        window.showToast && window.showToast("Factuur aangemaakt", "success");
+        window.showToast && window.showToast(tA("adm.inv.createdToast","Factuur aangemaakt"), "success");
       } catch(err) {
         if (errEl) { errEl.textContent = err.message; errEl.style.display = ""; }
       }
