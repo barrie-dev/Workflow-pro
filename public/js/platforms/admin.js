@@ -230,6 +230,54 @@
   // i18n-helper voor de admin-shell (t()-gebaseerde, dynamisch opgebouwde inhoud).
   function tA(key, fallback) { return window.wfpI18n ? window.wfpI18n.t(key, fallback) : fallback; }
 
+  // Werkbon-status/prioriteit vertalen (server levert NL/canonieke waarden).
+  function tWoStatus(s) {
+    if (!s) return "-";
+    const k = String(s).toLowerCase().replace(/\s+/g, "_");
+    const map = {
+      open: "dash.woseg.open", nieuw: "dash.woseg.open",
+      in_progress: "dash.woseg.inprog", "in_uitvoering": "dash.woseg.inprog", bezig: "dash.woseg.inprog",
+      done: "dash.woseg.done", voltooid: "dash.woseg.done", afgerond: "dash.woseg.done", klaar: "dash.woseg.done",
+      geannuleerd: "dash.woseg.cancelled", cancelled: "dash.woseg.cancelled", annulatie: "dash.woseg.cancelled"
+    };
+    return map[k] ? tA(map[k], s) : s;
+  }
+  function tWoPrio(p) {
+    const k = String(p || "normaal").toLowerCase();
+    const map = { hoog: "adm.wo.prioHigh", normaal: "adm.wo.prioNormal", laag: "adm.wo.prioLow" };
+    return map[k] ? tA(map[k], p || "normaal") : (p || "normaal");
+  }
+  // Verlof-type/status vertalen.
+  function tLeaveType(tp) {
+    const k = String(tp || "").toLowerCase();
+    const known = ["vakantie","ziekte","adv","bijzonder","onbetaald","verlof"];
+    return known.includes(k) ? tA("adm.ltype." + k, tp || "-") : (tp || "-");
+  }
+  function tLeaveStatus(s) {
+    const k = String(s || "").toLowerCase();
+    const map = { aangevraagd: "adm.lstatus.requested", goedgekeurd: "adm.lstatus.approved", geweigerd: "adm.lstatus.rejected" };
+    return map[k] ? tA(map[k], s || "") : (s || "");
+  }
+  // Gelokaliseerde maand-/dagnamen voor de verlofkalender.
+  function monthNames() {
+    const lang = (window.wfpI18n && window.wfpI18n.lang) || "nl";
+    const M = {
+      nl: ["","Januari","Februari","Maart","April","Mei","Juni","Juli","Augustus","September","Oktober","November","December"],
+      fr: ["","Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"],
+      en: ["","January","February","March","April","May","June","July","August","September","October","November","December"]
+    };
+    return M[lang] || M.nl;
+  }
+  function weekdayShort() {
+    const lang = (window.wfpI18n && window.wfpI18n.lang) || "nl";
+    const D = {
+      nl: ["Ma","Di","Wo","Do","Vr","Za","Zo"],
+      fr: ["Lu","Ma","Me","Je","Ve","Sa","Di"],
+      en: ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
+    };
+    return D[lang] || D.nl;
+  }
+
   // ── Shell ──────────────────────────────────────────────────
   function buildShell() {
     const el = document.getElementById("platform-admin");
@@ -1485,19 +1533,19 @@ ${emp ? `
     content.innerHTML = `
 <div class="adm-card">
   <div class="adm-card-header">
-    <h3 class="adm-card-title">Planning</h3>
+    <h3 class="adm-card-title">${tA("nav.planning","Planning")}</h3>
     <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
       <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admPrevWeek" aria-label="Vorige week" title="Vorige week">‹</button>
       <span style="font-size:13px;font-weight:500;min-width:160px;text-align:center;">${weekLabel}</span>
       <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admNextWeek" aria-label="Volgende week" title="Volgende week">›</button>
-      ${_planningWeekOffset !== 0 ? `<button class="adm-btn adm-btn-secondary adm-btn-sm" id="admTodayWeek">Vandaag</button>` : ""}
-      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admCopyWeek" title="Kopieer alle shifts naar volgende week">⧉ Kopieer week</button>
-      <button class="adm-btn adm-btn-primary adm-btn-sm" id="admAddShift">+ Shift</button>
+      ${_planningWeekOffset !== 0 ? `<button class="adm-btn adm-btn-secondary adm-btn-sm" id="admTodayWeek">${tA("adm.today","Vandaag")}</button>` : ""}
+      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admCopyWeek" title="Kopieer alle shifts naar volgende week">${tA("adm.plan.copyWeek","⧉ Kopieer week")}</button>
+      <button class="adm-btn adm-btn-primary adm-btn-sm" id="admAddShift">${tA("adm.plan.addShift","+ Shift")}</button>
     </div>
   </div>
   <div class="adm-card-body adm-table-wrap">
     <table class="adm-table adm-plan-table">
-      <thead><tr><th>Medewerker</th>${days.map(d => {
+      <thead><tr><th>${tA("adm.thEmployee","Medewerker")}</th>${days.map(d => {
         const dayName = new Date(d).toLocaleDateString("nl-BE",{weekday:"short",day:"numeric",month:"numeric"});
         return `<th style="${d===today?"color:var(--wf-blue);font-weight:600;background:var(--wf-blue-l)":""}">${dayName}</th>`;
       }).join("")}</tr></thead>
@@ -1507,8 +1555,8 @@ ${emp ? `
     </table>
   </div>
   <div style="padding:8px 16px;font-size:11px;color:var(--gray-400);display:flex;gap:14px;border-top:1px solid var(--gray-50);">
-    <span><span class="adm-dot" style="background:var(--wf-blue)"></span> Shift</span><span style="color:var(--wf-yellow)"><span class="adm-dot" style="background:var(--wf-yellow)"></span> Verlof (afwezig)</span>
-    <span style="margin-left:auto">${shifts.length} shifts · ${Object.keys(leaveMap).length} personen op verlof</span>
+    <span><span class="adm-dot" style="background:var(--wf-blue)"></span> ${tA("adm.plan.shift","Shift")}</span><span style="color:var(--wf-yellow)"><span class="adm-dot" style="background:var(--wf-yellow)"></span> ${tA("adm.plan.leaveAbsent","Verlof (afwezig)")}</span>
+    <span style="margin-left:auto">${tA("adm.plan.summary","{s} shifts · {p} personen op verlof").replace("{s}", shifts.length).replace("{p}", Object.keys(leaveMap).length)}</span>
   </div>
 </div>`;
     document.getElementById("admAddShift")?.addEventListener("click", () => openShiftDrawer(from, to, null, shifts));
@@ -1516,9 +1564,9 @@ ${emp ? `
     document.getElementById("admNextWeek")?.addEventListener("click", () => { _planningWeekOffset++; renderPlanning(); });
     document.getElementById("admTodayWeek")?.addEventListener("click", () => { _planningWeekOffset = 0; renderPlanning(); });
     document.getElementById("admCopyWeek")?.addEventListener("click", async () => {
-      if (!shifts.length) { window.showToast && window.showToast("Geen shifts om te kopiëren", "info"); return; }
+      if (!shifts.length) { window.showToast && window.showToast(tA("adm.plan.copyNone","Geen shifts om te kopiëren"), "info"); return; }
       const btn = document.getElementById("admCopyWeek");
-      btn.disabled = true; btn.textContent = "Bezig…";
+      btn.disabled = true; btn.textContent = tA("adm.busy","Bezig…");
       try {
         const nextWeekBase = new Date(baseWeek); nextWeekBase.setDate(nextWeekBase.getDate() + 7);
         let copied = 0;
@@ -1528,10 +1576,10 @@ ${emp ? `
           await api("POST", "/planning", { userId: s.userId, date: newDate.toISOString().slice(0,10), start: s.start, end: s.end, location: s.location||"", note: s.note||"" });
           copied++;
         }
-        window.showToast && window.showToast(`${copied} shifts gekopieerd naar volgende week`, "success");
+        window.showToast && window.showToast(tA("adm.plan.copied","{n} shifts gekopieerd naar volgende week").replace("{n}", copied), "success");
         _planningWeekOffset++;
         renderPlanning();
-      } catch(e) { window.showToast && window.showToast("Fout: "+e.message, "error"); btn.disabled = false; btn.textContent = "⧉ Kopieer week"; }
+      } catch(e) { window.showToast && window.showToast(e.message, "error"); btn.disabled = false; btn.textContent = tA("adm.plan.copyWeek","⧉ Kopieer week"); }
     });
     document.querySelectorAll(".adm-shift-pill").forEach(pill => {
       pill.addEventListener("click", () => {
@@ -1730,18 +1778,18 @@ ${emp ? `
       content.innerHTML = `
 <div class="adm-card" style="margin-bottom:14px">
   <div class="adm-card-header">
-    <h3 class="adm-card-title">Prikklok overzicht</h3>
+    <h3 class="adm-card-title">${tA("adm.clk.title","Prikklok overzicht")}</h3>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <input type="date" id="admClockDate" value="${_clockDate}">
-      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admClockPrev">‹ Vorige</button>
-      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admClockToday">Vandaag</button>
-      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admClockNext">Volgende ›</button>
-      <button class="adm-btn adm-btn-primary adm-btn-sm" id="admClockAdd">+ Correctie</button>
+      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admClockPrev">‹</button>
+      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admClockToday">${tA("adm.today","Vandaag")}</button>
+      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admClockNext">›</button>
+      <button class="adm-btn adm-btn-primary adm-btn-sm" id="admClockAdd">+ ${tA("adm.clk.correction","Correctie")}</button>
     </div>
   </div>
 </div>
 <div class="adm-card">
-  <div class="adm-card-body adm-table-wrap" id="admClockTable"><div class="adm-loading">Laden…</div></div>
+  <div class="adm-card-body adm-table-wrap" id="admClockTable"><div class="adm-loading">${tA("emp.common.loading","Laden…")}</div></div>
 </div>`;
 
       document.getElementById("admClockDate").addEventListener("change", e => {
@@ -1797,11 +1845,11 @@ ${emp ? `
   </div>
   <div style="background:var(--wf-green-l);border-radius:8px;padding:8px 14px;text-align:center">
     <div style="font-size:18px;font-weight:600;color:var(--wf-green)">${totalHours.toFixed(1)} u</div>
-    <div style="font-size:11px;color:var(--gray-500)">Totaal uren</div>
+    <div style="font-size:11px;color:var(--gray-500)">${tA("adm.clk.totalHours","Totaal uren")}</div>
   </div>
 </div>
 <table class="adm-table" style="margin-top:10px">
-  <thead><tr><th>Medewerker</th><th>Inkloktijd</th><th>Uitkloktijd</th><th>Uren</th><th>Status</th><th>Actie</th></tr></thead>
+  <thead><tr><th>${tA("adm.thEmployee","Medewerker")}</th><th>${tA("adm.clk.thIn","Inkloktijd")}</th><th>${tA("adm.clk.thOut","Uitkloktijd")}</th><th>${tA("adm.clk.thHours","Uren")}</th><th>${tA("adm.status","Status")}</th><th>${tA("adm.actions","Actie")}</th></tr></thead>
   <tbody>
     ${clocks.map(c => {
       const hours = c.clockedOut ? ((new Date(c.clockedOut) - new Date(c.clockedIn)) / 3600000).toFixed(1) : "-";
@@ -1809,12 +1857,12 @@ ${emp ? `
       return `<tr class="${noOut ? "" : "adm-row-link clk-row"}" data-id="${esc(c.id)}" ${noOut ? "" : 'title="Open correctie"'}>
         <td style="font-weight:500">${esc(uName(c))}</td>
         <td>${c.clockedIn ? new Date(c.clockedIn).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}) : "-"}</td>
-        <td>${c.clockedOut ? new Date(c.clockedOut).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}) : '<span style="color:var(--wf-yellow)">Niet uitgeklokt</span>'}</td>
+        <td>${c.clockedOut ? new Date(c.clockedOut).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}) : `<span style="color:var(--wf-yellow)">${tA("adm.clk.notOut","Niet uitgeklokt")}</span>`}</td>
         <td>${hours}</td>
-        <td>${c.status==="in"||noOut ? '<span class="adm-status adm-status-active">Ingeklokt</span>' : '<span class="adm-status adm-status-inactive">Uitgeklokt</span>'}</td>
-        <td>${noOut ? `<button class="adm-btn adm-btn-warning adm-btn-sm clk-force-out" data-id="${esc(c.id)}" data-uid="${esc(c.userId)}">Klokt uit</button>` : `<button class="adm-btn adm-btn-secondary adm-btn-sm clk-edit" data-id="${esc(c.id)}">Corrigeer</button>`}</td>
+        <td>${c.status==="in"||noOut ? `<span class="adm-status adm-status-active">${tA("dash.stClockedIn","Ingeklokt")}</span>` : `<span class="adm-status adm-status-inactive">${tA("adm.clk.clockedOut","Uitgeklokt")}</span>`}</td>
+        <td>${noOut ? `<button class="adm-btn adm-btn-warning adm-btn-sm clk-force-out" data-id="${esc(c.id)}" data-uid="${esc(c.userId)}">${tA("adm.clk.forceOut","Klokt uit")}</button>` : `<button class="adm-btn adm-btn-secondary adm-btn-sm clk-edit" data-id="${esc(c.id)}">${tA("adm.clk.correct","Corrigeer")}</button>`}</td>
       </tr>`;
-    }).join("") || '<tr><td colspan="6" class="adm-empty">Geen klokregistraties voor deze datum</td></tr>'}
+    }).join("") || `<tr><td colspan="6" class="adm-empty">${tA("adm.clk.none","Geen klokregistraties voor deze datum")}</td></tr>`}
   </tbody>
 </table>`;
 
@@ -1989,12 +2037,12 @@ ${emp ? `
     content.innerHTML = `
 <div class="adm-card">
   <div class="adm-card-header">
-    <h3 class="adm-card-title">Verlof</h3>
+    <h3 class="adm-card-title">${tA("nav.leaves","Verlof")}</h3>
     <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-      <button class="adm-btn adm-btn-sm ${_leaveTab==="aanvragen"?"adm-btn-primary":"adm-btn-secondary"}" id="admLeaveTabReq">Aanvragen</button>
-      <button class="adm-btn adm-btn-sm ${_leaveTab==="kalender"?"adm-btn-primary":"adm-btn-secondary"}" id="admLeaveTabCal">Kalender</button>
-      <button class="adm-btn adm-btn-sm ${_leaveTab==="saldi"?"adm-btn-primary":"adm-btn-secondary"}" id="admLeaveTabBal">Saldi</button>
-      <button class="adm-btn adm-btn-primary adm-btn-sm" id="admLeaveNew" style="margin-left:8px;">+ Verlof aanmaken</button>
+      <button class="adm-btn adm-btn-sm ${_leaveTab==="aanvragen"?"adm-btn-primary":"adm-btn-secondary"}" id="admLeaveTabReq">${tA("adm.leave.tabRequests","Aanvragen")}</button>
+      <button class="adm-btn adm-btn-sm ${_leaveTab==="kalender"?"adm-btn-primary":"adm-btn-secondary"}" id="admLeaveTabCal">${tA("adm.leave.tabCalendar","Kalender")}</button>
+      <button class="adm-btn adm-btn-sm ${_leaveTab==="saldi"?"adm-btn-primary":"adm-btn-secondary"}" id="admLeaveTabBal">${tA("adm.leave.tabBalances","Saldi")}</button>
+      <button class="adm-btn adm-btn-primary adm-btn-sm" id="admLeaveNew" style="margin-left:8px;">${tA("adm.leave.new","+ Verlof aanmaken")}</button>
     </div>
   </div>
   <div class="adm-card-body" id="admLeaveBody" style="padding:0;"></div>
@@ -2011,51 +2059,51 @@ ${emp ? `
     let employees = [];
     try { const d = await api("GET", "/employees"); employees = d.employees || []; } catch(_){}
     const today = new Date().toISOString().slice(0, 10);
-    document.getElementById("admDrawerTitle").textContent = "Verlof aanmaken";
+    document.getElementById("admDrawerTitle").textContent = tA("adm.leave.newTitle","Verlof aanmaken");
     document.getElementById("admDrawerBody").innerHTML = `
 <form id="createLeaveForm">
   <div class="adm-form-group">
-    <label>Medewerker *</label>
+    <label>${tA("adm.leave.employee","Medewerker")} *</label>
     <select name="userId" required>
-      <option value="">- Kies medewerker -</option>
+      <option value="">${tA("adm.leave.pickEmployee","- Kies medewerker -")}</option>
       ${employees.map(u => `<option value="${esc(u.id)}" ${preselectedUserId===u.id?"selected":""}>${esc(u.name||u.email)}</option>`).join("")}
     </select>
   </div>
   <div class="adm-form-group">
-    <label>Type verlof</label>
+    <label>${tA("adm.leave.typeLabel","Type verlof")}</label>
     <select name="type">
-      <option value="vakantie">Vakantie</option>
-      <option value="ziekte">Ziekte</option>
-      <option value="adv">ADV</option>
-      <option value="bijzonder">Bijzonder verlof</option>
-      <option value="onbetaald">Onbetaald verlof</option>
+      <option value="vakantie">${tA("adm.ltype.vakantie","Vakantie")}</option>
+      <option value="ziekte">${tA("adm.ltype.ziekte","Ziekte")}</option>
+      <option value="adv">${tA("adm.ltype.adv","ADV")}</option>
+      <option value="bijzonder">${tA("adm.ltype.bijzonder","Bijzonder verlof")}</option>
+      <option value="onbetaald">${tA("adm.ltype.onbetaald","Onbetaald verlof")}</option>
     </select>
   </div>
   <div class="adm-form-row">
     <div class="adm-form-group">
-      <label>Van *</label>
+      <label>${tA("adm.leave.from","Van")} *</label>
       <input name="startDate" type="date" value="${today}" required>
     </div>
     <div class="adm-form-group">
-      <label>Tot *</label>
+      <label>${tA("adm.leave.to","Tot")} *</label>
       <input name="endDate" type="date" value="${today}" required>
     </div>
   </div>
   <div class="adm-form-group">
-    <label>Status</label>
+    <label>${tA("adm.status","Status")}</label>
     <select name="status">
-      <option value="goedgekeurd">Goedgekeurd</option>
-      <option value="aangevraagd">Aangevraagd</option>
+      <option value="goedgekeurd">${tA("adm.lstatus.approved","Goedgekeurd")}</option>
+      <option value="aangevraagd">${tA("adm.lstatus.requested","Aangevraagd")}</option>
     </select>
   </div>
   <div class="adm-form-group">
-    <label>Reden / notitie</label>
-    <textarea name="reason" rows="2" style="width:100%" placeholder="Optionele opmerking"></textarea>
+    <label>${tA("adm.leave.reasonLabel","Reden / notitie")}</label>
+    <textarea name="reason" rows="2" style="width:100%" placeholder="${tA("adm.leave.optNote","Optionele opmerking")}"></textarea>
   </div>
   <div id="createLeaveErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:8px;font-size:12px;margin-bottom:8px;"></div>
   <div class="adm-form-actions">
-    <button type="button" class="adm-btn adm-btn-secondary" id="createLeaveCancel">Annuleren</button>
-    <button type="submit" class="adm-btn adm-btn-primary">Aanmaken</button>
+    <button type="button" class="adm-btn adm-btn-secondary" id="createLeaveCancel">${tA("adm.cancel","Annuleren")}</button>
+    <button type="submit" class="adm-btn adm-btn-primary">${tA("adm.leave.create","Aanmaken")}</button>
   </div>
 </form>`;
     openDrawer();
@@ -2074,7 +2122,7 @@ ${emp ? `
         closeDrawer();
         _leaveTab = "aanvragen";
         renderLeaves();
-        window.showToast && window.showToast("Verlof aangemaakt", "success");
+        window.showToast && window.showToast(tA("adm.leave.created","Verlof aangemaakt"), "success");
       } catch(err) {
         if (errEl) { errEl.textContent = err.message; errEl.style.display = ""; }
       }
@@ -2090,7 +2138,7 @@ ${emp ? `
 
     const body = document.getElementById("admLeaveBody");
     if (!body) return;
-    body.innerHTML = `<div style="padding:24px;text-align:center;color:var(--gray-400);font-size:13px;">Laden…</div>`;
+    body.innerHTML = `<div style="padding:24px;text-align:center;color:var(--gray-400);font-size:13px;">${tA("adm.loading","Laden…")}</div>`;
 
     if (_leaveTab === "aanvragen") {
       const data = await api("GET", "/leaves");
@@ -2098,10 +2146,10 @@ ${emp ? `
       body.innerHTML = `
 <div style="padding:12px 16px;border-bottom:1px solid var(--gray-100);display:flex;gap:8px;align-items:center;">
   <select id="admLeaveFilter">
-    <option value="">Alle statussen</option>
-    <option value="aangevraagd">Aangevraagd</option>
-    <option value="goedgekeurd">Goedgekeurd</option>
-    <option value="geweigerd">Geweigerd</option>
+    <option value="">${tA("adm.allStatuses","Alle statussen")}</option>
+    <option value="aangevraagd">${tA("adm.lstatus.requested","Aangevraagd")}</option>
+    <option value="goedgekeurd">${tA("adm.lstatus.approved","Goedgekeurd")}</option>
+    <option value="geweigerd">${tA("adm.lstatus.rejected","Geweigerd")}</option>
   </select>
 </div>
 <div class="adm-table-wrap" id="admLeaveTable">${renderLeaveTable(leaves)}</div>`;
@@ -2121,8 +2169,7 @@ ${emp ? `
   }
 
   async function renderLeaveCalendar(container) {
-    const MONTHS_NL = ["","Januari","Februari","Maart","April","Mei","Juni","Juli","Augustus","September","Oktober","November","December"];
-    const DAYS_NL   = ["Zo","Ma","Di","Wo","Do","Vr","Za"];
+    const MONTHS = monthNames();
 
     let calData;
     try {
@@ -2156,7 +2203,7 @@ ${emp ? `
       const isToday = dateStr === new Date().toISOString().slice(0,10);
       cells += `<div style="min-height:52px;border-radius:8px;padding:4px 6px;background:${isToday?"var(--wf-blue-l)":isWeekend?"var(--gray-50)":"#fff"};border:1px solid ${isToday?"var(--wf-blue-l)":"var(--gray-200)"};">
         <div style="font-size:11px;font-weight:${isToday?"700":"500"};color:${isWeekend?"var(--gray-400)":isToday?"var(--wf-blue)":"var(--gray-700)"};margin-bottom:2px;">${d}</div>
-        ${userIds.slice(0,3).map(uid => { const nm = empMap[uid] || empNameById(uid) || "Onbekend"; return `<div style="font-size:10px;background:var(--wf-blue-l);color:var(--wf-blue);border-radius:4px;padding:1px 4px;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(nm)}">${esc(nm.split(" ")[0])}</div>`; }).join("")}
+        ${userIds.slice(0,3).map(uid => { const nm = empMap[uid] || empNameById(uid) || tA("adm.unknown","Onbekend"); return `<div style="font-size:10px;background:var(--wf-blue-l);color:var(--wf-blue);border-radius:4px;padding:1px 4px;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(nm)}">${esc(nm.split(" ")[0])}</div>`; }).join("")}
         ${userIds.length > 3 ? `<div style="font-size:10px;color:var(--gray-500);">+${userIds.length-3}</div>` : ""}
       </div>`;
     }
@@ -2165,20 +2212,20 @@ ${emp ? `
 <div style="padding:16px;">
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
     <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admCalPrev">‹</button>
-    <span style="font-size:15px;font-weight:600;min-width:160px;text-align:center;">${MONTHS_NL[_leaveCalMonth]} ${_leaveCalYear}</span>
+    <span style="font-size:15px;font-weight:600;min-width:160px;text-align:center;">${MONTHS[_leaveCalMonth]} ${_leaveCalYear}</span>
     <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admCalNext">›</button>
-    <span style="font-size:12px;color:var(--gray-500);margin-left:8px;">${leaves.length} goedgekeurde verloven</span>
+    <span style="font-size:12px;color:var(--gray-500);margin-left:8px;">${leaves.length} ${tA("adm.leave.approvedCount","goedgekeurde verloven")}</span>
   </div>
   <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:6px;">
-    ${["Ma","Di","Wo","Do","Vr","Za","Zo"].map(d=>`<div style="text-align:center;font-size:11px;font-weight:600;color:var(--gray-500);padding:4px 0;">${d}</div>`).join("")}
+    ${weekdayShort().map(d=>`<div style="text-align:center;font-size:11px;font-weight:600;color:var(--gray-500);padding:4px 0;">${d}</div>`).join("")}
   </div>
   <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;">${cells}</div>
   ${leaves.length ? `
   <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--gray-100);">
-    <div class="adm-form-section">Verloven deze maand</div>
+    <div class="adm-form-section">${tA("adm.leave.thisMonth","Verloven deze maand")}</div>
     <div style="display:flex;flex-wrap:wrap;gap:6px;">
     ${leaves.map(l=>`<div style="font-size:12px;background:var(--wf-green-l);border:1px solid var(--wf-green-l);border-radius:6px;padding:4px 8px;color:var(--wf-green);">
-      <strong>${esc(empMap[l.userId]||uName(l))}</strong> · ${esc(l.type)} · ${l.startDate}→${l.endDate} (${l.days}d)
+      <strong>${esc(empMap[l.userId]||uName(l))}</strong> · ${esc(tLeaveType(l.type))} · ${l.startDate}→${l.endDate} (${l.days}${tA("adm.leave.daysAbbr","d")})
     </div>`).join("")}
     </div>
   </div>` : ""}
@@ -2207,23 +2254,24 @@ ${emp ? `
     }
     const balance = balData.balance || [];
     if (!balance.length) {
-      container.innerHTML = `<div style="padding:24px;text-align:center;color:var(--gray-400);">Geen medewerkers gevonden.</div>`;
+      container.innerHTML = `<div style="padding:24px;text-align:center;color:var(--gray-400);">${tA("adm.leave.noEmployees","Geen medewerkers gevonden.")}</div>`;
       return;
     }
+    const dAbbr = tA("adm.leave.daysAbbr","d");
 
     container.innerHTML = `
 <div style="padding:16px;">
-  <div style="font-size:13px;color:var(--gray-500);margin-bottom:12px;">Vakantiesaldo ${year} · op basis van goedgekeurde verlofaanvragen</div>
+  <div style="font-size:13px;color:var(--gray-500);margin-bottom:12px;">${tA("adm.leave.balanceIntro","Vakantiesaldo {year} · op basis van goedgekeurde verlofaanvragen").replace("{year}", year)}</div>
   <table class="adm-table">
-    <thead><tr><th>Medewerker</th><th>Quota</th><th>Gebruikt</th><th>Resterend</th><th>Voortgang</th></tr></thead>
+    <thead><tr><th>${tA("adm.thEmployee","Medewerker")}</th><th>${tA("adm.leave.thQuota","Quota")}</th><th>${tA("adm.leave.thUsed","Gebruikt")}</th><th>${tA("adm.leave.thRemaining","Resterend")}</th><th>${tA("adm.leave.thProgress","Voortgang")}</th></tr></thead>
     <tbody>${balance.map(b => {
       const pct = b.quota ? Math.min(100, Math.round((b.used / b.quota) * 100)) : 0;
       const color = pct >= 90 ? "var(--wf-red)" : pct >= 70 ? "var(--wf-yellow)" : "var(--wf-green)";
       return `<tr>
         <td><div style="font-weight:500;">${esc(b.name)}</div><div style="font-size:11px;color:var(--gray-400);">${esc(b.email)}</div></td>
-        <td>${b.quota}d</td>
-        <td>${b.used}d</td>
-        <td style="font-weight:600;color:${b.remaining<=2?"var(--wf-red)":b.remaining<=5?"var(--wf-yellow)":"var(--wf-green)"};">${b.remaining}d</td>
+        <td>${b.quota}${dAbbr}</td>
+        <td>${b.used}${dAbbr}</td>
+        <td style="font-weight:600;color:${b.remaining<=2?"var(--wf-red)":b.remaining<=5?"var(--wf-yellow)":"var(--wf-green)"};">${b.remaining}${dAbbr}</td>
         <td style="min-width:120px;">
           <div style="background:var(--gray-100);border-radius:20px;height:8px;overflow:hidden;">
             <div style="height:100%;width:${pct}%;background:${color};border-radius:20px;transition:width .3s;"></div>
@@ -2237,21 +2285,21 @@ ${emp ? `
   }
 
   function renderLeaveTable(leaves) {
-    if (!leaves.length) return `<div class="adm-empty"><div class="adm-empty-text">Geen verlofaanvragen</div></div>`;
+    if (!leaves.length) return `<div class="adm-empty"><div class="adm-empty-text">${tA("adm.leave.noRequests","Geen verlofaanvragen")}</div></div>`;
     return `<table class="adm-table">
-      <thead><tr><th>Medewerker</th><th>Type</th><th>Van</th><th>Tot</th><th>Reden</th><th>Status</th><th>Opmerking</th><th>Acties</th></tr></thead>
+      <thead><tr><th>${tA("adm.thEmployee","Medewerker")}</th><th>${tA("adm.leave.thType","Type")}</th><th>${tA("adm.leave.from","Van")}</th><th>${tA("adm.leave.to","Tot")}</th><th>${tA("adm.leave.thReason","Reden")}</th><th>${tA("adm.status","Status")}</th><th>${tA("adm.leave.thNote","Opmerking")}</th><th>${tA("adm.actions","Acties")}</th></tr></thead>
       <tbody>${leaves.map(l => `
         <tr>
           <td>${esc(uName(l))}</td>
-          <td>${esc(l.type||"-")}</td>
+          <td>${esc(tLeaveType(l.type))}</td>
           <td>${esc(l.startDate||"")}</td>
           <td>${esc(l.endDate||"")}</td>
           <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(l.reason||"")}">${esc(l.reason||"-")}</td>
-          <td><span class="adm-status adm-status-${l.status}">${esc(l.status||"")}</span></td>
+          <td><span class="adm-status adm-status-${l.status}">${esc(tLeaveStatus(l.status))}</span></td>
           <td style="font-size:12px;color:var(--gray-500);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(l.reviewNote||"")}">${esc(l.reviewNote||"-")}</td>
           <td style="white-space:nowrap;">${l.status==="aangevraagd" ? `
-            <button class="adm-btn adm-btn-success adm-btn-sm adm-leave-action" data-id="${esc(l.id)}" data-status="goedgekeurd">Goed</button>
-            <button class="adm-btn adm-btn-danger adm-btn-sm adm-leave-action" data-id="${esc(l.id)}" data-status="geweigerd">Weigeren</button>
+            <button class="adm-btn adm-btn-success adm-btn-sm adm-leave-action" data-id="${esc(l.id)}" data-status="goedgekeurd">${tA("adm.leave.approveShort","Goed")}</button>
+            <button class="adm-btn adm-btn-danger adm-btn-sm adm-leave-action" data-id="${esc(l.id)}" data-status="geweigerd">${tA("adm.leave.reject","Weigeren")}</button>
           ` : "-"}</td>
         </tr>`).join("")}
       </tbody>
@@ -2270,19 +2318,19 @@ ${emp ? `
 
   function openLeaveReviewModal(leaveId, decision, leave, onDone) {
     const isApprove = decision === "goedgekeurd";
-    const label = isApprove ? "Verlof goedkeuren" : "Verlof weigeren";
+    const label = isApprove ? tA("adm.leave.approveTitle","Verlof goedkeuren") : tA("adm.leave.rejectTitle","Verlof weigeren");
     const overlay = document.createElement("div");
     overlay.style.cssText = "position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:1200;display:flex;align-items:center;justify-content:center;padding:16px;";
     overlay.innerHTML = `
 <div style="background:#fff;border-radius:14px;width:420px;max-width:100%;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.2);">
   <h3 style="font-size:15px;font-weight:600;margin:0 0 6px;">${label}</h3>
-  <p style="font-size:13px;color:var(--gray-500);margin:0 0 16px;">${esc(leave?.userName||leave?.userId||"")} · ${esc(leave?.type||"verlof")} · ${leave?.startDate||""}${leave?.endDate&&leave?.endDate!==leave?.startDate?" → "+leave?.endDate:""}</p>
-  <label style="font-size:12px;font-weight:600;color:var(--gray-700);display:block;margin-bottom:4px;">Opmerking ${isApprove?"(optioneel)":"(optioneel)"}</label>
-  <textarea id="admLeaveNote" rows="3" placeholder="Voeg een opmerking toe…"
+  <p style="font-size:13px;color:var(--gray-500);margin:0 0 16px;">${esc(leave?.userName||leave?.userId||"")} · ${esc(tLeaveType(leave?.type||"verlof"))} · ${leave?.startDate||""}${leave?.endDate&&leave?.endDate!==leave?.startDate?" → "+leave?.endDate:""}</p>
+  <label style="font-size:12px;font-weight:600;color:var(--gray-700);display:block;margin-bottom:4px;">${tA("adm.leave.noteOptional","Opmerking (optioneel)")}</label>
+  <textarea id="admLeaveNote" rows="3" placeholder="${tA("adm.leave.notePh","Voeg een opmerking toe…")}"
     style="width:100%;resize:vertical;box-sizing:border-box"></textarea>
   <div id="admLeaveModalErr" style="display:none;color:var(--wf-red);font-size:12px;margin-top:6px;"></div>
   <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
-    <button id="admLeaveModalCancel" class="adm-btn adm-btn-secondary adm-btn-sm">Annuleren</button>
+    <button id="admLeaveModalCancel" class="adm-btn adm-btn-secondary adm-btn-sm">${tA("adm.cancel","Annuleren")}</button>
     <button id="admLeaveModalConfirm" class="adm-btn ${isApprove?"adm-btn-success":"adm-btn-danger"} adm-btn-sm">${label}</button>
   </div>
 </div>`;
@@ -2326,43 +2374,43 @@ ${emp ? `
     content.innerHTML = `
 <div class="adm-kpis" style="margin-bottom:14px;">
   <div class="adm-kpi adm-kpi-amber">
-    <div class="adm-kpi-label">In behandeling</div>
+    <div class="adm-kpi-label">${tA("adm.exp.fPending","In behandeling")}</div>
     <div class="adm-kpi-value">${pending.length}</div>
     <div class="adm-kpi-sub">${fmtE(totalPend)}</div>
   </div>
   <div class="adm-kpi adm-kpi-green">
-    <div class="adm-kpi-label">Goedgekeurd</div>
+    <div class="adm-kpi-label">${tA("emp.status.goedgekeurd","Goedgekeurd")}</div>
     <div class="adm-kpi-value">${approved.length}</div>
     <div class="adm-kpi-sub">${fmtE(totalAppr)}</div>
   </div>
   <div class="adm-kpi adm-kpi-red">
-    <div class="adm-kpi-label">Geweigerd</div>
+    <div class="adm-kpi-label">${tA("emp.status.geweigerd","Geweigerd")}</div>
     <div class="adm-kpi-value">${rejected.length}</div>
-    <div class="adm-kpi-sub">declaraties</div>
+    <div class="adm-kpi-sub">${tA("adm.exp.claims","declaraties")}</div>
   </div>
   <div class="adm-kpi adm-kpi-blue">
-    <div class="adm-kpi-label">Totaal ingediend</div>
+    <div class="adm-kpi-label">${tA("adm.exp.totalSubmitted","Totaal ingediend")}</div>
     <div class="adm-kpi-value">${expenses.length}</div>
-    <div class="adm-kpi-sub">alle statussen</div>
+    <div class="adm-kpi-sub">${tA("adm.exp.allStatusesSub","alle statussen")}</div>
   </div>
 </div>
 <div class="adm-card">
   <div class="adm-card-header">
-    <h3 class="adm-card-title">Onkostennota's <span style="background:var(--wf-blue-l);color:var(--wf-blue);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${expenses.length}</span></h3>
+    <h3 class="adm-card-title">${tA("adm.exp.title","Onkostennota's")} <span style="background:var(--wf-blue-l);color:var(--wf-blue);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${expenses.length}</span></h3>
     <select id="admExpFilter">
-      <option value="">Alle statussen</option>
-      <option value="ingediend">In behandeling</option>
-      <option value="goedgekeurd">Goedgekeurd</option>
-      <option value="geweigerd">Geweigerd</option>
+      <option value="">${tA("adm.allStatuses","Alle statussen")}</option>
+      <option value="ingediend">${tA("adm.exp.fPending","In behandeling")}</option>
+      <option value="goedgekeurd">${tA("emp.status.goedgekeurd","Goedgekeurd")}</option>
+      <option value="geweigerd">${tA("emp.status.geweigerd","Geweigerd")}</option>
     </select>
   </div>
   <div class="adm-card-body adm-table-wrap" id="admExpTable"></div>
 </div>`;
 
     function buildExpRows(rows) {
-      if (!rows.length) return '<div class="adm-empty">Geen onkosten gevonden</div>';
+      if (!rows.length) return `<div class="adm-empty">${tA("adm.exp.none","Geen onkosten gevonden")}</div>`;
       return `<table class="adm-table">
-        <thead><tr><th>Medewerker</th><th>Datum</th><th>Categorie</th><th>Bedrag</th><th>Omschrijving</th><th>Werkbon</th><th>Status</th><th>Acties</th></tr></thead>
+        <thead><tr><th>${tA("adm.thEmployee","Medewerker")}</th><th>${tA("adm.date","Datum")}</th><th>${tA("adm.thCategory","Categorie")}</th><th>${tA("adm.amount","Bedrag")}</th><th>${tA("adm.thDescription","Omschrijving")}</th><th>${tA("adm.thWorkorder","Werkbon")}</th><th>${tA("adm.status","Status")}</th><th>${tA("adm.actions","Acties")}</th></tr></thead>
         <tbody>${rows.map(e => {
           const wo = e.workorderId ? woById[e.workorderId] : null;
           const woCell = e.invoiceId
@@ -2561,33 +2609,33 @@ ${emp ? `
     content.innerHTML = `
 <div class="adm-card">
   <div class="adm-card-header">
-    <h3 class="adm-card-title">Werkbonnen
+    <h3 class="adm-card-title">${(window.wfpTerms && window.wfpTerms.t("jobPlural")) || tA("nav.workorders","Werkbonnen")}
       <span style="background:var(--wf-blue-l);color:var(--wf-blue);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${workorders.length}/${allWorkorders.length}</span>
     </h3>
-    <button class="adm-btn adm-btn-primary adm-btn-sm" id="admNewWO">+ Werkbon</button>
+    <button class="adm-btn adm-btn-primary adm-btn-sm" id="admNewWO">+ ${(window.wfpTerms && window.wfpTerms.t("jobSingular")) || tA("emp.wo.default","Werkbon")}</button>
   </div>
 
   <!-- Filter bar -->
   <div style="display:flex;gap:10px;flex-wrap:wrap;padding:0 20px 14px;border-bottom:1px solid var(--gray-100);">
-    <input id="admWoSearch" type="search" placeholder="Zoek op titel / klant…" value="${esc(_woFilterSearch)}"
+    <input id="admWoSearch" type="search" placeholder="${tA("adm.wo.searchPh","Zoek op titel / klant…")}" value="${esc(_woFilterSearch)}"
       style="flex:1;min-width:160px;10px">
     <select id="admWoStatusFilter" style="min-width:140px">
-      <option value="">Alle statussen</option>
-      <option value="open"        ${_woFilterStatus==="open"?"selected":""}>Open (${statusCounts.open||0})</option>
-      <option value="in_progress" ${_woFilterStatus==="in_progress"?"selected":""}>In uitvoering (${statusCounts.in_progress||0})</option>
-      <option value="done"        ${_woFilterStatus==="done"?"selected":""}>Voltooid (${doneCount})</option>
-      <option value="geannuleerd" ${_woFilterStatus==="geannuleerd"?"selected":""}>Geannuleerd (${statusCounts.geannuleerd||0})</option>
+      <option value="">${tA("adm.allStatuses","Alle statussen")}</option>
+      <option value="open"        ${_woFilterStatus==="open"?"selected":""}>${tA("dash.woseg.open","Open")} (${statusCounts.open||0})</option>
+      <option value="in_progress" ${_woFilterStatus==="in_progress"?"selected":""}>${tA("dash.woseg.inprog","In uitvoering")} (${statusCounts.in_progress||0})</option>
+      <option value="done"        ${_woFilterStatus==="done"?"selected":""}>${tA("dash.woseg.done","Voltooid")} (${doneCount})</option>
+      <option value="geannuleerd" ${_woFilterStatus==="geannuleerd"?"selected":""}>${tA("dash.woseg.cancelled","Geannuleerd")} (${statusCounts.geannuleerd||0})</option>
     </select>
     <select id="admWoUserFilter" style="min-width:160px">
-      <option value="">Alle medewerkers</option>
+      <option value="">${tA("adm.wo.allEmployees","Alle medewerkers")}</option>
       ${employees.map(u => `<option value="${esc(u.id)}" ${_woFilterUser===u.id?"selected":""}>${esc(u.name||u.email)}</option>`).join("")}
     </select>
-    ${(_woFilterStatus||_woFilterUser||_woFilterSearch) ? `<button class="adm-btn adm-btn-secondary adm-btn-sm" id="admWoClearFilter" style="white-space:nowrap;">Wis filters</button>` : ""}
+    ${(_woFilterStatus||_woFilterUser||_woFilterSearch) ? `<button class="adm-btn adm-btn-secondary adm-btn-sm" id="admWoClearFilter" style="white-space:nowrap;">${tA("adm.wo.clearFilters","Wis filters")}</button>` : ""}
   </div>
 
   <div class="adm-card-body adm-table-wrap">
     <table class="adm-table">
-      <thead><tr><th>#</th><th>Titel</th><th>Medewerker</th><th>Klant</th><th>Status</th><th>Prioriteit</th><th>Datum</th><th>Acties</th></tr></thead>
+      <thead><tr><th>#</th><th>${tA("adm.thTitle","Titel")}</th><th>${tA("adm.thEmployee","Medewerker")}</th><th>${tA("adm.thCustomer","Klant")}</th><th>${tA("adm.status","Status")}</th><th>${tA("adm.thPriority","Prioriteit")}</th><th>${tA("adm.date","Datum")}</th><th>${tA("adm.actions","Acties")}</th></tr></thead>
       <tbody>
         ${workorders.map(w => `
         <tr class="adm-row-link adm-wo-row" data-id="${w.id}" title="Open werkbon">
@@ -2595,16 +2643,16 @@ ${emp ? `
           <td>${esc(w.title || "-")}</td>
           <td>${esc(uName(w) || "-")}</td>
           <td>${esc(w.clientName || "-")}</td>
-          <td><span class="adm-status adm-status-${(w.status||"").toLowerCase().replace(/\s/g,"-")}">${esc(w.status||"-")}</span></td>
-          <td><span style="font-size:12px;">${w.priority==="hoog"?'<span class="adm-dot" style="background:var(--wf-red)"></span>':w.priority==="laag"?'<span class="adm-dot" style="background:var(--wf-green)"></span>':'<span class="adm-dot" style="background:var(--wf-yellow)"></span>'} ${esc(w.priority||"normaal")}</span></td>
+          <td><span class="adm-status adm-status-${(w.status||"").toLowerCase().replace(/\s/g,"-")}">${esc(tWoStatus(w.status))}</span></td>
+          <td><span style="font-size:12px;">${w.priority==="hoog"?'<span class="adm-dot" style="background:var(--wf-red)"></span>':w.priority==="laag"?'<span class="adm-dot" style="background:var(--wf-green)"></span>':'<span class="adm-dot" style="background:var(--wf-yellow)"></span>'} ${esc(tWoPrio(w.priority))}</span></td>
           <td>${w.scheduledDate || w.createdAt?.slice(0,10) || "-"}</td>
           <td style="white-space:nowrap;">
             ${w.invoiceId
-              ? `<span style="font-size:11px;color:var(--wf-green);font-weight:600;">✓ gefactureerd</span>`
-              : (woBillable(w) ? `<button class="adm-btn adm-btn-success adm-btn-sm adm-wo-invoice" data-id="${w.id}" title="Maak factuur van deze werkbon">→ Factuur</button>` : "")}
-            <button class="adm-btn adm-btn-secondary adm-btn-sm adm-wo-edit" data-id="${w.id}">Bewerken</button>
+              ? `<span style="font-size:11px;color:var(--wf-green);font-weight:600;">✓ ${tA("adm.wo.invoiced","gefactureerd")}</span>`
+              : (woBillable(w) ? `<button class="adm-btn adm-btn-success adm-btn-sm adm-wo-invoice" data-id="${w.id}" title="Maak factuur van deze werkbon">→ ${tA("adm.wo.toInvoice","Factuur")}</button>` : "")}
+            <button class="adm-btn adm-btn-secondary adm-btn-sm adm-wo-edit" data-id="${w.id}">${tA("adm.edit","Bewerken")}</button>
           </td>
-        </tr>`).join("") || `<tr><td colspan="8" class="adm-empty">${_woFilterStatus||_woFilterUser||_woFilterSearch ? "Geen resultaten voor deze filters" : `Nog geen werkbonnen.<br><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewWO" style="margin-top:10px">+ Eerste werkbon aanmaken</button>`}</td></tr>`}
+        </tr>`).join("") || `<tr><td colspan="8" class="adm-empty">${_woFilterStatus||_woFilterUser||_woFilterSearch ? tA("adm.wo.noResults","Geen resultaten voor deze filters") : `${tA("adm.wo.emptyTitle","Nog geen werkbonnen.")}<br><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewWO" style="margin-top:10px">+ ${tA("adm.wo.emptyBtn","Eerste werkbon aanmaken")}</button>`}</td></tr>`}
       </tbody>
     </table>
   </div>

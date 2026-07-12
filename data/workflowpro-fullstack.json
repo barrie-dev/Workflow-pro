@@ -38,12 +38,13 @@
       "mfaPendingSecret": null,
       "loginAttempts": 0,
       "recoveryCodes": [],
-      "updatedAt": "2026-06-09T18:12:53.584Z"
+      "updatedAt": "2026-06-09T18:12:53.584Z",
+      "protected": true
     },
     {
       "mfaEnabled": false,
       "mfaEnforced": false,
-      "lastLoginAt": "2026-06-09T19:32:49.213Z",
+      "lastLoginAt": "2026-07-12T06:36:55.276Z",
       "failedLoginCount": 0,
       "lockedUntil": null,
       "id": "u_admin",
@@ -114,7 +115,7 @@
     {
       "mfaEnabled": false,
       "mfaEnforced": false,
-      "lastLoginAt": "2026-06-09T17:15:13.286Z",
+      "lastLoginAt": "2026-07-11T21:16:42.617Z",
       "failedLoginCount": 0,
       "lockedUntil": null,
       "id": "u_emp1",
@@ -1009,6 +1010,71 @@
       "tenantId": "t_demo",
       "action": "login",
       "area": "auth"
+    },
+    {
+      "id": "audit_1783803008070_c08a1139f59cc8",
+      "at": "2026-07-11T20:50:08.070Z",
+      "actor": "system",
+      "tenantId": null,
+      "action": "platform_god_marked",
+      "area": "auth",
+      "detail": "super@workflowpro.be"
+    },
+    {
+      "id": "audit_1783803035724_fc2fd5ee58f6a8",
+      "at": "2026-07-11T20:50:35.724Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1783803051419_eecfbba4d4c238",
+      "at": "2026-07-11T20:50:51.419Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1783803487184_4392bdf9e24288",
+      "at": "2026-07-11T20:58:07.184Z",
+      "actor": "jan@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1783804602620_24b5d0cdaeea7",
+      "at": "2026-07-11T21:16:42.620Z",
+      "actor": "jan@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1783805024846_6dc47af88af2f8",
+      "at": "2026-07-11T21:23:44.846Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1783805154776_9ef3d63b0df1f8",
+      "at": "2026-07-11T21:25:54.776Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1783838215277_368aa84c54dc6",
+      "at": "2026-07-12T06:36:55.277Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
     }
   ],
   "errorEvents": [
@@ -1235,5 +1301,181 @@
       "createdAt": "2026-06-09T19:29:54.676Z",
       "updatedAt": "2026-06-09T19:29:54.705Z"
     }
-  ]
+  ],
+  "platformConfig": [],
+  "resellers": [],
+  "bundles": [
+    {
+      "id": "bundle_starter",
+      "tenantId": null,
+      "key": "starter",
+      "label": "Starter",
+      "description": "Voor kleine teams die starten met planning en tijdregistratie.",
+      "order": 1,
+      "active": true,
+      "custom": false,
+      "popular": false,
+      "modules": [
+        "planning",
+        "clockings",
+        "messages",
+        "customers",
+        "venues"
+      ],
+      "submodules": {
+        "planning": [
+          "shift-templates",
+          "calendar-export"
+        ],
+        "clockings": [
+          "gps",
+          "corrections"
+        ]
+      },
+      "updatedAt": "2026-07-11T20:50:51.432Z"
+    },
+    {
+      "id": "bundle_business",
+      "tenantId": null,
+      "key": "business",
+      "label": "Business",
+      "description": "Het volledige operationele pakket inclusief werkbonnen en facturatie.",
+      "order": 2,
+      "active": true,
+      "custom": false,
+      "popular": true,
+      "modules": [
+        "planning",
+        "clockings",
+        "messages",
+        "customers",
+        "venues",
+        "workorders",
+        "leaves",
+        "expenses",
+        "offertes",
+        "invoices",
+        "stock",
+        "vehicles",
+        "reports"
+      ],
+      "submodules": {
+        "planning": [
+          "shift-templates",
+          "calendar-export"
+        ],
+        "clockings": [
+          "gps",
+          "corrections"
+        ],
+        "workorders": [
+          "photos",
+          "signature",
+          "pdf"
+        ],
+        "leaves": [
+          "balances",
+          "calendar"
+        ],
+        "expenses": [
+          "approval",
+          "receipt-scan"
+        ],
+        "offertes": [
+          "pdf",
+          "online-accept"
+        ],
+        "invoices": [
+          "peppol",
+          "reminders",
+          "online-payment"
+        ],
+        "stock": [
+          "low-alerts"
+        ],
+        "vehicles": [
+          "maintenance"
+        ],
+        "reports": [
+          "datahub-export"
+        ]
+      },
+      "updatedAt": "2026-07-11T20:50:51.433Z"
+    },
+    {
+      "id": "bundle_enterprise",
+      "tenantId": null,
+      "key": "enterprise",
+      "label": "Enterprise",
+      "description": "Alles, met integraties en maatwerkafspraken.",
+      "order": 3,
+      "active": true,
+      "custom": true,
+      "popular": false,
+      "modules": [
+        "planning",
+        "workorders",
+        "clockings",
+        "leaves",
+        "expenses",
+        "messages",
+        "customers",
+        "offertes",
+        "invoices",
+        "stock",
+        "vehicles",
+        "venues",
+        "ciaw",
+        "posted_workers",
+        "reports",
+        "integrations",
+        "sso",
+        "ai_actions"
+      ],
+      "submodules": {
+        "planning": [
+          "shift-templates",
+          "calendar-export"
+        ],
+        "workorders": [
+          "photos",
+          "signature",
+          "pdf"
+        ],
+        "clockings": [
+          "gps",
+          "corrections"
+        ],
+        "leaves": [
+          "balances",
+          "calendar"
+        ],
+        "expenses": [
+          "approval",
+          "receipt-scan"
+        ],
+        "offertes": [
+          "pdf",
+          "online-accept"
+        ],
+        "invoices": [
+          "peppol",
+          "reminders",
+          "online-payment"
+        ],
+        "stock": [
+          "low-alerts"
+        ],
+        "vehicles": [
+          "maintenance"
+        ],
+        "reports": [
+          "datahub-export"
+        ]
+      },
+      "updatedAt": "2026-07-11T20:50:51.435Z"
+    }
+  ],
+  "postedWorkers": [],
+  "templates": []
 }
