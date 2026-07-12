@@ -3087,66 +3087,66 @@ ${emp ? `
     content.innerHTML = `
 <div class="adm-card" style="margin-bottom:16px;">
   <div class="adm-card-header">
-    <h3 class="adm-card-title">Rapportages</h3>
+    <h3 class="adm-card-title">${tA("nav.reports","Rapportages")}</h3>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
       <input type="date" id="repFrom" value="${firstOfMonth}">
-      <span style="font-size:13px;color:var(--gray-400);">t/m</span>
+      <span style="font-size:13px;color:var(--gray-400);">${tA("adm.rep.until","t/m")}</span>
       <input type="date" id="repTo" value="${lastOfMonth}">
-      <button class="adm-btn adm-btn-primary adm-btn-sm" id="repLoad">Laden</button>
-      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="repBeslissers" title="Printbaar beslissersrapport genereren">Beslissersrapport</button>
+      <button class="adm-btn adm-btn-primary adm-btn-sm" id="repLoad">${tA("adm.rep.load","Laden")}</button>
+      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="repBeslissers" title="${tA("adm.rep.decisionTitle","Printbaar beslissersrapport genereren")}">${tA("adm.rep.decisionReport","Beslissersrapport")}</button>
     </div>
   </div>
 </div>
 
 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;" id="repKpis">
-  <div class="adm-kpi adm-kpi-blue"><div class="adm-kpi-label">Totaal uren</div><div class="adm-kpi-value" id="repKpiHours">-</div><div class="adm-kpi-sub">Geregistreerd</div></div>
-  <div class="adm-kpi adm-kpi-green"><div class="adm-kpi-label">Goedgekeurde onkosten</div><div class="adm-kpi-value" id="repKpiExpenses">-</div><div class="adm-kpi-sub">Totaal bedrag</div></div>
-  <div class="adm-kpi adm-kpi-amber"><div class="adm-kpi-label">Verlofdagen</div><div class="adm-kpi-value" id="repKpiLeaves">-</div><div class="adm-kpi-sub">Goedgekeurd</div></div>
-  <div class="adm-kpi adm-kpi-purple"><div class="adm-kpi-label">Werkbonnen voltooid</div><div class="adm-kpi-value" id="repKpiWO">-</div><div class="adm-kpi-sub">In periode</div></div>
+  <div class="adm-kpi adm-kpi-blue"><div class="adm-kpi-label">${tA("adm.rep.totalHours","Totaal uren")}</div><div class="adm-kpi-value" id="repKpiHours">-</div><div class="adm-kpi-sub">${tA("adm.rep.registered","Geregistreerd")}</div></div>
+  <div class="adm-kpi adm-kpi-green"><div class="adm-kpi-label">${tA("adm.rep.approvedExp","Goedgekeurde onkosten")}</div><div class="adm-kpi-value" id="repKpiExpenses">-</div><div class="adm-kpi-sub">${tA("adm.rep.totalAmount","Totaal bedrag")}</div></div>
+  <div class="adm-kpi adm-kpi-amber"><div class="adm-kpi-label">${tA("adm.rep.leaveDays","Verlofdagen")}</div><div class="adm-kpi-value" id="repKpiLeaves">-</div><div class="adm-kpi-sub">${tA("adm.lstatus.approved","Goedgekeurd")}</div></div>
+  <div class="adm-kpi adm-kpi-purple"><div class="adm-kpi-label">${tA("adm.rep.woCompleted","Werkbonnen voltooid")}</div><div class="adm-kpi-value" id="repKpiWO">-</div><div class="adm-kpi-sub">${tA("adm.rep.inPeriod","In periode")}</div></div>
 </div>
 
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
   <!-- Uren per medewerker -->
   <div class="adm-card">
     <div class="adm-card-header">
-      <h3 class="adm-card-title">Uren per medewerker</h3>
-      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="repExportClocks">CSV export</button>
+      <h3 class="adm-card-title">${tA("adm.rep.hoursPerEmp","Uren per medewerker")}</h3>
+      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="repExportClocks">${tA("adm.rep.csvExport","CSV export")}</button>
     </div>
     <div class="adm-card-body adm-table-wrap" id="repClocksTable">
-      <div class="adm-loading">Klik op Laden…</div>
+      <div class="adm-loading">${tA("adm.rep.clickLoad","Klik op Laden…")}</div>
     </div>
   </div>
 
   <!-- Onkosten overzicht -->
   <div class="adm-card">
     <div class="adm-card-header">
-      <h3 class="adm-card-title">Onkosten overzicht</h3>
-      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="repExportExpenses">CSV export</button>
+      <h3 class="adm-card-title">${tA("adm.rep.expOverview","Onkosten overzicht")}</h3>
+      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="repExportExpenses">${tA("adm.rep.csvExport","CSV export")}</button>
     </div>
     <div class="adm-card-body adm-table-wrap" id="repExpensesTable">
-      <div class="adm-loading">Klik op Laden…</div>
+      <div class="adm-loading">${tA("adm.rep.clickLoad","Klik op Laden…")}</div>
     </div>
   </div>
 
   <!-- Verlof overzicht -->
   <div class="adm-card">
     <div class="adm-card-header">
-      <h3 class="adm-card-title">Verlof overzicht</h3>
-      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="repExportLeaves">CSV export</button>
+      <h3 class="adm-card-title">${tA("adm.rep.leaveOverview","Verlof overzicht")}</h3>
+      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="repExportLeaves">${tA("adm.rep.csvExport","CSV export")}</button>
     </div>
     <div class="adm-card-body adm-table-wrap" id="repLeavesTable">
-      <div class="adm-loading">Klik op Laden…</div>
+      <div class="adm-loading">${tA("adm.rep.clickLoad","Klik op Laden…")}</div>
     </div>
   </div>
 
   <!-- Werkbonnen status -->
   <div class="adm-card">
     <div class="adm-card-header">
-      <h3 class="adm-card-title">Werkbonnen status</h3>
-      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="repExportWO">CSV export</button>
+      <h3 class="adm-card-title">${tA("adm.rep.woStatus","Werkbonnen status")}</h3>
+      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="repExportWO">${tA("adm.rep.csvExport","CSV export")}</button>
     </div>
     <div class="adm-card-body adm-table-wrap" id="repWOTable">
-      <div class="adm-loading">Klik op Laden…</div>
+      <div class="adm-loading">${tA("adm.rep.clickLoad","Klik op Laden…")}</div>
     </div>
   </div>
 </div>
@@ -3154,22 +3154,22 @@ ${emp ? `
 <!-- Loonlijst -->
 <div class="adm-card" style="margin-top:16px;">
   <div class="adm-card-header">
-    <h3 class="adm-card-title">Loonlijst overzicht</h3>
-    <button class="adm-btn adm-btn-secondary adm-btn-sm" id="repExportPayroll">Export CSV</button>
+    <h3 class="adm-card-title">${tA("adm.rep.payrollOverview","Loonlijst overzicht")}</h3>
+    <button class="adm-btn adm-btn-secondary adm-btn-sm" id="repExportPayroll">${tA("adm.rep.exportCsv","Export CSV")}</button>
   </div>
   <div class="adm-card-body adm-table-wrap" id="repPayrollTable">
-    <div class="adm-loading">Klik op Laden…</div>
+    <div class="adm-loading">${tA("adm.rep.clickLoad","Klik op Laden…")}</div>
   </div>
 </div>
 
 <!-- Winstgevendheid per klant -->
 <div class="adm-card" style="margin-top:16px;">
   <div class="adm-card-header">
-    <h3 class="adm-card-title">Winstgevendheid per klant</h3>
-    <button class="adm-btn adm-btn-secondary adm-btn-sm" id="repExportCust">Export CSV</button>
+    <h3 class="adm-card-title">${tA("adm.rep.custProfit","Winstgevendheid per klant")}</h3>
+    <button class="adm-btn adm-btn-secondary adm-btn-sm" id="repExportCust">${tA("adm.rep.exportCsv","Export CSV")}</button>
   </div>
   <div class="adm-card-body adm-table-wrap" id="repCustTable">
-    <div class="adm-loading">Klik op Laden…</div>
+    <div class="adm-loading">${tA("adm.rep.clickLoad","Klik op Laden…")}</div>
   </div>
 </div>`;
 
@@ -3240,7 +3240,7 @@ ${emp ? `
         const custEl = document.getElementById("repCustTable");
         if (custEl) {
           custEl.innerHTML = custRows.length ? `<table class="adm-table">
-            <thead><tr><th>Klant</th><th>Omzet (excl. btw)</th><th>Openstaand</th><th>Facturen</th><th>Werkbonnen</th><th>Uren geklokt</th><th>Onkosten doorgerekend</th><th>Onkosten eigen kost</th></tr></thead>
+            <thead><tr><th>${tA("adm.thCustomer","Klant")}</th><th>${tA("adm.rep.revenueExVat","Omzet (excl. btw)")}</th><th>${tA("adm.cust.outstandingCap","Openstaand")}</th><th>${tA("nav.facturen","Facturen")}</th><th>${(window.wfpTerms && window.wfpTerms.t("jobPlural")) || tA("nav.workorders","Werkbonnen")}</th><th>${tA("adm.rep.hoursClocked","Uren geklokt")}</th><th>${tA("adm.rep.costPassed","Onkosten doorgerekend")}</th><th>${tA("adm.rep.costOwn","Onkosten eigen kost")}</th></tr></thead>
             <tbody>${custRows.map(r => `<tr>
               <td style="font-weight:600">${esc(r.klant)}</td>
               <td style="font-weight:600">${fmtC(r.omzet)}</td>
@@ -3252,8 +3252,8 @@ ${emp ? `
               <td>${r.kostEigen ? `<span style="color:var(--wf-red)">${fmtC(r.kostEigen)}</span>` : "-"}</td>
             </tr>`).join("")}</tbody>
           </table>
-          <div style="font-size:11.5px;color:var(--gray-400);padding:10px 4px 2px;">Omzet = gefactureerd in de periode (excl. btw). Eigen kost = goedgekeurde onkosten op werkbonnen van deze klant die (nog) niet doorgerekend zijn. Loonkost valt buiten dit overzicht.</div>`
-          : `<div class="adm-empty"><div class="adm-empty-text">Geen facturen of werkbonnen met klant in deze periode</div></div>`;
+          <div style="font-size:11.5px;color:var(--gray-400);padding:10px 4px 2px;">${tA("adm.rep.profitNote","Omzet = gefactureerd in de periode (excl. btw). Eigen kost = goedgekeurde onkosten op werkbonnen van deze klant die (nog) niet doorgerekend zijn. Loonkost valt buiten dit overzicht.")}</div>`
+          : `<div class="adm-empty"><div class="adm-empty-text">${tA("adm.rep.noCustData","Geen facturen of werkbonnen met klant in deze periode")}</div></div>`;
         }
 
         // ── KPIs ─────────────────────────────────────────────
@@ -3271,9 +3271,9 @@ ${emp ? `
         }, 0);
         const completedWO = workorders.filter(w => ["Voltooid","Afgewerkt"].includes(w.status)).length;
 
-        document.getElementById("repKpiHours").textContent = totalHours.toFixed(1) + " u";
+        document.getElementById("repKpiHours").textContent = totalHours.toFixed(1) + " " + tA("adm.rep.hoursUnit","u");
         document.getElementById("repKpiExpenses").textContent = "€" + totalExp.toFixed(0);
-        document.getElementById("repKpiLeaves").textContent = leaveDays + " d";
+        document.getElementById("repKpiLeaves").textContent = leaveDays + " " + tA("adm.leave.daysAbbr","d");
         document.getElementById("repKpiWO").textContent = completedWO;
 
         // ── Uren per medewerker ───────────────────────────────
@@ -3295,26 +3295,26 @@ ${emp ? `
               <div style="flex:1;background:var(--gray-100);border-radius:4px;height:18px;overflow:hidden;">
                 <div style="width:${(r.hours/maxHours*100).toFixed(1)}%;background:${BAR_COLORS[i%BAR_COLORS.length]};height:100%;border-radius:4px;transition:width .4s;"></div>
               </div>
-              <div style="width:52px;font-size:12px;font-weight:600;color:var(--gray-900);text-align:right;">${r.hours.toFixed(1)} u</div>
-              <div style="width:40px;font-size:11px;color:var(--gray-400);text-align:right;">${r.days.size}d</div>
+              <div style="width:52px;font-size:12px;font-weight:600;color:var(--gray-900);text-align:right;">${r.hours.toFixed(1)} ${tA("adm.rep.hoursUnit","u")}</div>
+              <div style="width:40px;font-size:11px;color:var(--gray-400);text-align:right;">${r.days.size}${tA("adm.leave.daysAbbr","d")}</div>
             </div>`).join("")}
             </div>
-            <div style="font-size:11px;color:var(--gray-400);margin-top:6px;text-align:right">Totaal: ${totalHours.toFixed(1)} u · ${hourRows.length} medewerkers</div>`
-          : '<div class="adm-empty">Geen kloktijden in deze periode</div>';
+            <div style="font-size:11px;color:var(--gray-400);margin-top:6px;text-align:right">${tA("adm.total","Totaal")}: ${totalHours.toFixed(1)} ${tA("adm.rep.hoursUnit","u")} · ${hourRows.length} ${tA("nav.employees","Medewerkers").toLowerCase()}</div>`
+          : `<div class="adm-empty">${tA("adm.rep.noClocks","Geen kloktijden in deze periode")}</div>`;
 
         // ── Onkosten ──────────────────────────────────────────
         document.getElementById("repExpensesTable").innerHTML = expenses.length
-          ? `<table class="adm-table"><thead><tr><th>Medewerker</th><th>Datum</th><th>Categorie</th><th>Bedrag</th><th>Status</th></tr></thead><tbody>
+          ? `<table class="adm-table"><thead><tr><th>${tA("adm.thEmployee","Medewerker")}</th><th>${tA("adm.date","Datum")}</th><th>${tA("adm.thCategory","Categorie")}</th><th>${tA("adm.amount","Bedrag")}</th><th>${tA("adm.status","Status")}</th></tr></thead><tbody>
              ${expenses.map(e => `<tr><td>${esc(uName(e))}</td><td>${esc(e.date)}</td><td>${esc(e.category||"-")}</td><td>€${Number(e.amount||0).toFixed(2)}</td><td><span class="adm-status adm-status-${esc(e.status)}">${esc(e.status)}</span></td></tr>`).join("")}
              </tbody></table>`
-          : '<div class="adm-empty">Geen onkosten in deze periode</div>';
+          : `<div class="adm-empty">${tA("adm.rep.noExp","Geen onkosten in deze periode")}</div>`;
 
         // ── Verlof ────────────────────────────────────────────
         document.getElementById("repLeavesTable").innerHTML = leaves.length
-          ? `<table class="adm-table"><thead><tr><th>Medewerker</th><th>Type</th><th>Van</th><th>Tot</th><th>Status</th></tr></thead><tbody>
-             ${leaves.map(l => `<tr><td>${esc(uName(l))}</td><td>${esc(l.type||"-")}</td><td>${esc(l.startDate)}</td><td>${esc(l.endDate)}</td><td><span class="adm-status adm-status-${esc(l.status)}">${esc(l.status)}</span></td></tr>`).join("")}
+          ? `<table class="adm-table"><thead><tr><th>${tA("adm.thEmployee","Medewerker")}</th><th>${tA("adm.leave.thType","Type")}</th><th>${tA("adm.leave.from","Van")}</th><th>${tA("adm.leave.to","Tot")}</th><th>${tA("adm.status","Status")}</th></tr></thead><tbody>
+             ${leaves.map(l => `<tr><td>${esc(uName(l))}</td><td>${esc(tLeaveType(l.type))}</td><td>${esc(l.startDate)}</td><td>${esc(l.endDate)}</td><td><span class="adm-status adm-status-${esc(l.status)}">${esc(tLeaveStatus(l.status))}</span></td></tr>`).join("")}
              </tbody></table>`
-          : '<div class="adm-empty">Geen verlof in deze periode</div>';
+          : `<div class="adm-empty">${tA("adm.rep.noLeave","Geen verlof in deze periode")}</div>`;
 
         // ── Werkbonnen ────────────────────────────────────────
         const woByStatus = {};
@@ -3329,13 +3329,13 @@ ${emp ? `
               ${Object.entries(woByStatus).map(([s,n]) => `
               <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--gray-50);">
                 <div style="width:10px;height:10px;border-radius:50%;background:${woStatusColors[s]||"var(--gray-400)"};flex-shrink:0;"></div>
-                <div style="font-size:13px;color:var(--gray-700);flex:1;">${s}</div>
+                <div style="font-size:13px;color:var(--gray-700);flex:1;">${esc(tWoStatus(s))}</div>
                 <div style="font-size:13px;font-weight:600;color:var(--gray-900);">${n}</div>
                 <div style="font-size:11px;color:var(--gray-400);width:36px;text-align:right;">${(n/woTotal*100).toFixed(0)}%</div>
               </div>`).join("")}
-              <div style="font-size:11px;color:var(--gray-400);margin-top:6px;text-align:right">Totaal: ${woTotal} werkbonnen</div>
+              <div style="font-size:11px;color:var(--gray-400);margin-top:6px;text-align:right">${tA("adm.total","Totaal")}: ${woTotal} ${((window.wfpTerms && window.wfpTerms.t("jobPlural")) || tA("nav.workorders","Werkbonnen")).toLowerCase()}</div>
             </div>`
-          : '<div class="adm-empty">Geen werkbonnen in deze periode</div>';
+          : `<div class="adm-empty">${tA("adm.rep.noWo","Geen werkbonnen in deze periode")}</div>`;
 
         // ── Loonlijst ─────────────────────────────────────────
         const payrollByUser = {};
@@ -3360,7 +3360,7 @@ ${emp ? `
         const payrollTbl = document.getElementById("repPayrollTable");
         if (payrollTbl) {
           if (!payrollRows.length) {
-            payrollTbl.innerHTML = '<div class="adm-empty">Geen data voor loonlijst in deze periode</div>';
+            payrollTbl.innerHTML = `<div class="adm-empty">${tA("adm.rep.noPayroll","Geen data voor loonlijst in deze periode")}</div>`;
           } else {
             const totH = payrollRows.reduce((s,r)=>s+r.hours,0);
             const totE = payrollRows.reduce((s,r)=>s+r.expAmt,0);
@@ -3369,12 +3369,12 @@ ${emp ? `
 <table class="adm-table">
   <thead>
     <tr style="background:var(--gray-50);">
-      <th>Medewerker</th>
-      <th style="text-align:right">Gewerkte dagen</th>
-      <th style="text-align:right">Gewerkte uren</th>
-      <th style="text-align:right">Gem. uur/dag</th>
-      <th style="text-align:right">Verlof (d)</th>
-      <th style="text-align:right">Onkosten (€)</th>
+      <th>${tA("adm.thEmployee","Medewerker")}</th>
+      <th style="text-align:right">${tA("adm.rep.workedDays","Gewerkte dagen")}</th>
+      <th style="text-align:right">${tA("adm.rep.workedHours","Gewerkte uren")}</th>
+      <th style="text-align:right">${tA("adm.rep.avgHourDay","Gem. uur/dag")}</th>
+      <th style="text-align:right">${tA("adm.rep.leaveD","Verlof (d)")}</th>
+      <th style="text-align:right">${tA("adm.rep.expEur","Onkosten (€)")}</th>
     </tr>
   </thead>
   <tbody>
@@ -3389,11 +3389,11 @@ ${emp ? `
   </tbody>
   <tfoot>
     <tr style="background:var(--gray-100);font-weight:600;border-top:2px solid var(--gray-200);">
-      <td>Totaal (${payrollRows.length} medewerkers)</td>
+      <td>${tA("adm.total","Totaal")} (${payrollRows.length} ${tA("nav.employees","Medewerkers").toLowerCase()})</td>
       <td style="text-align:right;">-</td>
-      <td style="text-align:right;">${totH.toFixed(2)} u</td>
+      <td style="text-align:right;">${totH.toFixed(2)} ${tA("adm.rep.hoursUnit","u")}</td>
       <td style="text-align:right;">-</td>
-      <td style="text-align:right;">${totL} d</td>
+      <td style="text-align:right;">${totL} ${tA("adm.leave.daysAbbr","d")}</td>
       <td style="text-align:right;">€${totE.toFixed(2)}</td>
     </tr>
   </tfoot>
@@ -3402,7 +3402,7 @@ ${emp ? `
         }
 
       } catch (err) {
-        document.getElementById("repClocksTable").innerHTML = `<div class="adm-empty" style="color:var(--wf-red);">Fout: ${err.message}</div>`;
+        document.getElementById("repClocksTable").innerHTML = `<div class="adm-empty" style="color:var(--wf-red);">${tA("adm.error","Fout")}: ${err.message}</div>`;
       }
     }
 
