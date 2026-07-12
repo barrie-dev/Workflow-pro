@@ -14,6 +14,17 @@
   // ── Helpers ────────────────────────────────────────────────
   const token  = () => window.wfpCore.token();
   const esc    = v => window.wfpCore.esc(v);
+  // i18n-helper voor de superadmin-shell (t()-gebaseerd, dynamisch opgebouwd).
+  const tS = (key, fallback) => window.wfpI18n ? window.wfpI18n.t(key, fallback) : fallback;
+  let _saLangHandler = null;
+  function saViewTitle(v) {
+    const map = {
+      dashboard:["sa.dashboard","Dashboard"], tenants:["sa.tenants","Tenants"],
+      billing:["sa.billing","Facturatie / MRR"], modules:["sa.modules","Modules & Bundels"], integrations:["sa.integrations","Integraties"], system:["sa.system","Systeem"], ops:["sa.ops","Operations"], security:["sa.securityGov","Beveiliging & governance"], support:["sa.support","Support"],
+      staff:["sa.staff","Platformteam"], resellers:["sa.resellers","Resellers"], audit:["sa.audit","Audit Log"], communication:["sa.communication","Communicatie"], settings:["sa.settings","Instellingen"]
+    };
+    const e = map[v]; return e ? tS(e[0], e[1]) : v;
+  }
   const fmtD   = iso => iso ? new Date(iso).toLocaleDateString("nl-BE") : "-";
   const fmtDT  = iso => iso ? new Date(iso).toLocaleString("nl-BE",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}) : "-";
   const fmtEur = n  => new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR",maximumFractionDigits:0}).format(Number(n||0));
@@ -225,59 +236,59 @@
     </div>
 
     <nav class="sa-nav">
-      <div class="sa-nav-section">Beheer</div>
+      <div class="sa-nav-section">${tS("sa.navManage","Beheer")}</div>
       <button class="sa-nav-item active" data-view="dashboard">
-        <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>Dashboard
+        <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>${tS("sa.dashboard","Dashboard")}
       </button>
       <button class="sa-nav-item" data-view="tenants">
-        <svg viewBox="0 0 24 24"><path d="M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z"/></svg>Tenants
+        <svg viewBox="0 0 24 24"><path d="M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z"/></svg>${tS("sa.tenants","Tenants")}
         <span class="nav-badge" id="navBadgeTenants" style="display:none">0</span>
       </button>
 
       <div class="sa-nav-divider"></div>
-      <div class="sa-nav-section">Financieel</div>
+      <div class="sa-nav-section">${tS("sa.navFinance","Financieel")}</div>
       <button class="sa-nav-item" data-view="billing">
-        <svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>Facturatie / MRR
+        <svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>${tS("sa.billing","Facturatie / MRR")}
       </button>
       <button class="sa-nav-item" data-view="modules">
-        <svg viewBox="0 0 24 24"><path d="M4 4h7v7H4V4zm9 0h7v7h-7V4zM4 13h7v7H4v-7zm9 0h7v7h-7v-7z"/></svg>Modules &amp; Bundels
+        <svg viewBox="0 0 24 24"><path d="M4 4h7v7H4V4zm9 0h7v7h-7V4zM4 13h7v7H4v-7zm9 0h7v7h-7v-7z"/></svg>${tS("sa.modules","Modules &amp; Bundels")}
       </button>
 
       <div class="sa-nav-divider"></div>
-      <div class="sa-nav-section">Systeem</div>
+      <div class="sa-nav-section">${tS("sa.navSystem","Systeem")}</div>
       <button class="sa-nav-item" data-view="integrations">
-        <svg viewBox="0 0 24 24"><path d="M22 7h-7V2H9v5H2v15h20V7zM11 4h2v3h-2V4zm9 16H4V9h16v11zM9 13h2v2H9v-2zm4 0h2v2h-2v-2z"/></svg>Integraties
+        <svg viewBox="0 0 24 24"><path d="M22 7h-7V2H9v5H2v15h20V7zM11 4h2v3h-2V4zm9 16H4V9h16v11zM9 13h2v2H9v-2zm4 0h2v2h-2v-2z"/></svg>${tS("sa.integrations","Integraties")}
       </button>
       <button class="sa-nav-item" data-view="system">
-        <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>Systeem
+        <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>${tS("sa.system","Systeem")}
         <span class="nav-badge" id="navBadgeErrors" style="display:none">0</span>
       </button>
       <button class="sa-nav-item" data-view="ops">
-        <svg viewBox="0 0 24 24"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>Operations
+        <svg viewBox="0 0 24 24"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>${tS("sa.ops","Operations")}
         <span class="nav-badge" id="navBadgeOps" style="display:none">0</span>
       </button>
       <button class="sa-nav-item" data-view="security">
-        <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>Beveiliging
+        <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>${tS("sa.security","Beveiliging")}
         <span class="nav-badge" id="navBadgeSecurity" style="display:none">0</span>
       </button>
       <button class="sa-nav-item" data-view="support">
-        <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>Support-toegang
+        <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>${tS("sa.support","Support-toegang")}
         <span class="nav-badge" id="navBadgeSupport" style="display:none">0</span>
       </button>
       <button class="sa-nav-item" data-view="staff">
-        <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>Platformteam
+        <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>${tS("sa.staff","Platformteam")}
       </button>
       <button class="sa-nav-item" data-view="resellers">
-        <svg viewBox="0 0 24 24"><path d="M12 2l9 4v6c0 5-3.8 9.7-9 11-5.2-1.3-9-6-9-11V6l9-4zm0 2.2L5 7v5c0 3.9 2.9 7.6 7 8.9 4.1-1.3 7-5 7-8.9V7l-7-2.8zM11 8h2v3h3v2h-3v3h-2v-3H8v-2h3V8z"/></svg>Resellers
+        <svg viewBox="0 0 24 24"><path d="M12 2l9 4v6c0 5-3.8 9.7-9 11-5.2-1.3-9-6-9-11V6l9-4zm0 2.2L5 7v5c0 3.9 2.9 7.6 7 8.9 4.1-1.3 7-5 7-8.9V7l-7-2.8zM11 8h2v3h3v2h-3v3h-2v-3H8v-2h3V8z"/></svg>${tS("sa.resellers","Resellers")}
       </button>
       <button class="sa-nav-item" data-view="audit">
-        <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6zm2-8h8v2H8zm0 4h5v2H8z"/></svg>Audit Log
+        <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6zm2-8h8v2H8zm0 4h5v2H8z"/></svg>${tS("sa.audit","Audit Log")}
       </button>
       <button class="sa-nav-item" data-view="communication">
-        <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12zM6 7h12v2H6zm0 4h8v2H6z"/></svg>Communicatie
+        <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12zM6 7h12v2H6zm0 4h8v2H6z"/></svg>${tS("sa.communication","Communicatie")}
       </button>
       <button class="sa-nav-item" data-view="settings">
-        <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>Instellingen
+        <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>${tS("sa.settings","Instellingen")}
       </button>
     </nav>
 
@@ -291,7 +302,7 @@
       </div>
       <button class="sa-btn-logout" id="saLogout">
         <svg viewBox="0 0 24 24"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
-        Uitloggen
+        ${tS("rsp.logout","Uitloggen")}
       </button>
     </div>
     <div style="padding:8px 12px 12px;font-size:10.5px;color:rgba(255,255,255,.4);text-align:center">Powered by <strong style="color:rgba(255,255,255,.65)">Monargo</strong></div>
@@ -302,10 +313,11 @@
       <button class="sa-menu-toggle" id="saMenuToggle">
         <svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
       </button>
-      <div class="sa-topbar-title" id="saTopTitle">Dashboard</div>
+      <div class="sa-topbar-title" id="saTopTitle">${tS("sa.dashboard","Dashboard")}</div>
       <div class="sa-topbar-actions" id="saTopActions"></div>
+      <button id="saLangToggle" title="NL / FR / EN" style="margin-left:8px;background:var(--surface);color:var(--ink);border:1px solid var(--line-strong,var(--gray-200));border-radius:9px;padding:7px 11px;font-size:12px;font-weight:600;cursor:pointer">NL</button>
     </header>
-    <div class="sa-content" id="saContent"><div class="sa-loader">Laden…</div></div>
+    <div class="sa-content" id="saContent"><div class="sa-loader">${tS("adm.loading","Laden…")}</div></div>
   </main>
 </div>`;
 
@@ -315,11 +327,7 @@
         el.querySelectorAll(".sa-nav-item").forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
         _view = btn.dataset.view;
-        document.getElementById("saTopTitle").textContent = {
-          dashboard:"Dashboard", tenants:"Tenants",
-          billing:"Facturatie / MRR", modules:"Modules & Bundels", integrations:"Integraties", system:"Systeem", ops:"Operations", security:"Beveiliging &amp; governance", support:"Support",
-          staff:"Platformteam", resellers:"Resellers", audit:"Audit Log", communication:"Communicatie", settings:"Instellingen"
-        }[_view] || _view;
+        document.getElementById("saTopTitle").textContent = saViewTitle(_view);
         document.getElementById("saTopActions").innerHTML = "";
         document.getElementById("saSidebar").classList.remove("open");
         renderView();
@@ -329,6 +337,19 @@
     document.getElementById("saMenuToggle")?.addEventListener("click", () => {
       document.getElementById("saSidebar").classList.toggle("open");
     });
+
+    // NL/FR/EN taalwissel: knop toont de taal waarnaar je overschakelt.
+    if (window.wfpI18n) {
+      const paintLang = () => {
+        const b = document.getElementById("saLangToggle");
+        if (b) b.textContent = window.wfpI18n.nextLang(window.wfpI18n.lang).toUpperCase();
+      };
+      paintLang();
+      document.getElementById("saLangToggle")?.addEventListener("click", () => window.wfpI18n.cycleLang());
+      document.removeEventListener("wfp:langchange", _saLangHandler);
+      _saLangHandler = () => buildShell();
+      document.addEventListener("wfp:langchange", _saLangHandler);
+    }
 
     document.getElementById("saLogout")?.addEventListener("click", () => {
       localStorage.removeItem("wfp_token");
@@ -600,32 +621,32 @@ ${(s.locked||[]).length ? `<div class="sa-card" style="margin-bottom:16px"><div 
       c.innerHTML = `
 <div class="sa-kpis">
   <div class="sa-kpi kpi-indigo">
-    <div class="sa-kpi-label">Tenants totaal</div>
+    <div class="sa-kpi-label">${tS("sa.tenantsTotal","Tenants totaal")}</div>
     <div class="sa-kpi-value">${st.tenants?.total||0}</div>
-    <div class="sa-kpi-sub">${st.tenants?.active||0} actief · ${st.tenants?.trial||0} trial</div>
+    <div class="sa-kpi-sub">${st.tenants?.active||0} ${tS("adm.active","actief").toLowerCase()} · ${st.tenants?.trial||0} trial</div>
   </div>
   <div class="sa-kpi kpi-green">
-    <div class="sa-kpi-label">MRR (schatting)</div>
+    <div class="sa-kpi-label">${tS("sa.mrrEst","MRR (schatting)")}</div>
     <div class="sa-kpi-value">${fmtEur(st.mrr)}</div>
     <div class="sa-kpi-sub">ARR ${fmtEur(st.arr)}</div>
   </div>
   <div class="sa-kpi kpi-blue">
-    <div class="sa-kpi-label">Gebruikers totaal</div>
+    <div class="sa-kpi-label">${tS("sa.usersTotal","Gebruikers totaal")}</div>
     <div class="sa-kpi-value">${st.users?.total||0}</div>
-    <div class="sa-kpi-sub">${st.users?.active||0} actief</div>
+    <div class="sa-kpi-sub">${st.users?.active||0} ${tS("adm.active","actief").toLowerCase()}</div>
   </div>
   <div class="sa-kpi kpi-orange">
-    <div class="sa-kpi-label">Support-sessies actief</div>
+    <div class="sa-kpi-label">${tS("sa.supportSessionsActive","Support-sessies actief")}</div>
     <div class="sa-kpi-value">${activeSessions.length}</div>
-    <div class="sa-kpi-sub">${supRows.filter(r=>r.allowed).length} tenants gaven toestemming</div>
+    <div class="sa-kpi-sub">${tS("sa.tenantsConsented","{n} tenants gaven toestemming").replace("{n}", supRows.filter(r=>r.allowed).length)}</div>
   </div>
   <div class="sa-kpi ${(st.errors24h||0)>0?"kpi-red":"kpi-teal"}">
-    <div class="sa-kpi-label">Errors (24h)</div>
+    <div class="sa-kpi-label">${tS("sa.errors24h","Errors (24h)")}</div>
     <div class="sa-kpi-value">${st.errors24h||0}</div>
-    <div class="sa-kpi-sub">${(st.errors24h||0)===0?"Systeem gezond":"Controleer Systeem"}</div>
+    <div class="sa-kpi-sub">${(st.errors24h||0)===0?tS("sa.systemHealthy","Systeem gezond"):tS("sa.checkSystem","Controleer Systeem")}</div>
   </div>
   <div class="sa-kpi kpi-purple">
-    <div class="sa-kpi-label">Server uptime</div>
+    <div class="sa-kpi-label">${tS("sa.serverUptime","Server uptime")}</div>
     <div class="sa-kpi-value">${fmtUptime(st.uptime||0)}</div>
     <div class="sa-kpi-sub">${st.releaseChannel||"dev"} · ${(st.commitSha||"local").slice(0,7)}</div>
   </div>
@@ -634,24 +655,24 @@ ${(s.locked||[]).length ? `<div class="sa-card" style="margin-bottom:16px"><div 
 <div class="sa-grid2">
   <div class="sa-card">
     <div class="sa-card-head">
-      <div class="sa-card-title">Recente tenants</div>
-      <button class="sa-btn btn-ghost sm" data-nav="tenants">Alle →</button>
+      <div class="sa-card-title">${tS("sa.recentTenants","Recente tenants")}</div>
+      <button class="sa-btn btn-ghost sm" data-nav="tenants">${tS("sa.allArrow","Alle →")}</button>
     </div>
     <div id="dashTenantList"><div class="sa-loader">…</div></div>
   </div>
   <div class="sa-card">
     <div class="sa-card-head">
-      <div class="sa-card-title">Actieve support-sessies</div>
-      <button class="sa-btn btn-ghost sm" data-nav="support">Alle →</button>
+      <div class="sa-card-title">${tS("sa.activeSupportSessions","Actieve support-sessies")}</div>
+      <button class="sa-btn btn-ghost sm" data-nav="support">${tS("sa.allArrow","Alle →")}</button>
     </div>
     ${activeSessions.length ? activeSessions.slice(0,5).map(r=>`
     <div style="padding:10px 16px;border-bottom:1px solid var(--gray-50);display:flex;align-items:center;gap:10px">
       <div style="flex:1;min-width:0">
         <div style="font-size:13px;font-weight:600;color:var(--gray-900);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.tenantName||r.tenantId||"-")}</div>
-        <div style="font-size:11px;color:var(--gray-400)">${esc(r.session.agent||"agent")} · verloopt ${fmtD(r.session.expiresAt)}</div>
+        <div style="font-size:11px;color:var(--gray-400)">${esc(r.session.agent||"agent")} · ${tS("sa.expires","verloopt")} ${fmtD(r.session.expiresAt)}</div>
       </div>
-      ${badge(r.session.scope==="read"?"alleen-lezen":"lezen+schrijven", r.session.scope==="read"?"badge-gray":"badge-red")}
-    </div>`).join("") : `<div class="sa-empty">Geen actieve support-sessies</div>`}
+      ${badge(r.session.scope==="read"?tS("mgr.scopeRead","alleen-lezen"):tS("sa.readWrite","lezen+schrijven"), r.session.scope==="read"?"badge-gray":"badge-red")}
+    </div>`).join("") : `<div class="sa-empty">${tS("sa.noActiveSupport","Geen actieve support-sessies")}</div>`}
   </div>
 </div>`;
 
@@ -662,14 +683,14 @@ ${(s.locked||[]).length ? `<div class="sa-card" style="margin-bottom:16px"><div 
         const el = document.getElementById("dashTenantList");
         if (el) el.innerHTML = _cache.tenants.length ? `
         <div class="sa-tbl-wrap"><table class="sa-tbl">
-          <thead><tr><th>Naam</th><th>Plan</th><th>Status</th><th>Gebruikers</th></tr></thead>
+          <thead><tr><th>${tS("adm.cust.thName","Naam")}</th><th>${tS("sa.plan","Plan")}</th><th>${tS("adm.status","Status")}</th><th>${tS("sa.users","Gebruikers")}</th></tr></thead>
           <tbody>${_cache.tenants.slice(0,6).map(t=>`<tr>
             <td><div class="main">${esc(t.name)}</div><div class="sub">${esc(t.id)}</div></td>
             <td>${badge(t.plan, planColor[t.plan])}</td>
             <td>${badge(t.status, statusColor[t.status])}</td>
             <td>${t.counts?.users||0}</td>
           </tr>`).join("")}</tbody>
-        </table></div>` : `<div class="sa-empty">Geen tenants · <button class="sa-btn btn-primary sm" style="margin-top:8px" data-nav="tenants">+ Aanmaken</button></div>`;
+        </table></div>` : `<div class="sa-empty">${tS("sa.noTenants","Geen tenants")} · <button class="sa-btn btn-primary sm" style="margin-top:8px" data-nav="tenants">+ ${tS("adm.createBtn","Aanmaken")}</button></div>`;
       } catch(_) {}
     } catch(e) { content().innerHTML = err(e); }
   }
@@ -682,23 +703,23 @@ ${(s.locked||[]).length ? `<div class="sa-card" style="margin-bottom:16px"><div 
     try {
       const td = await api("/api/admin/tenants");
       _cache.tenants = td.tenants||[];
-      topAction(`<button class="sa-btn btn-primary" id="saNewTenant">+ Nieuwe tenant</button>`);
+      topAction(`<button class="sa-btn btn-primary" id="saNewTenant">+ ${tS("sa.newTenant","Nieuwe tenant")}</button>`);
       c.innerHTML = `
 <div class="sa-page-head">
-  <h1>Tenants<span class="cnt">${_cache.tenants.length}</span></h1><div class="sa-spacer"></div>
+  <h1>${tS("sa.tenants","Tenants")}<span class="cnt">${_cache.tenants.length}</span></h1><div class="sa-spacer"></div>
 </div>
 <div class="sa-filters">
-  <input id="tfSearch" placeholder="Zoek naam, e-mail, ID…" style="flex:1;min-width:180px">
-  <select id="tfPlan"><option value="">Alle plannen</option><option>starter</option><option>business</option><option>enterprise</option></select>
-  <select id="tfStatus"><option value="">Alle statussen</option><option>trial</option><option>active</option><option>suspended</option></select>
+  <input id="tfSearch" placeholder="${tS("sa.searchTenantPh","Zoek naam, e-mail, ID…")}" style="flex:1;min-width:180px">
+  <select id="tfPlan"><option value="">${tS("sa.allPlans","Alle plannen")}</option><option>starter</option><option>business</option><option>enterprise</option></select>
+  <select id="tfStatus"><option value="">${tS("adm.allStatuses","Alle statussen")}</option><option>trial</option><option>active</option><option>suspended</option></select>
 </div>
 <div class="sa-card">
   <div class="sa-tbl-wrap">
     <table class="sa-tbl">
-      <thead><tr><th>Tenant</th><th>Plan</th><th>Status</th><th>Gebruikers</th><th>Werkbonnen</th><th>Aangemaakt</th><th>Acties</th></tr></thead>
+      <thead><tr><th>${tS("sa.tenant","Tenant")}</th><th>${tS("sa.plan","Plan")}</th><th>${tS("adm.status","Status")}</th><th>${tS("sa.users","Gebruikers")}</th><th>${(window.wfpTerms && window.wfpTerms.t("jobPlural")) || tS("nav.workorders","Werkbonnen")}</th><th>${tS("sa.created","Aangemaakt")}</th><th>${tS("adm.actions","Acties")}</th></tr></thead>
       <tbody id="tenantTbody"></tbody>
     </table>
-    <div id="tenantEmpty" class="sa-empty" style="display:none">Geen tenants gevonden</div>
+    <div id="tenantEmpty" class="sa-empty" style="display:none">${tS("sa.noTenantsFound","Geen tenants gevonden")}</div>
   </div>
 </div>`;
 
@@ -2018,7 +2039,7 @@ ${enrolled.map(e => `
 
   // ── Utils ───────────────────────────────────────────────────
   function content()  { return document.getElementById("saContent"); }
-  function loader()   { return `<div class="sa-loader">Laden…</div>`; }
+  function loader()   { return `<div class="sa-loader">${tS("adm.loading","Laden…")}</div>`; }
   function err(e)     { return `<div class="sa-error">${esc(e.message)}</div>`; }
   function topAction(html) { const el = document.getElementById("saTopActions"); if (el) el.innerHTML = html; }
   function badge_update(id, n) {
