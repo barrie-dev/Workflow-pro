@@ -5098,7 +5098,7 @@ ${phases.map(p => {
 
   async function renderBilling() {
     const content = document.getElementById("admContent");
-    content.innerHTML = `<div class="adm-loading"><div class="adm-spinner"></div>Laden…</div>`;
+    content.innerHTML = `<div class="adm-loading"><div class="adm-spinner"></div>${tA("adm.loading","Laden…")}</div>`;
     try {
       const [sumData, plansData] = await Promise.all([
         api("GET", "/billing/summary"),
@@ -5122,10 +5122,10 @@ ${phases.map(p => {
 
       content.innerHTML = `
 <div class="adm-kpis" style="margin-bottom:16px">
-  <div class="adm-kpi adm-kpi-green"><div class="adm-kpi-label">Huidig abonnement</div><div class="adm-kpi-value" style="font-size:18px;text-transform:capitalize">${esc(billing.plan||"-")}</div><div class="adm-kpi-sub">${esc(billing.status||"")}</div></div>
-  <div class="adm-kpi adm-kpi-blue"><div class="adm-kpi-label">Maandprijs</div><div class="adm-kpi-value" style="font-size:20px">${fmtEur(monthlyShown)}</div><div class="adm-kpi-sub">excl. BTW</div></div>
-  <div class="adm-kpi adm-kpi-purple"><div class="adm-kpi-label">Facturen</div><div class="adm-kpi-value">${invoices.length}</div><div class="adm-kpi-sub">${openInvoices.length} openstaand</div></div>
-  <div class="adm-kpi ${hasPayment?"adm-kpi-green":"adm-kpi-amber"}"><div class="adm-kpi-label">Betaalmethode</div><div class="adm-kpi-value" style="font-size:15px">${hasPayment?esc(billing.paymentMethod):"Niet ingesteld"}</div></div>
+  <div class="adm-kpi adm-kpi-green"><div class="adm-kpi-label">${tA("adm.bill.currentSub","Huidig abonnement")}</div><div class="adm-kpi-value" style="font-size:18px;text-transform:capitalize">${esc(billing.plan||"-")}</div><div class="adm-kpi-sub">${esc(billing.status||"")}</div></div>
+  <div class="adm-kpi adm-kpi-blue"><div class="adm-kpi-label">${tA("adm.bill.monthly","Maandprijs")}</div><div class="adm-kpi-value" style="font-size:20px">${fmtEur(monthlyShown)}</div><div class="adm-kpi-sub">${tA("adm.bill.exclVat","excl. BTW")}</div></div>
+  <div class="adm-kpi adm-kpi-purple"><div class="adm-kpi-label">${tA("nav.facturen","Facturen")}</div><div class="adm-kpi-value">${invoices.length}</div><div class="adm-kpi-sub">${openInvoices.length} ${tA("adm.cust.outstanding","openstaand")}</div></div>
+  <div class="adm-kpi ${hasPayment?"adm-kpi-green":"adm-kpi-amber"}"><div class="adm-kpi-label">${tA("adm.bill.paymentMethod","Betaalmethode")}</div><div class="adm-kpi-value" style="font-size:15px">${hasPayment?esc(billing.paymentMethod):tA("adm.bill.notSet","Niet ingesteld")}</div></div>
 </div>
 
 ${billing.status === "trial" ? (() => {
@@ -5134,20 +5134,20 @@ ${billing.status === "trial" ? (() => {
   return `<div style="background:var(--wf-yellow-l);border:1px solid var(--wf-yellow-l);border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:12px">
   <span style="font-size:20px"></span>
   <div>
-    <div style="font-size:14px;font-weight:600;color:var(--wf-yellow)">Gratis proefperiode${daysLeft != null ? ` · nog ${daysLeft} dag${daysLeft === 1 ? "" : "en"}` : " actief"}</div>
+    <div style="font-size:14px;font-weight:600;color:var(--wf-yellow)">${tA("adm.bill.trialTitle","Gratis proefperiode")}${daysLeft != null ? ` · ${tA("adm.bill.trialDaysLeft","nog {n} dagen").replace("{n}", daysLeft)}` : " " + tA("adm.bill.active","actief")}</div>
     <div style="font-size:12px;color:var(--wf-yellow);margin-top:2px">${hasPayment
-      ? `Je kaart staat geregistreerd. ${endStr ? `Vanaf ${endStr} wordt automatisch ${fmtEur(monthlyShown)}/maand gefactureerd.` : "Na de proefperiode start de facturatie automatisch."} Opzeggen kan altijd in het beheerportaal.`
-      : "Kies hieronder je bundel. Je kaartgegevens zijn vereist om te starten · je wordt pas na 14 dagen gefactureerd en kan altijd opzeggen."}</div>
+      ? `${tA("adm.bill.cardOnFile","Je kaart staat geregistreerd.")} ${endStr ? tA("adm.bill.billFrom","Vanaf {d} wordt automatisch {a}/maand gefactureerd.").replace("{d}", endStr).replace("{a}", fmtEur(monthlyShown)) : tA("adm.bill.autoBillAfter","Na de proefperiode start de facturatie automatisch.")} ${tA("adm.bill.cancelAnytime","Opzeggen kan altijd in het beheerportaal.")}`
+      : tA("adm.bill.pickBundleTrial","Kies hieronder je bundel. Je kaartgegevens zijn vereist om te starten · je wordt pas na 14 dagen gefactureerd en kan altijd opzeggen.")}</div>
   </div>
 </div>`;
 })() : ""}
 
 <!-- Bundel kiezen -->
 <div class="adm-card">
-  <div class="adm-card-header"><h3 class="adm-card-title">Kies je bundel</h3>
+  <div class="adm-card-header"><h3 class="adm-card-title">${tA("adm.bill.pickBundle","Kies je bundel")}</h3>
     <div style="display:inline-flex;background:var(--gray-100);border-radius:980px;padding:3px;gap:2px;">
-      <button class="adm-period-btn" data-per="year" style="border:none;cursor:pointer;font:600 12px inherit;padding:6px 14px;border-radius:980px;background:${_billPeriod==="year"?"var(--surface)":"transparent"};color:${_billPeriod==="year"?"var(--ink)":"var(--muted)"};box-shadow:${_billPeriod==="year"?"0 1px 2px rgba(0,0,0,.08)":"none"};">Jaarlijks <span style="color:var(--wf-green);font-weight:600;">−17%</span></button>
-      <button class="adm-period-btn" data-per="month" style="border:none;cursor:pointer;font:600 12px inherit;padding:6px 14px;border-radius:980px;background:${_billPeriod==="month"?"var(--surface)":"transparent"};color:${_billPeriod==="month"?"var(--ink)":"var(--muted)"};box-shadow:${_billPeriod==="month"?"0 1px 2px rgba(0,0,0,.08)":"none"};">Maandelijks</button>
+      <button class="adm-period-btn" data-per="year" style="border:none;cursor:pointer;font:600 12px inherit;padding:6px 14px;border-radius:980px;background:${_billPeriod==="year"?"var(--surface)":"transparent"};color:${_billPeriod==="year"?"var(--ink)":"var(--muted)"};box-shadow:${_billPeriod==="year"?"0 1px 2px rgba(0,0,0,.08)":"none"};">${tA("adm.bill.yearly","Jaarlijks")} <span style="color:var(--wf-green);font-weight:600;">−17%</span></button>
+      <button class="adm-period-btn" data-per="month" style="border:none;cursor:pointer;font:600 12px inherit;padding:6px 14px;border-radius:980px;background:${_billPeriod==="month"?"var(--surface)":"transparent"};color:${_billPeriod==="month"?"var(--ink)":"var(--muted)"};box-shadow:${_billPeriod==="month"?"0 1px 2px rgba(0,0,0,.08)":"none"};">${tA("adm.bill.monthlyToggle","Maandelijks")}</button>
     </div>
   </div>
   <div class="adm-card-body">
@@ -5161,59 +5161,59 @@ ${billing.status === "trial" ? (() => {
         const annual = p.baseAnnual || 0;
         const perMonth = _billPeriod === "year" ? Math.round(annual / 12) : Math.round(annual / 10);
         const seatExtra = _billPeriod === "year" ? Math.round((p.seatAnnual || 0) / 12) : Math.round((p.seatAnnual || 0) / 10);
-        const subStr = p.custom ? "Jaarcontract &amp; SLA"
-          : (_billPeriod === "year" ? `${fmtEur(annual)}/jaar` : "maandelijks gefactureerd")
-            + ` · incl. ${p.includedSeats} gebruikers · +${fmtEur(seatExtra)}/extra`;
+        const subStr = p.custom ? tA("adm.bill.yearContractSla","Jaarcontract &amp; SLA")
+          : (_billPeriod === "year" ? `${fmtEur(annual)}/${tA("adm.bill.perYear","jaar")}` : tA("adm.bill.billedMonthly","maandelijks gefactureerd"))
+            + ` · ${tA("adm.bill.inclUsers","incl. {n} gebruikers").replace("{n}", p.includedSeats)} · +${fmtEur(seatExtra)}/${tA("adm.bill.extra","extra")}`;
         return `<div style="border:${ring} solid ${accent};border-radius:16px;padding:20px 18px;position:relative;display:flex;flex-direction:column;gap:10px;background:var(--surface);">
           ${isCurrent
-            ? `<span style="position:absolute;top:-10px;right:16px;background:var(--wf-blue);color:#fff;font-size:10px;font-weight:600;padding:3px 10px;border-radius:999px;">Huidig plan</span>`
-            : p.popular ? `<span style="position:absolute;top:-10px;right:16px;background:var(--wf-blue);color:#fff;font-size:10px;font-weight:600;padding:3px 10px;border-radius:999px;">Meest gekozen</span>` : ""}
+            ? `<span style="position:absolute;top:-10px;right:16px;background:var(--wf-blue);color:#fff;font-size:10px;font-weight:600;padding:3px 10px;border-radius:999px;">${tA("adm.bill.currentPlanBadge","Huidig plan")}</span>`
+            : p.popular ? `<span style="position:absolute;top:-10px;right:16px;background:var(--wf-blue);color:#fff;font-size:10px;font-weight:600;padding:3px 10px;border-radius:999px;">${tA("adm.bill.mostChosen","Meest gekozen")}</span>` : ""}
           <div style="font-size:15px;font-weight:600;color:var(--ink);letter-spacing:-.2px;">${esc(p.label)}</div>
           <div style="display:flex;align-items:baseline;gap:4px;">
-            <span style="font-size:26px;font-weight:600;color:var(--ink);letter-spacing:-1px;">${p.custom?"Op maat":fmtEur(perMonth)}</span>
-            ${p.custom?"":`<span style="font-size:12px;color:var(--muted);">/maand</span>`}
+            <span style="font-size:26px;font-weight:600;color:var(--ink);letter-spacing:-1px;">${p.custom?tA("adm.bill.custom","Op maat"):fmtEur(perMonth)}</span>
+            ${p.custom?"":`<span style="font-size:12px;color:var(--muted);">/${tA("adm.bill.perMonth","maand")}</span>`}
           </div>
           <div style="font-size:11.5px;color:var(--muted);min-height:16px;">${subStr}</div>
           <ul style="list-style:none;padding:0;margin:6px 0 2px;display:flex;flex-direction:column;gap:6px;flex:1;">
             ${(p.features||[]).slice(0,8).map(f=>`<li style="font-size:12.5px;color:var(--text);display:flex;gap:7px;align-items:flex-start;"><span style="color:var(--wf-blue);font-weight:600;line-height:1.2;">✓</span> ${esc(f)}</li>`).join("")}
           </ul>
           ${isCurrent
-            ? `<button class="adm-btn adm-btn-secondary adm-btn-sm" disabled style="opacity:.55;cursor:default;">Je huidige plan</button>`
+            ? `<button class="adm-btn adm-btn-secondary adm-btn-sm" disabled style="opacity:.55;cursor:default;">${tA("adm.bill.yourCurrentPlan","Je huidige plan")}</button>`
             : p.custom
-              ? `<button class="adm-btn adm-btn-secondary adm-btn-sm bill-contact">Contacteer ons</button>`
-              : `<button class="adm-btn ${p.popular?"adm-btn-primary":"adm-btn-secondary"} adm-btn-sm bill-select" data-plan="${p.key}" data-label="${esc(p.label)}">${trialEligible?"Start 14 dagen gratis":`Kies ${esc(p.label)}`}</button>`}
+              ? `<button class="adm-btn adm-btn-secondary adm-btn-sm bill-contact">${tA("adm.bill.contactUs","Contacteer ons")}</button>`
+              : `<button class="adm-btn ${p.popular?"adm-btn-primary":"adm-btn-secondary"} adm-btn-sm bill-select" data-plan="${p.key}" data-label="${esc(p.label)}">${trialEligible?tA("adm.bill.startTrial","Start 14 dagen gratis"):tA("adm.bill.choosePlan","Kies {p}").replace("{p}", esc(p.label))}</button>`}
         </div>`;
       }).join("")}
     </div>
     ${trialEligible ? `<div style="margin-top:14px;background:var(--wf-blue-l);border-radius:12px;padding:12px 16px;font-size:12.5px;color:var(--wf-blue-d);display:flex;gap:9px;align-items:flex-start;">
       <span style="font-size:15px;"></span>
-      <span><strong>14 dagen gratis</strong> op elk plan. Je kaartgegevens zijn vereist om te starten (via onze beveiligde betaalpartner Stripe), maar je wordt <strong>pas na 14 dagen</strong> gefactureerd · en je kan altijd opzeggen vóór het einde van de proefperiode.</span>
+      <span>${tA("adm.bill.trialInfo","<strong>14 dagen gratis</strong> op elk plan. Je kaartgegevens zijn vereist om te starten (via onze beveiligde betaalpartner Stripe), maar je wordt <strong>pas na 14 dagen</strong> gefactureerd · en je kan altijd opzeggen vóór het einde van de proefperiode.")}</span>
     </div>` : ""}
     <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="billPortal">Abonnement &amp; betaalmethode beheren</button>
-      <span style="font-size:12px;color:var(--gray-400);">Veilig betalen · je betaalgegevens worden door onze betaalpartner (Stripe) verwerkt. Upgraden, downgraden, betaalmethode en opzeggen regel je in het beheerportaal.</span>
+      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="billPortal">${tA("adm.bill.managePortal","Abonnement &amp; betaalmethode beheren")}</button>
+      <span style="font-size:12px;color:var(--gray-400);">${tA("adm.bill.portalNote","Veilig betalen · je betaalgegevens worden door onze betaalpartner (Stripe) verwerkt. Upgraden, downgraden, betaalmethode en opzeggen regel je in het beheerportaal.")}</span>
     </div>
   </div>
 </div>
 
 <!-- Add-ons (optionele betaalde extra's) -->
 <div class="adm-card" id="billAddonsCard" style="margin-top:16px;display:none;">
-  <div class="adm-card-header"><h3 class="adm-card-title">Add-ons</h3></div>
+  <div class="adm-card-header"><h3 class="adm-card-title">${tA("adm.bill.addons","Add-ons")}</h3></div>
   <div class="adm-card-body" id="billAddons"></div>
 </div>
 
 <!-- Factuurgeschiedenis -->
 <div class="adm-card" style="margin-top:16px;">
-  <div class="adm-card-header"><h3 class="adm-card-title">Factuurgeschiedenis</h3></div>
+  <div class="adm-card-header"><h3 class="adm-card-title">${tA("adm.bill.invoiceHistory","Factuurgeschiedenis")}</h3></div>
   ${invoices.length === 0
-    ? `<div class="adm-empty"><div class="adm-empty-text">Nog geen facturen</div></div>`
+    ? `<div class="adm-empty"><div class="adm-empty-text">${tA("adm.inv.empty","Nog geen facturen")}</div></div>`
     : `<div class="adm-table-wrap"><table class="adm-table">
-        <thead><tr><th>Factuur #</th><th>Datum</th><th>Vervaldatum</th><th>Omschrijving</th><th>Bedrag</th><th>Status</th></tr></thead>
+        <thead><tr><th>${tA("adm.bill.invoiceNr","Factuur #")}</th><th>${tA("adm.date","Datum")}</th><th>${tA("adm.inv.due","Vervaldatum")}</th><th>${tA("adm.bill.description","Omschrijving")}</th><th>${tA("adm.amount","Bedrag")}</th><th>${tA("adm.status","Status")}</th></tr></thead>
         <tbody>${invoices.map(i => `<tr>
           <td style="font-family:monospace;font-weight:600">${esc(i.number||i.id.slice(-6))}</td>
           <td>${i.date ? new Date(i.date).toLocaleDateString("nl-BE") : "-"}</td>
           <td>${i.dueDate ? new Date(i.dueDate).toLocaleDateString("nl-BE") : "-"}</td>
-          <td>${esc(i.description||i.title||"Abonnement Monargo One")}</td>
+          <td>${esc(i.description||i.title||tA("adm.bill.subDesc","Abonnement Monargo One"))}</td>
           <td style="font-weight:600">${fmtEur(i.amount)}</td>
           <td><span class="adm-status ${statusCss[i.status]||"adm-status-pending"}">${esc(i.status||"-")}</span></td>
         </tr>`).join("")}</tbody>
@@ -5227,20 +5227,20 @@ ${billing.status === "trial" ? (() => {
           const plan = btn.dataset.plan;
           const label = btn.dataset.label || plan;
           const msg = trialEligible
-            ? `Start je 14 dagen gratis proefperiode op ${label}?\n\nJe geeft je kaartgegevens op via onze beveiligde betaalpagina (Stripe), maar je wordt pas na 14 dagen gefactureerd. Opzeggen kan altijd.`
-            : `Overschakelen naar het ${label}-abonnement? Je wordt naar de beveiligde betaalpagina geleid.`;
+            ? tA("adm.bill.confirmTrial","Start je 14 dagen gratis proefperiode op {label}?\n\nJe geeft je kaartgegevens op via onze beveiligde betaalpagina (Stripe), maar je wordt pas na 14 dagen gefactureerd. Opzeggen kan altijd.").replace("{label}", label)
+            : tA("adm.bill.confirmSwitch","Overschakelen naar het {label}-abonnement? Je wordt naar de beveiligde betaalpagina geleid.").replace("{label}", label);
           if (!confirm(msg)) return;
-          btn.disabled = true; btn.textContent = "Bezig…";
+          btn.disabled = true; btn.textContent = tA("adm.bill.busy","Bezig…");
           try {
             const r = await api("POST", "/billing/checkout", { plan });
             if (r.provider === "stripe" && r.url) { window.location.href = r.url; return; }
-            window.showToast && window.showToast(r.trial ? `Proefperiode van 14 dagen gestart (${label})` : `Abonnement geactiveerd (${label})`, "success");
+            window.showToast && window.showToast(r.trial ? tA("adm.bill.trialStarted","Proefperiode van 14 dagen gestart ({label})").replace("{label}", label) : tA("adm.bill.subActivated","Abonnement geactiveerd ({label})").replace("{label}", label), "success");
             renderBilling();
-          } catch(e) { window.showToast && window.showToast(e.message, "error"); btn.disabled = false; btn.textContent = trialEligible ? "Start 14 dagen gratis" : "Kies"; }
+          } catch(e) { window.showToast && window.showToast(e.message, "error"); btn.disabled = false; btn.textContent = trialEligible ? tA("adm.bill.startTrial","Start 14 dagen gratis") : tA("adm.bill.choose","Kies"); }
         });
       });
       content.querySelectorAll(".bill-contact").forEach(btn => {
-        btn.addEventListener("click", () => window.showToast && window.showToast("Voor Enterprise maken we een offerte op maat. Neem contact op via je accountmanager of support.", "info"));
+        btn.addEventListener("click", () => window.showToast && window.showToast(tA("adm.bill.enterpriseNote","Voor Enterprise maken we een offerte op maat. Neem contact op via je accountmanager of support."), "info"));
       });
       content.querySelectorAll(".adm-period-btn").forEach(btn => {
         btn.addEventListener("click", () => { _billPeriod = btn.dataset.per; renderBilling(); });
@@ -5250,7 +5250,7 @@ ${billing.status === "trial" ? (() => {
         try {
           const r = await api("POST", "/billing/portal", {});
           if (r.provider === "stripe" && r.url) { window.location.href = r.url; return; }
-          window.showToast && window.showToast("Het beheerportaal is beschikbaar zodra betalingen live staan (Stripe-sleutel geconfigureerd).", "info");
+          window.showToast && window.showToast(tA("adm.bill.portalNotLive","Het beheerportaal is beschikbaar zodra betalingen live staan (Stripe-sleutel geconfigureerd)."), "info");
         } catch(e) { window.showToast && window.showToast(e.message, "error"); }
       });
 
@@ -5273,17 +5273,17 @@ ${billing.status === "trial" ? (() => {
                 <strong style="font-size:14px;color:var(--gray-900);">${esc(a.label)}</strong>
                 ${has ? `<span style="font-size:10px;font-weight:700;background:var(--wf-green-l);color:var(--wf-green);border-radius:999px;padding:2px 8px;">ACTIEF</span>` : ""}
               </div>
-              <div style="font-size:20px;font-weight:700;color:var(--gray-900);margin:6px 0;">€${a.monthly}<span style="font-size:12px;font-weight:500;color:var(--gray-400);">/mnd</span></div>
+              <div style="font-size:20px;font-weight:700;color:var(--gray-900);margin:6px 0;">€${a.monthly}<span style="font-size:12px;font-weight:500;color:var(--gray-400);">/${tA("adm.bill.mo","mnd")}</span></div>
               <div style="font-size:12px;color:var(--gray-500);min-height:32px;">${esc(a.description)}</div>
               ${has
-                ? `<button class="adm-btn adm-btn-secondary adm-btn-sm" disabled style="opacity:.6;width:100%;margin-top:8px;">Inbegrepen</button>`
-                : `<button class="adm-btn adm-btn-primary adm-btn-sm addon-request" data-addon="${esc(a.label)}" style="width:100%;margin-top:8px;">Aanvragen</button>`}
+                ? `<button class="adm-btn adm-btn-secondary adm-btn-sm" disabled style="opacity:.6;width:100%;margin-top:8px;">${tA("adm.bill.included","Inbegrepen")}</button>`
+                : `<button class="adm-btn adm-btn-primary adm-btn-sm addon-request" data-addon="${esc(a.label)}" style="width:100%;margin-top:8px;">${tA("adm.bill.request","Aanvragen")}</button>`}
             </div>`;
           }).join("")}
         </div>
-        <div style="font-size:11.5px;color:var(--gray-400);margin-top:10px;">Add-ons worden door je accountbeheerder of support geactiveerd. Neem contact op om een add-on toe te voegen.</div>`;
+        <div style="font-size:11.5px;color:var(--gray-400);margin-top:10px;">${tA("adm.bill.addonNote","Add-ons worden door je accountbeheerder of support geactiveerd. Neem contact op om een add-on toe te voegen.")}</div>`;
         body.querySelectorAll(".addon-request").forEach(btn => btn.addEventListener("click", () =>
-          window.showToast && window.showToast(`Bedankt! Vraag '${btn.dataset.addon}' aan via je accountmanager of support · wij activeren het voor je organisatie.`, "info")));
+          window.showToast && window.showToast(tA("adm.bill.addonRequested","Bedankt! Vraag '{a}' aan via je accountmanager of support · wij activeren het voor je organisatie.").replace("{a}", btn.dataset.addon), "info")));
       })();
     } catch(e) { content.innerHTML = `<div style="padding:20px;color:var(--wf-red)">${tA("adm.error","Fout")}: ${e.message}</div>`; }
   }
