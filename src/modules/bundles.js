@@ -23,7 +23,7 @@ const DEFAULT_BUNDLES = [
     key: "business", label: "Business", order: 2, active: true, custom: false, popular: true,
     description: "Het volledige operationele pakket inclusief werkbonnen en facturatie.",
     modules: ["planning", "appointments", "clockings", "messages", "customers", "venues", "incidents",
-      "workorders", "leaves", "expenses", "offertes", "invoices", "stock", "vehicles", "reports"],
+      "inbox", "workorders", "leaves", "expenses", "offertes", "invoices", "stock", "vehicles", "reports"],
   },
   {
     key: "enterprise", label: "Enterprise", order: 3, active: true, custom: true,
@@ -39,6 +39,8 @@ const BUNDLE_BACKFILL = {
   appointments: ["starter", "business", "enterprise"],
   // Werkongevallen-register is wettelijk verplicht voor elke werkgever → elke bundel.
   incidents: ["starter", "business", "enterprise"],
+  // E-mail-intake: vanaf Business (starter kan upgraden of via override).
+  inbox: ["business", "enterprise"],
 };
 
 function ensureArray(store) {

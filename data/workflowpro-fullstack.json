@@ -14,7 +14,12 @@
       "name": "Demo Bouwgroep NV",
       "plan": "business",
       "status": "trial",
-      "billingEmail": "finance@demobouw.be"
+      "billingEmail": "finance@demobouw.be",
+      "intake": {
+        "token": "7bdcc0d5779b",
+        "enabled": true,
+        "createdAt": "2026-07-15T21:10:42.894Z"
+      }
     }
   ],
   "users": [
@@ -44,7 +49,7 @@
     {
       "mfaEnabled": false,
       "mfaEnforced": false,
-      "lastLoginAt": "2026-07-15T21:02:12.257Z",
+      "lastLoginAt": "2026-07-15T21:10:42.860Z",
       "failedLoginCount": 0,
       "lockedUntil": null,
       "id": "u_admin",
@@ -1170,6 +1175,68 @@
       "action": "incident_deleted",
       "area": "incidents",
       "detail": "2026-07-10 · Jan Peeters"
+    },
+    {
+      "id": "audit_1784149842862_ed0da6462c1fe",
+      "at": "2026-07-15T21:10:42.862Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1784149842909_4bdbf43b030d2",
+      "at": "2026-07-15T21:10:42.909Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "customer_created",
+      "area": "customers",
+      "detail": "Smoke Klant BV"
+    },
+    {
+      "id": "audit_1784149842919_c92c3f6f50072",
+      "at": "2026-07-15T21:10:42.919Z",
+      "actor": "inbound-mail",
+      "tenantId": "t_demo",
+      "action": "inquiry_received",
+      "area": "inbox",
+      "detail": "smoke@klant.be · Offerte oprit"
+    },
+    {
+      "id": "audit_1784149842939_5d4a0d42737758",
+      "at": "2026-07-15T21:10:42.939Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "inquiry_updated",
+      "area": "inbox",
+      "detail": "Offerte oprit → beantwoord"
+    },
+    {
+      "id": "audit_1784149842949_8fdb554239996",
+      "at": "2026-07-15T21:10:42.949Z",
+      "actor": "inbound-mail",
+      "tenantId": "t_demo",
+      "action": "inquiry_received",
+      "area": "inbox",
+      "detail": "- · Herstelling dak"
+    },
+    {
+      "id": "audit_1784149842958_f85814081d7918",
+      "at": "2026-07-15T21:10:42.958Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "inquiry_deleted",
+      "area": "inbox",
+      "detail": "Offerte oprit"
+    },
+    {
+      "id": "audit_1784149842965_c2c3256a80bfb8",
+      "at": "2026-07-15T21:10:42.966Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "inquiry_deleted",
+      "area": "inbox",
+      "detail": "Herstelling dak"
     }
   ],
   "errorEvents": [
@@ -1468,7 +1535,8 @@
         "vehicles",
         "reports",
         "appointments",
-        "incidents"
+        "incidents",
+        "inbox"
       ],
       "submodules": {
         "planning": [
@@ -1514,10 +1582,11 @@
           "reminders"
         ]
       },
-      "updatedAt": "2026-07-15T20:59:15.993Z",
+      "updatedAt": "2026-07-15T21:10:42.885Z",
       "backfilled": [
         "appointments",
-        "incidents"
+        "incidents",
+        "inbox"
       ]
     },
     {
@@ -1550,7 +1619,8 @@
         "sso",
         "ai_actions",
         "appointments",
-        "incidents"
+        "incidents",
+        "inbox"
       ],
       "submodules": {
         "planning": [
@@ -1596,15 +1666,17 @@
           "reminders"
         ]
       },
-      "updatedAt": "2026-07-15T20:59:15.993Z",
+      "updatedAt": "2026-07-15T21:10:42.886Z",
       "backfilled": [
         "appointments",
-        "incidents"
+        "incidents",
+        "inbox"
       ]
     }
   ],
   "postedWorkers": [],
   "templates": [],
   "appointments": [],
-  "incidents": []
+  "incidents": [],
+  "inquiries": []
 }

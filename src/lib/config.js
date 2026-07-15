@@ -61,6 +61,12 @@ const config = {
   kbo: {
     provider: process.env.KBO_PROVIDER || "mock"
   },
+  // Inbound e-mail (klantvragen-intake): provider POST't naar
+  // /api/webhooks/inbound-mail?secret=<INBOUND_MAIL_SECRET>.
+  inboundMail: {
+    domain: process.env.INBOUND_MAIL_DOMAIN || "in.monargo.com",
+    secret: process.env.INBOUND_MAIL_SECRET || ""
+  },
   webpush: {
     publicKey: process.env.VAPID_PUBLIC_KEY || "",
     privateKey: process.env.VAPID_PRIVATE_KEY || "",

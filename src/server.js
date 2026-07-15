@@ -92,7 +92,7 @@ function sanitizeEmployeePermissions(store, tenant, role, requested) {
 // basisfunctionaliteit en vallen buiten deze gate.
 const WRITE_GATE_MAP = {
   workorders: ["workorders"], shifts: ["planning"], planning: ["planning"], appointments: ["planning"],
-  incidents: ["incidents"],
+  incidents: ["incidents"], inquiries: ["customers"],
   expenses: ["expenses"], leaves: ["leaves"], messages: ["messages"],
   customers: ["customers"], venues: ["venues"], stock: ["stock"], vehicles: ["vehicles"],
   facturen: ["invoicing", "billing"], offertes: ["invoicing", "billing"],
@@ -205,6 +205,7 @@ const { createCustomerInvoice, workorderInvoicePayload } = require("./modules/cu
 const { runPaymentReminders, reminderPolicy } = require("./modules/payment-reminders");
 const { normalizeAppointment, runAppointmentReminders } = require("./modules/appointments");
 const { normalizeIncident, incidentsToCsv } = require("./modules/incidents");
+const { INQUIRY_STATUSES, ensureIntake, intakeAddress, newIntakeToken, parseInboundPayload, resolveIntakeTenant, createInquiry } = require("./modules/inbox");
 const {
   createSetupIntent,
   billingQuote,
@@ -671,6 +672,27 @@ http.createServer(async (req, res) => {
       }
       const result = processStripeWebhook(store, event);
       sendJson(res, 200, { ok: true, signature: signature.mode, result });
+      return;
+    }
+
+    // ── Inbound e-mail → klantvraag (provider-agnostisch: Mailgun/Postmark/SendGrid) ──
+    if (url.pathname === "/api/webhooks/inbound-mail" && req.method === "POST") {
+      const provided = url.searchParams.get("secret") || req.headers["x-inbound-secret"] || "";
+      if (config.inboundMail.secret) {
+        if (provided !== config.inboundMail.secret) return sendJson(res, 401, { ok: false, error: "Invalid inbound secret" });
+      } else if (config.isProduction) {
+        // Zonder secret geen open intake in productie (spam/forgery).
+        return sendJson(res, 503, { ok: false, error: "Inbound mail is niet geconfigureerd" });
+      }
+      const body = await readBody(req);
+      let mail;
+      try { mail = parseInboundPayload(body); }
+      catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message }); }
+      const intakeTenant = resolveIntakeTenant(store, mail.to);
+      if (!intakeTenant) return sendJson(res, 404, { ok: false, error: "Onbekend intake-adres" });
+      if (!isModuleEnabled(store, intakeTenant, "inbox")) return sendJson(res, 403, { ok: false, error: "Module Klantvragen is niet actief voor deze organisatie" });
+      const result = createInquiry(store, intakeTenant, mail);
+      sendJson(res, 200, { ok: true, duplicate: result.duplicate, inquiryId: result.inquiry.id });
       return;
     }
 
@@ -3920,6 +3942,92 @@ http.createServer(async (req, res) => {
         if (!existingInc) return sendJson(res, 404, { ok: false, error: "Werkongeval niet gevonden" });
         store.remove("incidents", existingInc.id);
         store.audit({ actor: user.email, tenantId, action: "incident_deleted", area: "incidents", detail: `${existingInc.date} · ${existingInc.employeeName}` });
+        sendJson(res, 200, { ok: true });
+        return;
+      }
+
+      // ── Klantvragen (Inbox · e-mail-intake) ─────────────────────────────
+      if (action === "inquiries/intake-config" && req.method === "GET") {
+        assertCan(user, "customers");
+        const intake = ensureIntake(store, tenant);
+        sendJson(res, 200, { ok: true, intake: {
+          address: intakeAddress(tenant, config),
+          enabled: intake.enabled !== false,
+          // Zonder INBOUND_MAIL_SECRET is de webhook nog niet aangesloten op
+          // een provider · de UI toont dan dat intake in testmodus staat.
+          live: !!config.inboundMail.secret,
+        } });
+        return;
+      }
+      if (action === "inquiries/intake-config" && req.method === "POST") {
+        assertCan(user, "settings");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        const intake = { ...ensureIntake(store, tenant) };
+        if (body.regenerate) intake.token = newIntakeToken();
+        if (typeof body.enabled === "boolean") intake.enabled = body.enabled;
+        store.updateTenant(tenant.id, { intake });
+        tenant.intake = intake;
+        store.audit({ actor: user.email, tenantId, action: "intake_config_updated", area: "inbox", detail: body.regenerate ? "adres vernieuwd" : `enabled=${intake.enabled !== false}` });
+        sendJson(res, 200, { ok: true, intake: { address: intakeAddress(tenant, config), enabled: intake.enabled !== false, live: !!config.inboundMail.secret } });
+        return;
+      }
+      if (action === "inquiries" && req.method === "GET") {
+        assertCan(user, "customers");
+        const rows = store.list("inquiries", tenantId)
+          .slice()
+          .sort((a, b) => String(b.receivedAt || "").localeCompare(String(a.receivedAt || "")));
+        sendJson(res, 200, { ok: true, inquiries: rows });
+        return;
+      }
+      if (action === "inquiries" && req.method === "POST") {
+        // Handmatige klantvraag (telefoon/balie) in dezelfde Inbox.
+        assertCan(user, "customers");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        const fromEmail = String(body.fromEmail || "").trim().toLowerCase();
+        if (fromEmail && !fromEmail.includes("@")) return sendJson(res, 400, { ok: false, error: "Geldig e-mailadres van de klant is vereist" });
+        if (!String(body.subject || "").trim() && !String(body.text || "").trim()) return sendJson(res, 400, { ok: false, error: "Onderwerp of omschrijving is verplicht" });
+        const result = createInquiry(store, tenant, {
+          fromEmail: fromEmail || "-",
+          fromName: String(body.fromName || "").trim(),
+          subject: String(body.subject || "").trim() || "(geen onderwerp)",
+          text: String(body.text || "").trim(),
+          messageId: null,
+        }, "handmatig");
+        sendJson(res, 201, { ok: true, inquiry: result.inquiry });
+        return;
+      }
+      const inqMatch = action.match(/^inquiries\/([^/]+)$/);
+      if (inqMatch && inqMatch[1] !== "intake-config" && req.method === "PATCH") {
+        assertCan(user, "customers");
+        assertApiKeyWriteAllowed(user, req);
+        const existingInq = store.list("inquiries", tenantId).find(q => q.id === inqMatch[1]);
+        if (!existingInq) return sendJson(res, 404, { ok: false, error: "Klantvraag niet gevonden" });
+        const body = await readBody(req);
+        const patch = { updatedAt: new Date().toISOString() };
+        if (body.status !== undefined) {
+          if (!INQUIRY_STATUSES.includes(body.status)) return sendJson(res, 400, { ok: false, error: "Ongeldige status" });
+          patch.status = body.status;
+        }
+        if (body.customerId !== undefined) {
+          const cust = body.customerId ? store.list("customers", tenantId).find(c => c.id === body.customerId) : null;
+          if (body.customerId && !cust) return sendJson(res, 400, { ok: false, error: "Klant niet gevonden" });
+          patch.customerId = cust ? cust.id : null;
+          patch.customerName = cust ? cust.name : null;
+        }
+        const row = store.update("inquiries", existingInq.id, patch);
+        store.audit({ actor: user.email, tenantId, action: "inquiry_updated", area: "inbox", detail: `${existingInq.subject} → ${patch.status || existingInq.status}` });
+        sendJson(res, 200, { ok: true, inquiry: row });
+        return;
+      }
+      if (inqMatch && inqMatch[1] !== "intake-config" && req.method === "DELETE") {
+        assertCan(user, "customers");
+        assertApiKeyWriteAllowed(user, req);
+        const existingInq = store.list("inquiries", tenantId).find(q => q.id === inqMatch[1]);
+        if (!existingInq) return sendJson(res, 404, { ok: false, error: "Klantvraag niet gevonden" });
+        store.remove("inquiries", existingInq.id);
+        store.audit({ actor: user.email, tenantId, action: "inquiry_deleted", area: "inbox", detail: existingInq.subject });
         sendJson(res, 200, { ok: true });
         return;
       }

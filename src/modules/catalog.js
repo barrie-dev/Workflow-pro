@@ -61,6 +61,10 @@ const MODULE_CATALOG = [
   // ── Klanten & Financiën ───────────────────────────────────
   { key: "customers", label: "Klanten", group: "Klanten & Financiën", core: false,
     view: "customers", actions: ["customers"], submodules: [] },
+  // E-mail-intake: uniek intake-adres per organisatie · inkomende klantmails
+  // worden klantvragen in de Inbox, gekoppeld aan de klant via het afzendadres.
+  { key: "inbox", label: "Klantvragen (e-mail-intake)", group: "Klanten & Financiën", core: false,
+    view: "inbox", actions: ["inquiries"], submodules: [] },
   { key: "offertes", label: "Offertes", group: "Klanten & Financiën", core: false,
     view: "offertes", actions: ["offertes"],
     submodules: [

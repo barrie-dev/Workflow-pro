@@ -58,6 +58,7 @@ const REQUIRED_COLLECTIONS = [
   "shifts",
   "appointments",
   "incidents",
+  "inquiries",
   "workorders",
   "clocks",
   "expenses",
