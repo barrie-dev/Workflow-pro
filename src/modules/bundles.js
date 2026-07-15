@@ -17,12 +17,12 @@ const DEFAULT_BUNDLES = [
   {
     key: "starter", label: "Starter", order: 1, active: true, custom: false,
     description: "Voor kleine teams die starten met planning en tijdregistratie.",
-    modules: ["planning", "clockings", "messages", "customers", "venues"],
+    modules: ["planning", "appointments", "clockings", "messages", "customers", "venues"],
   },
   {
     key: "business", label: "Business", order: 2, active: true, custom: false, popular: true,
     description: "Het volledige operationele pakket inclusief werkbonnen en facturatie.",
-    modules: ["planning", "clockings", "messages", "customers", "venues",
+    modules: ["planning", "appointments", "clockings", "messages", "customers", "venues",
       "workorders", "leaves", "expenses", "offertes", "invoices", "stock", "vehicles", "reports"],
   },
   {
@@ -31,6 +31,13 @@ const DEFAULT_BUNDLES = [
     modules: gateableKeys(),
   },
 ];
+
+// Nieuwe standaardmodules die aan RÉEDS BESTAANDE bundels moeten worden
+// toegevoegd (append-only, éénmalig). Bijhouden via bundle.backfilled zodat
+// een bewuste verwijdering door de superadmin daarna gerespecteerd blijft.
+const BUNDLE_BACKFILL = {
+  appointments: ["starter", "business", "enterprise"],
+};
 
 function ensureArray(store) {
   if (!Array.isArray(store.data[COLLECTION])) store.data[COLLECTION] = [];
@@ -86,6 +93,24 @@ function seedDefaults(store) {
   for (const def of DEFAULT_BUNDLES) {
     const existing = store.data[COLLECTION].find(b => b.key === def.key);
     if (existing && existing.popular === undefined) existing.popular = !!def.popular;
+  }
+  // Backfill: nieuwe standaardmodules éénmalig toevoegen aan bestaande bundels.
+  for (const [modKey, bundleKeys] of Object.entries(BUNDLE_BACKFILL)) {
+    for (const bKey of bundleKeys) {
+      const b = store.data[COLLECTION].find(x => x.key === bKey);
+      if (!b) continue;
+      b.backfilled = Array.isArray(b.backfilled) ? b.backfilled : [];
+      if (b.backfilled.includes(modKey)) continue;         // al gedaan (evt. bewust verwijderd)
+      b.backfilled.push(modKey);
+      if (!Array.isArray(b.modules)) b.modules = [];
+      if (!b.modules.includes(modKey)) b.modules.push(modKey);
+      const subs = submoduleKeys(modKey);
+      if (subs.length) {
+        b.submodules = b.submodules || {};
+        if (!Array.isArray(b.submodules[modKey])) b.submodules[modKey] = subs;
+      }
+      b.updatedAt = new Date().toISOString();
+    }
   }
 }
 

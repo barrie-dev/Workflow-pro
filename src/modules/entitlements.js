@@ -117,7 +117,8 @@ function assertModuleEnabled(store, user, tenant, action) {
 // Ook GEEN 'clockings': in-/uitprikken is basisfunctionaliteit die ELKE gebruiker
 // altijd heeft, ongeacht functie · dus niet per-user uitschakelbaar (zie ALWAYS_PERMISSIONS).
 const OPERATIONAL_PERMISSIONS = [
-  { key: "planning", label: "Planning" },
+  // Afspraken vallen onder het planning-recht (zelfde domein: wie plant, plant ook klantafspraken).
+  { key: "planning", label: "Planning", modules: ["planning", "appointments"] },
   { key: "workorders", label: "Werkbonnen" },
   { key: "expenses", label: "Onkosten" },
   { key: "leaves", label: "Verlof" },

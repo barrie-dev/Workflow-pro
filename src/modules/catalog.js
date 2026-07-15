@@ -23,6 +23,13 @@ const MODULE_CATALOG = [
       { key: "shift-templates", label: "Ploegsjablonen" },
       { key: "calendar-export", label: "Kalender-export" },
     ] },
+  // Afspraken bij de klant (wanneer worden de werken uitgevoerd) + automatische
+  // reminder-mail naar de klant X dagen vooraf (submodule "reminders").
+  { key: "appointments", label: "Afspraken", group: "Operaties", core: false,
+    view: "appointments", actions: ["appointments"],
+    submodules: [
+      { key: "reminders", label: "Klant-reminders" },
+    ] },
   { key: "workorders", label: "Werkbonnen", group: "Operaties", core: false,
     view: "workorders", actions: ["workorders"],
     submodules: [

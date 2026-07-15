@@ -44,7 +44,7 @@
     {
       "mfaEnabled": false,
       "mfaEnforced": false,
-      "lastLoginAt": "2026-07-12T06:36:55.276Z",
+      "lastLoginAt": "2026-07-15T20:43:52.769Z",
       "failedLoginCount": 0,
       "lockedUntil": null,
       "id": "u_admin",
@@ -1075,6 +1075,41 @@
       "tenantId": "t_demo",
       "action": "login",
       "area": "auth"
+    },
+    {
+      "id": "audit_1784148232771_81a854014c05e8",
+      "at": "2026-07-15T20:43:52.771Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1784148232800_9a67afa82bd638",
+      "at": "2026-07-15T20:43:52.800Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "appointment_created",
+      "area": "appointments",
+      "detail": "2026-07-16 09:00 · Test Klant BV"
+    },
+    {
+      "id": "audit_1784148232813_a7aa95e42e4e1",
+      "at": "2026-07-15T20:43:52.813Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "appointment_updated",
+      "area": "appointments",
+      "detail": "2026-07-16 09:00 · Test Klant BV"
+    },
+    {
+      "id": "audit_1784148232824_4665daf751fce8",
+      "at": "2026-07-15T20:43:52.824Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "appointment_deleted",
+      "area": "appointments",
+      "detail": "2026-07-16 09:00 · Test Klant BV"
     }
   ],
   "errorEvents": [
@@ -1320,7 +1355,8 @@
         "clockings",
         "messages",
         "customers",
-        "venues"
+        "venues",
+        "appointments"
       ],
       "submodules": {
         "planning": [
@@ -1330,9 +1366,15 @@
         "clockings": [
           "gps",
           "corrections"
+        ],
+        "appointments": [
+          "reminders"
         ]
       },
-      "updatedAt": "2026-07-11T20:50:51.432Z"
+      "updatedAt": "2026-07-15T20:43:45.909Z",
+      "backfilled": [
+        "appointments"
+      ]
     },
     {
       "id": "bundle_business",
@@ -1357,7 +1399,8 @@
         "invoices",
         "stock",
         "vehicles",
-        "reports"
+        "reports",
+        "appointments"
       ],
       "submodules": {
         "planning": [
@@ -1398,9 +1441,15 @@
         ],
         "reports": [
           "datahub-export"
+        ],
+        "appointments": [
+          "reminders"
         ]
       },
-      "updatedAt": "2026-07-11T20:50:51.433Z"
+      "updatedAt": "2026-07-15T20:43:45.909Z",
+      "backfilled": [
+        "appointments"
+      ]
     },
     {
       "id": "bundle_enterprise",
@@ -1430,7 +1479,8 @@
         "reports",
         "integrations",
         "sso",
-        "ai_actions"
+        "ai_actions",
+        "appointments"
       ],
       "submodules": {
         "planning": [
@@ -1471,11 +1521,18 @@
         ],
         "reports": [
           "datahub-export"
+        ],
+        "appointments": [
+          "reminders"
         ]
       },
-      "updatedAt": "2026-07-11T20:50:51.435Z"
+      "updatedAt": "2026-07-15T20:43:45.909Z",
+      "backfilled": [
+        "appointments"
+      ]
     }
   ],
   "postedWorkers": [],
-  "templates": []
+  "templates": [],
+  "appointments": []
 }

@@ -91,7 +91,7 @@ function sanitizeEmployeePermissions(store, tenant, role, requested) {
 // me/*-flows (eigen klok, eigen verlof/onkosten indienen) blijven persoonlijke
 // basisfunctionaliteit en vallen buiten deze gate.
 const WRITE_GATE_MAP = {
-  workorders: ["workorders"], shifts: ["planning"], planning: ["planning"],
+  workorders: ["workorders"], shifts: ["planning"], planning: ["planning"], appointments: ["planning"],
   expenses: ["expenses"], leaves: ["leaves"], messages: ["messages"],
   customers: ["customers"], venues: ["venues"], stock: ["stock"], vehicles: ["vehicles"],
   facturen: ["invoicing", "billing"], offertes: ["invoicing", "billing"],
@@ -202,6 +202,7 @@ const { listModule, createModuleRow, updateModuleRow } = require("./modules/crud
 const { lookupKboResolve } = require("./modules/kbo");
 const { createCustomerInvoice, workorderInvoicePayload } = require("./modules/customer-invoicing");
 const { runPaymentReminders, reminderPolicy } = require("./modules/payment-reminders");
+const { normalizeAppointment, runAppointmentReminders } = require("./modules/appointments");
 const {
   createSetupIntent,
   billingQuote,
@@ -3812,6 +3813,59 @@ http.createServer(async (req, res) => {
       }
 
       // ── Locaties / Venues ─────────────────────────────────────────────────────
+      // ── Afspraken bij de klant (+ automatische reminder) ────────────────
+      if (action === "appointments" && req.method === "GET") {
+        assertCan(user, "planning");
+        const rows = store.list("appointments", tenantId)
+          .slice()
+          .sort((a, b) => `${a.date} ${a.start || ""}`.localeCompare(`${b.date} ${b.start || ""}`));
+        sendJson(res, 200, { ok: true, appointments: rows });
+        return;
+      }
+      if (action === "appointments" && req.method === "POST") {
+        assertCan(user, "planning");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        const clean = normalizeAppointment(body);
+        const row = store.insert("appointments", {
+          id: `apt_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+          tenantId, ...clean, reminderSentAt: null,
+          createdBy: user.email, createdAt: new Date().toISOString()
+        });
+        store.audit({ actor: user.email, tenantId, action: "appointment_created", area: "appointments", detail: `${clean.date} ${clean.start} · ${clean.customerName}` });
+        sendJson(res, 201, { ok: true, appointment: row });
+        return;
+      }
+      const aptMatch = action.match(/^appointments\/([^/]+)$/);
+      if (aptMatch && req.method === "PATCH") {
+        assertCan(user, "planning");
+        assertApiKeyWriteAllowed(user, req);
+        const existingApt = store.list("appointments", tenantId).find(a => a.id === aptMatch[1]);
+        if (!existingApt) return sendJson(res, 404, { ok: false, error: "Afspraak niet gevonden" });
+        const body = await readBody(req);
+        const clean = normalizeAppointment(body, existingApt);
+        // Verschuift de afspraak of wijzigt het reminder-venster → reminder mag opnieuw.
+        const resetReminder = clean.date !== existingApt.date || clean.start !== existingApt.start || clean.reminderDays !== existingApt.reminderDays;
+        const row = store.update("appointments", existingApt.id, {
+          ...clean,
+          ...(resetReminder ? { reminderSentAt: null } : {}),
+          updatedAt: new Date().toISOString()
+        });
+        store.audit({ actor: user.email, tenantId, action: "appointment_updated", area: "appointments", detail: `${clean.date} ${clean.start} · ${clean.customerName}` });
+        sendJson(res, 200, { ok: true, appointment: row });
+        return;
+      }
+      if (aptMatch && req.method === "DELETE") {
+        assertCan(user, "planning");
+        assertApiKeyWriteAllowed(user, req);
+        const existingApt = store.list("appointments", tenantId).find(a => a.id === aptMatch[1]);
+        if (!existingApt) return sendJson(res, 404, { ok: false, error: "Afspraak niet gevonden" });
+        store.remove("appointments", existingApt.id);
+        store.audit({ actor: user.email, tenantId, action: "appointment_deleted", area: "appointments", detail: `${existingApt.date} ${existingApt.start} · ${existingApt.customerName}` });
+        sendJson(res, 200, { ok: true });
+        return;
+      }
+
       if (action === "venues" && req.method === "GET") {
         assertCan(user, "venues");
         sendJson(res, 200, { ok: true, venues: store.list("venues", tenantId) });
@@ -4454,6 +4508,10 @@ http.createServer(async (req, res) => {
   const runReminderCycle = () => {
     runPaymentReminders(store, config)
       .then(r => { if (r.sent > 0) console.log(`  Herinnering: ${r.sent} betaalherinnering(en) verstuurd`); })
+      .catch(() => {});
+    // Afspraak-reminders naar de klant (module appointments · submodule reminders).
+    runAppointmentReminders(store, config)
+      .then(r => { if (r.sent > 0) console.log(`  Herinnering: ${r.sent} afspraak-reminder(s) verstuurd`); })
       .catch(() => {});
   };
   setTimeout(runReminderCycle, 60 * 1000).unref();
