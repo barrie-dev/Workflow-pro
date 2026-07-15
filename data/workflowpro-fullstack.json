@@ -19,6 +19,11 @@
         "token": "7bdcc0d5779b",
         "enabled": true,
         "createdAt": "2026-07-15T21:10:42.894Z"
+      },
+      "moduleOverrides": {
+        "add": [
+          "ai_estimate"
+        ]
       }
     }
   ],
@@ -49,7 +54,7 @@
     {
       "mfaEnabled": false,
       "mfaEnforced": false,
-      "lastLoginAt": "2026-07-15T21:10:42.860Z",
+      "lastLoginAt": "2026-07-15T21:19:03.195Z",
       "failedLoginCount": 0,
       "lockedUntil": null,
       "id": "u_admin",
@@ -1237,6 +1242,76 @@
       "action": "inquiry_deleted",
       "area": "inbox",
       "detail": "Herstelling dak"
+    },
+    {
+      "id": "audit_1784150336642_4941f70df4dc38",
+      "at": "2026-07-15T21:18:56.642Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1784150343197_c2893c7c6aef28",
+      "at": "2026-07-15T21:19:03.197Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1784150343230_0d3208341d5c8",
+      "at": "2026-07-15T21:19:03.230Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "quote_estimated",
+      "area": "offertes",
+      "detail": "mock · 3 regels · Terras aanleggen van 40m2 in klinkers, oude tegels afvoeren."
+    },
+    {
+      "id": "audit_1784150343244_537b37c270103",
+      "at": "2026-07-15T21:19:03.244Z",
+      "actor": "inbound-mail",
+      "tenantId": "t_demo",
+      "action": "inquiry_received",
+      "area": "inbox",
+      "detail": "estklant@test.be · Offerte tuinmuur"
+    },
+    {
+      "id": "audit_1784150343250_fbc2702f90be38",
+      "at": "2026-07-15T21:19:03.250Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "quote_estimated",
+      "area": "offertes",
+      "detail": "mock · 3 regels · Offerte tuinmuur\n\nGraag prijs voor een tuinmuur van 12m lang"
+    },
+    {
+      "id": "audit_1784150343258_db4d8c787ccd",
+      "at": "2026-07-15T21:19:03.258Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "quote_created",
+      "area": "offertes",
+      "detail": "OFF-2026-003 · €792.55"
+    },
+    {
+      "id": "audit_1784150343269_48d5dd1e53b788",
+      "at": "2026-07-15T21:19:03.269Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "quote_deleted",
+      "area": "offertes",
+      "detail": "OFF-2026-003"
+    },
+    {
+      "id": "audit_1784150343277_bf5930598251c",
+      "at": "2026-07-15T21:19:03.277Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "inquiry_deleted",
+      "area": "inbox",
+      "detail": "Offerte tuinmuur"
     }
   ],
   "errorEvents": [

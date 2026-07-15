@@ -2313,6 +2313,10 @@ ${intake ? `<div class="adm-card" style="margin-bottom:14px">
   ${tA("adm.inq.thReceived","Ontvangen")}: ${inq.receivedAt ? new Date(inq.receivedAt).toLocaleString("nl-BE") : "-"} · ${inq.source === "handmatig" ? tA("adm.inq.manualTag","handmatig") : tA("adm.inq.viaMail","via e-mail")}
 </div>
 <div style="background:var(--gray-50);border:1px solid var(--gray-100);border-radius:10px;padding:12px;font-size:13px;white-space:pre-wrap;max-height:300px;overflow:auto;margin-bottom:14px;">${esc(inq.text || "-")}</div>
+${((window._wfpEnt && window._wfpEnt.modules) || []).includes("ai_estimate") ? `<div id="inqAiZone" style="margin-bottom:14px;">
+  <button type="button" class="adm-btn adm-btn-secondary adm-btn-sm" id="inqAiBtn">${tA("adm.est.btn","AI-offerte-concept maken")}</button>
+  <span style="font-size:11px;color:var(--gray-400);margin-left:8px;">${tA("adm.est.hint","AI stelt regels voor · jij controleert en verstuurt")}</span>
+</div>` : ""}
 <form id="inqForm">
   <div class="adm-form-row">
     <div class="adm-form-group"><label>${tA("adm.thCustomer","Klant")}</label>
@@ -2342,6 +2346,57 @@ ${intake ? `<div class="adm-card" style="margin-bottom:14px">
 </form>`;
     openDrawer();
     document.getElementById("inqCancel").addEventListener("click", closeDrawer);
+    // AI-estimatie: eerst de raming + aannames tonen, pas na bevestiging een
+    // concept-offerte aanmaken (menselijke eindcontrole).
+    document.getElementById("inqAiBtn")?.addEventListener("click", async () => {
+      const zone = document.getElementById("inqAiZone");
+      const btn = document.getElementById("inqAiBtn");
+      btn.disabled = true; btn.textContent = tA("adm.est.busy","AI rekent…");
+      let est;
+      try { est = await api("POST", "/estimate", { inquiryId: inq.id }); }
+      catch (err) {
+        btn.disabled = false; btn.textContent = tA("adm.est.btn","AI-offerte-concept maken");
+        window.showToast && window.showToast(err.message, "error");
+        return;
+      }
+      const e = est.estimate;
+      const subtotal = e.lines.reduce((s, l) => s + l.qty * l.unitPrice, 0);
+      const confLabel = { laag: tA("adm.est.confLow","lage zekerheid"), middel: tA("adm.est.confMid","gemiddelde zekerheid"), hoog: tA("adm.est.confHigh","hoge zekerheid") }[e.confidence] || e.confidence;
+      zone.innerHTML = `
+<div style="border:1px solid var(--wf-blue-l);border-radius:10px;padding:12px;background:var(--wf-blue-l);">
+  <div style="font-weight:600;font-size:13px;margin-bottom:8px;">${tA("adm.est.previewTitle","AI-raming")} · ${esc(confLabel)}${e.mock ? ` · <span style="font-weight:400;">${tA("adm.inq.testMode","testmodus")}</span>` : ""}</div>
+  ${e.lines.map(l => `<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;"><span>${esc(String(l.qty))} × ${esc(l.description)}</span><span style="white-space:nowrap;margin-left:10px;">€ ${(l.qty * l.unitPrice).toFixed(2)}</span></div>`).join("")}
+  <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:600;border-top:1px solid rgba(0,0,0,.08);margin-top:6px;padding-top:6px;"><span>${tA("adm.est.subtotal","Totaal excl. btw")}</span><span>€ ${subtotal.toFixed(2)}</span></div>
+  ${e.assumptions.length ? `<div style="font-size:11px;color:var(--gray-500);margin-top:8px;">${tA("adm.est.assumptions","Aannames")}:<br>${e.assumptions.map(a => `· ${esc(a)}`).join("<br>")}</div>` : ""}
+  <div style="display:flex;gap:8px;margin-top:10px;">
+    <button type="button" class="adm-btn adm-btn-primary adm-btn-sm" id="inqAiConfirm">${tA("adm.est.confirmBtn","Concept-offerte aanmaken")}</button>
+    <button type="button" class="adm-btn adm-btn-secondary adm-btn-sm" id="inqAiDismiss">${tA("adm.cancel","Annuleren")}</button>
+  </div>
+</div>`;
+      document.getElementById("inqAiDismiss").addEventListener("click", () => {
+        zone.innerHTML = `<button type="button" class="adm-btn adm-btn-secondary adm-btn-sm" id="inqAiBtn2">${tA("adm.est.btn","AI-offerte-concept maken")}</button>`;
+        document.getElementById("inqAiBtn2").addEventListener("click", () => openInquiryDrawer(inq));
+      });
+      document.getElementById("inqAiConfirm").addEventListener("click", async () => {
+        const cBtn = document.getElementById("inqAiConfirm");
+        cBtn.disabled = true; cBtn.textContent = tA("adm.est.creating","Aanmaken…");
+        try {
+          const created = await api("POST", "/offertes", {
+            customerId: est.prefill.customerId || undefined,
+            customerName: est.prefill.customerName || inq.fromName || inq.fromEmail || "-",
+            lines: e.lines,
+          });
+          if (inq.status === "nieuw") api("PATCH", `/inquiries/${inq.id}`, { status: "in_behandeling" }).catch(() => {});
+          closeDrawer();
+          window.showToast && window.showToast(`${tA("adm.est.createdToast","AI-concept aangemaakt")} · ${created.quote ? created.quote.number : ""} · ${tA("adm.est.reviewToast","controleer regels en prijzen")}`, "success");
+          switchView("offertes");
+          if (created.quote) openOfferteDrawer(created.quote);
+        } catch (err) {
+          cBtn.disabled = false; cBtn.textContent = tA("adm.est.confirmBtn","Concept-offerte aanmaken");
+          window.showToast && window.showToast(err.message, "error");
+        }
+      });
+    });
     document.getElementById("inqDelete").addEventListener("click", async () => {
       if (!confirm(tA("adm.inq.deleteConfirm","Deze klantvraag verwijderen?"))) return;
       try { await api("DELETE", `/inquiries/${inq.id}`); closeDrawer(); renderInbox(); }

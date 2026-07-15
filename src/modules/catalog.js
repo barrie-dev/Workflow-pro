@@ -122,6 +122,12 @@ const MODULE_CATALOG = [
   { key: "ai_actions", label: "AI-acties (Boden voert uit)", group: "Systeem", core: false,
     addon: true, actions: [], submodules: [],
     addonMonthly: 29, addonDesc: "Laat de AI-assistent taken uitvoeren (verlof, onkosten, klanten, werkbonnen…) na jouw bevestiging." },
+  // Add-on: AI-estimatie · klantvraag → offerte-concept (regels met materiaal,
+  // uren en prijs), onderbouwd door de eigen offertehistoriek. Altijd een
+  // concept dat de gebruiker controleert; AI-kost → betaalde add-on.
+  { key: "ai_estimate", label: "AI-offerte-estimatie", group: "Systeem", core: false,
+    addon: true, actions: ["estimate"], submodules: [],
+    addonMonthly: 39, addonDesc: "Zet een klantvraag automatisch om in een offerte-concept met materiaal, uren en prijs, gebaseerd op je eigen offertehistoriek. Jij controleert en verstuurt." },
 ];
 
 // Altijd-aan modules: nooit gated, niet in bundels te kiezen.

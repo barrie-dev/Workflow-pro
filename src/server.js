@@ -92,7 +92,7 @@ function sanitizeEmployeePermissions(store, tenant, role, requested) {
 // basisfunctionaliteit en vallen buiten deze gate.
 const WRITE_GATE_MAP = {
   workorders: ["workorders"], shifts: ["planning"], planning: ["planning"], appointments: ["planning"],
-  incidents: ["incidents"], inquiries: ["customers"],
+  incidents: ["incidents"], inquiries: ["customers"], estimate: ["invoicing", "billing"],
   expenses: ["expenses"], leaves: ["leaves"], messages: ["messages"],
   customers: ["customers"], venues: ["venues"], stock: ["stock"], vehicles: ["vehicles"],
   facturen: ["invoicing", "billing"], offertes: ["invoicing", "billing"],
@@ -206,6 +206,7 @@ const { runPaymentReminders, reminderPolicy } = require("./modules/payment-remin
 const { normalizeAppointment, runAppointmentReminders } = require("./modules/appointments");
 const { normalizeIncident, incidentsToCsv } = require("./modules/incidents");
 const { INQUIRY_STATUSES, ensureIntake, intakeAddress, newIntakeToken, parseInboundPayload, resolveIntakeTenant, createInquiry } = require("./modules/inbox");
+const { estimateFromQuestion } = require("./modules/estimator");
 const {
   createSetupIntent,
   billingQuote,
@@ -4029,6 +4030,32 @@ http.createServer(async (req, res) => {
         store.remove("inquiries", existingInq.id);
         store.audit({ actor: user.email, tenantId, action: "inquiry_deleted", area: "inbox", detail: existingInq.subject });
         sendJson(res, 200, { ok: true });
+        return;
+      }
+
+      // ── AI-offerte-estimatie (add-on ai_estimate · altijd concept, mens keurt goed) ──
+      if (action === "estimate" && req.method === "POST") {
+        assertInvoicing(user);
+        assertInteractiveUser(user);
+        const body = await readBody(req);
+        let question = String(body.question || "").trim();
+        let inquiry = null;
+        if (body.inquiryId) {
+          inquiry = store.list("inquiries", tenantId).find(q => q.id === body.inquiryId);
+          if (!inquiry) return sendJson(res, 404, { ok: false, error: "Klantvraag niet gevonden" });
+          question = [inquiry.subject, inquiry.text].filter(Boolean).join("\n\n");
+        }
+        if (!question) return sendJson(res, 400, { ok: false, error: "Omschrijf de klantvraag (of kies een klantvraag uit de Inbox)" });
+        try {
+          const estimate = await estimateFromQuestion(store, tenant, question);
+          store.audit({ actor: user.email, tenantId, action: "quote_estimated", area: "offertes", detail: `${estimate.mock ? "mock" : "ai"} · ${estimate.lines.length} regels · ${question.slice(0, 60)}` });
+          sendJson(res, 200, { ok: true, estimate, prefill: {
+            customerId: inquiry ? inquiry.customerId : null,
+            customerName: inquiry ? (inquiry.customerName || inquiry.fromName || "") : "",
+          } });
+        } catch (e) {
+          sendJson(res, e.status || 502, { ok: false, error: e.message });
+        }
         return;
       }
 
