@@ -86,6 +86,10 @@ const MODULE_CATALOG = [
     view: "venues", actions: ["venues"], submodules: [] },
 
   // ── Compliance (Belgische bouw) ───────────────────────────
+  // Werkongevallen-register: wettelijk verplichte registratie + opvolging van
+  // de aangifte bij de verzekeraar (8 dagen) en CSV-export van het register.
+  { key: "incidents", label: "Werkongevallen", group: "Compliance", core: false,
+    view: "incidents", actions: ["incidents"], submodules: [] },
   // CIAW / Checkin@Work · verplichte aanwezigheidsregistratie naar RSZ/ONSS.
   // À-la-carte add-on: superadmin zet 'm per tenant aan (moduleOverrides.add).
   { key: "ciaw", label: "Checkin@Work (CIAW)", group: "Compliance", core: false,

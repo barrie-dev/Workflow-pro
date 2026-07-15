@@ -92,6 +92,22 @@ const migrations = [
         ...row
       }));
     }
+  },
+  {
+    // Werkongevallen-module: bestaande tenant-admins krijgen het nieuwe
+    // "incidents"-recht (zelfde union-aanpak als versie 3).
+    version: 7,
+    name: "tenant-admin-incidents-permission",
+    apply(data, context) {
+      data.users = (data.users || []).map(user => {
+        if (user.role !== "tenant_admin") return user;
+        return {
+          ...user,
+          permissions: unique([...(user.permissions || []), ...context.businessAdminPermissions])
+        };
+      });
+      return context;
+    }
   }
 ];
 

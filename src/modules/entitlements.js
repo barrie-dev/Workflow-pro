@@ -127,6 +127,8 @@ const OPERATIONAL_PERMISSIONS = [
   { key: "venues", label: "Locaties / werven" },
   { key: "stock", label: "Stock" },
   { key: "vehicles", label: "Wagenpark" },
+  // Werkongevallen registreren (bv. preventieadviseur of werfleider).
+  { key: "incidents", label: "Werkongevallen" },
   // Klant-facturatie (offertes + facturen) als apart toekenbaar recht, LOS van
   // "billing" (abonnement/checkout/portal blijft admin-only). Zo kan de klant
   // een finance-profiel maken zonder toegang tot het abonnementsbeheer.

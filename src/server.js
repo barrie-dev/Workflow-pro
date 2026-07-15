@@ -92,6 +92,7 @@ function sanitizeEmployeePermissions(store, tenant, role, requested) {
 // basisfunctionaliteit en vallen buiten deze gate.
 const WRITE_GATE_MAP = {
   workorders: ["workorders"], shifts: ["planning"], planning: ["planning"], appointments: ["planning"],
+  incidents: ["incidents"],
   expenses: ["expenses"], leaves: ["leaves"], messages: ["messages"],
   customers: ["customers"], venues: ["venues"], stock: ["stock"], vehicles: ["vehicles"],
   facturen: ["invoicing", "billing"], offertes: ["invoicing", "billing"],
@@ -203,6 +204,7 @@ const { lookupKboResolve } = require("./modules/kbo");
 const { createCustomerInvoice, workorderInvoicePayload } = require("./modules/customer-invoicing");
 const { runPaymentReminders, reminderPolicy } = require("./modules/payment-reminders");
 const { normalizeAppointment, runAppointmentReminders } = require("./modules/appointments");
+const { normalizeIncident, incidentsToCsv } = require("./modules/incidents");
 const {
   createSetupIntent,
   billingQuote,
@@ -3862,6 +3864,62 @@ http.createServer(async (req, res) => {
         if (!existingApt) return sendJson(res, 404, { ok: false, error: "Afspraak niet gevonden" });
         store.remove("appointments", existingApt.id);
         store.audit({ actor: user.email, tenantId, action: "appointment_deleted", area: "appointments", detail: `${existingApt.date} ${existingApt.start} · ${existingApt.customerName}` });
+        sendJson(res, 200, { ok: true });
+        return;
+      }
+
+      // ── Werkongevallen (register + aangifte-opvolging) ──────────────────
+      if (action === "incidents" && req.method === "GET") {
+        assertCan(user, "incidents");
+        const rows = store.list("incidents", tenantId)
+          .slice()
+          .sort((a, b) => `${b.date} ${b.time || ""}`.localeCompare(`${a.date} ${a.time || ""}`));
+        if (url.searchParams.get("format") === "csv") {
+          res.writeHead(200, {
+            "Content-Type": "text/csv; charset=utf-8",
+            "Content-Disposition": `attachment; filename="werkongevallen-${new Date().toISOString().slice(0, 10)}.csv"`,
+            "Cache-Control": "no-store"
+          });
+          res.end(incidentsToCsv(rows));
+          return;
+        }
+        sendJson(res, 200, { ok: true, incidents: rows });
+        return;
+      }
+      if (action === "incidents" && req.method === "POST") {
+        assertCan(user, "incidents");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        const clean = normalizeIncident(body);
+        const row = store.insert("incidents", {
+          id: `inc_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+          tenantId, ...clean,
+          createdBy: user.email, createdAt: new Date().toISOString()
+        });
+        store.audit({ actor: user.email, tenantId, action: "incident_created", area: "incidents", detail: `${clean.date} · ${clean.employeeName} · ${clean.severity}` });
+        sendJson(res, 201, { ok: true, incident: row });
+        return;
+      }
+      const incMatch = action.match(/^incidents\/([^/]+)$/);
+      if (incMatch && req.method === "PATCH") {
+        assertCan(user, "incidents");
+        assertApiKeyWriteAllowed(user, req);
+        const existingInc = store.list("incidents", tenantId).find(i => i.id === incMatch[1]);
+        if (!existingInc) return sendJson(res, 404, { ok: false, error: "Werkongeval niet gevonden" });
+        const body = await readBody(req);
+        const clean = normalizeIncident(body, existingInc);
+        const row = store.update("incidents", existingInc.id, { ...clean, updatedAt: new Date().toISOString() });
+        store.audit({ actor: user.email, tenantId, action: "incident_updated", area: "incidents", detail: `${clean.date} · ${clean.employeeName} · ${clean.severity}` });
+        sendJson(res, 200, { ok: true, incident: row });
+        return;
+      }
+      if (incMatch && req.method === "DELETE") {
+        assertCan(user, "incidents");
+        assertApiKeyWriteAllowed(user, req);
+        const existingInc = store.list("incidents", tenantId).find(i => i.id === incMatch[1]);
+        if (!existingInc) return sendJson(res, 404, { ok: false, error: "Werkongeval niet gevonden" });
+        store.remove("incidents", existingInc.id);
+        store.audit({ actor: user.email, tenantId, action: "incident_deleted", area: "incidents", detail: `${existingInc.date} · ${existingInc.employeeName}` });
         sendJson(res, 200, { ok: true });
         return;
       }

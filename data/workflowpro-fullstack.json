@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 6,
+  "schemaVersion": 7,
   "tenants": [
     {
       "invoiceProfile": {},
@@ -44,7 +44,7 @@
     {
       "mfaEnabled": false,
       "mfaEnforced": false,
-      "lastLoginAt": "2026-07-15T20:43:52.769Z",
+      "lastLoginAt": "2026-07-15T21:02:12.257Z",
       "failedLoginCount": 0,
       "lockedUntil": null,
       "id": "u_admin",
@@ -70,7 +70,8 @@
         "integrations",
         "stock",
         "vehicles",
-        "leaves"
+        "leaves",
+        "incidents"
       ],
       "active": true,
       "updatedAt": "2026-06-09T18:12:54.127Z",
@@ -1110,6 +1111,65 @@
       "action": "appointment_deleted",
       "area": "appointments",
       "detail": "2026-07-16 09:00 · Test Klant BV"
+    },
+    {
+      "id": "audit_1784149083837_acc1e49a1db6f8",
+      "at": "2026-07-15T20:58:03.837Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1784149155969_d6a1024e00eb58",
+      "at": "2026-07-15T20:59:15.969Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1784149294888_3e2db09c54d8e8",
+      "at": "2026-07-15T21:01:34.888Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1784149332259_6b8a2d9a365ca",
+      "at": "2026-07-15T21:02:12.259Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
+    },
+    {
+      "id": "audit_1784149332294_4485b50fa920a",
+      "at": "2026-07-15T21:02:12.294Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "incident_created",
+      "area": "incidents",
+      "detail": "2026-07-10 · Jan Peeters · werkverlet"
+    },
+    {
+      "id": "audit_1784149332309_130a15fea97f1",
+      "at": "2026-07-15T21:02:12.309Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "incident_updated",
+      "area": "incidents",
+      "detail": "2026-07-10 · Jan Peeters · werkverlet"
+    },
+    {
+      "id": "audit_1784149332324_3da96ad44dc3c8",
+      "at": "2026-07-15T21:02:12.324Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "incident_deleted",
+      "area": "incidents",
+      "detail": "2026-07-10 · Jan Peeters"
     }
   ],
   "errorEvents": [
@@ -1243,6 +1303,11 @@
       "version": 6,
       "name": "support-escalation-notification-shape",
       "appliedAt": "2026-05-12T17:53:36.349Z"
+    },
+    {
+      "version": 7,
+      "name": "tenant-admin-incidents-permission",
+      "appliedAt": "2026-07-15T21:02:08.577Z"
     }
   ],
   "quotes": [
@@ -1356,7 +1421,8 @@
         "messages",
         "customers",
         "venues",
-        "appointments"
+        "appointments",
+        "incidents"
       ],
       "submodules": {
         "planning": [
@@ -1371,9 +1437,10 @@
           "reminders"
         ]
       },
-      "updatedAt": "2026-07-15T20:43:45.909Z",
+      "updatedAt": "2026-07-15T20:59:15.993Z",
       "backfilled": [
-        "appointments"
+        "appointments",
+        "incidents"
       ]
     },
     {
@@ -1400,7 +1467,8 @@
         "stock",
         "vehicles",
         "reports",
-        "appointments"
+        "appointments",
+        "incidents"
       ],
       "submodules": {
         "planning": [
@@ -1446,9 +1514,10 @@
           "reminders"
         ]
       },
-      "updatedAt": "2026-07-15T20:43:45.909Z",
+      "updatedAt": "2026-07-15T20:59:15.993Z",
       "backfilled": [
-        "appointments"
+        "appointments",
+        "incidents"
       ]
     },
     {
@@ -1480,7 +1549,8 @@
         "integrations",
         "sso",
         "ai_actions",
-        "appointments"
+        "appointments",
+        "incidents"
       ],
       "submodules": {
         "planning": [
@@ -1526,13 +1596,15 @@
           "reminders"
         ]
       },
-      "updatedAt": "2026-07-15T20:43:45.909Z",
+      "updatedAt": "2026-07-15T20:59:15.993Z",
       "backfilled": [
-        "appointments"
+        "appointments",
+        "incidents"
       ]
     }
   ],
   "postedWorkers": [],
   "templates": [],
-  "appointments": []
+  "appointments": [],
+  "incidents": []
 }

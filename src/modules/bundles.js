@@ -17,12 +17,12 @@ const DEFAULT_BUNDLES = [
   {
     key: "starter", label: "Starter", order: 1, active: true, custom: false,
     description: "Voor kleine teams die starten met planning en tijdregistratie.",
-    modules: ["planning", "appointments", "clockings", "messages", "customers", "venues"],
+    modules: ["planning", "appointments", "clockings", "messages", "customers", "venues", "incidents"],
   },
   {
     key: "business", label: "Business", order: 2, active: true, custom: false, popular: true,
     description: "Het volledige operationele pakket inclusief werkbonnen en facturatie.",
-    modules: ["planning", "appointments", "clockings", "messages", "customers", "venues",
+    modules: ["planning", "appointments", "clockings", "messages", "customers", "venues", "incidents",
       "workorders", "leaves", "expenses", "offertes", "invoices", "stock", "vehicles", "reports"],
   },
   {
@@ -37,6 +37,8 @@ const DEFAULT_BUNDLES = [
 // een bewuste verwijdering door de superadmin daarna gerespecteerd blijft.
 const BUNDLE_BACKFILL = {
   appointments: ["starter", "business", "enterprise"],
+  // Werkongevallen-register is wettelijk verplicht voor elke werkgever → elke bundel.
+  incidents: ["starter", "business", "enterprise"],
 };
 
 function ensureArray(store) {
