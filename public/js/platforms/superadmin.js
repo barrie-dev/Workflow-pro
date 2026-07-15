@@ -411,41 +411,41 @@
     const evStatus = s => s === "failed" || s === "payment_failed" ? "badge-red" : (s === "processed" || s === "invoice_paid" || s === "active" ? "badge-green" : "badge-gray");
     c.innerHTML = `
 <div class="sa-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px">
-  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">Productie-readiness</div><div style="font-size:26px;font-weight:700;color:${r.score>=90?"var(--wf-green)":r.score>=60?"var(--wf-yellow)":"var(--wf-red)"}">${r.score}%</div><div style="font-size:12px;color:var(--gray-500)">${r.blockers} P0-blockers</div></div></div>
-  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">Betaal-events (fout)</div><div style="font-size:26px;font-weight:700;color:${(ev.failed||0)?"var(--wf-red)":"var(--wf-green)"}">${ev.failed||0}</div><div style="font-size:12px;color:var(--gray-500)">${ev.total||0} totaal</div></div></div>
-  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">Backups ontbreken/oud</div><div style="font-size:26px;font-weight:700;color:${(bk.missing||0)+(bk.stale||0)?"var(--wf-yellow)":"var(--wf-green)"}">${(bk.missing||0)+(bk.stale||0)}</div><div style="font-size:12px;color:var(--gray-500)">van ${bk.tenants||0} tenants</div></div></div>
-  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">E-mail live</div><div style="font-size:26px;font-weight:700;color:${ml.live?"var(--wf-green)":"var(--wf-yellow)"}">${ml.live?"Ja":"Log"}</div><div style="font-size:12px;color:var(--gray-500)">${mail.filter(m=>!m.ok).length} recente fouten</div></div></div>
+  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">${tS("sa.prodReadiness","Productie-readiness")}</div><div style="font-size:26px;font-weight:700;color:${r.score>=90?"var(--wf-green)":r.score>=60?"var(--wf-yellow)":"var(--wf-red)"}">${r.score}%</div><div style="font-size:12px;color:var(--gray-500)">${r.blockers} P0-blockers</div></div></div>
+  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">${tS("sa.payEventsFail","Betaal-events (fout)")}</div><div style="font-size:26px;font-weight:700;color:${(ev.failed||0)?"var(--wf-red)":"var(--wf-green)"}">${ev.failed||0}</div><div style="font-size:12px;color:var(--gray-500)">${ev.total||0} ${tS("sa.total","totaal")}</div></div></div>
+  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">${tS("sa.backupsMissing","Backups ontbreken/oud")}</div><div style="font-size:26px;font-weight:700;color:${(bk.missing||0)+(bk.stale||0)?"var(--wf-yellow)":"var(--wf-green)"}">${(bk.missing||0)+(bk.stale||0)}</div><div style="font-size:12px;color:var(--gray-500)">${tS("sa.ofN","van {n} tenants").replace("{n}", bk.tenants||0)}</div></div></div>
+  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">${tS("sa.emailLive","E-mail live")}</div><div style="font-size:26px;font-weight:700;color:${ml.live?"var(--wf-green)":"var(--wf-yellow)"}">${ml.live?tS("sa.yes","Ja"):"Log"}</div><div style="font-size:12px;color:var(--gray-500)">${tS("sa.recentErrors","{n} recente fouten").replace("{n}", mail.filter(m=>!m.ok).length)}</div></div></div>
 </div>
 
-<div class="sa-card" style="margin-bottom:16px"><div class="sa-card-head"><div class="sa-card-title">Productie-readiness</div></div>
+<div class="sa-card" style="margin-bottom:16px"><div class="sa-card-head"><div class="sa-card-title">${tS("sa.prodReadiness","Productie-readiness")}</div></div>
   <div class="sa-card-body" style="padding:12px 16px;display:flex;flex-direction:column;gap:5px">
     ${(r.checks||[]).map(ch => `<div style="display:flex;gap:8px;align-items:center;font-size:13px">
       <span style="font-weight:700;color:${ch.ok?"var(--wf-green)":ch.priority==="P0"?"var(--wf-red)":"var(--wf-yellow)"}">${ch.ok?"✓":"!"}</span>
       <strong style="min-width:200px">${esc(ch.label)}</strong>
-      <span style="color:var(--gray-500)">${esc(ch.detail||"")}</span></div>`).join("") || "<div style='color:var(--gray-500)'>Geen checks.</div>"}
+      <span style="color:var(--gray-500)">${esc(ch.detail||"")}</span></div>`).join("") || `<div style='color:var(--gray-500)'>${tS("sa.noChecks","Geen checks.")}</div>`}
   </div></div>
 
-<div class="sa-card" style="margin-bottom:16px"><div class="sa-card-head"><div class="sa-card-title">Backups per tenant</div></div>
-  <div class="sa-tbl-wrap"><table class="sa-tbl"><thead><tr><th>Tenant</th><th>Aantal</th><th>Laatste</th><th>Status</th><th>Bewaarbeleid</th><th></th></tr></thead><tbody>
+<div class="sa-card" style="margin-bottom:16px"><div class="sa-card-head"><div class="sa-card-title">${tS("sa.backupsPerTenant","Backups per tenant")}</div></div>
+  <div class="sa-tbl-wrap"><table class="sa-tbl"><thead><tr><th>${tS("sa.tenant","Tenant")}</th><th>${tS("sa.count","Aantal")}</th><th>${tS("sa.latest","Laatste")}</th><th>${tS("adm.status","Status")}</th><th>${tS("adm.set.retentionPolicy","Bewaarbeleid")}</th><th></th></tr></thead><tbody>
     ${bkRows.map(b => `<tr data-bk="${esc(b.tenantId)}"><td>${esc(b.tenant)}</td><td>${b.count}</td><td>${b.latestAt?fmtDT(b.latestAt):"-"}</td>
-      <td>${badge(b.status==="ok"?"vers":b.status==="stale"?`${b.ageDays}d oud`:"ontbreekt", b.status==="ok"?"badge-green":b.status==="stale"?"badge-yellow":"badge-red")}</td>
-      <td><button class="sa-btn btn-secondary sm bk-policy" data-id="${esc(b.tenantId)}" data-name="${esc(b.tenant)}">Beleid</button></td>
-      <td><button class="sa-btn btn-secondary sm bk-make" data-id="${esc(b.tenantId)}">Backup maken</button></td></tr>`).join("") || "<tr><td colspan=6 style='color:var(--gray-500)'>Geen tenants.</td></tr>"}
+      <td>${badge(b.status==="ok"?tS("sa.fresh","vers"):b.status==="stale"?tS("sa.daysOld","{n}d oud").replace("{n}",b.ageDays):tS("sa.missing","ontbreekt"), b.status==="ok"?"badge-green":b.status==="stale"?"badge-yellow":"badge-red")}</td>
+      <td><button class="sa-btn btn-secondary sm bk-policy" data-id="${esc(b.tenantId)}" data-name="${esc(b.tenant)}">${tS("sa.policy","Beleid")}</button></td>
+      <td><button class="sa-btn btn-secondary sm bk-make" data-id="${esc(b.tenantId)}">${tS("sa.makeBackup","Backup maken")}</button></td></tr>`).join("") || `<tr><td colspan=6 style='color:var(--gray-500)'>${tS("sa.noTenantsShort","Geen tenants.")}</td></tr>`}
   </tbody></table></div></div>
 
-<div class="sa-card" style="margin-bottom:16px"><div class="sa-card-head"><div class="sa-card-title">Webhook-/betaal-events</div></div>
-  <div class="sa-tbl-wrap"><table class="sa-tbl"><thead><tr><th>Tijd</th><th>Tenant</th><th>Type</th><th>Actie</th><th>Status</th></tr></thead><tbody>
-    ${evRows.map(e => `<tr><td>${fmtDT(e.at)}</td><td>${esc(e.tenant)}</td><td style="font-family:monospace;font-size:12px">${esc(e.type)}</td><td>${esc(e.action||"-")}</td><td>${badge(e.status||"-", evStatus(e.status||e.action))}</td></tr>`).join("") || "<tr><td colspan=5 style='color:var(--gray-500)'>Nog geen events.</td></tr>"}
+<div class="sa-card" style="margin-bottom:16px"><div class="sa-card-head"><div class="sa-card-title">${tS("sa.webhookPayEvents","Webhook-/betaal-events")}</div></div>
+  <div class="sa-tbl-wrap"><table class="sa-tbl"><thead><tr><th>${tS("sa.time","Tijd")}</th><th>${tS("sa.tenant","Tenant")}</th><th>${tS("adm.leave.thType","Type")}</th><th>${tS("sa.action","Actie")}</th><th>${tS("adm.status","Status")}</th></tr></thead><tbody>
+    ${evRows.map(e => `<tr><td>${fmtDT(e.at)}</td><td>${esc(e.tenant)}</td><td style="font-family:monospace;font-size:12px">${esc(e.type)}</td><td>${esc(e.action||"-")}</td><td>${badge(e.status||"-", evStatus(e.status||e.action))}</td></tr>`).join("") || `<tr><td colspan=5 style='color:var(--gray-500)'>${tS("sa.noEvents","Nog geen events.")}</td></tr>`}
   </tbody></table></div></div>
 
-<div class="sa-card"><div class="sa-card-head"><div class="sa-card-title">E-mail-log (recent)</div></div>
-  <div class="sa-tbl-wrap"><table class="sa-tbl"><thead><tr><th>Tijd</th><th>Aan</th><th>Onderwerp</th><th>Provider</th><th>Status</th></tr></thead><tbody>
-    ${mail.map(m => `<tr><td>${fmtDT(m.at)}</td><td>${esc(m.to)}</td><td>${esc(m.subject)}</td><td>${esc(m.provider)}</td><td>${badge(m.ok?"ok":"fout", m.ok?"badge-green":"badge-red")}</td></tr>`).join("") || "<tr><td colspan=5 style='color:var(--gray-500)'>Nog geen verzendingen op deze server-instance.</td></tr>"}
+<div class="sa-card"><div class="sa-card-head"><div class="sa-card-title">${tS("sa.emailLogRecent","E-mail-log (recent)")}</div></div>
+  <div class="sa-tbl-wrap"><table class="sa-tbl"><thead><tr><th>${tS("sa.time","Tijd")}</th><th>${tS("mgr.to","Aan")}</th><th>${tS("mgr.subject","Onderwerp")}</th><th>Provider</th><th>${tS("adm.status","Status")}</th></tr></thead><tbody>
+    ${mail.map(m => `<tr><td>${fmtDT(m.at)}</td><td>${esc(m.to)}</td><td>${esc(m.subject)}</td><td>${esc(m.provider)}</td><td>${badge(m.ok?"ok":tS("sa.errorLc","fout"), m.ok?"badge-green":"badge-red")}</td></tr>`).join("") || `<tr><td colspan=5 style='color:var(--gray-500)'>${tS("sa.noMailSent","Nog geen verzendingen op deze server-instance.")}</td></tr>`}
   </tbody></table></div></div>`;
     c.querySelectorAll(".bk-make").forEach(btn => btn.addEventListener("click", async () => {
-      btn.disabled = true; btn.textContent = "Bezig…";
-      try { await api(`/api/admin/backups/${btn.dataset.id}`, { method: "POST" }); window.showToast && window.showToast("Backup gemaakt", "success"); ops(); }
-      catch (e) { window.showToast && window.showToast(e.message, "error"); btn.disabled = false; btn.textContent = "Backup maken"; }
+      btn.disabled = true; btn.textContent = tS("adm.bill.busy","Bezig…");
+      try { await api(`/api/admin/backups/${btn.dataset.id}`, { method: "POST" }); window.showToast && window.showToast(tS("sa.backupMade","Backup gemaakt"), "success"); ops(); }
+      catch (e) { window.showToast && window.showToast(e.message, "error"); btn.disabled = false; btn.textContent = tS("sa.makeBackup","Backup maken"); }
     }));
     c.querySelectorAll(".bk-policy").forEach(btn => btn.addEventListener("click", () => openBackupPolicy(btn.dataset.id, btn.dataset.name)));
   }
@@ -457,34 +457,34 @@
     catch (e) { window.showToast && window.showToast(e.message, "error"); return; }
     const p = d.policy || {};
     const presets = d.presets || [30, 90, 180, 365, 730, 2555];
-    const yrs = days => days < 365 ? `${days} dagen` : (days % 365 === 0 ? `${days / 365} jaar` : `${Math.round(days / 365 * 10) / 10} jaar`);
+    const yrs = days => days < 365 ? `${days} ${tS("adm.set.days","dagen")}` : (days % 365 === 0 ? `${days / 365} ${tS("adm.set.years","jaar")}` : `${Math.round(days / 365 * 10) / 10} ${tS("adm.set.years","jaar")}`);
     const opts = presets.map(v => `<option value="${v}" ${p.retentionDays === v ? "selected" : ""}>${yrs(v)}</option>`).join("")
       + (presets.includes(p.retentionDays) ? "" : `<option value="${esc(p.retentionDays)}" selected>${yrs(p.retentionDays)}</option>`);
     const c = d.counts || { total: 0, toKeep: 0, toPrune: 0 };
-    openDrawer(`Bewaarbeleid · ${esc(tenantName || tenantId)}`, `
-  <div style="font-size:12px;color:var(--gray-500);margin-bottom:4px">${c.total} backup(s) · ${c.toKeep} behouden${c.toPrune ? ` · <span style="color:var(--wf-yellow)">${c.toPrune} buiten termijn</span>` : ""}</div>
-  <div class="sa-field"><label>Bewaartermijn backups</label>
+    openDrawer(`${tS("adm.set.retentionPolicy","Bewaarbeleid")} · ${esc(tenantName || tenantId)}`, `
+  <div style="font-size:12px;color:var(--gray-500);margin-bottom:4px">${c.total} backup(s) · ${c.toKeep} ${tS("adm.set.kept","behouden")}${c.toPrune ? ` · <span style="color:var(--wf-yellow)">${c.toPrune} ${tS("adm.set.outOfTerm","buiten termijn")}</span>` : ""}</div>
+  <div class="sa-field"><label>${tS("sa.retentionBackups","Bewaartermijn backups")}</label>
     <select id="bpRetention">${opts}</select></div>
-  <div class="sa-field"><label>Frequentie</label>
+  <div class="sa-field"><label>${tS("adm.set.frequency","Frequentie")}</label>
     <select id="bpFreq">
-      <option value="daily" ${p.frequency === "daily" ? "selected" : ""}>Dagelijks</option>
-      <option value="weekly" ${p.frequency === "weekly" ? "selected" : ""}>Wekelijks</option>
+      <option value="daily" ${p.frequency === "daily" ? "selected" : ""}>${tS("adm.set.daily","Dagelijks")}</option>
+      <option value="weekly" ${p.frequency === "weekly" ? "selected" : ""}>${tS("adm.set.weekly","Wekelijks")}</option>
     </select></div>
-  <div class="sa-field"><label>Minimaal te behouden (nieuwste backups blijven altijd)</label>
+  <div class="sa-field"><label>${tS("sa.keepMinNote","Minimaal te behouden (nieuwste backups blijven altijd)")}</label>
     <input id="bpKeepMin" type="number" min="1" max="${esc(d.limits?.maxKeepMinimum || 30)}" value="${esc(p.keepMinimum)}"></div>
   <label style="display:flex;align-items:center;gap:9px;font-size:13px;color:var(--gray-700);cursor:pointer">
     <input id="bpLegalHold" type="checkbox" ${p.legalHold ? "checked" : ""} style="width:16px;height:16px">
-    <span><strong>Legal hold</strong> · opruiming volledig stilleggen (audit/geschil/GDPR-verzoek)</span></label>
+    <span>${tS("sa.legalHoldNote","<strong>Legal hold</strong> · opruiming volledig stilleggen (audit/geschil/GDPR-verzoek)")}</span></label>
   <div style="font-size:11.5px;color:var(--gray-400);line-height:1.5;border-top:1px solid var(--gray-100);padding-top:10px">
-    GDPR art. 5(1)(e): backups buiten de termijn worden automatisch opgeruimd. DR-backups ≠ wettelijk archief (facturen 7j, sociale/arbeidstijd 5j rusten op de live-data).
-    ${p.updatedAt ? `<div style="margin-top:6px">Laatst gewijzigd ${fmtDT(p.updatedAt)}${p.updatedBy ? ` door ${esc(p.updatedBy)}` : ""}</div>` : ""}
+    ${tS("sa.gdprBackupNote","GDPR art. 5(1)(e): backups buiten de termijn worden automatisch opgeruimd. DR-backups ≠ wettelijk archief (facturen 7j, sociale/arbeidstijd 5j rusten op de live-data).")}
+    ${p.updatedAt ? `<div style="margin-top:6px">${tS("sa.lastChanged","Laatst gewijzigd")} ${fmtDT(p.updatedAt)}${p.updatedBy ? ` ${tS("adm.set.by","door")} ${esc(p.updatedBy)}` : ""}</div>` : ""}
   </div>`,
-      `<button class="sa-btn btn-primary" id="bpSave">Opslaan</button>
-       <button class="sa-btn btn-secondary" id="closeDrawer">Annuleren</button>`);
+      `<button class="sa-btn btn-primary" id="bpSave">${tS("adm.save","Opslaan")}</button>
+       <button class="sa-btn btn-secondary" id="closeDrawer">${tS("adm.cancel","Annuleren")}</button>`);
     document.getElementById("closeDrawer")?.addEventListener("click", closeDrawer);
     document.getElementById("bpSave")?.addEventListener("click", async () => {
       const btn = document.getElementById("bpSave");
-      btn.disabled = true; btn.textContent = "Opslaan…";
+      btn.disabled = true; btn.textContent = tS("mgr.saving","Opslaan…");
       try {
         await api(`/api/admin/backups/${tenantId}/policy`, { method: "PUT", body: JSON.stringify({
           retentionDays: parseInt(document.getElementById("bpRetention").value, 10),
@@ -492,11 +492,11 @@
           keepMinimum: parseInt(document.getElementById("bpKeepMin").value, 10),
           legalHold: document.getElementById("bpLegalHold").checked,
         })});
-        window.showToast && window.showToast("Bewaarbeleid opgeslagen", "success");
+        window.showToast && window.showToast(tS("sa.policySaved","Bewaarbeleid opgeslagen"), "success");
         closeDrawer(); ops();
       } catch (e) {
         window.showToast && window.showToast(e.message, "error");
-        btn.disabled = false; btn.textContent = "Opslaan";
+        btn.disabled = false; btn.textContent = tS("adm.save","Opslaan");
       }
     });
   }
@@ -518,31 +518,31 @@
     const gov = kg.governance || { rows: [], blockers: 0, warnings: 0, checked: 0 };
     c.innerHTML = `
 <div class="sa-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px">
-  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">Admins met MFA klaar</div><div style="font-size:26px;font-weight:700;color:${mfa.readyAdmins===mfa.totalAdmins?"var(--wf-green)":"var(--wf-yellow)"}">${mfa.readyAdmins||0}/${mfa.totalAdmins||0}</div><div style="font-size:12px;color:var(--gray-500)">${mfa.missingMfa||0} zonder MFA</div></div></div>
-  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">Vergrendelde accounts</div><div style="font-size:26px;font-weight:700;color:${(s.locked||[]).length?"var(--wf-red)":"var(--wf-green)"}">${(s.locked||[]).length}</div><div style="font-size:12px;color:var(--gray-500)">na mislukte logins</div></div></div>
-  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">DPA ontbreekt</div><div style="font-size:26px;font-weight:700;color:${(gd.dpaMissing||0)?"var(--wf-yellow)":"var(--wf-green)"}">${gd.dpaMissing||0}</div><div style="font-size:12px;color:var(--gray-500)">van ${gd.tenants||0} tenants</div></div></div>
-  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">Open GDPR-verzoeken</div><div style="font-size:26px;font-weight:700;color:${(gd.openRequests||0)?"var(--wf-yellow)":"var(--wf-green)"}">${gd.openRequests||0}</div><div style="font-size:12px;color:var(--gray-500)">export/verwijdering</div></div></div>
-  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">API-key-issues</div><div style="font-size:26px;font-weight:700;color:${gov.blockers?"var(--wf-red)":gov.warnings?"var(--wf-yellow)":"var(--wf-green)"}">${gov.blockers||0}/${gov.warnings||0}</div><div style="font-size:12px;color:var(--gray-500)">P0/P1 · ${gov.checked||0} keys</div></div></div>
+  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">${tS("sa.adminsMfaReady","Admins met MFA klaar")}</div><div style="font-size:26px;font-weight:700;color:${mfa.readyAdmins===mfa.totalAdmins?"var(--wf-green)":"var(--wf-yellow)"}">${mfa.readyAdmins||0}/${mfa.totalAdmins||0}</div><div style="font-size:12px;color:var(--gray-500)">${tS("sa.withoutMfa","{n} zonder MFA").replace("{n}", mfa.missingMfa||0)}</div></div></div>
+  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">${tS("sa.lockedAccounts","Vergrendelde accounts")}</div><div style="font-size:26px;font-weight:700;color:${(s.locked||[]).length?"var(--wf-red)":"var(--wf-green)"}">${(s.locked||[]).length}</div><div style="font-size:12px;color:var(--gray-500)">${tS("sa.afterFailedLogins","na mislukte logins")}</div></div></div>
+  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">${tS("sa.dpaMissing","DPA ontbreekt")}</div><div style="font-size:26px;font-weight:700;color:${(gd.dpaMissing||0)?"var(--wf-yellow)":"var(--wf-green)"}">${gd.dpaMissing||0}</div><div style="font-size:12px;color:var(--gray-500)">${tS("sa.ofN","van {n} tenants").replace("{n}", gd.tenants||0)}</div></div></div>
+  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">${tS("sa.openGdprReq","Open GDPR-verzoeken")}</div><div style="font-size:26px;font-weight:700;color:${(gd.openRequests||0)?"var(--wf-yellow)":"var(--wf-green)"}">${gd.openRequests||0}</div><div style="font-size:12px;color:var(--gray-500)">${tS("sa.exportDelete","export/verwijdering")}</div></div></div>
+  <div class="sa-card"><div class="sa-card-body"><div style="font-size:12px;color:var(--gray-500)">${tS("sa.apiKeyIssues","API-key-issues")}</div><div style="font-size:26px;font-weight:700;color:${gov.blockers?"var(--wf-red)":gov.warnings?"var(--wf-yellow)":"var(--wf-green)"}">${gov.blockers||0}/${gov.warnings||0}</div><div style="font-size:12px;color:var(--gray-500)">P0/P1 · ${gov.checked||0} keys</div></div></div>
 </div>
 
-<div class="sa-card" style="margin-bottom:16px"><div class="sa-card-head"><div class="sa-card-title">MFA-status admins</div></div>
-  <div class="sa-tbl-wrap"><table class="sa-tbl"><thead><tr><th>Naam</th><th>E-mail</th><th>Rol</th><th>Status</th></tr></thead><tbody>
-    ${(mfa.rows||[]).map(u => `<tr><td>${esc(u.name||"-")}</td><td>${esc(u.email)}</td><td>${esc(u.role)}</td><td>${u.ready?badge("klaar","badge-green"):badge(u.mfaEnabled?"niet afgedwongen":"geen MFA","badge-red")}</td></tr>`).join("") || "<tr><td colspan=4 style='color:var(--gray-500)'>Geen admins gevonden.</td></tr>"}
+<div class="sa-card" style="margin-bottom:16px"><div class="sa-card-head"><div class="sa-card-title">${tS("sa.mfaStatusAdmins","MFA-status admins")}</div></div>
+  <div class="sa-tbl-wrap"><table class="sa-tbl"><thead><tr><th>${tS("adm.cust.thName","Naam")}</th><th>${tS("adm.email","E-mail")}</th><th>${tS("sa.role","Rol")}</th><th>${tS("adm.status","Status")}</th></tr></thead><tbody>
+    ${(mfa.rows||[]).map(u => `<tr><td>${esc(u.name||"-")}</td><td>${esc(u.email)}</td><td>${esc(u.role)}</td><td>${u.ready?badge(tS("sa.ready","klaar"),"badge-green"):badge(u.mfaEnabled?tS("sa.notEnforced","niet afgedwongen"):tS("sa.noMfa","geen MFA"),"badge-red")}</td></tr>`).join("") || `<tr><td colspan=4 style='color:var(--gray-500)'>${tS("sa.noAdmins","Geen admins gevonden.")}</td></tr>`}
   </tbody></table></div></div>
 
-${(s.locked||[]).length ? `<div class="sa-card" style="margin-bottom:16px"><div class="sa-card-head"><div class="sa-card-title">Vergrendelde accounts</div></div>
-  <div class="sa-tbl-wrap"><table class="sa-tbl"><thead><tr><th>E-mail</th><th>Mislukte logins</th><th>Vergrendeld tot</th></tr></thead><tbody>
+${(s.locked||[]).length ? `<div class="sa-card" style="margin-bottom:16px"><div class="sa-card-head"><div class="sa-card-title">${tS("sa.lockedAccounts","Vergrendelde accounts")}</div></div>
+  <div class="sa-tbl-wrap"><table class="sa-tbl"><thead><tr><th>${tS("adm.email","E-mail")}</th><th>${tS("sa.failedLogins","Mislukte logins")}</th><th>${tS("sa.lockedUntil","Vergrendeld tot")}</th></tr></thead><tbody>
     ${s.locked.map(u => `<tr><td>${esc(u.email)}</td><td>${u.failedLogins}</td><td>${fmtDT(u.lockedUntil)}</td></tr>`).join("")}
   </tbody></table></div></div>` : ""}
 
-<div class="sa-card" style="margin-bottom:16px"><div class="sa-card-head"><div class="sa-card-title">GDPR / DPA per tenant</div></div>
-  <div class="sa-tbl-wrap"><table class="sa-tbl"><thead><tr><th>Tenant</th><th>DPA</th><th>Open verzoeken</th><th>Totaal</th><th>Support-toegang</th></tr></thead><tbody>
-    ${gdprRows.map(r => `<tr><td>${esc(r.tenant)}</td><td>${r.dpaAccepted?badge("aanvaard","badge-green"):badge("ontbreekt","badge-red")}</td><td>${r.openRequests||0}</td><td>${r.totalRequests||0}</td><td>${r.supportAccess?badge("aan","badge-yellow"):"-"}</td></tr>`).join("") || "<tr><td colspan=5 style='color:var(--gray-500)'>Geen tenants.</td></tr>"}
+<div class="sa-card" style="margin-bottom:16px"><div class="sa-card-head"><div class="sa-card-title">${tS("sa.gdprDpaPerTenant","GDPR / DPA per tenant")}</div></div>
+  <div class="sa-tbl-wrap"><table class="sa-tbl"><thead><tr><th>${tS("sa.tenant","Tenant")}</th><th>DPA</th><th>${tS("sa.openRequests","Open verzoeken")}</th><th>${tS("adm.total","Totaal")}</th><th>${tS("sa.support","Support-toegang")}</th></tr></thead><tbody>
+    ${gdprRows.map(r => `<tr><td>${esc(r.tenant)}</td><td>${r.dpaAccepted?badge(tS("sa.accepted","aanvaard"),"badge-green"):badge(tS("sa.missing","ontbreekt"),"badge-red")}</td><td>${r.openRequests||0}</td><td>${r.totalRequests||0}</td><td>${r.supportAccess?badge(tS("sa.on","aan"),"badge-yellow"):"-"}</td></tr>`).join("") || `<tr><td colspan=5 style='color:var(--gray-500)'>${tS("sa.noTenantsShort","Geen tenants.")}</td></tr>`}
   </tbody></table></div></div>
 
-<div class="sa-card"><div class="sa-card-head"><div class="sa-card-title">API-key-governance</div></div>
+<div class="sa-card"><div class="sa-card-head"><div class="sa-card-title">${tS("sa.apiKeyGov","API-key-governance")}</div></div>
   <div class="sa-card-body" style="padding:12px 16px">
-    ${(gov.openP0||[]).concat(gov.openP1||[]).length ? (gov.openP0||[]).concat(gov.openP1||[]).map(i => `<div style="display:flex;gap:8px;align-items:center;font-size:13px;margin-bottom:4px"><span style="font-weight:700;color:${i.priority==="P0"?"var(--wf-red)":"var(--wf-yellow)"}">!</span><strong>${esc((i.key&&i.key.label)||(i.key&&i.key.id)||"key")}</strong><span style="color:var(--gray-500)">${esc(i.detail||i.code||"")}</span></div>`).join("") : "<div style='color:var(--wf-green);font-size:13px'>Geen openstaande API-key-issues.</div>"}
+    ${(gov.openP0||[]).concat(gov.openP1||[]).length ? (gov.openP0||[]).concat(gov.openP1||[]).map(i => `<div style="display:flex;gap:8px;align-items:center;font-size:13px;margin-bottom:4px"><span style="font-weight:700;color:${i.priority==="P0"?"var(--wf-red)":"var(--wf-yellow)"}">!</span><strong>${esc((i.key&&i.key.label)||(i.key&&i.key.id)||"key")}</strong><span style="color:var(--gray-500)">${esc(i.detail||i.code||"")}</span></div>`).join("") : `<div style='color:var(--wf-green);font-size:13px'>${tS("sa.noApiKeyIssues","Geen openstaande API-key-issues.")}</div>`}
   </div></div>`;
   }
 
@@ -561,30 +561,30 @@ ${(s.locked||[]).length ? `<div class="sa-card" style="margin-bottom:16px"><div 
     const lvl = (v, label) => `<option value="${v}" ${ann.level === v ? "selected" : ""}>${label}</option>`;
     const notes = rel.notes || rel.changelog || [];
     c.innerHTML = `
-<div class="sa-card" style="margin-bottom:16px"><div class="sa-card-head"><div class="sa-card-title">Platform-aankondiging / onderhoudsbanner</div></div>
+<div class="sa-card" style="margin-bottom:16px"><div class="sa-card-head"><div class="sa-card-title">${tS("sa.annTitle","Platform-aankondiging / onderhoudsbanner")}</div></div>
   <div class="sa-card-body" style="padding:16px;max-width:640px">
-    <div style="font-size:12.5px;color:var(--gray-500);margin-bottom:12px">Wordt bovenaan elke gebruiker-shell getoond zolang ze actief staat. Gebruik 'onderhoud' om een geplande downtime aan te kondigen.</div>
+    <div style="font-size:12.5px;color:var(--gray-500);margin-bottom:12px">${tS("sa.annIntro","Wordt bovenaan elke gebruiker-shell getoond zolang ze actief staat. Gebruik 'onderhoud' om een geplande downtime aan te kondigen.")}</div>
     <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:14px;font-weight:600">
-      <input type="checkbox" id="annActive" ${ann.active ? "checked" : ""}> Banner actief
+      <input type="checkbox" id="annActive" ${ann.active ? "checked" : ""}> ${tS("sa.bannerActive","Banner actief")}
     </label>
-    <label style="display:block;font-size:12.5px;font-weight:600;margin-bottom:4px">Niveau</label>
+    <label style="display:block;font-size:12.5px;font-weight:600;margin-bottom:4px">${tS("sa.level","Niveau")}</label>
     <select id="annLevel" style="margin-bottom:12px;width:200px">
-      ${lvl("info", "Info (blauw)")}${lvl("warning", "Waarschuwing (oranje)")}${lvl("maintenance", "Onderhoud (rood)")}
+      ${lvl("info", tS("sa.lvlInfo","Info (blauw)"))}${lvl("warning", tS("sa.lvlWarning","Waarschuwing (oranje)"))}${lvl("maintenance", tS("sa.lvlMaintenance","Onderhoud (rood)"))}
     </select>
-    <label style="display:block;font-size:12.5px;font-weight:600;margin-bottom:4px">Bericht</label>
-    <textarea id="annMessage" rows="3" maxlength="500" style="width:100%;margin-bottom:12px" placeholder="Bv. Gepland onderhoud zondag 02:00–04:00. Excuses voor het ongemak.">${esc(ann.message || "")}</textarea>
+    <label style="display:block;font-size:12.5px;font-weight:600;margin-bottom:4px">${tS("mgr.message","Bericht")}</label>
+    <textarea id="annMessage" rows="3" maxlength="500" style="width:100%;margin-bottom:12px" placeholder="${tS("sa.annPh","Bv. Gepland onderhoud zondag 02:00–04:00. Excuses voor het ongemak.")}">${esc(ann.message || "")}</textarea>
     <div style="display:flex;gap:8px;align-items:center">
-      <button class="sa-btn btn-primary sm" id="annSave">Opslaan</button>
+      <button class="sa-btn btn-primary sm" id="annSave">${tS("adm.save","Opslaan")}</button>
       <span id="annMsg" style="font-size:12.5px;color:var(--wf-green)"></span>
     </div>
   </div></div>
 
-<div class="sa-card"><div class="sa-card-head"><div class="sa-card-title">Releases &amp; roadmap</div>${rel.version ? badge("v" + esc(rel.version), "badge-blue") : ""}</div>
+<div class="sa-card"><div class="sa-card-head"><div class="sa-card-title">${tS("sa.releasesRoadmap","Releases &amp; roadmap")}</div>${rel.version ? badge("v" + esc(rel.version), "badge-blue") : ""}</div>
   <div class="sa-card-body" style="padding:16px">
     ${notes.length ? notes.map(n => `<div style="margin-bottom:12px">
         <div style="font-weight:600;font-size:13.5px">${esc(n.version || n.title || "")} ${n.date ? `<span style="font-weight:400;color:var(--gray-500);font-size:12px">- ${esc(n.date)}</span>` : ""}</div>
         ${Array.isArray(n.items || n.changes) ? `<ul style="margin:4px 0 0 18px;font-size:13px;color:var(--gray-600)">${(n.items || n.changes).map(i => `<li>${esc(i)}</li>`).join("")}</ul>` : (n.summary ? `<div style="font-size:13px;color:var(--gray-600)">${esc(n.summary)}</div>` : "")}
-      </div>`).join("") : "<div style='font-size:13px;color:var(--gray-500)'>Geen release-notes beschikbaar.</div>"}
+      </div>`).join("") : `<div style='font-size:13px;color:var(--gray-500)'>${tS("sa.noReleaseNotes","Geen release-notes beschikbaar.")}</div>`}
   </div></div>`;
     document.getElementById("annSave").addEventListener("click", async () => {
       const payload = { announcement: {
@@ -593,7 +593,7 @@ ${(s.locked||[]).length ? `<div class="sa-card" style="margin-bottom:16px"><div 
         message: document.getElementById("annMessage").value.trim(),
       } };
       const msg = document.getElementById("annMsg"); msg.textContent = "";
-      try { await api("/api/admin/announcement", { method: "PUT", body: JSON.stringify(payload) }); msg.textContent = "Opgeslagen · banner wordt direct toegepast."; }
+      try { await api("/api/admin/announcement", { method: "PUT", body: JSON.stringify(payload) }); msg.textContent = tS("sa.annSaved","Opgeslagen · banner wordt direct toegepast."); }
       catch (e) { msg.style.color = "var(--wf-red)"; msg.textContent = e.message; }
     });
   }
@@ -755,10 +755,10 @@ ${(s.locked||[]).length ? `<div class="sa-card" style="margin-bottom:16px"><div 
       <td>${t.counts?.workorders||0}</td>
       <td><span class="sub">${fmtD(t.createdAt)}</span></td>
       <td><div class="sa-actions">
-        <button class="sa-btn btn-secondary sm" data-tid="${esc(t.id)}" data-act="detail">Detail</button>
+        <button class="sa-btn btn-secondary sm" data-tid="${esc(t.id)}" data-act="detail">${tS("adm.cust.detail","Detail")}</button>
         ${t.status!=="suspended"
-          ? `<button class="sa-btn btn-danger sm" data-tid="${esc(t.id)}" data-act="suspend">Pauzeer</button>`
-          : `<button class="sa-btn btn-success sm" data-tid="${esc(t.id)}" data-act="activate">Activeer</button>`}
+          ? `<button class="sa-btn btn-danger sm" data-tid="${esc(t.id)}" data-act="suspend">${tS("sa.pause","Pauzeer")}</button>`
+          : `<button class="sa-btn btn-success sm" data-tid="${esc(t.id)}" data-act="activate">${tS("sa.activate","Activeer")}</button>`}
       </div></td>
     </tr>`).join("");
     tb.querySelectorAll("[data-act]").forEach(btn => {
@@ -773,7 +773,7 @@ ${(s.locked||[]).length ? `<div class="sa-card" style="margin-bottom:16px"><div 
 
   async function confirmSuspend(id) {
     const t = _cache.tenants.find(x=>x.id===id);
-    if (!confirm(`Tenant "${t?.name||id}" pauzeren?`)) return;
+    if (!confirm(tS("sa.pauseConfirm",'Tenant "{n}" pauzeren?').replace("{n}", t?.name||id))) return;
     try { await api(`/api/admin/tenants/${id}/suspend`,{method:"POST"}); tenants(); }
     catch(e) { window.showToast(e.message, "error"); }
   }
@@ -788,38 +788,38 @@ ${(s.locked||[]).length ? `<div class="sa-card" style="margin-bottom:16px"><div 
     openDrawer(`${esc(t.name)}`, `
 <div class="sa-detail">
   <div class="sa-detail-row"><span class="sa-detail-label">ID</span><span class="sa-detail-value mono">${esc(t.id)}</span></div>
-  <div class="sa-detail-row"><span class="sa-detail-label">Naam</span><span class="sa-detail-value">${esc(t.name)}</span></div>
-  <div class="sa-detail-row"><span class="sa-detail-label">Plan</span><span class="sa-detail-value">${badge(t.plan,planColor[t.plan])}</span></div>
-  <div class="sa-detail-row"><span class="sa-detail-label">Status</span><span class="sa-detail-value">${badge(t.status,statusColor[t.status])}</span></div>
-  <div class="sa-detail-row"><span class="sa-detail-label">Billing e-mail</span><span class="sa-detail-value">${esc(t.billingEmail||"-")}</span></div>
-  <div class="sa-detail-row"><span class="sa-detail-label">Aangemaakt</span><span class="sa-detail-value">${fmtD(t.createdAt)}</span></div>
+  <div class="sa-detail-row"><span class="sa-detail-label">${tS("adm.cust.thName","Naam")}</span><span class="sa-detail-value">${esc(t.name)}</span></div>
+  <div class="sa-detail-row"><span class="sa-detail-label">${tS("sa.plan","Plan")}</span><span class="sa-detail-value">${badge(t.plan,planColor[t.plan])}</span></div>
+  <div class="sa-detail-row"><span class="sa-detail-label">${tS("adm.status","Status")}</span><span class="sa-detail-value">${badge(t.status,statusColor[t.status])}</span></div>
+  <div class="sa-detail-row"><span class="sa-detail-label">${tS("sa.billingEmail","Billing e-mail")}</span><span class="sa-detail-value">${esc(t.billingEmail||"-")}</span></div>
+  <div class="sa-detail-row"><span class="sa-detail-label">${tS("sa.created","Aangemaakt")}</span><span class="sa-detail-value">${fmtD(t.createdAt)}</span></div>
 </div>
 
 <div class="sa-stat-grid">
-  <div class="sa-stat-card"><div class="sv">${t.counts?.users||0}</div><div class="sl">Gebruikers</div></div>
-  <div class="sa-stat-card"><div class="sv">${t.counts?.workorders||0}</div><div class="sl">Werkbonnen</div></div>
-  <div class="sa-stat-card"><div class="sv">${t.counts?.invoices||0}</div><div class="sl">Facturen</div></div>
+  <div class="sa-stat-card"><div class="sv">${t.counts?.users||0}</div><div class="sl">${tS("sa.users","Gebruikers")}</div></div>
+  <div class="sa-stat-card"><div class="sv">${t.counts?.workorders||0}</div><div class="sl">${(window.wfpTerms && window.wfpTerms.t("jobPlural")) || tS("nav.workorders","Werkbonnen")}</div></div>
+  <div class="sa-stat-card"><div class="sv">${t.counts?.invoices||0}</div><div class="sl">${tS("nav.facturen","Facturen")}</div></div>
 </div>
 
 <div class="sa-divider"></div>
-<div style="font-size:13px;font-weight:600;color:var(--gray-700);margin-bottom:8px">Plan wijzigen</div>
+<div style="font-size:13px;font-weight:600;color:var(--gray-700);margin-bottom:8px">${tS("sa.changePlan","Plan wijzigen")}</div>
 <div style="display:flex;gap:8px;flex-wrap:wrap">
   ${["starter","business","enterprise"].map(p=>`<button class="sa-btn ${t.plan===p?"btn-primary":"btn-secondary"} sm" data-plan="${p}" id="planBtn_${p}">${p}</button>`).join("")}
 </div>
 
 <div class="sa-divider"></div>
-<div style="font-size:13px;font-weight:600;color:var(--gray-700);margin-bottom:8px">Acties</div>
+<div style="font-size:13px;font-weight:600;color:var(--gray-700);margin-bottom:8px">${tS("adm.actions","Acties")}</div>
 <div style="display:flex;gap:8px;flex-wrap:wrap">
   ${t.status!=="suspended"
-    ? `<button class="sa-btn btn-danger sm" id="drawerSuspend" data-id="${esc(t.id)}">⏸ Pauzeer tenant</button>`
-    : `<button class="sa-btn btn-success sm" id="drawerActivate" data-id="${esc(t.id)}">▶ Activeer tenant</button>`}
+    ? `<button class="sa-btn btn-danger sm" id="drawerSuspend" data-id="${esc(t.id)}">⏸ ${tS("sa.pauseTenant","Pauzeer tenant")}</button>`
+    : `<button class="sa-btn btn-success sm" id="drawerActivate" data-id="${esc(t.id)}">▶ ${tS("sa.activateTenant","Activeer tenant")}</button>`}
 </div>`,
     // footer
-    `<button class="sa-btn btn-secondary" id="closeDrawer">Sluiten</button>`);
+    `<button class="sa-btn btn-secondary" id="closeDrawer">${tS("adm.close","Sluiten")}</button>`);
 
     document.getElementById("closeDrawer")?.addEventListener("click", closeDrawer);
     document.getElementById("drawerSuspend")?.addEventListener("click", async e => {
-      if (!confirm("Pauzeren?")) return;
+      if (!confirm(tS("sa.pauseQ","Pauzeren?"))) return;
       try { await api(`/api/admin/tenants/${e.target.dataset.id}/suspend`,{method:"POST"}); closeDrawer(); tenants(); }
       catch(ex) { window.showToast(ex.message, "error"); }
     });
@@ -839,28 +839,28 @@ ${(s.locked||[]).length ? `<div class="sa-card" style="margin-bottom:16px"><div 
   }
 
   function newTenantDrawer() {
-    openDrawer("Nieuwe tenant aanmaken", `
+    openDrawer(tS("sa.newTenantTitle","Nieuwe tenant aanmaken"), `
 <form id="newTenantForm">
   <div class="sa-form-grid">
-    <div class="sa-field" style="grid-column:1/-1"><label>Bedrijfsnaam *</label><input name="name" required placeholder="Bouwbedrijf Janssen BV"></div>
-    <div class="sa-field" style="grid-column:1/-1"><label>Billing e-mail *</label><input name="billingEmail" type="email" required placeholder="finance@janssen.be"></div>
-    <div class="sa-field"><label>Plan</label>
+    <div class="sa-field" style="grid-column:1/-1"><label>${tS("adm.set.companyName","Bedrijfsnaam")} *</label><input name="name" required placeholder="Bouwbedrijf Janssen BV"></div>
+    <div class="sa-field" style="grid-column:1/-1"><label>${tS("sa.billingEmail","Billing e-mail")} *</label><input name="billingEmail" type="email" required placeholder="finance@janssen.be"></div>
+    <div class="sa-field"><label>${tS("sa.plan","Plan")}</label>
       <select name="plan"><option value="starter">Starter (€9/user)</option><option value="business" selected>Business (€18/user)</option><option value="enterprise">Enterprise (€29/user)</option></select>
     </div>
-    <div class="sa-field"><label>Status</label>
-      <select name="status"><option value="trial" selected>Trial</option><option value="active">Actief</option></select>
+    <div class="sa-field"><label>${tS("adm.status","Status")}</label>
+      <select name="status"><option value="trial" selected>Trial</option><option value="active">${tS("adm.active","Actief")}</option></select>
     </div>
   </div>
   <div class="sa-divider"></div>
-  <div style="font-size:12px;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px">Admin-gebruiker (optioneel)</div>
+  <div style="font-size:12px;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px">${tS("sa.adminUserOpt","Admin-gebruiker (optioneel)")}</div>
   <div class="sa-form-grid">
-    <div class="sa-field"><label>Admin naam</label><input name="adminName" placeholder="Jan Janssen"></div>
-    <div class="sa-field"><label>Admin e-mail</label><input name="adminEmail" type="email" placeholder="jan@janssen.be"></div>
-    <div class="sa-field" style="grid-column:1/-1;font-size:12px;color:var(--gray-500)">De admin ontvangt een activatiemail om zelf een wachtwoord in te stellen · je kiest er hier geen.</div>
+    <div class="sa-field"><label>${tS("sa.adminName","Admin naam")}</label><input name="adminName" placeholder="Jan Janssen"></div>
+    <div class="sa-field"><label>${tS("sa.adminEmail","Admin e-mail")}</label><input name="adminEmail" type="email" placeholder="jan@janssen.be"></div>
+    <div class="sa-field" style="grid-column:1/-1;font-size:12px;color:var(--gray-500)">${tS("sa.adminActivationNote","De admin ontvangt een activatiemail om zelf een wachtwoord in te stellen · je kiest er hier geen.")}</div>
   </div>
 </form>`,
-    `<button class="sa-btn btn-primary" id="submitNewTenant">Tenant aanmaken</button>
-     <button class="sa-btn btn-secondary" id="closeDrawer">Annuleren</button>`);
+    `<button class="sa-btn btn-primary" id="submitNewTenant">${tS("sa.createTenant","Tenant aanmaken")}</button>
+     <button class="sa-btn btn-secondary" id="closeDrawer">${tS("adm.cancel","Annuleren")}</button>`);
 
     document.getElementById("closeDrawer")?.addEventListener("click", closeDrawer);
     document.getElementById("submitNewTenant")?.addEventListener("click", async () => {
@@ -868,14 +868,14 @@ ${(s.locked||[]).length ? `<div class="sa-card" style="margin-bottom:16px"><div 
       if (!form.checkValidity()) { form.reportValidity(); return; }
       const body = Object.fromEntries(new FormData(form).entries());
       const btn = document.getElementById("submitNewTenant");
-      btn.disabled = true; btn.textContent = "Bezig…";
+      btn.disabled = true; btn.textContent = tS("adm.bill.busy","Bezig…");
       try {
         const r = await api("/api/admin/tenants",{method:"POST",body:JSON.stringify(body)});
         closeDrawer(); tenants();
-        if (r && r.activationLink) window.showToast("Tenant aangemaakt. Activatielink (dev): " + r.activationLink, "success");
-        else window.showToast("Tenant aangemaakt · admin krijgt een activatiemail.", "success");
+        if (r && r.activationLink) window.showToast(tS("sa.tenantCreatedLink","Tenant aangemaakt. Activatielink (dev): ") + r.activationLink, "success");
+        else window.showToast(tS("sa.tenantCreatedMail","Tenant aangemaakt · admin krijgt een activatiemail."), "success");
       }
-      catch(e) { btn.disabled=false; btn.textContent="Tenant aanmaken"; window.showToast(e.message, "error"); }
+      catch(e) { btn.disabled=false; btn.textContent=tS("sa.createTenant","Tenant aanmaken"); window.showToast(e.message, "error"); }
     });
   }
 
@@ -891,46 +891,46 @@ ${(s.locked||[]).length ? `<div class="sa-card" style="margin-bottom:16px"><div 
       c.innerHTML = `
 <div class="sa-kpis">
   <div class="sa-kpi kpi-green">
-    <div class="sa-kpi-label">MRR totaal (schatting)</div>
+    <div class="sa-kpi-label">${tS("sa.mrrTotalEst","MRR totaal (schatting)")}</div>
     <div class="sa-kpi-value">${fmtEur(bd.totalMrr)}</div>
-    <div class="sa-kpi-sub">Maandelijks terugkerende omzet</div>
+    <div class="sa-kpi-sub">${tS("sa.recurringMonthly","Maandelijks terugkerende omzet")}</div>
   </div>
   <div class="sa-kpi kpi-purple">
-    <div class="sa-kpi-label">ARR totaal (schatting)</div>
+    <div class="sa-kpi-label">${tS("sa.arrTotalEst","ARR totaal (schatting)")}</div>
     <div class="sa-kpi-value">${fmtEur(bd.totalArr)}</div>
-    <div class="sa-kpi-sub">Jaarlijkse omzet</div>
+    <div class="sa-kpi-sub">${tS("sa.yearlyRevenue","Jaarlijkse omzet")}</div>
   </div>
   <div class="sa-kpi kpi-blue">
-    <div class="sa-kpi-label">Actieve tenants</div>
+    <div class="sa-kpi-label">${tS("sa.activeTenants","Actieve tenants")}</div>
     <div class="sa-kpi-value">${rows.filter(r=>r.status==="active").length}</div>
-    <div class="sa-kpi-sub">van ${rows.length} totaal</div>
+    <div class="sa-kpi-sub">${tS("sa.ofTotal","van {n} totaal").replace("{n}", rows.length)}</div>
   </div>
   <div class="sa-kpi kpi-orange">
-    <div class="sa-kpi-label">Gem. MRR per tenant</div>
+    <div class="sa-kpi-label">${tS("sa.avgMrrTenant","Gem. MRR per tenant")}</div>
     <div class="sa-kpi-value">${rows.filter(r=>r.mrr>0).length ? fmtEur(bd.totalMrr / rows.filter(r=>r.mrr>0).length) : "-"}</div>
-    <div class="sa-kpi-sub">actieve tenants</div>
+    <div class="sa-kpi-sub">${tS("sa.activeTenantsLc","actieve tenants")}</div>
   </div>
 </div>
-<div class="sa-alert alert-info" style="margin-bottom:16px">ℹ️ Schattingen gebaseerd op plan × gebruikers. Koppel Stripe voor werkelijke facturatie.</div>
-${life ? `<div class="sa-card" style="margin-bottom:16px"><div class="sa-card-head"><div class="sa-card-title">Lifecycle &amp; conversie</div></div>
+<div class="sa-alert alert-info" style="margin-bottom:16px">ℹ️ ${tS("sa.estimatesNote","Schattingen gebaseerd op plan × gebruikers. Koppel Stripe voor werkelijke facturatie.")}</div>
+${life ? `<div class="sa-card" style="margin-bottom:16px"><div class="sa-card-head"><div class="sa-card-title">${tS("sa.lifecycleConv","Lifecycle &amp; conversie")}</div></div>
   <div class="sa-card-body" style="padding:14px 16px">
     <div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:10px">
       <div><div style="font-size:11px;color:var(--gray-500)">Trials</div><div style="font-size:20px;font-weight:700;color:var(--wf-yellow)">${life.counts.trial}</div></div>
-      <div><div style="font-size:11px;color:var(--gray-500)">Actief (betalend)</div><div style="font-size:20px;font-weight:700;color:var(--wf-green)">${life.counts.active}</div></div>
-      <div><div style="font-size:11px;color:var(--gray-500)">Opgezegd</div><div style="font-size:20px;font-weight:700;color:var(--wf-red)">${life.counts.canceled}</div></div>
-      <div><div style="font-size:11px;color:var(--gray-500)">Conversie</div><div style="font-size:20px;font-weight:700">${life.conversionPct}%</div></div>
-      <div><div style="font-size:11px;color:var(--gray-500)">Nieuw (30d)</div><div style="font-size:20px;font-weight:700">${life.recentSignups}</div></div>
+      <div><div style="font-size:11px;color:var(--gray-500)">${tS("sa.activePaying","Actief (betalend)")}</div><div style="font-size:20px;font-weight:700;color:var(--wf-green)">${life.counts.active}</div></div>
+      <div><div style="font-size:11px;color:var(--gray-500)">${tS("sa.canceled","Opgezegd")}</div><div style="font-size:20px;font-weight:700;color:var(--wf-red)">${life.counts.canceled}</div></div>
+      <div><div style="font-size:11px;color:var(--gray-500)">${tS("adm.quote.conversion","Conversie")}</div><div style="font-size:20px;font-weight:700">${life.conversionPct}%</div></div>
+      <div><div style="font-size:11px;color:var(--gray-500)">${tS("sa.new30d","Nieuw (30d)")}</div><div style="font-size:20px;font-weight:700">${life.recentSignups}</div></div>
     </div>
-    ${life.trials.length ? `<div style="font-size:12px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Trials (oudste eerst · opvolgen)</div>
-    <div class="sa-tbl-wrap"><table class="sa-tbl"><thead><tr><th>Tenant</th><th>Plan</th><th>Trial-leeftijd</th><th>Laatste activiteit</th></tr></thead><tbody>
-      ${life.trials.slice(0,15).map(t => `<tr><td>${esc(t.tenant)}</td><td>${esc(t.plan||"-")}</td><td>${t.ageDays!=null?t.ageDays+" d":"-"}</td><td>${t.lastActivityAt?fmtDT(t.lastActivityAt):"nooit"}</td></tr>`).join("")}
-    </tbody></table></div>` : "<div style='font-size:12.5px;color:var(--gray-500)'>Geen openstaande trials.</div>"}
+    ${life.trials.length ? `<div style="font-size:12px;font-weight:600;color:var(--gray-500);margin-bottom:4px">${tS("sa.trialsOldest","Trials (oudste eerst · opvolgen)")}</div>
+    <div class="sa-tbl-wrap"><table class="sa-tbl"><thead><tr><th>${tS("sa.tenant","Tenant")}</th><th>${tS("sa.plan","Plan")}</th><th>${tS("sa.trialAge","Trial-leeftijd")}</th><th>${tS("sa.lastActivity","Laatste activiteit")}</th></tr></thead><tbody>
+      ${life.trials.slice(0,15).map(t => `<tr><td>${esc(t.tenant)}</td><td>${esc(t.plan||"-")}</td><td>${t.ageDays!=null?t.ageDays+" d":"-"}</td><td>${t.lastActivityAt?fmtDT(t.lastActivityAt):tS("sa.never","nooit")}</td></tr>`).join("")}
+    </tbody></table></div>` : `<div style='font-size:12.5px;color:var(--gray-500)'>${tS("sa.noOpenTrials","Geen openstaande trials.")}</div>`}
   </div></div>` : ""}
 <div class="sa-card">
-  <div class="sa-card-head"><div class="sa-card-title">MRR per tenant</div></div>
+  <div class="sa-card-head"><div class="sa-card-title">${tS("sa.mrrPerTenant","MRR per tenant")}</div></div>
   <div class="sa-tbl-wrap">
     <table class="sa-tbl">
-      <thead><tr><th>Tenant</th><th>Plan</th><th>Status</th><th>Gebruikers</th><th>Prijs/user</th><th>MRR</th><th>ARR</th></tr></thead>
+      <thead><tr><th>${tS("sa.tenant","Tenant")}</th><th>${tS("sa.plan","Plan")}</th><th>${tS("adm.status","Status")}</th><th>${tS("sa.users","Gebruikers")}</th><th>${tS("sa.priceUser","Prijs/user")}</th><th>MRR</th><th>ARR</th></tr></thead>
       <tbody>
         ${rows.map(r=>`<tr>
           <td><div class="main">${esc(r.name)}</div><div class="sub">${esc(r.billingEmail||r.id)}</div></td>
@@ -944,7 +944,7 @@ ${life ? `<div class="sa-card" style="margin-bottom:16px"><div class="sa-card-he
       </tbody>
       <tfoot>
         <tr style="background:var(--gray-50);font-weight:600">
-          <td colspan="5" style="padding:10px 14px;font-size:12px;color:var(--gray-500)">TOTAAL</td>
+          <td colspan="5" style="padding:10px 14px;font-size:12px;color:var(--gray-500)">${tS("adm.total","Totaal").toUpperCase()}</td>
           <td style="padding:10px 14px;font-size:14px;color:var(--wf-green)">${fmtEur(bd.totalMrr)}</td>
           <td style="padding:10px 14px;font-size:14px;color:var(--gray-700)">${fmtEur(bd.totalArr)}</td>
         </tr>
@@ -971,36 +971,36 @@ ${life ? `<div class="sa-card" style="margin-bottom:16px"><div class="sa-card-he
       c.innerHTML = `
 <div class="sa-kpis">
   <div class="sa-kpi kpi-teal">
-    <div class="sa-kpi-label">Server status</div>
+    <div class="sa-kpi-label">${tS("sa.serverStatus","Server status")}</div>
     <div class="sa-kpi-value" style="font-size:18px">Online</div>
     <div class="sa-kpi-sub">Uptime ${fmtUptime(hd.uptime||0)}</div>
   </div>
   <div class="sa-kpi kpi-blue">
-    <div class="sa-kpi-label">Versie</div>
+    <div class="sa-kpi-label">${tS("sa.version","Versie")}</div>
     <div class="sa-kpi-value" style="font-size:18px">${esc(hd.version||"-")}</div>
     <div class="sa-kpi-sub">${esc(hd.releaseChannel||"-")} · ${esc((hd.commitSha||"local").slice(0,8))}</div>
   </div>
   <div class="sa-kpi kpi-indigo">
-    <div class="sa-kpi-label">Opslag</div>
+    <div class="sa-kpi-label">${tS("sa.storage","Opslag")}</div>
     <div class="sa-kpi-value" style="font-size:18px">${esc(hd.storageAdapter||"json")}</div>
-    <div class="sa-kpi-sub">${hd.storeReady?"Verbonden":"Niet verbonden"}</div>
+    <div class="sa-kpi-sub">${hd.storeReady?tS("sa.connected","Verbonden"):tS("sa.notConnected","Niet verbonden")}</div>
   </div>
   <div class="sa-kpi ${errors.length>0?"kpi-red":"kpi-teal"}">
-    <div class="sa-kpi-label">Errors (opgeslagen)</div>
+    <div class="sa-kpi-label">${tS("sa.errorsStored","Errors (opgeslagen)")}</div>
     <div class="sa-kpi-value">${errors.length}</div>
-    <div class="sa-kpi-sub">recent</div>
+    <div class="sa-kpi-sub">${tS("sa.recent","recent")}</div>
   </div>
 </div>
 
 <div class="sa-card">
   <div class="sa-card-head">
-    <div class="sa-card-title">Server errors ${badge_e(errors.length)}</div>
-    <button class="sa-btn btn-secondary sm" data-action="refresh">↻ Vernieuwen</button>
+    <div class="sa-card-title">${tS("sa.serverErrors","Server errors")} ${badge_e(errors.length)}</div>
+    <button class="sa-btn btn-secondary sm" data-action="refresh">↻ ${tS("sa.refresh","Vernieuwen")}</button>
   </div>
   ${errors.length ? `
   <div class="sa-tbl-wrap">
     <table class="sa-tbl">
-      <thead><tr><th>Tijdstip</th><th>Status</th><th>Methode</th><th>Pad</th><th>Bericht</th><th>Tenant</th></tr></thead>
+      <thead><tr><th>${tS("sa.time","Tijd")}</th><th>${tS("adm.status","Status")}</th><th>${tS("sa.method","Methode")}</th><th>${tS("sa.path","Pad")}</th><th>${tS("mgr.message","Bericht")}</th><th>${tS("sa.tenant","Tenant")}</th></tr></thead>
       <tbody>
         ${errors.map(e=>`<tr>
           <td><span class="mono">${esc((e.at||"").slice(0,19).replace("T"," "))}</span></td>
@@ -1012,7 +1012,7 @@ ${life ? `<div class="sa-card" style="margin-bottom:16px"><div class="sa-card-he
         </tr>`).join("")}
       </tbody>
     </table>
-  </div>` : `<div class="sa-empty">Geen server errors · systeem is gezond</div>`}
+  </div>` : `<div class="sa-empty">${tS("sa.noServerErrors","Geen server errors · systeem is gezond")}</div>`}
 </div>`;
     } catch(e) { content().innerHTML = err(e); }
   }
@@ -1028,32 +1028,32 @@ ${life ? `<div class="sa-card" style="margin-bottom:16px"><div class="sa-card-he
       const canManage = !!d.canManage;
       const payouts = (po && po.rows) || [];
       c.innerHTML = `
-<div class="sa-page-head"><h1>Resellers<span class="cnt">${rows.length}</span></h1></div>
-${payouts.length ? `<div class="sa-card" style="margin-bottom:16px"><div class="sa-card-head"><div class="sa-card-title">Uit te betalen commissie (per maand)</div>
+<div class="sa-page-head"><h1>${tS("sa.resellers","Resellers")}<span class="cnt">${rows.length}</span></h1></div>
+${payouts.length ? `<div class="sa-card" style="margin-bottom:16px"><div class="sa-card-head"><div class="sa-card-title">${tS("sa.payoutTitle","Uit te betalen commissie (per maand)")}</div>
   <button class="sa-btn btn-secondary sm" id="poCsv">CSV</button></div>
   <div class="sa-card-body" style="padding:0 0 6px">
-    <div style="padding:12px 16px;font-size:13px;color:var(--gray-600)">Totaal verschuldigd: <strong>${fmtEur(po.totalMonthly||0)}/maand</strong></div>
-    <div class="sa-tbl-wrap"><table class="sa-tbl"><thead><tr><th>Reseller</th><th>Klanten</th><th>MRR</th><th>Commissie/maand</th></tr></thead><tbody>
+    <div style="padding:12px 16px;font-size:13px;color:var(--gray-600)">${tS("sa.totalOwed","Totaal verschuldigd")}: <strong>${fmtEur(po.totalMonthly||0)}/${tS("adm.bill.perMonth","maand")}</strong></div>
+    <div class="sa-tbl-wrap"><table class="sa-tbl"><thead><tr><th>Reseller</th><th>${tS("nav.customers","Klanten")}</th><th>MRR</th><th>${tS("rsp.commissionMonth","Commissie / maand")}</th></tr></thead><tbody>
       ${payouts.map(r => `<tr><td>${esc(r.reseller)}</td><td>${r.clients}</td><td>${fmtEur(r.mrr)}</td><td style="font-weight:600;color:var(--wf-green)">${fmtEur(r.commissionMonthly)}</td></tr>`).join("")}
     </tbody></table></div></div></div>` : ""}
 <div class="sa-card" style="margin-bottom:16px"><div style="padding:14px 16px;font-size:13px;color:var(--gray-600);line-height:1.5">
-  Resellers brengen klanten aan en verdienen een terugkerende commissie (% van het abonnement). Ze beheren hun eigen klanten via het reseller-portaal en zien enkel commerciële gegevens · geen operationele klantdata.
-  ${canManage ? "" : "<br><strong>Alleen de hoofd-superadmin kan resellers aanmaken of wijzigen.</strong>"}
+  ${tS("sa.resellerIntro","Resellers brengen klanten aan en verdienen een terugkerende commissie (% van het abonnement). Ze beheren hun eigen klanten via het reseller-portaal en zien enkel commerciële gegevens · geen operationele klantdata.")}
+  ${canManage ? "" : `<br><strong>${tS("sa.onlyGodManages","Alleen de hoofd-superadmin kan resellers aanmaken of wijzigen.")}</strong>`}
 </div></div>
 ${canManage ? `
 <div class="sa-card" style="margin-bottom:16px">
-  <div class="sa-card-head"><div class="sa-card-title">Nieuwe reseller</div></div>
+  <div class="sa-card-head"><div class="sa-card-title">${tS("sa.newReseller","Nieuwe reseller")}</div></div>
   <div style="padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:680px">
-    <input id="rsName" placeholder="Naam (partner/bedrijf)">
-    <input id="rsContact" placeholder="Contact-e-mail (optioneel)">
-    <input id="rsLogin" type="email" placeholder="Login-e-mail">
-    <div><label style="font-size:12px;color:var(--gray-500)">Commissie %</label><input id="rsPct" type="number" min="0" max="100" value="10" style="width:100%"></div>
-    <div style="grid-column:1/3;font-size:12px;color:var(--gray-500)">De reseller ontvangt een activatiemail om zelf een wachtwoord in te stellen.</div>
-    <div style="grid-column:1/3;display:flex;gap:8px;align-items:center"><button class="sa-btn btn-primary sm" id="rsCreate">Reseller toevoegen</button><span id="rsMsg" style="font-size:12.5px;color:var(--wf-red)"></span></div>
+    <input id="rsName" placeholder="${tS("sa.rsNamePh","Naam (partner/bedrijf)")}">
+    <input id="rsContact" placeholder="${tS("sa.rsContactPh","Contact-e-mail (optioneel)")}">
+    <input id="rsLogin" type="email" placeholder="${tS("sa.rsLoginPh","Login-e-mail")}">
+    <div><label style="font-size:12px;color:var(--gray-500)">${tS("rsp.commissionPct","Commissie %")}</label><input id="rsPct" type="number" min="0" max="100" value="10" style="width:100%"></div>
+    <div style="grid-column:1/3;font-size:12px;color:var(--gray-500)">${tS("sa.rsActivationNote","De reseller ontvangt een activatiemail om zelf een wachtwoord in te stellen.")}</div>
+    <div style="grid-column:1/3;display:flex;gap:8px;align-items:center"><button class="sa-btn btn-primary sm" id="rsCreate">${tS("sa.addReseller","Reseller toevoegen")}</button><span id="rsMsg" style="font-size:12.5px;color:var(--wf-red)"></span></div>
   </div>
 </div>` : ""}
 <div class="sa-card"><div class="sa-tbl-wrap"><table class="sa-tbl">
-  <thead><tr><th>Reseller</th><th>Status</th><th>Commissie</th><th>Klanten</th><th>MRR</th><th>Commissie/mnd</th><th></th></tr></thead>
+  <thead><tr><th>Reseller</th><th>${tS("adm.status","Status")}</th><th>${tS("sa.commission","Commissie")}</th><th>${tS("nav.customers","Klanten")}</th><th>MRR</th><th>${tS("rsp.commissionMo","Commissie/mnd")}</th><th></th></tr></thead>
   <tbody id="rsBody"></tbody>
 </table></div></div>`;
 
@@ -1072,15 +1072,15 @@ ${canManage ? `
       function render() {
         const tb = document.getElementById("rsBody");
         tb.innerHTML = rows.map(r => {
-          const status = r.status === "active" ? badge("actief", "badge-green")
-            : r.status === "pending" ? badge("in aanvraag", "badge-orange")
-            : badge("gepauzeerd", "badge-gray");
+          const status = r.status === "active" ? badge(tS("adm.active","Actief").toLowerCase(), "badge-green")
+            : r.status === "pending" ? badge(tS("sa.pending","in aanvraag"), "badge-orange")
+            : badge(tS("sa.paused","gepauzeerd"), "badge-gray");
           let action = `<span class="sub">-</span>`;
           if (canManage) {
-            action = `<button class="sa-btn btn-secondary sm" data-edit="${r.id}">Commissie</button> `
-              + (r.status === "pending" ? `<button class="sa-btn btn-primary sm" data-resume="${r.id}">Goedkeuren</button>`
-                : r.status === "active" ? `<button class="sa-btn btn-secondary sm" data-pause="${r.id}">Pauzeren</button>`
-                : `<button class="sa-btn btn-primary sm" data-resume="${r.id}">Activeren</button>`);
+            action = `<button class="sa-btn btn-secondary sm" data-edit="${r.id}">${tS("sa.commission","Commissie")}</button> `
+              + (r.status === "pending" ? `<button class="sa-btn btn-primary sm" data-resume="${r.id}">${tS("mgr.approve","Goedkeuren")}</button>`
+                : r.status === "active" ? `<button class="sa-btn btn-secondary sm" data-pause="${r.id}">${tS("sa.pause","Pauzeer")}</button>`
+                : `<button class="sa-btn btn-primary sm" data-resume="${r.id}">${tS("sa.activate","Activeer")}</button>`);
           }
           return `<tr>
             <td><div class="main">${esc(r.name)}</div>${r.contactEmail ? `<span class="sub">${esc(r.contactEmail)}</span>` : ""}</td>
@@ -1091,7 +1091,7 @@ ${canManage ? `
             <td style="font-weight:600;color:var(--wf-green)">${fmtEur(r.totalCommission || 0)}</td>
             <td style="text-align:right">${action}</td>
           </tr>`;
-        }).join("") || `<tr><td colspan="7"><div class="sa-empty">Nog geen resellers</div></td></tr>`;
+        }).join("") || `<tr><td colspan="7"><div class="sa-empty">${tS("sa.noResellers","Nog geen resellers")}</div></td></tr>`;
         tb.querySelectorAll("[data-pause]").forEach(b => b.addEventListener("click", () => setStatus(b.dataset.pause, "paused")));
         tb.querySelectorAll("[data-resume]").forEach(b => b.addEventListener("click", () => setStatus(b.dataset.resume, "active")));
         tb.querySelectorAll("[data-edit]").forEach(b => b.addEventListener("click", () => editPct(b.dataset.edit)));
@@ -1099,7 +1099,7 @@ ${canManage ? `
       async function setStatus(id, status) { try { await api(`/api/admin/resellers/${id}`, { method: "PATCH", body: JSON.stringify({ status }) }); resellers(); } catch (e) { alert(e.message); } }
       function editPct(id) {
         const r = rows.find(x => x.id === id) || {};
-        const pct = window.prompt(`Commissie-% voor ${r.name}:`, String(r.defaultCommissionPct || 0));
+        const pct = window.prompt(tS("sa.commissionPromptFor","Commissie-% voor {n}:").replace("{n}", r.name), String(r.defaultCommissionPct || 0));
         if (pct == null) return;
         api(`/api/admin/resellers/${id}`, { method: "PATCH", body: JSON.stringify({ defaultCommissionPct: Number(pct) }) }).then(() => resellers()).catch(e => alert(e.message));
       }
@@ -1110,10 +1110,10 @@ ${canManage ? `
           const loginEmail = document.getElementById("rsLogin").value.trim();
           const defaultCommissionPct = Number(document.getElementById("rsPct").value) || 0;
           const msg = document.getElementById("rsMsg"); msg.textContent = "";
-          if (!name || !loginEmail) { msg.textContent = "Naam en login-e-mail zijn verplicht."; return; }
+          if (!name || !loginEmail) { msg.textContent = tS("sa.nameLoginReq","Naam en login-e-mail zijn verplicht."); return; }
           try {
             const r = await api("/api/admin/resellers", { method: "POST", body: JSON.stringify({ name, contactEmail, loginEmail, defaultCommissionPct }) });
-            if (r && r.activationLink) window.showToast("Reseller aangemaakt. Activatielink (dev): " + r.activationLink, "success");
+            if (r && r.activationLink) window.showToast(tS("sa.resellerCreatedLink","Reseller aangemaakt. Activatielink (dev): ") + r.activationLink, "success");
             resellers();
           }
           catch (e) { msg.textContent = e.message; }
@@ -1127,6 +1127,11 @@ ${canManage ? `
   // VIEW: Platformteam (eigen support-medewerkers / super_admins)
   // ══════════════════════════════════════════════════════════
   const SCOPE_LABELS = { tenants:"Tenants", billing:"Facturatie", modules:"Modules & Bundels", integrations:"Integraties", system:"Systeem", support:"Support-toegang", audit:"Audit", settings:"Instellingen" };
+  // Vertaald scope-label (mapt op de bestaande sa.*-navkeys).
+  function scopeLabel(s) {
+    const map = { tenants:"sa.tenants", billing:"sa.billing", modules:"sa.modules", integrations:"sa.integrations", system:"sa.system", support:"sa.support", audit:"sa.audit", settings:"sa.settings" };
+    return map[s] ? tS(map[s], SCOPE_LABELS[s]||s) : (SCOPE_LABELS[s]||s);
+  }
   async function staff() {
     const c = content(); c.innerHTML = loader();
     try {
@@ -1135,30 +1140,28 @@ ${canManage ? `
       const canManage = !!d.canManage;
       const allScopes = d.allScopes || Object.keys(SCOPE_LABELS);
       const scopeChecks = (checked, idPrefix) => allScopes.map(s =>
-        `<label style="display:inline-flex;align-items:center;gap:6px;margin:3px 12px 3px 0;font-size:13px"><input type="checkbox" data-scope="${s}" id="${idPrefix}-${s}"${checked.includes(s)?" checked":""}> ${esc(SCOPE_LABELS[s]||s)}</label>`).join("");
+        `<label style="display:inline-flex;align-items:center;gap:6px;margin:3px 12px 3px 0;font-size:13px"><input type="checkbox" data-scope="${s}" id="${idPrefix}-${s}"${checked.includes(s)?" checked":""}> ${esc(scopeLabel(s))}</label>`).join("");
       c.innerHTML = `
-<div class="sa-page-head"><h1>Platformteam<span class="cnt">${rows.length}</span></h1></div>
+<div class="sa-page-head"><h1>${tS("sa.staff","Platformteam")}<span class="cnt">${rows.length}</span></h1></div>
 <div class="sa-card" style="margin-bottom:16px">
   <div style="padding:14px 16px;font-size:13px;color:var(--gray-600);line-height:1.5">
-    Platform-medewerkers krijgen toegang tot de platform-secties die je per persoon aanvinkt
-    (bv. enkel Support, of ook Facturatie/Modules). Uitzonderingen: enkel de hoofd-superadmin
-    beheert het team, en de hoofd-superadmin zelf kan nooit gedeactiveerd of gewijzigd worden.
-    ${canManage ? "" : `<br><strong>Alleen de hoofd-superadmin kan teamleden beheren.</strong>`}
+    ${tS("sa.staffIntro","Platform-medewerkers krijgen toegang tot de platform-secties die je per persoon aanvinkt (bv. enkel Support, of ook Facturatie/Modules). Uitzonderingen: enkel de hoofd-superadmin beheert het team, en de hoofd-superadmin zelf kan nooit gedeactiveerd of gewijzigd worden.")}
+    ${canManage ? "" : `<br><strong>${tS("sa.onlyGodStaff","Alleen de hoofd-superadmin kan teamleden beheren.")}</strong>`}
   </div>
 </div>
 ${canManage ? `
 <div class="sa-card" style="margin-bottom:16px">
-  <div class="sa-card-head"><div class="sa-card-title">Nieuw teamlid</div></div>
+  <div class="sa-card-head"><div class="sa-card-title">${tS("sa.newStaff","Nieuw teamlid")}</div></div>
   <div style="padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:640px">
-    <input id="stfName" placeholder="Naam">
-    <input id="stfEmail" type="email" placeholder="E-mail">
-    <div style="grid-column:1/3;font-size:12px;color:var(--gray-500)">Het teamlid ontvangt een activatiemail om zelf een wachtwoord in te stellen.</div>
+    <input id="stfName" placeholder="${tS("adm.cust.thName","Naam")}">
+    <input id="stfEmail" type="email" placeholder="${tS("adm.email","E-mail")}">
+    <div style="grid-column:1/3;font-size:12px;color:var(--gray-500)">${tS("sa.staffActivationNote","Het teamlid ontvangt een activatiemail om zelf een wachtwoord in te stellen.")}</div>
     <div style="grid-column:1/3">
-      <div style="font-size:12px;color:var(--gray-500);margin-bottom:6px">Toegang tot platform-secties:</div>
+      <div style="font-size:12px;color:var(--gray-500);margin-bottom:6px">${tS("sa.accessToSections","Toegang tot platform-secties:")}</div>
       <div id="stfScopes">${scopeChecks(allScopes, "ns")}</div>
     </div>
     <div style="grid-column:1/3;display:flex;gap:8px;align-items:center">
-      <button class="sa-btn btn-primary sm" id="stfCreate">Teamlid toevoegen</button>
+      <button class="sa-btn btn-primary sm" id="stfCreate">${tS("sa.addStaff","Teamlid toevoegen")}</button>
       <span id="stfMsg" style="font-size:12.5px;color:var(--wf-red)"></span>
     </div>
   </div>
@@ -1166,30 +1169,30 @@ ${canManage ? `
 <div class="sa-card">
   <div class="sa-tbl-wrap">
     <table class="sa-tbl">
-      <thead><tr><th>Naam</th><th>E-mail</th><th>Toegang</th><th>Status</th><th></th></tr></thead>
+      <thead><tr><th>${tS("adm.cust.thName","Naam")}</th><th>${tS("adm.email","E-mail")}</th><th>${tS("sa.access","Toegang")}</th><th>${tS("adm.status","Status")}</th><th></th></tr></thead>
       <tbody id="stfBody"></tbody>
     </table>
   </div>
 </div>`;
 
       function scopesText(u) {
-        if (u.protected) return badge("alle secties","badge-red");
+        if (u.protected) return badge(tS("sa.allSections","alle secties"),"badge-red");
         const sc = u.scopes || [];
-        if (sc.length >= allScopes.length) return badge("alle secties","badge-blue");
-        if (sc.length === 0) return `<span class="sub">geen</span>`;
-        return sc.map(s => `<span class="sub" style="margin-right:6px">${esc(SCOPE_LABELS[s]||s)}</span>`).join("");
+        if (sc.length >= allScopes.length) return badge(tS("sa.allSections","alle secties"),"badge-blue");
+        if (sc.length === 0) return `<span class="sub">${tS("sa.none","geen")}</span>`;
+        return sc.map(s => `<span class="sub" style="margin-right:6px">${esc(scopeLabel(s))}</span>`).join("");
       }
       function render() {
         const tb = document.getElementById("stfBody");
         tb.innerHTML = rows.map(u => {
-          const tags = (u.protected ? badge("hoofd-superadmin","badge-red") : "") + (u.isYou ? ` ${badge("jij","badge-blue")}` : "");
-          const status = u.active ? badge("actief","badge-green") : badge("gedeactiveerd","badge-gray");
+          const tags = (u.protected ? badge(tS("sa.godBadge","hoofd-superadmin"),"badge-red") : "") + (u.isYou ? ` ${badge(tS("sa.you","jij"),"badge-blue")}` : "");
+          const status = u.active ? badge(tS("adm.active","Actief").toLowerCase(),"badge-green") : badge(tS("sa.deactivated","gedeactiveerd"),"badge-gray");
           let action = `<span class="sub">-</span>`;
           if (canManage && !u.protected && !u.isYou) {
-            action = `<button class="sa-btn btn-secondary sm" data-scopes="${u.id}">Rechten</button> `
+            action = `<button class="sa-btn btn-secondary sm" data-scopes="${u.id}">${tS("sa.rights","Rechten")}</button> `
               + (u.active
-                ? `<button class="sa-btn btn-secondary sm" data-deact="${u.id}">Deactiveren</button>`
-                : `<button class="sa-btn btn-primary sm" data-act="${u.id}">Heractiveren</button>`);
+                ? `<button class="sa-btn btn-secondary sm" data-deact="${u.id}">${tS("sa.deactivate","Deactiveren")}</button>`
+                : `<button class="sa-btn btn-primary sm" data-act="${u.id}">${tS("sa.reactivate","Heractiveren")}</button>`);
           }
           return `<tr>
             <td><div class="main">${esc(u.name||"-")}</div>${tags}</td>
@@ -1198,7 +1201,7 @@ ${canManage ? `
             <td>${status}</td>
             <td style="text-align:right">${action}</td>
           </tr>`;
-        }).join("") || `<tr><td colspan="5"><div class="sa-empty">Geen teamleden</div></td></tr>`;
+        }).join("") || `<tr><td colspan="5"><div class="sa-empty">${tS("mgr.noTeam","Geen teamleden")}</div></td></tr>`;
         tb.querySelectorAll("[data-deact]").forEach(b=>b.addEventListener("click",()=>setActive(b.dataset.deact,false)));
         tb.querySelectorAll("[data-act]").forEach(b=>b.addEventListener("click",()=>setActive(b.dataset.act,true)));
         tb.querySelectorAll("[data-scopes]").forEach(b=>b.addEventListener("click",()=>editScopes(b.dataset.scopes)));
@@ -1213,13 +1216,13 @@ ${canManage ? `
         ov.style.cssText = "position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:1200;display:flex;align-items:center;justify-content:center;padding:16px;";
         ov.innerHTML = `
 <div style="background:#fff;border-radius:16px;width:100%;max-width:440px;padding:22px 24px;box-shadow:0 20px 60px rgba(0,0,0,.25)">
-  <h3 style="margin:0 0 4px;font-size:17px;color:var(--gray-900)">Rechten van ${esc(u.name||u.email)}</h3>
-  <div style="font-size:13px;color:var(--gray-500);margin-bottom:14px">Vink aan tot welke platform-secties deze persoon toegang heeft.</div>
+  <h3 style="margin:0 0 4px;font-size:17px;color:var(--gray-900)">${tS("sa.rightsOf","Rechten van")} ${esc(u.name||u.email)}</h3>
+  <div style="font-size:13px;color:var(--gray-500);margin-bottom:14px">${tS("sa.rightsHint","Vink aan tot welke platform-secties deze persoon toegang heeft.")}</div>
   <div id="esScopes">${scopeChecks(u.scopes||[], "es")}</div>
   <div id="esMsg" style="display:none;color:var(--wf-red);font-size:12.5px;margin-top:8px"></div>
   <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
-    <button class="sa-btn btn-secondary sm" id="esCancel">Annuleren</button>
-    <button class="sa-btn btn-primary sm" id="esSave">Opslaan</button>
+    <button class="sa-btn btn-secondary sm" id="esCancel">${tS("adm.cancel","Annuleren")}</button>
+    <button class="sa-btn btn-primary sm" id="esSave">${tS("adm.save","Opslaan")}</button>
   </div>
 </div>`;
         document.body.appendChild(ov);
@@ -1239,10 +1242,10 @@ ${canManage ? `
           const platformScopes = [...document.querySelectorAll("#stfScopes input:checked")].map(i=>i.dataset.scope);
           const msg = document.getElementById("stfMsg");
           msg.textContent = "";
-          if (!name || !email) { msg.textContent = "Naam en e-mail zijn verplicht."; return; }
+          if (!name || !email) { msg.textContent = tS("sa.nameEmailReq","Naam en e-mail zijn verplicht."); return; }
           try {
             const r = await api("/api/admin/staff", { method:"POST", body: JSON.stringify({ name, email, platformScopes }) });
-            if (r && r.activationLink) window.showToast("Teamlid aangemaakt. Activatielink (dev): " + r.activationLink, "success");
+            if (r && r.activationLink) window.showToast(tS("sa.staffCreatedLink","Teamlid aangemaakt. Activatielink (dev): ") + r.activationLink, "success");
             staff();
           } catch(e){ msg.textContent = e.message; }
         });
@@ -1266,23 +1269,21 @@ ${canManage ? `
       // van een sessie halen we ze op via een consent-gated endpoint (alleen als
       // de klant support-toegang toestond).
       const roleRank = { tenant_admin:0, manager:1, employee:2 };
-      const roleLabel = { tenant_admin:"beheerder", manager:"werfleider", employee:"medewerker" };
+      const roleLabel = { tenant_admin:tS("sa.roleAdmin","beheerder"), manager:tS("sa.roleManager","werfleider"), employee:tS("sa.roleEmployee","medewerker") };
 
-      function scopeBadge(scope){ return scope==="read" ? badge("alleen-lezen","badge-gray") : badge("lezen+schrijven","badge-red"); }
+      function scopeBadge(scope){ return scope==="read" ? badge(tS("mgr.scopeRead","alleen-lezen"),"badge-gray") : badge(tS("sa.readWrite","lezen+schrijven"),"badge-red"); }
 
       c.innerHTML = `
-<div class="sa-page-head"><h1>Support-toegang<span class="cnt">${active.length}</span></h1></div>
+<div class="sa-page-head"><h1>${tS("sa.support","Support-toegang")}<span class="cnt">${active.length}</span></h1></div>
 <div class="sa-card" style="margin-bottom:16px">
   <div style="padding:14px 16px;font-size:13px;color:var(--gray-600);line-height:1.5">
-    <strong>GDPR-conforme support.</strong> Een support-sessie kan alleen starten als de klant toestemming gaf.
-    De sessie neemt de exacte gebruikerssessie over (impersonatie), is tijdgebonden met automatische
-    verlenging bij activiteit tot een harde limiet, en wordt volledig geaudit.
+    ${tS("sa.supportIntro","<strong>GDPR-conforme support.</strong> Een support-sessie kan alleen starten als de klant toestemming gaf. De sessie neemt de exacte gebruikerssessie over (impersonatie), is tijdgebonden met automatische verlenging bij activiteit tot een harde limiet, en wordt volledig geaudit.")}
   </div>
 </div>
 <div class="sa-card">
   <div class="sa-tbl-wrap">
     <table class="sa-tbl">
-      <thead><tr><th>Tenant</th><th>Toestemming</th><th>Actieve sessie</th><th>Verloopt</th><th></th></tr></thead>
+      <thead><tr><th>${tS("sa.tenant","Tenant")}</th><th>${tS("sa.consent","Toestemming")}</th><th>${tS("sa.activeSession","Actieve sessie")}</th><th>${tS("sa.expiresCap","Verloopt")}</th><th></th></tr></thead>
       <tbody id="supBody"></tbody>
     </table>
   </div>
@@ -1292,8 +1293,8 @@ ${canManage ? `
         const tb = document.getElementById("supBody");
         tb.innerHTML = rows.map(r=>{
           const consent = r.allowed
-            ? badge("toegestaan","badge-green")
-            : badge("geweigerd","badge-gray");
+            ? badge(tS("sa.allowed","toegestaan"),"badge-green")
+            : badge(tS("sa.denied","geweigerd"),"badge-gray");
           const sess = r.session
             ? `${scopeBadge(r.session.scope)} <span class="sub">${esc(r.session.agent||"agent")}</span>`
             : `<span class="sub">-</span>`;
@@ -1301,18 +1302,18 @@ ${canManage ? `
             ? `<span class="sub">${fmtD(r.session.expiresAt)}<br>hard: ${fmtD(r.session.hardExpiresAt)}</span>`
             : `<span class="sub">-</span>`;
           const action = r.session
-            ? `<button class="sa-btn btn-secondary sm" data-end="${r.tenantId}">Sessie beëindigen</button>`
+            ? `<button class="sa-btn btn-secondary sm" data-end="${r.tenantId}">${tS("sa.endSession","Sessie beëindigen")}</button>`
             : (r.allowed
-                ? `<button class="sa-btn btn-primary sm" data-start="${r.tenantId}">Start sessie</button>`
-                : `<span class="sub">Wacht op toestemming klant</span>`);
+                ? `<button class="sa-btn btn-primary sm" data-start="${r.tenantId}">${tS("sa.startSession","Start sessie")}</button>`
+                : `<span class="sub">${tS("sa.awaitConsent","Wacht op toestemming klant")}</span>`);
           return `<tr>
-            <td><div class="main">${esc(r.tenantName||r.tenantId)}</div>${r.consentBy?`<span class="sub">door ${esc(r.consentBy)}</span>`:""}</td>
+            <td><div class="main">${esc(r.tenantName||r.tenantId)}</div>${r.consentBy?`<span class="sub">${tS("adm.set.by","door")} ${esc(r.consentBy)}</span>`:""}</td>
             <td>${consent}</td>
             <td>${sess}</td>
             <td>${expiry}</td>
             <td style="text-align:right">${action}</td>
           </tr>`;
-        }).join("") || `<tr><td colspan="5"><div class="sa-empty">Geen tenants</div></td></tr>`;
+        }).join("") || `<tr><td colspan="5"><div class="sa-empty">${tS("sa.noTenants","Geen tenants")}</div></td></tr>`;
 
         tb.querySelectorAll("[data-start]").forEach(b=>b.addEventListener("click", ()=>startSession(b.dataset.start)));
         tb.querySelectorAll("[data-end]").forEach(b=>b.addEventListener("click", ()=>endSession(b.dataset.end)));
@@ -1323,28 +1324,28 @@ ${canManage ? `
         // Consent-gated: gebruikers pas ophalen bij het starten (klant gaf toestemming).
         let users = [];
         try { const r = await api(`/api/admin/support/${tenantId}/users`); users = (r.users||[]).slice().sort((a,b)=>(roleRank[a.role]??9)-(roleRank[b.role]??9) || String(a.name||"").localeCompare(String(b.name||""))); }
-        catch(e){ alert(e.message || "Kon gebruikers niet ophalen"); return; }
+        catch(e){ alert(e.message || tS("sa.usersLoadFail","Kon gebruikers niet ophalen")); return; }
         const ov = document.createElement("div");
         ov.style.cssText = "position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:1200;display:flex;align-items:center;justify-content:center;padding:16px;";
         ov.innerHTML = `
 <div style="background:#fff;border-radius:16px;width:100%;max-width:440px;padding:22px 24px;box-shadow:0 20px 60px rgba(0,0,0,.25)">
-  <h3 style="margin:0 0 4px;font-size:17px;color:var(--gray-900)">Support-sessie starten</h3>
+  <h3 style="margin:0 0 4px;font-size:17px;color:var(--gray-900)">${tS("sa.startSupportSession","Support-sessie starten")}</h3>
   <div style="font-size:13px;color:var(--gray-500);margin-bottom:16px">${esc(row.tenantName||tenantId)}</div>
-  <label style="display:block;font-size:13px;font-weight:600;color:var(--gray-700);margin-bottom:6px">Wie neem je over?</label>
+  <label style="display:block;font-size:13px;font-weight:600;color:var(--gray-700);margin-bottom:6px">${tS("sa.whoTakeOver","Wie neem je over?")}</label>
   <select id="supUser" style="width:100%;margin-bottom:14px">
-    ${users.length ? users.map(u=>`<option value="${u.id}">${esc(u.name||u.email)} · ${roleLabel[u.role]||u.role}${u.email?` (${esc(u.email)})`:""}</option>`).join("") : `<option value="">Geen gebruikers gevonden</option>`}
+    ${users.length ? users.map(u=>`<option value="${u.id}">${esc(u.name||u.email)} · ${roleLabel[u.role]||u.role}${u.email?` (${esc(u.email)})`:""}</option>`).join("") : `<option value="">${tS("sa.noUsersFound","Geen gebruikers gevonden")}</option>`}
   </select>
-  <label style="display:block;font-size:13px;font-weight:600;color:var(--gray-700);margin-bottom:6px">Rechten</label>
+  <label style="display:block;font-size:13px;font-weight:600;color:var(--gray-700);margin-bottom:6px">${tS("sa.rights","Rechten")}</label>
   <select id="supScope" style="width:100%;margin-bottom:14px">
-    <option value="read">Alleen-lezen (aanbevolen)</option>
-    <option value="write">Lezen + schrijven</option>
+    <option value="read">${tS("sa.readOnlyRec","Alleen-lezen (aanbevolen)")}</option>
+    <option value="write">${tS("mgr.scopeWrite","lezen + schrijven")}</option>
   </select>
-  <label style="display:block;font-size:13px;font-weight:600;color:var(--gray-700);margin-bottom:6px">Reden (verplicht, wordt geaudit)</label>
-  <input id="supReason" placeholder="bv. factuur kan niet verstuurd worden" style="width:100%;margin-bottom:8px">
+  <label style="display:block;font-size:13px;font-weight:600;color:var(--gray-700);margin-bottom:6px">${tS("sa.reasonAudited","Reden (verplicht, wordt geaudit)")}</label>
+  <input id="supReason" placeholder="${tS("sa.reasonSupportPh","bv. factuur kan niet verstuurd worden")}" style="width:100%;margin-bottom:8px">
   <div id="supErr" style="display:none;color:var(--wf-red);font-size:12.5px;margin-bottom:8px"></div>
   <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
-    <button class="sa-btn btn-secondary sm" id="supCancel">Annuleren</button>
-    <button class="sa-btn btn-primary sm" id="supGo">Sessie overnemen</button>
+    <button class="sa-btn btn-secondary sm" id="supCancel">${tS("adm.cancel","Annuleren")}</button>
+    <button class="sa-btn btn-primary sm" id="supGo">${tS("sa.takeOverSession","Sessie overnemen")}</button>
   </div>
 </div>`;
         document.body.appendChild(ov);
@@ -1356,8 +1357,8 @@ ${canManage ? `
           const scope = ov.querySelector("#supScope").value;
           const reason = ov.querySelector("#supReason").value.trim();
           const errEl = ov.querySelector("#supErr");
-          if (!impersonatedUserId) { errEl.textContent = "Geen gebruiker geselecteerd."; errEl.style.display = ""; return; }
-          if (!reason) { errEl.textContent = "Reden is verplicht."; errEl.style.display = ""; return; }
+          if (!impersonatedUserId) { errEl.textContent = tS("sa.noUserSelected","Geen gebruiker geselecteerd."); errEl.style.display = ""; return; }
+          if (!reason) { errEl.textContent = tS("sa.reasonRequired","Reden is verplicht."); errEl.style.display = ""; return; }
           try {
             const r = await api("/api/admin/support/start", { method:"POST", body: JSON.stringify({ tenantId, impersonatedUserId, scope, reason }) });
             close();
@@ -1375,7 +1376,7 @@ ${canManage ? `
         });
       }
       async function endSession(tenantId) {
-        if (!window.confirm("Support-sessie nu beëindigen?")) return;
+        if (!window.confirm(tS("sa.endSessionConfirm","Support-sessie nu beëindigen?"))) return;
         try { await api("/api/admin/support/end", { method:"POST", body: JSON.stringify({ tenantId }) }); support(); }
         catch(e){ alert(e.message); }
       }
@@ -1393,22 +1394,22 @@ ${canManage ? `
       const d = await api("/api/audit?limit=200");
       const events = d.rows||d.events||[];
       c.innerHTML = `
-<div class="sa-page-head"><h1>Audit Log<span class="cnt">${events.length}</span></h1>
+<div class="sa-page-head"><h1>${tS("sa.audit","Audit Log")}<span class="cnt">${events.length}</span></h1>
   <div class="sa-spacer"></div>
   <button class="sa-btn btn-secondary sm" id="auditExport">CSV</button>
 </div>
 <div class="sa-filters">
-  <input id="auSearch" placeholder="Actor of detail…" style="flex:1;min-width:180px">
-  <select id="auArea"><option value="">Alle gebieden</option>${[...new Set(events.map(e=>e.area).filter(Boolean))].map(a=>`<option>${a}</option>`).join("")}</select>
+  <input id="auSearch" placeholder="${tS("sa.actorDetailPh","Actor of detail…")}" style="flex:1;min-width:180px">
+  <select id="auArea"><option value="">${tS("sa.allAreas","Alle gebieden")}</option>${[...new Set(events.map(e=>e.area).filter(Boolean))].map(a=>`<option>${a}</option>`).join("")}</select>
   <select id="auLimit"><option value="50">50</option><option value="100" selected>100</option><option value="200">200</option></select>
 </div>
 <div class="sa-card">
   <div class="sa-tbl-wrap">
     <table class="sa-tbl">
-      <thead><tr><th>Tijdstip</th><th>Actor</th><th>Actie</th><th>Gebied</th><th>Tenant</th><th>Detail</th></tr></thead>
+      <thead><tr><th>${tS("sa.time","Tijd")}</th><th>Actor</th><th>${tS("sa.action","Actie")}</th><th>${tS("sa.area","Gebied")}</th><th>${tS("sa.tenant","Tenant")}</th><th>Detail</th></tr></thead>
       <tbody id="auTbody"></tbody>
     </table>
-    <div id="auEmpty" class="sa-empty" style="display:none">Geen events</div>
+    <div id="auEmpty" class="sa-empty" style="display:none">${tS("sa.noEventsShort","Geen events")}</div>
   </div>
 </div>`;
 
@@ -1513,8 +1514,8 @@ ${canManage ? `
 
       c.innerHTML = `
 <div class="sa-filters" style="margin-bottom:16px">
-  <button class="sa-btn ${_modTab === "bundles" ? "btn-primary" : "btn-secondary"} sm" id="tabBundles">Bundels samenstellen</button>
-  <button class="sa-btn ${_modTab === "tenants" ? "btn-primary" : "btn-secondary"} sm" id="tabTenants">Vrijgave per tenant</button>
+  <button class="sa-btn ${_modTab === "bundles" ? "btn-primary" : "btn-secondary"} sm" id="tabBundles">${tS("sa.tabBundles","Bundels samenstellen")}</button>
+  <button class="sa-btn ${_modTab === "tenants" ? "btn-primary" : "btn-secondary"} sm" id="tabTenants">${tS("sa.tabTenants","Vrijgave per tenant")}</button>
   <button class="sa-btn ${_modTab === "addons" ? "btn-primary" : "btn-secondary"} sm" id="tabAddons">Add-ons</button>
 </div>
 <div id="modPanel"></div>`;
@@ -1541,28 +1542,28 @@ ${canManage ? `
         catch (e) { panel.innerHTML = `<div class="sa-card"><div class="sa-card-body">${esc(e.message)}</div></div>`; return; }
         panel.innerHTML = `
 <div class="sa-card">
-  <div class="sa-card-head"><div class="sa-card-title">Add-ons (naam, prijs &amp; omschrijving)</div></div>
+  <div class="sa-card-head"><div class="sa-card-title">${tS("sa.addonsTitle","Add-ons (naam, prijs &amp; omschrijving)")}</div></div>
   <div class="sa-card-body" style="padding:16px;display:flex;flex-direction:column;gap:14px">
-    <div style="font-size:12.5px;color:var(--gray-500)">Pas de commerciële naam, maandprijs en omschrijving van elke add-on aan. Dit verschijnt bij de klant (prijzen/aanbod). À-la-carte toekennen per tenant gebeurt via "Vrijgave per tenant".</div>
+    <div style="font-size:12.5px;color:var(--gray-500)">${tS("sa.addonsIntro","Pas de commerciële naam, maandprijs en omschrijving van elke add-on aan. Dit verschijnt bij de klant (prijzen/aanbod). À-la-carte toekennen per tenant gebeurt via \"Vrijgave per tenant\".")}</div>
     ${addons.map(a => `
       <div class="sa-addon-row" data-key="${esc(a.key)}" style="border:1px solid var(--gray-200);border-radius:10px;padding:12px;display:grid;grid-template-columns:1fr 130px;gap:10px">
         <div>
           <div style="font-size:11px;color:var(--gray-400);font-family:monospace;margin-bottom:4px">${esc(a.key)}</div>
-          <input class="ao-label" value="${esc(a.label)}" placeholder="Naam" style="width:100%;font-weight:600;margin-bottom:6px">
-          <textarea class="ao-desc" rows="2" placeholder="Omschrijving" style="width:100%;font-size:12.5px;resize:vertical">${esc(a.description)}</textarea>
+          <input class="ao-label" value="${esc(a.label)}" placeholder="${tS("adm.cust.thName","Naam")}" style="width:100%;font-weight:600;margin-bottom:6px">
+          <textarea class="ao-desc" rows="2" placeholder="${tS("adm.thDescription","Omschrijving")}" style="width:100%;font-size:12.5px;resize:vertical">${esc(a.description)}</textarea>
         </div>
         <div style="display:flex;flex-direction:column;gap:8px">
-          <label style="font-size:11px;color:var(--gray-500)">€/maand
+          <label style="font-size:11px;color:var(--gray-500)">€/${tS("adm.bill.perMonth","maand")}
             <input class="ao-monthly" type="number" min="0" step="1" value="${a.monthly ?? ""}" style="width:100%">
           </label>
           <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--gray-600);cursor:pointer">
-            <input class="ao-active" type="checkbox" ${a.active ? "checked" : ""}> Actief
+            <input class="ao-active" type="checkbox" ${a.active ? "checked" : ""}> ${tS("adm.active","Actief")}
           </label>
-          <button class="sa-btn btn-secondary sm ao-reset" type="button" data-label="${esc(a.defaults.label)}" data-monthly="${a.defaults.monthly ?? ""}" data-desc="${esc(a.defaults.description)}">Standaard</button>
+          <button class="sa-btn btn-secondary sm ao-reset" type="button" data-label="${esc(a.defaults.label)}" data-monthly="${a.defaults.monthly ?? ""}" data-desc="${esc(a.defaults.description)}">${tS("sa.default","Standaard")}</button>
         </div>
       </div>`).join("")}
     <div style="display:flex;gap:8px;align-items:center">
-      <button class="sa-btn btn-primary sm" id="aoSave">Add-ons opslaan</button>
+      <button class="sa-btn btn-primary sm" id="aoSave">${tS("sa.saveAddons","Add-ons opslaan")}</button>
       <span id="aoMsg" style="font-size:12.5px;color:var(--wf-green)"></span>
     </div>
   </div>
@@ -1586,7 +1587,7 @@ ${canManage ? `
             };
           });
           const msg = document.getElementById("aoMsg"); msg.textContent = "";
-          try { await api("/api/admin/addons", { method: "PUT", body: JSON.stringify(payload) }); msg.textContent = "Opgeslagen ✓"; }
+          try { await api("/api/admin/addons", { method: "PUT", body: JSON.stringify(payload) }); msg.textContent = tS("sa.savedCheck","Opgeslagen ✓"); }
           catch (e) { msg.style.color = "var(--wf-red)"; msg.textContent = e.message; }
         });
       }
@@ -1598,10 +1599,10 @@ ${canManage ? `
         let plans = [];
         try { plans = (await api("/api/admin/plan-prices")).plans || []; } catch (_) { return; }
         card.innerHTML = `
-<div class="sa-card"><div class="sa-card-head"><div class="sa-card-title">Bundel-prijzen</div></div>
+<div class="sa-card"><div class="sa-card-head"><div class="sa-card-title">${tS("sa.planPrices","Bundel-prijzen")}</div></div>
   <div class="sa-card-body" style="padding:16px">
-    <div style="font-size:12.5px;color:var(--gray-500);margin-bottom:10px">Basisprijs per jaar + prijs per extra gebruiker/jaar + inbegrepen gebruikers, per bundel. €0 basis = 'op aanvraag' (bv. enterprise).</div>
-    <div class="sa-tbl-wrap"><table class="sa-tbl"><thead><tr><th>Bundel</th><th>Basis €/jaar</th><th>Per seat €/jaar</th><th>Inbegrepen seats</th></tr></thead><tbody>
+    <div style="font-size:12.5px;color:var(--gray-500);margin-bottom:10px">${tS("sa.planPricesIntro","Basisprijs per jaar + prijs per extra gebruiker/jaar + inbegrepen gebruikers, per bundel. €0 basis = 'op aanvraag' (bv. enterprise).")}</div>
+    <div class="sa-tbl-wrap"><table class="sa-tbl"><thead><tr><th>${tS("sa.bundle","Bundel")}</th><th>${tS("sa.baseYear","Basis €/jaar")}</th><th>${tS("sa.perSeatYear","Per seat €/jaar")}</th><th>${tS("sa.includedSeats","Inbegrepen seats")}</th></tr></thead><tbody>
       ${plans.map(p => `<tr class="pp-row" data-key="${esc(p.key)}">
         <td><strong>${esc(p.label)}</strong></td>
         <td><input class="pp-base" type="number" min="0" value="${p.baseAnnual}" style="width:100px"></td>
@@ -1610,7 +1611,7 @@ ${canManage ? `
       </tr>`).join("")}
     </tbody></table></div>
     <div style="display:flex;gap:8px;align-items:center;margin-top:10px">
-      <button class="sa-btn btn-primary sm" id="ppSave">Prijzen opslaan</button>
+      <button class="sa-btn btn-primary sm" id="ppSave">${tS("sa.savePrices","Prijzen opslaan")}</button>
       <span id="ppMsg" style="font-size:12.5px;color:var(--wf-green)"></span>
     </div>
   </div></div>`;
@@ -1624,7 +1625,7 @@ ${canManage ? `
             };
           });
           const msg = document.getElementById("ppMsg"); msg.textContent = "";
-          try { await api("/api/admin/plan-prices", { method: "PUT", body: JSON.stringify({ planPrices }) }); msg.textContent = "Opgeslagen ✓"; }
+          try { await api("/api/admin/plan-prices", { method: "PUT", body: JSON.stringify({ planPrices }) }); msg.textContent = tS("sa.savedCheck","Opgeslagen ✓"); }
           catch (e) { msg.style.color = "var(--wf-red)"; msg.textContent = e.message; }
         });
       }
@@ -1635,10 +1636,10 @@ ${canManage ? `
         panel.innerHTML = `
 <div class="sa-card">
   <div class="sa-card-head">
-    <div class="sa-card-title">Bundel bewerken</div>
+    <div class="sa-card-title">${tS("sa.editBundle","Bundel bewerken")}</div>
     <select id="bunSel" class="sa-btn btn-secondary sm" style="font-weight:600">
       ${bundles.map(b => `<option value="${b.key}">${esc(b.label)} (${b.modules.length} modules)</option>`).join("")}
-      <option value="__new">+ Nieuwe bundel…</option>
+      <option value="__new">+ ${tS("sa.newBundle","Nieuwe bundel…")}</option>
     </select>
   </div>
   <div class="sa-card-body" id="bunEditor" style="padding:16px"></div>
@@ -1654,17 +1655,17 @@ ${canManage ? `
         const b = isNew ? { key: "", label: "", description: "", modules: [], submodules: {}, custom: false, active: true, order: (bundles.length + 1) } : bundles.find(x => x.key === key);
         ed.innerHTML = `
 <div class="sa-form-grid" style="margin-bottom:14px">
-  <div class="sa-field"><label>Bundel-key</label><input id="bKey" value="${esc(b.key)}" ${isNew ? "" : "disabled"} placeholder="bv. pro"></div>
-  <div class="sa-field"><label>Naam</label><input id="bLabel" value="${esc(b.label)}" placeholder="bv. Pro"></div>
+  <div class="sa-field"><label>${tS("sa.bundleKey","Bundel-key")}</label><input id="bKey" value="${esc(b.key)}" ${isNew ? "" : "disabled"} placeholder="bv. pro"></div>
+  <div class="sa-field"><label>${tS("adm.cust.thName","Naam")}</label><input id="bLabel" value="${esc(b.label)}" placeholder="bv. Pro"></div>
 </div>
-<div class="sa-field" style="margin-bottom:14px"><label>Omschrijving</label><input id="bDesc" value="${esc(b.description || "")}" placeholder="Korte omschrijving"></div>
-<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--gray-600);margin-bottom:10px"><input type="checkbox" id="bCustom" ${b.custom ? "checked" : ""}> Op aanvraag (custom · klant kan niet zelf kiezen)</label>
-<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--gray-600);margin-bottom:14px"><input type="checkbox" id="bPopular" ${b.popular ? "checked" : ""}> Meest gekozen (uitgelicht in prijzen &amp; abonnementsscherm)</label>
-<div style="font-size:12px;font-weight:600;color:var(--gray-900);margin-bottom:6px">Inbegrepen modules &amp; submodules</div>
+<div class="sa-field" style="margin-bottom:14px"><label>${tS("adm.thDescription","Omschrijving")}</label><input id="bDesc" value="${esc(b.description || "")}" placeholder="${tS("sa.shortDescPh","Korte omschrijving")}"></div>
+<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--gray-600);margin-bottom:10px"><input type="checkbox" id="bCustom" ${b.custom ? "checked" : ""}> ${tS("sa.onRequestCustom","Op aanvraag (custom · klant kan niet zelf kiezen)")}</label>
+<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--gray-600);margin-bottom:14px"><input type="checkbox" id="bPopular" ${b.popular ? "checked" : ""}> ${tS("sa.mostChosenNote","Meest gekozen (uitgelicht in prijzen &amp; abonnementsscherm)")}</label>
+<div style="font-size:12px;font-weight:600;color:var(--gray-900);margin-bottom:6px">${tS("sa.includedModules","Inbegrepen modules &amp; submodules")}</div>
 <div id="bGrid">${grid("b", b.modules, b.submodules || {})}</div>
 <div style="display:flex;gap:8px;margin-top:14px">
-  <button class="sa-btn btn-primary" id="bSave">${isNew ? "Bundel aanmaken" : "Wijzigingen opslaan"}</button>
-  ${(!isNew && !b.custom) ? `<button class="sa-btn btn-danger" id="bDelete">Verwijderen</button>` : ""}
+  <button class="sa-btn btn-primary" id="bSave">${isNew ? tS("sa.createBundle","Bundel aanmaken") : tS("sa.saveChanges","Wijzigingen opslaan")}</button>
+  ${(!isNew && !b.custom) ? `<button class="sa-btn btn-danger" id="bDelete">${tS("adm.delete","Verwijderen")}</button>` : ""}
   <span id="bMsg" style="font-size:12.5px;align-self:center;color:var(--gray-500)"></span>
 </div>`;
         wireSubToggle(ed, "b");
@@ -1682,16 +1683,16 @@ ${canManage ? `
           };
           try {
             await api("/api/admin/bundles", { method: "POST", body: JSON.stringify(payload) });
-            window.showToast && window.showToast(`Bundel '${payload.label}' opgeslagen`, "success");
+            window.showToast && window.showToast(tS("sa.bundleSaved","Bundel '{n}' opgeslagen").replace("{n}", payload.label), "success");
             modules();
           } catch (e) { window.showToast && window.showToast(e.message, "error"); }
         });
         const del = document.getElementById("bDelete");
         if (del) del.addEventListener("click", async () => {
-          if (!confirm(`Bundel '${b.label}' verwijderen?`)) return;
+          if (!confirm(tS("sa.bundleDeleteConfirm","Bundel '{n}' verwijderen?").replace("{n}", b.label))) return;
           try {
             await api(`/api/admin/bundles/${b.key}`, { method: "DELETE" });
-            window.showToast && window.showToast("Bundel verwijderd", "success");
+            window.showToast && window.showToast(tS("sa.bundleDeleted","Bundel verwijderd"), "success");
             modules();
           } catch (e) { window.showToast && window.showToast(e.message, "error"); }
         });
@@ -1703,14 +1704,14 @@ ${canManage ? `
         panel.innerHTML = `
 <div class="sa-card">
   <div class="sa-card-head">
-    <div class="sa-card-title">Modules vrijgeven per tenant</div>
+    <div class="sa-card-title">${tS("sa.releasePerTenant","Modules vrijgeven per tenant")}</div>
     <select id="tenSel" class="sa-btn btn-secondary sm" style="font-weight:600">
       ${tenants.map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join("")}
     </select>
   </div>
   <div class="sa-card-body" id="tenEditor" style="padding:16px"></div>
 </div>`;
-        if (!tenants.length) { document.getElementById("tenEditor").innerHTML = `<div class="sa-empty">Geen tenants</div>`; return; }
+        if (!tenants.length) { document.getElementById("tenEditor").innerHTML = `<div class="sa-empty">${tS("sa.noTenants","Geen tenants")}</div>`; return; }
         const sel = document.getElementById("tenSel");
         sel.addEventListener("change", () => editTenant(sel.value));
         editTenant(tenants[0].id);
@@ -1726,16 +1727,16 @@ ${canManage ? `
           const baseBundle = bundles.find(b => b.key === ent.plan) || { modules: [] };
           ed.innerHTML = `
 <div class="sa-form-grid" style="margin-bottom:14px">
-  <div class="sa-field"><label>Bundel (plan)</label>
+  <div class="sa-field"><label>${tS("sa.bundlePlan","Bundel (plan)")}</label>
     <select id="tPlan">${bundles.map(b => `<option value="${b.key}" ${b.key === ent.plan ? "selected" : ""}>${esc(b.label)}</option>`).join("")}</select>
   </div>
-  <div class="sa-field"><label>Actieve modules</label><input value="${ent.modules.length} van ${catalog.length}" disabled></div>
+  <div class="sa-field"><label>${tS("sa.activeModules","Actieve modules")}</label><input value="${ent.modules.length} ${tS("sa.of","van")} ${catalog.length}" disabled></div>
 </div>
-<div class="sa-alert alert-info" style="margin-bottom:12px">Aangevinkt = vrijgegeven voor deze tenant. Wijk je af van de bundel, dan wordt dat als uitzondering bewaard. Wissel van bundel hierboven om de basis te resetten.</div>
+<div class="sa-alert alert-info" style="margin-bottom:12px">${tS("sa.entitlementNote","Aangevinkt = vrijgegeven voor deze tenant. Wijk je af van de bundel, dan wordt dat als uitzondering bewaard. Wissel van bundel hierboven om de basis te resetten.")}</div>
 <div id="tGrid">${grid("t", ent.modules, ent.submodules || {}, { subs: false })}</div>
 <div style="display:flex;gap:8px;margin-top:14px">
-  <button class="sa-btn btn-primary" id="tSave">Opslaan</button>
-  <span style="font-size:12px;align-self:center;color:var(--gray-400)">Baseline bundel '${esc(baseBundle.label || ent.plan)}': ${baseBundle.modules.length} modules</span>
+  <button class="sa-btn btn-primary" id="tSave">${tS("adm.save","Opslaan")}</button>
+  <span style="font-size:12px;align-self:center;color:var(--gray-400)">${tS("sa.baselineBundle","Baseline bundel")} '${esc(baseBundle.label || ent.plan)}': ${baseBundle.modules.length} modules</span>
 </div>`;
           // Bij bundelwissel: herlaad raster op die bundel-baseline (nog niet opgeslagen).
           document.getElementById("tPlan").addEventListener("change", e => {
@@ -1750,7 +1751,7 @@ ${canManage ? `
             const remove = nb.modules.filter(k => !chosen.includes(k));
             try {
               await api(`/api/admin/tenants/${tid}/modules`, { method: "PATCH", body: JSON.stringify({ plan, moduleOverrides: { add, remove } }) });
-              window.showToast && window.showToast(`Modules van ${tenant.name} bijgewerkt ✓ (${add.length} extra, ${remove.length} ingetrokken)`, "success");
+              window.showToast && window.showToast(tS("sa.modulesUpdated","Modules van {n} bijgewerkt ✓ ({a} extra, {r} ingetrokken)").replace("{n}", tenant.name).replace("{a}", add.length).replace("{r}", remove.length), "success");
               editTenant(tid);
             } catch (e) { window.showToast && window.showToast(e.message, "error"); }
           });
@@ -1772,19 +1773,19 @@ ${canManage ? `
         api("/api/admin/tenant-integrations").catch(() => ({ rows: [], total: 0, connected: 0 })),
       ]);
       const cfg = d.config || {};
-      const statusPill = ok => ok ? badge("Geconfigureerd","badge-green") : badge("Dummy","badge-orange");
+      const statusPill = ok => ok ? badge(tS("sa.configured","Geconfigureerd"),"badge-green") : badge("Dummy","badge-orange");
       c.innerHTML = `
 <div class="sa-card">
-  <div class="sa-card-head"><div class="sa-card-title">Integraties &amp; API-sleutels</div><div class="sa-card-sub">Beheer hier de echte sleutels. Standaard staan dummy-waarden ingesteld zodat niets crasht.</div></div>
+  <div class="sa-card-head"><div class="sa-card-title">${tS("sa.intTitle","Integraties &amp; API-sleutels")}</div><div class="sa-card-sub">${tS("sa.intSub","Beheer hier de echte sleutels. Standaard staan dummy-waarden ingesteld zodat niets crasht.")}</div></div>
   <div style="padding:16px;display:flex;flex-direction:column;gap:8px">
     <div style="font-size:12px;color:var(--wf-yellow);background:var(--wf-yellow-l);border:1px solid var(--wf-yellow-l);border-radius:8px;padding:10px 12px">
-      Geheime sleutels worden gemaskeerd getoond. Laat een veld op de gemaskeerde waarde staan om het ongewijzigd te laten; typ een nieuwe waarde om te overschrijven.
+      ${tS("sa.maskedNote","Geheime sleutels worden gemaskeerd getoond. Laat een veld op de gemaskeerde waarde staan om het ongewijzigd te laten; typ een nieuwe waarde om te overschrijven.")}
     </div>
   </div>
 </div>
 
 <form id="saIntegrationsForm">
-  <div class="sa-int-sec">Betalingen</div>
+  <div class="sa-int-sec">${tS("sa.secPayments","Betalingen")}</div>
   <div class="sa-card">
     <div class="sa-card-head"><div class="sa-card-title">Stripe · betalingen</div><div class="sa-card-sub">${statusPill(cfg.stripe?.keyConfigured)} ${cfg.stripe?.mode?badge(cfg.stripe.mode==="live"?"LIVE":"SANDBOX", cfg.stripe.mode==="live"?"badge-green":"badge-blue"):""}</div></div>
     <div style="padding:16px;display:grid;gap:12px">
@@ -1809,7 +1810,7 @@ ${canManage ? `
     </div>
   </div>
 
-  <div class="sa-int-sec">E-facturatie (Peppol)</div>
+  <div class="sa-int-sec">${tS("sa.secEinvoicing","E-facturatie (Peppol)")}</div>
   <div class="sa-card">
     <div class="sa-card-head"><div class="sa-card-title">Peppol · e-facturatie (BE)</div><div class="sa-card-sub">${statusPill(cfg.peppol?.configured)}</div></div>
     <div style="padding:16px;display:grid;gap:12px">
@@ -1822,7 +1823,7 @@ ${canManage ? `
     </div>
   </div>
 
-  <div class="sa-int-sec">Communicatie</div>
+  <div class="sa-int-sec">${tS("sa.communication","Communicatie")}</div>
   <div class="sa-card">
     <div class="sa-card-head"><div class="sa-card-title">E-mail · verzending</div><div class="sa-card-sub">${statusPill(cfg.email?.configured)}</div></div>
     <div style="padding:16px;display:grid;gap:12px">
@@ -1836,7 +1837,7 @@ ${canManage ? `
     </div>
   </div>
 
-  <div class="sa-int-sec">Bedrijfsdata</div>
+  <div class="sa-int-sec">${tS("sa.secCompanyData","Bedrijfsdata")}</div>
   <div class="sa-card">
     <div class="sa-card-head"><div class="sa-card-title">KBO · bedrijfsopzoeking</div><div class="sa-card-sub">${statusPill(cfg.kbo?.configured)}</div></div>
     <div style="padding:16px;display:grid;gap:12px">
@@ -1849,7 +1850,7 @@ ${canManage ? `
     </div>
   </div>
 
-  <div class="sa-int-sec">Compliance (BE bouw)</div>
+  <div class="sa-int-sec">${tS("sa.secCompliance","Compliance (BE bouw)")}</div>
   <div class="sa-card">
     <div class="sa-card-head"><div class="sa-card-title">Checkin@Work (CIAW) + Limosa · RSZ-gateway</div><div class="sa-card-sub">${statusPill(cfg.ciaw?.configured)}</div></div>
     <div style="padding:16px;display:grid;gap:12px">
@@ -1864,7 +1865,7 @@ ${canManage ? `
     </div>
   </div>
 
-  <div class="sa-int-sec">AI-assistent</div>
+  <div class="sa-int-sec">${tS("sa.secAi","AI-assistent")}</div>
   <div class="sa-card">
     <div class="sa-card-head"><div class="sa-card-title">Boden · AI-assistent (OpenAI)</div><div class="sa-card-sub">${statusPill(cfg.openai?.configured)}</div></div>
     <div style="padding:16px;display:grid;gap:12px">
@@ -1875,15 +1876,15 @@ ${canManage ? `
   </div>
 
   <div style="display:flex;gap:10px;align-items:center;margin:4px 0 24px">
-    <button type="submit" class="sa-btn btn-primary">Opslaan</button>
+    <button type="submit" class="sa-btn btn-primary">${tS("adm.save","Opslaan")}</button>
     <span id="saIntStatus" style="font-size:13px"></span>
   </div>
 </form>
 
 <div class="sa-card" style="margin-top:8px">
-  <div class="sa-card-head"><div class="sa-card-title">Klant-koppelingen (alleen-lezen)</div><div class="sa-card-sub">${(tint.connected||0)}/${(tint.total||0)} verbonden · eigen ERP/boekhouding van klanten · beheerd door de klant zelf</div></div>
-  <div class="sa-tbl-wrap"><table class="sa-tbl"><thead><tr><th>Tenant</th><th>Koppeling</th><th>Status</th><th>Sleutel</th><th>Laatste sync</th></tr></thead><tbody>
-    ${(tint.rows||[]).map(r => `<tr><td>${esc(r.tenant)}</td><td>${esc(r.provider)}</td><td>${esc(r.status)}</td><td>${r.hasSecret?badge("ingesteld","badge-green"):badge("geen","badge-gray")}</td><td style="font-size:12px;color:var(--gray-500)">${r.lastSyncAt?fmtDT(r.lastSyncAt):"-"}</td></tr>`).join("") || "<tr><td colspan=5 style='color:var(--gray-500);padding:14px'>Nog geen klant-koppelingen. Klanten verbinden hun ERP via hun eigen Koppelingen-scherm.</td></tr>"}
+  <div class="sa-card-head"><div class="sa-card-title">${tS("sa.tenantIntTitle","Klant-koppelingen (alleen-lezen)")}</div><div class="sa-card-sub">${(tint.connected||0)}/${(tint.total||0)} ${tS("sa.connectedLc","verbonden")} · ${tS("sa.tenantIntSub","eigen ERP/boekhouding van klanten · beheerd door de klant zelf")}</div></div>
+  <div class="sa-tbl-wrap"><table class="sa-tbl"><thead><tr><th>${tS("sa.tenant","Tenant")}</th><th>${tS("sa.integration","Koppeling")}</th><th>${tS("adm.status","Status")}</th><th>${tS("sa.key","Sleutel")}</th><th>${tS("sa.lastSync","Laatste sync")}</th></tr></thead><tbody>
+    ${(tint.rows||[]).map(r => `<tr><td>${esc(r.tenant)}</td><td>${esc(r.provider)}</td><td>${esc(r.status)}</td><td>${r.hasSecret?badge(tS("sa.set","ingesteld"),"badge-green"):badge(tS("sa.none","geen"),"badge-gray")}</td><td style="font-size:12px;color:var(--gray-500)">${r.lastSyncAt?fmtDT(r.lastSyncAt):"-"}</td></tr>`).join("") || `<tr><td colspan=5 style='color:var(--gray-500);padding:14px'>${tS("sa.noTenantInt","Nog geen klant-koppelingen. Klanten verbinden hun ERP via hun eigen Koppelingen-scherm.")}</td></tr>`}
   </tbody></table></div>
 </div>
 <style>
@@ -1900,12 +1901,12 @@ ${canManage ? `
         const body = { stripe:{}, peppol:{}, email:{}, kbo:{}, ciaw:{}, openai:{} };
         for (const [k,v] of fd.entries()) { const [s,f]=k.split("."); if(body[s]) body[s][f]=v; }
         const st = document.getElementById("saIntStatus");
-        st.textContent = "Opslaan…"; st.style.color = "var(--gray-500)";
+        st.textContent = tS("mgr.saving","Opslaan…"); st.style.color = "var(--gray-500)";
         try {
           await api("/api/admin/integrations", { method:"PUT", body: JSON.stringify(body) });
-          st.textContent = "✓ Opgeslagen"; st.style.color = "var(--wf-green)";
+          st.textContent = "✓ " + tS("sa.saved","Opgeslagen"); st.style.color = "var(--wf-green)";
           setTimeout(() => integrations(), 700);
-        } catch(err) { st.textContent = "Fout: "+err.message; st.style.color = "var(--wf-red)"; }
+        } catch(err) { st.textContent = tS("adm.error","Fout")+": "+err.message; st.style.color = "var(--wf-red)"; }
       });
     } catch(e) { content().innerHTML = err(e); }
   }
@@ -1918,26 +1919,26 @@ ${canManage ? `
       c.innerHTML = `
 <div class="sa-grid2">
   <div class="sa-card">
-    <div class="sa-card-head"><div class="sa-card-title">Systeem info</div></div>
+    <div class="sa-card-head"><div class="sa-card-title">${tS("sa.systemInfo","Systeem info")}</div></div>
     <div style="padding:16px">
       <div class="sa-detail">
-        <div class="sa-detail-row"><span class="sa-detail-label">Applicatie</span><span class="sa-detail-value">${esc(hd.app||"Monargo One")}</span></div>
-        <div class="sa-detail-row"><span class="sa-detail-label">Versie</span><span class="sa-detail-value">${esc(hd.version||"-")}</span></div>
+        <div class="sa-detail-row"><span class="sa-detail-label">${tS("sa.application","Applicatie")}</span><span class="sa-detail-value">${esc(hd.app||"Monargo One")}</span></div>
+        <div class="sa-detail-row"><span class="sa-detail-label">${tS("sa.version","Versie")}</span><span class="sa-detail-value">${esc(hd.version||"-")}</span></div>
         <div class="sa-detail-row"><span class="sa-detail-label">Release channel</span><span class="sa-detail-value">${badge(hd.releaseChannel||"dev", hd.releaseChannel==="production"?"badge-green":"badge-orange")}</span></div>
         <div class="sa-detail-row"><span class="sa-detail-label">Commit SHA</span><span class="sa-detail-value mono">${esc((hd.commitSha||"local").slice(0,12))}</span></div>
-        <div class="sa-detail-row"><span class="sa-detail-label">Opslag adapter</span><span class="sa-detail-value">${badge(hd.storageAdapter||"json", hd.storageAdapter==="postgres"?"badge-green":"badge-blue")}</span></div>
-        <div class="sa-detail-row"><span class="sa-detail-label">Server uptime</span><span class="sa-detail-value">${fmtUptime(hd.uptime||0)}</span></div>
+        <div class="sa-detail-row"><span class="sa-detail-label">${tS("sa.storageAdapter","Opslag adapter")}</span><span class="sa-detail-value">${badge(hd.storageAdapter||"json", hd.storageAdapter==="postgres"?"badge-green":"badge-blue")}</span></div>
+        <div class="sa-detail-row"><span class="sa-detail-label">${tS("sa.serverUptime","Server uptime")}</span><span class="sa-detail-value">${fmtUptime(hd.uptime||0)}</span></div>
         <div class="sa-detail-row"><span class="sa-detail-label">Modules</span><span class="sa-detail-value">${hd.modules||"-"}</span></div>
-        <div class="sa-detail-row"><span class="sa-detail-label">Tijd server</span><span class="sa-detail-value mono" style="font-size:11px">${esc(hd.time||"")}</span></div>
+        <div class="sa-detail-row"><span class="sa-detail-label">${tS("sa.serverTime","Tijd server")}</span><span class="sa-detail-value mono" style="font-size:11px">${esc(hd.time||"")}</span></div>
       </div>
     </div>
   </div>
 
   <div class="sa-card">
-    <div class="sa-card-head"><div class="sa-card-title">Release info</div></div>
+    <div class="sa-card-head"><div class="sa-card-title">${tS("sa.releaseInfo","Release info")}</div></div>
     <div style="padding:16px">
       <div class="sa-detail">
-        <div class="sa-detail-row"><span class="sa-detail-label">Versie</span><span class="sa-detail-value">${esc(rel2.version||"-")}</span></div>
+        <div class="sa-detail-row"><span class="sa-detail-label">${tS("sa.version","Versie")}</span><span class="sa-detail-value">${esc(rel2.version||"-")}</span></div>
         <div class="sa-detail-row"><span class="sa-detail-label">Channel</span><span class="sa-detail-value">${esc(rel2.channel||"-")}</span></div>
         <div class="sa-detail-row"><span class="sa-detail-label">Commit</span><span class="sa-detail-value mono">${esc(rel2.commitSha||"-")}</span></div>
         <div class="sa-detail-row"><span class="sa-detail-label">Build at</span><span class="sa-detail-value">${fmtDT(rel2.builtAt)}</span></div>
@@ -1947,16 +1948,16 @@ ${canManage ? `
 </div>
 
 <div class="sa-card">
-  <div class="sa-card-head"><div class="sa-card-title">Beveiliging · MFA verplichten</div></div>
+  <div class="sa-card-head"><div class="sa-card-title">${tS("sa.securityMfaEnforce","Beveiliging · MFA verplichten")}</div></div>
   <div style="padding:16px">
-    <p style="font-size:13px;color:var(--gray-500);margin:0 0 12px">Schakelt 2FA in voor álle beheerders (tenant-admins + super-admins) die nog geen MFA hebben. Bij hun volgende login is een authenticator-code vereist. De secrets en recovery codes worden hieronder éénmalig getoond.</p>
-    <button id="saMfaEnforce" class="sa-btn btn-primary">MFA verplichten voor alle beheerders</button>
+    <p style="font-size:13px;color:var(--gray-500);margin:0 0 12px">${tS("sa.mfaEnforceIntro","Schakelt 2FA in voor álle beheerders (tenant-admins + super-admins) die nog geen MFA hebben. Bij hun volgende login is een authenticator-code vereist. De secrets en recovery codes worden hieronder éénmalig getoond.")}</p>
+    <button id="saMfaEnforce" class="sa-btn btn-primary">${tS("sa.mfaEnforceAll","MFA verplichten voor alle beheerders")}</button>
     <div id="saMfaResult" style="margin-top:14px"></div>
   </div>
 </div>
 
 <div class="sa-card">
-  <div class="sa-card-head"><div class="sa-card-title">Productie checklist</div></div>
+  <div class="sa-card-head"><div class="sa-card-title">${tS("sa.prodChecklist","Productie checklist")}</div></div>
   <div style="padding:16px;display:flex;flex-direction:column;gap:10px">
     ${checklist([
       [hd.storageAdapter==="postgres", "Opslag op PostgreSQL/Supabase (STORAGE_ADAPTER=postgres)"],
@@ -1970,39 +1971,39 @@ ${canManage ? `
 </div>`;
 
       document.getElementById("saMfaEnforce")?.addEventListener("click", async () => {
-        if (!confirm("MFA verplicht maken voor álle beheerders?\n\nBij de volgende login is een authenticator-code vereist. Bewaar de getoonde secrets en recovery codes · ze worden maar één keer getoond.")) return;
+        if (!confirm(tS("adm.set.mfaEnforceConfirm","MFA verplicht maken voor álle beheerders?\n\nBij de volgende login is een authenticator-code vereist. Bewaar de getoonde secrets en recovery codes zorgvuldig · ze worden maar één keer getoond."))) return;
         const btn = document.getElementById("saMfaEnforce");
         const out = document.getElementById("saMfaResult");
-        btn.disabled = true; btn.textContent = "Bezig…";
+        btn.disabled = true; btn.textContent = tS("adm.bill.busy","Bezig…");
         try {
           const d = await api("/api/admin/mfa/enforce", { method: "POST", body: "{}" });
           const enrolled = d.enrolled || [];
           if (!enrolled.length) {
-            out.innerHTML = `<div style="color:var(--wf-green);font-weight:600;font-size:13px">Alle beheerders hebben al MFA actief.</div>`;
-            btn.textContent = "MFA verplichten voor alle beheerders"; btn.disabled = false;
+            out.innerHTML = `<div style="color:var(--wf-green);font-weight:600;font-size:13px">${tS("adm.set.mfaAllActive","Alle beheerders hebben al MFA actief.")}</div>`;
+            btn.textContent = tS("sa.mfaEnforceAll","MFA verplichten voor alle beheerders"); btn.disabled = false;
             return;
           }
           out.innerHTML = `
 <div style="font-size:12px;color:var(--wf-yellow);background:var(--wf-yellow-l);border:1px solid var(--wf-yellow-l);border-radius:8px;padding:10px 12px;margin-bottom:10px">
-  Bewaar onderstaande gegevens nu. Ze worden niet opnieuw getoond. Voeg de sleutel toe aan een authenticator-app.
+  ${tS("adm.set.mfaSaveNow","Bewaar onderstaande gegevens nu. Ze worden niet opnieuw getoond. Voeg de sleutel toe aan een authenticator-app (Google Authenticator, Authy…).")}
 </div>
 ${enrolled.map(e => `
   <div style="border:1px solid var(--gray-200);border-radius:10px;padding:12px;margin-bottom:10px">
     <div style="font-weight:600;font-size:13px;color:var(--gray-900);margin-bottom:6px">${esc(e.name||e.email)} <span style="color:var(--gray-400);font-weight:400">· ${esc(e.email)}</span></div>
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
       <div style="flex:1;min-width:180px">
-        <div style="font-size:11px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.4px">Geheime sleutel</div>
+        <div style="font-size:11px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.4px">${tS("adm.set.mfaSecret","Geheime sleutel")}</div>
         <div class="mono" style="background:var(--gray-100);padding:6px 10px;border-radius:6px;font-size:12px;word-break:break-all;margin:3px 0 8px">${esc(e.secret||"")}</div>
-        <div style="font-size:11px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.4px">Recovery codes</div>
+        <div style="font-size:11px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.4px">${tS("adm.set.mfaRecovery","Recovery codes")}</div>
         <div class="mono" style="font-size:11.5px;color:var(--gray-700);line-height:1.7">${(e.recoveryCodes||[]).map(c=>esc(c)).join(" &nbsp; ")}</div>
       </div>
     </div>
   </div>`).join("")}
-<div style="color:var(--wf-green);font-weight:600;font-size:13px;margin-top:4px">${enrolled.length} beheerder(s) ingeschreven · Foundation-MFA voldaan.</div>`;
-          btn.textContent = "Ingeschreven ✓";
+<div style="color:var(--wf-green);font-weight:600;font-size:13px;margin-top:4px">${tS("sa.enrolledDone","{n} beheerder(s) ingeschreven · Foundation-MFA voldaan.").replace("{n}", enrolled.length)}</div>`;
+          btn.textContent = tS("sa.enrolledCheck","Ingeschreven ✓");
         } catch(e) {
-          out.innerHTML = `<div style="color:var(--wf-red);font-size:13px">Fout: ${esc(e.message)}</div>`;
-          btn.textContent = "MFA verplichten voor alle beheerders"; btn.disabled = false;
+          out.innerHTML = `<div style="color:var(--wf-red);font-size:13px">${tS("adm.error","Fout")}: ${esc(e.message)}</div>`;
+          btn.textContent = tS("sa.mfaEnforceAll","MFA verplichten voor alle beheerders"); btn.disabled = false;
         }
       });
     } catch(e) { content().innerHTML = err(e); }
