@@ -51,7 +51,7 @@
 
 /* Layout */
 .sa-layout{display:flex;height:100vh;background:var(--bg)}
-.sa-sidebar{width:248px;min-width:248px;background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0;transition:transform .2s}
+.sa-sidebar{width:248px;min-width:248px;background:linear-gradient(180deg,#091525 0%,#0b1320 62%,#101d30 100%);border-right:none;display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0;transition:transform .2s}
 .sa-main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
 .sa-topbar{height:56px;background:rgba(255,255,255,.8);backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 20px;gap:12px;flex-shrink:0}
 .sa-topbar-title{font-size:15px;font-weight:600;color:var(--ink);flex:1}
@@ -59,29 +59,29 @@
 .sa-content{flex:1;overflow-y:auto;padding:22px 24px}
 
 /* Sidebar brand */
-.sa-brand{display:flex;align-items:center;gap:12px;padding:18px 16px 16px;border-bottom:1px solid var(--line)}
+.sa-brand{display:flex;align-items:center;gap:12px;padding:18px 16px 16px;border-bottom:1px solid rgba(255,255,255,.10)}
 .sa-brand-mark{width:38px;height:38px;background:var(--wf-blue);border-radius:11px;display:grid;place-items:center;font-weight:600;font-size:13px;color:#fff;flex-shrink:0;box-shadow:0 4px 12px rgba(0,113,227,.30)}
-.sa-brand-name{font-size:14px;font-weight:600;color:var(--ink);line-height:1.2}
-.sa-brand-sub{font-size:11px;color:var(--wf-blue);font-weight:600;letter-spacing:.3px}
+.sa-brand-name{font-size:14px;font-weight:600;color:#fff;line-height:1.2}
+.sa-brand-sub{font-size:11px;color:rgba(255,255,255,.52);font-weight:600;letter-spacing:.3px}
 
 /* Nav */
 .sa-nav{padding:10px 8px;flex:1}
-.sa-nav-section{font-size:10px;font-weight:700;color:var(--gray-400);letter-spacing:.8px;padding:12px 12px 4px;text-transform:uppercase}
-.sa-nav-item{display:flex;align-items:center;gap:10px;width:100%;padding:8.5px 12px;border:none;background:none;border-radius:9px;color:var(--gray-600);font-size:13px;font-weight:500;cursor:pointer;text-align:left;transition:all .12s;position:relative;white-space:nowrap}
+.sa-nav-section{font-size:10px;font-weight:700;color:rgba(255,255,255,.35);letter-spacing:.8px;padding:12px 12px 4px;text-transform:uppercase}
+.sa-nav-item{display:flex;align-items:center;gap:10px;width:100%;padding:8.5px 12px;border:none;background:none;border-radius:9px;color:rgba(255,255,255,.70);font-size:13px;font-weight:500;cursor:pointer;text-align:left;transition:all .12s;position:relative;white-space:nowrap}
 .sa-nav-item svg{width:17px;height:17px;flex-shrink:0;fill:currentColor;opacity:.7}
-.sa-nav-item:hover{background:rgba(0,0,0,.045);color:var(--ink)}
-.sa-nav-item.active{background:var(--wf-blue-l);color:var(--wf-blue);font-weight:600}
-.sa-nav-item.active svg{opacity:1;color:var(--wf-blue)}
+.sa-nav-item:hover{background:rgba(255,255,255,.07);color:#fff}
+.sa-nav-item.active{background:linear-gradient(135deg,#0b7bf1,#0067d4);color:#fff;font-weight:600;box-shadow:0 8px 22px rgba(0,113,227,.28),inset 0 1px 0 rgba(255,255,255,.18)}
+.sa-nav-item.active svg{opacity:1;color:#fff}
 .sa-nav-item .nav-badge{margin-left:auto;background:var(--wf-red);color:#fff;border-radius:99px;font-size:10px;padding:1px 5px;font-weight:700;min-width:18px;text-align:center}
-.sa-nav-divider{height:1px;background:var(--line);margin:6px 10px}
+.sa-nav-divider{height:1px;background:rgba(255,255,255,.09);margin:6px 10px}
 
 /* Sidebar footer */
-.sa-sidebar-footer{padding:12px;border-top:1px solid var(--line)}
+.sa-sidebar-footer{padding:12px;border-top:1px solid rgba(255,255,255,.10)}
 .sa-user-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
 .sa-user-av{width:32px;height:32px;background:var(--wf-blue);border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:600;color:#fff;flex-shrink:0}
-.sa-user-nm{font-size:12px;font-weight:600;color:var(--ink);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.sa-user-rl{font-size:10px;color:var(--wf-blue);font-weight:600;text-transform:uppercase}
-.sa-btn-logout{width:100%;padding:7px;border:1px solid var(--line);background:transparent;color:var(--gray-500);border-radius:8px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .12s}
+.sa-user-nm{font-size:12px;font-weight:600;color:#fff;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sa-user-rl{font-size:10px;color:rgba(255,255,255,.48);font-weight:600;text-transform:uppercase}
+.sa-btn-logout{width:100%;padding:7px;border:1px solid rgba(255,255,255,.11);background:transparent;color:rgba(255,255,255,.58);border-radius:8px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .12s}
 .sa-btn-logout:hover{background:var(--wf-red-l);border-color:var(--wf-red-l);color:var(--wf-red)}
 .sa-btn-logout svg{width:14px;height:14px;fill:currentColor}
 
@@ -90,6 +90,10 @@
 .sa-page-head h1{font-size:24px;font-weight:600;color:var(--ink);letter-spacing:-.5px}
 .sa-page-head .cnt{background:var(--wf-blue-l);color:var(--wf-blue-d);border-radius:99px;font-size:12px;padding:2px 9px;font-weight:600;vertical-align:middle;margin-left:6px}
 .sa-spacer{flex:1}
+.sa-hero{display:flex;align-items:center;gap:22px;padding:23px 25px;border-radius:20px;margin-bottom:18px;color:#fff;background:linear-gradient(125deg,#091525 0%,#102c51 68%,#0874dd 150%);box-shadow:0 18px 42px rgba(9,28,51,.15);position:relative;overflow:hidden}
+.sa-hero:after{content:"";position:absolute;width:220px;height:220px;border-radius:50%;right:-75px;top:-125px;background:rgba(88,178,255,.18)}
+.sa-hero-copy{position:relative;z-index:1;flex:1}.sa-hero-kicker{font-size:10px;font-weight:750;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.52);margin-bottom:6px}.sa-hero h1{font-size:24px;line-height:1.15;letter-spacing:-.55px;margin:0 0 5px}.sa-hero p{font-size:12.5px;line-height:1.5;color:rgba(255,255,255,.64);margin:0}
+.sa-hero-actions{position:relative;z-index:1;display:grid;grid-template-columns:1fr 1fr;gap:8px;min-width:280px}.sa-hero-action{border:1px solid rgba(255,255,255,.11);background:rgba(255,255,255,.08);color:rgba(255,255,255,.82);border-radius:10px;padding:9px 11px;font-size:11.5px;font-weight:650;cursor:pointer;text-align:left;transition:background .14s,transform .14s}.sa-hero-action:hover{background:rgba(255,255,255,.14);color:#fff;transform:translateY(-1px)}
 
 /* KPI cards */
 .sa-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:13px;margin-bottom:22px}
@@ -217,7 +221,13 @@
   .sa-sidebar.open{transform:translateX(0)}
   .sa-grid2,.sa-grid3{grid-template-columns:1fr}
   .sa-form-grid{grid-template-columns:1fr}
+  .sa-content{padding:17px 15px}
+  .sa-hero{align-items:flex-start;flex-direction:column;padding:21px}
+  .sa-hero-actions{min-width:0;width:100%}
+  .sa-topbar{padding:0 14px}
+  .sa-topbar-actions .sa-btn{padding:7px 10px}
 }
+@media(max-width:460px){.sa-hero-actions{grid-template-columns:1fr}.sa-kpis{grid-template-columns:1fr 1fr}.sa-kpi{padding:14px}.sa-kpi-value{font-size:23px}.sa-drawer-hd,.sa-drawer-body,.sa-drawer-ft{padding-left:17px;padding-right:17px}}
 </style>`;
 
   // ── Shell HTML ──────────────────────────────────────────────
@@ -619,6 +629,19 @@ ${(s.locked||[]).length ? `<div class="sa-card" style="margin-bottom:16px"><div 
       badge_update("navBadgeSupport", activeSessions.length);
 
       c.innerHTML = `
+<section class="sa-hero">
+  <div class="sa-hero-copy">
+    <div class="sa-hero-kicker">Platform command center</div>
+    <h1>Alles onder controle</h1>
+    <p>Start bij klanten, omzet, support of systeemgezondheid en handel direct vanuit dezelfde omgeving.</p>
+  </div>
+  <div class="sa-hero-actions">
+    <button class="sa-hero-action" data-nav="tenants">Tenants beheren →</button>
+    <button class="sa-hero-action" data-nav="billing">MRR bekijken →</button>
+    <button class="sa-hero-action" data-nav="support">Support openen →</button>
+    <button class="sa-hero-action" data-nav="system">Systeemstatus →</button>
+  </div>
+</section>
 <div class="sa-kpis">
   <div class="sa-kpi kpi-indigo">
     <div class="sa-kpi-label">${tS("sa.tenantsTotal","Tenants totaal")}</div>
@@ -1866,9 +1889,9 @@ ${canManage ? `
 
   <div class="sa-int-sec">AI-assistent</div>
   <div class="sa-card">
-    <div class="sa-card-head"><div class="sa-card-title">Boden · AI-assistent (OpenAI)</div><div class="sa-card-sub">${statusPill(cfg.openai?.configured)}</div></div>
+    <div class="sa-card-head"><div class="sa-card-title">Mona · slimme assistent (OpenAI)</div><div class="sa-card-sub">${statusPill(cfg.openai?.configured)}</div></div>
     <div style="padding:16px;display:grid;gap:12px">
-      <div style="font-size:12px;color:var(--gray-500);font-weight:400">Zonder echte sleutel draait Boden in <strong>gratis demo-modus</strong> (gesimuleerde antwoorden, ideaal voor QA). Vul de OpenAI-sleutel in om de echte AI te activeren. Boden respecteert altijd de rechten van de ingelogde gebruiker.</div>
+      <div style="font-size:12px;color:var(--gray-500);font-weight:400">Zonder echte sleutel draait Mona in <strong>gratis demo-modus</strong> met gesimuleerde antwoorden voor QA. Vul de OpenAI-sleutel in om de echte AI te activeren. Mona respecteert altijd de rechten van de ingelogde gebruiker.</div>
       <label class="sa-fld"><span>OpenAI API-sleutel</span><input name="openai.apiKey" value="${esc(cfg.openai?.apiKey||"")}" placeholder="sk-..."></label>
       <label class="sa-fld"><span>Model</span><input name="openai.model" value="${esc(cfg.openai?.model||"")}" placeholder="bv. gpt-4o-mini of gpt-4o"></label>
     </div>

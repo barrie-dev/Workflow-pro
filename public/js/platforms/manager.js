@@ -164,7 +164,7 @@
 <style>
 #platform-manager { font-family:var(--font-sans); height:100vh; overflow:hidden; }
 .mgr-layout { display:flex; height:100vh; background:var(--bg); }
-.mgr-sidebar { width:220px; background:var(--ink); color:rgba(255,255,255,.80); border-right:none; display:flex; flex-direction:column; flex-shrink:0; }
+.mgr-sidebar { width:248px; background:linear-gradient(180deg,#091525 0%,#0b1320 62%,#101d30 100%); color:rgba(255,255,255,.80); border-right:none; display:flex; flex-direction:column; flex-shrink:0; }
 .mgr-logo { display:flex; align-items:center; gap:10px; padding:20px 16px; border-bottom:1px solid rgba(255,255,255,.10); }
 .mgr-logo-mark { background:var(--wf-blue); color:#fff; width:32px; height:32px; border-radius:9px; display:grid; place-items:center; font-weight:600; font-size:13px; flex-shrink:0; box-shadow:0 4px 12px rgba(0,113,227,.35); }
 .mgr-logo-text { font-weight:600; font-size:15px; letter-spacing:-.2px; color:#fff; }
@@ -173,7 +173,7 @@
 .mgr-nav-item svg { width:18px; height:18px; fill:currentColor; flex-shrink:0; opacity:.7; }
 .mgr-nav-item:hover { background:rgba(255,255,255,.07); color:#fff; }
 .mgr-nav-item:hover svg { opacity:1; }
-.mgr-nav-item.active { background:var(--wf-blue); color:#fff; font-weight:600; box-shadow:0 4px 12px rgba(0,113,227,.30); }
+.mgr-nav-item.active { background:linear-gradient(135deg,#0b7bf1,#0067d4); color:#fff; font-weight:600; box-shadow:0 8px 22px rgba(0,113,227,.28),inset 0 1px 0 rgba(255,255,255,.18); }
 .mgr-nav-item.active svg { opacity:1; }
 .mgr-badge { margin-left:auto; background:var(--wf-red); color:#fff; border-radius:999px; font-size:11px; padding:1px 6px; font-weight:600; }
 .mgr-nav-flyout { position:fixed; z-index:240; min-width:200px; max-width:270px; background:var(--ink); border:1px solid rgba(255,255,255,.12); border-radius:12px; padding:8px; box-shadow:var(--shadow-elevated); display:none; flex-direction:column; gap:2px; }
@@ -205,6 +205,18 @@
 .mgr-menu-toggle svg { width:20px; height:20px; fill:currentColor; display:block; }
 .mgr-page-title { font-size:21px; font-weight:600; flex:1; color:var(--ink); margin:0; letter-spacing:-.4px; }
 .mgr-content { flex:1; overflow-y:auto; padding:22px 24px; }
+.mgr-daystart { position:relative; overflow:hidden; display:flex; align-items:center; justify-content:space-between; gap:24px; margin-bottom:18px; padding:22px; border:1px solid rgba(0,113,227,.14); border-radius:20px; background:linear-gradient(120deg,#fff 0%,#f7fbff 58%,#edf6ff 100%); box-shadow:0 18px 55px rgba(11,19,32,.055); }
+.mgr-daystart::after { content:""; position:absolute; width:240px; height:240px; right:-90px; top:-150px; border-radius:50%; background:radial-gradient(circle,rgba(0,113,227,.17),transparent 68%); pointer-events:none; }
+.mgr-daystart-copy { position:relative; z-index:1; }
+.mgr-daystart-copy small { color:var(--wf-blue); font-size:10px; font-weight:750; letter-spacing:.09em; text-transform:uppercase; }
+.mgr-daystart-copy h2 { margin:4px 0 5px; color:var(--ink); font-size:23px; letter-spacing:-.6px; }
+.mgr-daystart-copy p { margin:0; color:var(--muted); font-size:12.5px; }
+.mgr-focus-actions { position:relative; z-index:1; display:grid; grid-template-columns:repeat(4,minmax(112px,1fr)); gap:8px; }
+.mgr-focus-btn { border:1px solid rgba(11,19,32,.08); border-radius:13px; background:rgba(255,255,255,.88); min-height:58px; padding:9px 11px; color:var(--ink); text-align:left; font-family:inherit; cursor:pointer; transition:transform .16s,box-shadow .16s,border-color .16s; }
+.mgr-focus-btn:hover { transform:translateY(-2px); border-color:rgba(0,113,227,.28); box-shadow:0 12px 28px rgba(11,19,32,.08); }
+.mgr-focus-btn strong,.mgr-focus-btn small { display:block; }
+.mgr-focus-btn strong { font-size:12px; }
+.mgr-focus-btn small { margin-top:2px; color:var(--muted); font-size:9.5px; }
 .mgr-btn { min-height:40px; padding:0 18px; border-radius:var(--radius-sm); font-size:14px; font-weight:600; cursor:pointer; border:1px solid transparent; font-family:inherit; line-height:1; white-space:nowrap; display:inline-flex; align-items:center; justify-content:center; gap:6px; transition:background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
 .mgr-btn:focus-visible { outline:none; box-shadow:0 0 0 2px rgba(0,113,227,.20); }
 .mgr-btn-primary { background:var(--wf-blue); color:#fff; }
@@ -251,6 +263,8 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
   .mgr-sidebar { position:fixed; left:0; top:0; z-index:100; transform:translateX(-100%); transition:transform .25s; }
   .mgr-sidebar.open { transform:translateX(0); }
   .mgr-menu-toggle { display:block; }
+  .mgr-daystart { align-items:flex-start; flex-direction:column; }
+  .mgr-focus-actions { width:100%; grid-template-columns:repeat(2,minmax(0,1fr)); }
 }
 </style>`;
 
@@ -482,7 +496,20 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     const dash = await api("GET", "/manager/dashboard");
     const content = document.getElementById("mgrContent");
 
+    const hour = new Date().getHours();
+    const greeting = hour < 12 ? "Goedemorgen" : hour < 18 ? "Goedemiddag" : "Goedenavond";
+    const firstName = (document.getElementById("mgrUserName")?.textContent || "").trim().split(" ")[0];
+    const dateLabel = new Intl.DateTimeFormat("nl-BE", { weekday:"long", day:"numeric", month:"long" }).format(new Date());
     content.innerHTML = `
+<section class="mgr-daystart">
+  <div class="mgr-daystart-copy"><small>${esc(dateLabel)}</small><h2>${greeting}${firstName && firstName !== "Manager" ? `, ${esc(firstName)}` : ""}</h2><p>Stuur bij op uitzonderingen en laat je team doorwerken.</p></div>
+  <div class="mgr-focus-actions">
+    <button class="mgr-focus-btn" data-focus-view="planning"><strong>Planning</strong><small>Bezetting bijsturen</small></button>
+    <button class="mgr-focus-btn" data-focus-view="workorders"><strong>Werkbonnen</strong><small>Uitvoering opvolgen</small></button>
+    <button class="mgr-focus-btn" data-focus-view="leaves"><strong>Verlof</strong><small>${dash.pendingLeaves || 0} te verwerken</small></button>
+    <button class="mgr-focus-btn" data-focus-view="expenses"><strong>Onkosten</strong><small>${dash.pendingExpenses || 0} te verwerken</small></button>
+  </div>
+</section>
 <div class="mgr-kpis">
   <div class="mgr-kpi mgr-kpi-link" data-goto="team" title="${tM("mgr.toTeam","Naar team")}">
     <div class="mgr-kpi-label">${tM("nav.team","Team")}</div>
@@ -541,6 +568,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
 </div>`;
 
     document.getElementById("mgrViewTeam")?.addEventListener("click", () => switchView("team"));
+    document.querySelectorAll("[data-focus-view]").forEach(btn => btn.addEventListener("click", () => switchView(btn.dataset.focusView)));
     // KPI-kaarten → doorklikken
     document.querySelectorAll(".mgr-kpi-link").forEach(card => {
       card.addEventListener("click", () => switchView(card.dataset.goto));

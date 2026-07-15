@@ -296,12 +296,15 @@
     <!-- Brand -->
     <div class="adm-brand">
       <div class="adm-brand-icon">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M13 3L4 14h7l-1 7 9-11h-7l1-7z" fill="currentColor"/></svg>
+        <span aria-hidden="true">M</span>
       </div>
       <div class="adm-brand-text">
         <div class="adm-brand-name">Monargo One</div>
         <div class="adm-brand-tenant" id="admCompanyName">Laden…</div>
       </div>
+      <button class="adm-sidebar-collapse" id="admSidebarCollapse" type="button" aria-label="Navigatie inklappen" title="Navigatie inklappen">
+        <svg viewBox="0 0 24 24"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+      </button>
     </div>
 
     <nav class="adm-nav" aria-label="Hoofdnavigatie">
@@ -488,6 +491,7 @@
     <div class="adm-page-head" id="admPageHead">
       <h1 class="adm-page-title" id="admPageTitle">Dashboard</h1>
     </div>
+    <div class="adm-flow-nav" id="admFlowNav" aria-label="Commerciële en operationele flow"></div>
     <div class="adm-content" id="admContent">
       <div class="adm-loading"><div class="adm-spinner"></div>Laden…</div>
     </div>
@@ -523,6 +527,19 @@
       document.getElementById("admSidebar").classList.toggle("open");
     });
 
+    // Compacte desktopnavigatie. De voorkeur blijft per browser bewaard.
+    const layout = el.querySelector(".adm-layout");
+    const collapseBtn = document.getElementById("admSidebarCollapse");
+    const applySidebarState = collapsed => {
+      layout.classList.toggle("nav-collapsed", collapsed);
+      collapseBtn?.setAttribute("aria-expanded", String(!collapsed));
+      collapseBtn?.setAttribute("title", collapsed ? "Navigatie uitklappen" : "Navigatie inklappen");
+      localStorage.setItem("monargo_admin_nav_collapsed", collapsed ? "1" : "0");
+      hideNavFlyout(true);
+    };
+    applySidebarState(localStorage.getItem("monargo_admin_nav_collapsed") === "1");
+    collapseBtn?.addEventListener("click", () => applySidebarState(!layout.classList.contains("nav-collapsed")));
+
     // logout
     document.getElementById("admLogoutBtn").addEventListener("click", () => {
       localStorage.removeItem("wfp_token");
@@ -540,7 +557,8 @@
         employees: () => d.employee(null), messages: () => d.message(),
         customers: () => d.customer(null), offertes: () => d.offerte(null),
         facturen: () => d.factuur(null), venues: () => d.venue(null),
-        vehicles: () => d.vehicle(null), stock: () => d.stock(null)
+        vehicles: () => d.vehicle(null), stock: () => d.stock(null),
+        planning: () => d.shift(null), workorders: () => d.workorder(null)
       };
       if (map[_currentView]) map[_currentView]();
     });
@@ -574,8 +592,32 @@
 
   const VIEW_BTN_LABEL = {
     employees: "+ Medewerker", messages: "+ Bericht", customers: "+ Klant",
-    offertes: "+ Offerte", facturen: "+ Factuur", venues: "+ Locatie", vehicles: "+ Voertuig", stock: "+ Artikel"
+    planning: "+ Inplannen", workorders: "+ Werkbon", offertes: "+ Offerte", facturen: "+ Factuur", venues: "+ Locatie", vehicles: "+ Voertuig", stock: "+ Artikel"
   };
+
+  const FLOW_VIEWS = [
+    { view:"customers", label:"Klant" },
+    { view:"offertes", label:"Offerte", optional:true },
+    { view:"planning", label:"Planning" },
+    { view:"workorders", label:"Werkbon" },
+    { view:"facturen", label:"Factuur" }
+  ];
+
+  function updateFlowNav(activeView) {
+    const host = document.getElementById("admFlowNav");
+    if (!host) return;
+    const visibleSteps = FLOW_VIEWS.filter(step => viewEnabled(step.view));
+    const inFlow = visibleSteps.some(step => step.view === activeView);
+    host.classList.toggle("visible", inFlow);
+    if (!inFlow) { host.innerHTML = ""; return; }
+    const activeIndex = visibleSteps.findIndex(step => step.view === activeView);
+    host.innerHTML = `<span class="adm-flow-label">Van aanvraag tot betaling</span><div class="adm-flow-steps">${visibleSteps.map((step, index) => `
+      <button type="button" class="adm-flow-step ${index < activeIndex ? "done" : ""} ${index === activeIndex ? "active" : ""}" data-flow-view="${step.view}" aria-current="${index === activeIndex ? "step" : "false"}">
+        <span class="adm-flow-index">${index < activeIndex ? "✓" : index + 1}</span>
+        <span>${step.label}${step.optional ? `<small>optioneel</small>` : ""}</span>
+      </button>${index < visibleSteps.length - 1 ? `<span class="adm-flow-line ${index < activeIndex ? "done" : ""}"></span>` : ""}`).join("")}</div>`;
+    host.querySelectorAll("[data-flow-view]").forEach(btn => btn.addEventListener("click", () => switchView(btn.dataset.flowView)));
+  }
 
   // ── Hover-submenu per module (flyout naast de zijbalk) ─────
   // Geen lijstfilters hier (die staan al in de view zelf): het submenu is
@@ -731,6 +773,7 @@
     // anders de vertaalde nav-naam.
     const termTitle = window.wfpTerms && (view === "workorders" ? window.wfpTerms.t("jobPlural") : view === "venues" ? window.wfpTerms.t("venuePlural") : null);
     document.getElementById("admPageTitle").textContent = termTitle || tA("nav." + view, VIEW_LABELS[view] || view);
+    updateFlowNav(view);
 
     const btn = document.getElementById("admPrimaryAction");
     const hasBtn = VIEW_BTN_LABEL[view];
@@ -757,14 +800,40 @@
     const hasPersonal = !!(b.personal && (b.personal.widgets || []).length);
     if (_dashMode === "org" && !hasOrg) _dashMode = "standaard";
     const chip = (mode, label) => `<button class="adm-btn ${_dashMode === mode ? "adm-btn-primary" : "adm-btn-secondary"} adm-btn-sm" data-dashmode="${mode}">${label}</button>`;
+    const hour = new Date().getHours();
+    const greeting = hour < 12 ? "Goedemorgen" : hour < 18 ? "Goedemiddag" : "Goedenavond";
+    const person = (document.getElementById("admTopbarName")?.textContent || "").trim().split(" ")[0];
+    const dateLabel = new Intl.DateTimeFormat("nl-BE", { weekday:"long", day:"numeric", month:"long" }).format(new Date());
     content.innerHTML = `
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px">
+      <section class="adm-command-hero" aria-label="Dagstart">
+        <div class="adm-command-copy">
+          <span class="adm-eyebrow">${esc(dateLabel)}</span>
+          <h2>${greeting}${person && person !== "Admin" ? `, ${esc(person)}` : ""}</h2>
+          <p>Alles wat vandaag aandacht nodig heeft, op één plek.</p>
+        </div>
+        <div class="adm-quick-actions" aria-label="Snelle acties">
+          <button type="button" class="adm-quick-action" data-quick-view="planning" data-quick-click="admAddShift"><span class="adm-quick-icon">+</span><span><strong>Inplannen</strong><small>Nieuwe opdracht</small></span></button>
+          <button type="button" class="adm-quick-action" data-quick-view="workorders" data-quick-click="admNewWO"><span class="adm-quick-icon">+</span><span><strong>Werkbon</strong><small>Direct aanmaken</small></span></button>
+          <button type="button" class="adm-quick-action" data-quick-view="customers" data-quick-drawer="customer"><span class="adm-quick-icon">+</span><span><strong>Klant</strong><small>Relatie toevoegen</small></span></button>
+          <button type="button" class="adm-quick-action adm-quick-action-ai" id="admQuickAi"><span class="adm-quick-icon">M</span><span><strong>Vraag Mona</strong><small>Je slimme assistent</small></span></button>
+        </div>
+      </section>
+      <div class="adm-dashboard-toolbar">
+        <div class="adm-segmented" role="tablist" aria-label="Dashboardweergave">
         ${chip("standaard", tA("dash.mode.overview","Overzicht"))}
         ${chip("personal", tA("dash.mode.personal","Mijn dashboard"))}
         ${hasOrg ? chip("org", tA("dash.mode.org","Organisatie")) : ""}
+        </div>
         ${_dashMode === "personal" ? `<button class="adm-btn adm-btn-secondary adm-btn-sm" id="dashConfigToggle" style="margin-left:auto">${tA("dash.mode.customize","Aanpassen")}</button>` : ""}
       </div>
       <div id="dashBody"></div>`;
+    content.querySelectorAll("[data-quick-view]").forEach(btn => btn.addEventListener("click", () => {
+      navFlyoutGo(btn.dataset.quickView, {
+        go:{ view:btn.dataset.quickView, click:btn.dataset.quickClick || undefined },
+        drawer:btn.dataset.quickDrawer || undefined
+      });
+    }));
+    document.getElementById("admQuickAi")?.addEventListener("click", () => admAskBoden("Geef me een korte samenvatting van wat vandaag mijn aandacht nodig heeft."));
     content.querySelectorAll("[data-dashmode]").forEach(btn => btn.addEventListener("click", () => { _dashMode = btn.dataset.dashmode; renderDashboard(); }));
     document.getElementById("dashConfigToggle")?.addEventListener("click", () => {
       const p = document.getElementById("dashConfigPanel"); if (p) p.style.display = p.style.display === "none" ? "" : "none";
@@ -1024,14 +1093,14 @@
   </div>`;
     const aiCard = document.getElementById("bodenFab") ? `
   <div class="adm-ai-card">
-    <div class="adm-ai-head"><span class="adm-ai-badge">AI</span> ${tA("dash.aiTitle","Boden · AI-assistent")}</div>
-    <p class="adm-ai-text">${tA("dash.aiText","Stel een vraag over je cijfers, planning of klanten. Boden kijkt enkel naar gegevens waar jij rechten op hebt.")}</p>
+    <div class="adm-ai-head"><span class="adm-ai-badge">AI</span> ${tA("dash.aiTitle","Mona · slimme assistent")}</div>
+    <p class="adm-ai-text">${tA("dash.aiText","Stel een vraag over je cijfers, planning of klanten. Mona kijkt enkel naar gegevens waar jij rechten op hebt.")}</p>
     <div class="adm-ai-chips">
       <button class="adm-ai-chip" data-q="${tA("dash.aiQ1","Welke facturen zijn vervallen?")}">${tA("dash.aiQ1","Welke facturen zijn vervallen?")}</button>
       <button class="adm-ai-chip" data-q="${tA("dash.aiQ2","Wat staat er vandaag gepland?")}">${tA("dash.aiQ2","Wat staat er vandaag gepland?")}</button>
       <button class="adm-ai-chip" data-q="${tA("dash.aiQ3","Hoeveel werkbonnen staan open?")}">${tA("dash.aiQ3","Hoeveel werkbonnen staan open?")}</button>
     </div>
-    <div style="margin-top:auto"><button class="adm-btn adm-btn-primary adm-btn-sm" id="admAiOpen">${tA("dash.aiOpen","Open Boden")}</button></div>
+    <div style="margin-top:auto"><button class="adm-btn adm-btn-primary adm-btn-sm" id="admAiOpen">${tA("dash.aiOpen","Open Mona")}</button></div>
   </div>` : "";
     const cockpitRows = `
 ${planCard || donutCard ? `<div class="adm-grid-2" style="margin-bottom:18px">${planCard}${donutCard}</div>` : ""}
@@ -1658,7 +1727,7 @@ ${emp ? `
   }
 
   // ── Shift drawer (admin) ───────────────────────────────────
-  function openShiftDrawer(weekFrom, weekTo, shift = null, allShifts = []) {
+  function openShiftDrawer(weekFrom, weekTo, shift = null, allShifts = [], prefill = {}) {
     const today = new Date().toISOString().slice(0, 10);
     api("GET", "/employees").then(data => {
       const employees = data.employees || [];
@@ -1670,11 +1739,11 @@ ${emp ? `
     <div class="adm-form-group"><label>Medewerker *</label>
       <select name="userId" required>
         <option value="">- Kies medewerker -</option>
-        ${employees.map(u => `<option value="${esc(u.id)}" ${shift?.userId===u.id?"selected":""}>${esc(u.name || u.email)}</option>`).join("")}
+        ${employees.map(u => `<option value="${esc(u.id)}" ${(shift?.userId||prefill.userId)===u.id?"selected":""}>${esc(u.name || u.email)}</option>`).join("")}
       </select>
     </div>
     <div class="adm-form-group"><label>Datum *</label>
-      <input name="date" type="date" value="${shift?.date || weekFrom || today}" required>
+      <input name="date" type="date" value="${shift?.date || prefill.date || weekFrom || today}" required>
     </div>
   </div>
   <div class="adm-form-row">
@@ -1686,10 +1755,10 @@ ${emp ? `
     </div>
   </div>
   <div class="adm-form-group"><label>Locatie / Werf</label>
-    <input name="venueId" placeholder="Locatienaam (optioneel)" value="${esc(shift?.venueId||shift?.location||"")}">
+    <input name="venueId" placeholder="Locatienaam (optioneel)" value="${esc(shift?.venueId||shift?.location||prefill.location||"")}">
   </div>
   <div class="adm-form-group"><label>Notitie</label>
-    <input name="note" placeholder="Optionele notitie" value="${esc(shift?.note||"")}">
+    <input name="note" placeholder="Optionele notitie" value="${esc(shift?.note||prefill.note||"")}">
   </div>
   ${!isEdit ? `
   <div style="background:var(--gray-50);border-radius:8px;padding:12px;margin-bottom:4px;">
@@ -2690,7 +2759,7 @@ ${emp ? `
         try {
           const d = await api("POST", `/workorders/${btn.dataset.id}/invoice`, {});
           window.showToast && window.showToast(`Factuur ${d.invoice?.number || ""} aangemaakt`, "success");
-          renderWorkorders();
+          switchView("facturen");
         } catch (err) {
           window.showToast && window.showToast(err.message || "Factureren mislukt", "error");
         }
@@ -2702,7 +2771,7 @@ ${emp ? `
   }
 
   // ── Werkbon drawer ─────────────────────────────────────────
-  function openWorkorderDrawer(workorder, _preloadedWOs) {
+  function openWorkorderDrawer(workorder, _preloadedWOs, prefill = {}) {
     Promise.all([
       api("GET", "/employees"),
       api("GET", "/customers").catch(() => ({ customers: [] }))
@@ -2713,29 +2782,29 @@ ${emp ? `
       document.getElementById("admDrawerBody").innerHTML = `
 <form id="woForm">
   <div class="adm-form-group"><label>Titel *</label>
-    <input name="title" value="${esc(workorder?.title || "")}" required placeholder="Omschrijving van de opdracht">
+    <input name="title" value="${esc(workorder?.title || prefill.title || "")}" required placeholder="Omschrijving van de opdracht">
   </div>
   <div class="adm-form-row">
     <div class="adm-form-group"><label>Medewerker</label>
       <select name="userId">
         <option value="">- Niet toegewezen -</option>
-        ${employees.map(u => `<option value="${esc(u.id)}" ${workorder?.userId === u.id ? "selected" : ""}>${esc(u.name || u.email)}</option>`).join("")}
+        ${employees.map(u => `<option value="${esc(u.id)}" ${(workorder?.userId || prefill.userId) === u.id ? "selected" : ""}>${esc(u.name || u.email)}</option>`).join("")}
       </select>
     </div>
     <div class="adm-form-group"><label>Klant</label>
       <select name="customerId" id="woCustSel">
         <option value="">- Kies klant of typ vrij -</option>
-        ${customers.map(c => `<option value="${c.id}" ${workorder?.customerId===c.id?"selected":""}>${esc(c.name)}</option>`).join("")}
+        ${customers.map(c => `<option value="${c.id}" ${(workorder?.customerId||prefill.customerId)===c.id?"selected":""}>${esc(c.name)}</option>`).join("")}
       </select>
     </div>
   </div>
   <div class="adm-form-group" id="woClientNameWrap">
     <label>Klantnaam</label>
-    <input name="clientName" id="woClientName" value="${esc(workorder?.clientName || "")}" placeholder="Of typ een klantnaam vrij">
+    <input name="clientName" id="woClientName" value="${esc(workorder?.clientName || prefill.clientName || "")}" placeholder="Of typ een klantnaam vrij">
   </div>
   <div class="adm-form-row">
     <div class="adm-form-group"><label>Gepland op</label>
-      <input name="scheduledDate" type="date" value="${esc(workorder?.scheduledDate || "")}">
+      <input name="scheduledDate" type="date" value="${esc(workorder?.scheduledDate || prefill.scheduledDate || "")}">
     </div>
     <div class="adm-form-group"><label>Prioriteit</label>
       <select name="priority">
@@ -2787,6 +2856,7 @@ ${emp ? `
     </label>
   </div>
   ${workorder?.invoiceId ? `<div style="background:var(--wf-green-l);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--wf-green);margin-bottom:8px;">Factuur aangemaakt</div>` : ""}
+  ${!workorder ? `<label class="adm-next-step-option"><input type="checkbox" id="woPlanAfterSave" ${prefill.planAfterSave ? "checked" : ""}><span><strong>Na het aanmaken meteen inplannen</strong><small>De medewerker, datum en opdracht worden overgenomen in de planning.</small></span></label>` : ""}
   <div id="woFormErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:8px;font-size:12px;margin-bottom:8px;"></div>
   <div class="adm-form-actions" style="flex-wrap:wrap;gap:8px;">
     <button type="button" class="adm-btn adm-btn-secondary" id="woCancel">Annuleren</button>
@@ -2880,8 +2950,18 @@ ${emp ? `
         try {
           if (workorder) await api("PATCH", `/workorders/${workorder.id}`, body);
           else await api("POST", "/workorders", body);
+          const planAfterSave = !workorder && document.getElementById("woPlanAfterSave")?.checked;
           closeDrawer();
-          renderWorkorders();
+          if (planAfterSave) {
+            switchView("planning");
+            let tries = 0;
+            const openPlannedShift = () => {
+              const d = window.wfpAdmin?.drawers;
+              if (!d?.shift && tries++ < 25) return setTimeout(openPlannedShift, 120);
+              d?.shift?.({ userId:body.userId, date:body.scheduledDate, note:body.title, location:body.clientName });
+            };
+            openPlannedShift();
+          } else renderWorkorders();
         } catch (err) {
           if (errEl) { errEl.textContent = err.message; errEl.style.display = "block"; }
           else window.showToast(err.message, "error");
@@ -3847,12 +3927,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
         }, { once: true });
       });
       content.querySelector("#custNewWO")?.addEventListener("click", () => {
-        openWorkorderDrawer(null);
-        // Pre-fill clientName after drawer renders
-        setTimeout(() => {
-          const inp = document.querySelector("#admDrawerBody [name=clientName]");
-          if (inp) inp.value = customer.name;
-        }, 100);
+        openWorkorderDrawer(null, null, { customerId:customer.id, clientName:customer.name });
       });
       content.querySelector("#custNewInv")?.addEventListener("click", () => {
         openFactuurDrawer(null, {
@@ -3943,9 +4018,15 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
       const errEl = document.getElementById("custFormErr");
       const body = Object.fromEntries(new FormData(e.target).entries());
       try {
-        if (customer) await api("PATCH", `/customers/${customer.id}`, body);
-        else await api("POST", "/customers", body);
-        closeDrawer(); renderCustomers();
+        if (customer) {
+          await api("PATCH", `/customers/${customer.id}`, body);
+          closeDrawer(); renderCustomers();
+        } else {
+          const created = await api("POST", "/customers", body);
+          closeDrawer();
+          window.showToast && window.showToast("Klant aangemaakt. Voeg nu een offerte of werkbon toe.", "success");
+          if (created.customer?.id) renderCustomerDetail(created.customer.id); else renderCustomers();
+        }
       } catch(err) {
         if (errEl) { errEl.textContent = err.message; errEl.style.display = "block"; }
         else window.showToast(err.message, "error");
@@ -4518,12 +4599,12 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
       }));
       content.querySelectorAll(".q-toinv").forEach(b => b.addEventListener("click", async () => {
         if(!confirm(tA("adm.quote.toInvConfirm","Offerte omzetten naar factuur?"))) return;
-        try { const d = await api("POST", `/offertes/${b.dataset.id}/convert`, { target:"invoice" }); window.showToast && window.showToast(tA("adm.wo.toInvoice","Factuur")+" "+(d.invoice?.number||"")+" "+tA("adm.created","aangemaakt"),"success"); renderOffertes(); }
+        try { const d = await api("POST", `/offertes/${b.dataset.id}/convert`, { target:"invoice" }); window.showToast && window.showToast(tA("adm.wo.toInvoice","Factuur")+" "+(d.invoice?.number||"")+" "+tA("adm.created","aangemaakt"),"success"); switchView("facturen"); }
         catch(e){ window.showToast && window.showToast(tA("adm.error","Fout")+": "+e.message,"error"); }
       }));
       content.querySelectorAll(".q-towo").forEach(b => b.addEventListener("click", async () => {
         if(!confirm(tA("adm.quote.toWoConfirm","Offerte omzetten naar werkbon?"))) return;
-        try { const d = await api("POST", `/offertes/${b.dataset.id}/convert`, { target:"workorder" }); window.showToast && window.showToast(((window.wfpTerms && window.wfpTerms.t("jobSingular")) || tA("emp.wo.default","Werkbon"))+" "+(d.workorder?.number||"")+" "+tA("adm.created","aangemaakt"),"success"); renderOffertes(); }
+        try { const d = await api("POST", `/offertes/${b.dataset.id}/convert`, { target:"workorder" }); window.showToast && window.showToast(((window.wfpTerms && window.wfpTerms.t("jobSingular")) || tA("emp.wo.default","Werkbon"))+" "+(d.workorder?.number||"")+" "+tA("adm.created","aangemaakt"),"success"); switchView("workorders"); }
         catch(e){ window.showToast && window.showToast(tA("adm.error","Fout")+": "+e.message,"error"); }
       }));
     } catch(e) { content.innerHTML = `<div style="padding:20px;color:var(--wf-red)">${tA("adm.error","Fout")}: ${e.message}</div>`; }
@@ -6615,7 +6696,12 @@ ${typeKeys.map(tk => {
   Object.assign(A.drawers, {
     employee: openEmployeeDrawer, message: openMessageDrawer, customer: openCustomerDrawer,
     offerte: openOfferteDrawer, factuur: openFactuurDrawer, venue: openVenueDrawer,
-    vehicle: openVehicleDrawer, stock: openStockDrawer
+    vehicle: openVehicleDrawer, stock: openStockDrawer,
+    workorder: prefill => openWorkorderDrawer(null, null, prefill || {}),
+    shift: prefill => {
+      const today = new Date().toISOString().slice(0,10);
+      openShiftDrawer(today, today, null, [], prefill || {});
+    }
   });
 
   window.wfp_adminInit = init;

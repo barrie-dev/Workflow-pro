@@ -512,6 +512,21 @@
 .emp-action-btn-danger svg { color: var(--wf-red); }
 .emp-action-btn-danger:hover { background: var(--wf-red-l); border-color: var(--wf-red); }
 
+/* Werkbonflow: de medewerker ziet altijd wat al afgerond is en wat volgt. */
+.emp-wo-flow { display:flex; align-items:flex-start; margin-top:14px; overflow-x:auto; scrollbar-width:none; }
+.emp-wo-flow::-webkit-scrollbar { display:none; }
+.emp-wo-flow span { display:flex; flex-direction:column; align-items:center; gap:4px; color:var(--gray-400); font-size:9px; font-weight:600; white-space:nowrap; }
+.emp-wo-flow span i { width:23px; height:23px; border-radius:50%; border:1px solid var(--gray-300); background:#fff; color:var(--gray-500); display:grid; place-items:center; font-style:normal; font-size:10px; }
+.emp-wo-flow span.done { color:var(--wf-green); }
+.emp-wo-flow span.done i { color:#fff; border-color:var(--wf-green); background:var(--wf-green); }
+.emp-wo-flow span.active { color:var(--wf-blue); }
+.emp-wo-flow span.active i { color:#fff; border-color:var(--wf-blue); background:var(--wf-blue); box-shadow:0 0 0 4px rgba(0,113,227,.10); }
+.emp-wo-flow b { flex:1 0 24px; height:1px; margin:11px 5px 0; background:var(--gray-200); }
+.emp-wo-flow b.done { background:var(--wf-green); }
+.emp-finish-label { display:block; margin:10px 0 5px; color:var(--gray-700); font-size:11.5px; font-weight:600; }
+.emp-confirm-check { display:flex; align-items:flex-start; gap:8px; margin-top:10px; color:var(--gray-700); font-size:11.5px; cursor:pointer; }
+.emp-confirm-check input { margin-top:1px; flex:0 0 auto; }
+
 /* ── List item ──────────────────────────────── */
 .emp-list-item {
   display: flex;
@@ -1546,10 +1561,9 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
       });
     });
     main.querySelectorAll(".emp-wo-done").forEach(btn => {
-      btn.addEventListener("click", async () => {
-        btn.disabled = true; btn.textContent = "…";
-        try { await api("PATCH", `/me/workorders/${btn.dataset.id}`, { status: "Voltooid" }); renderWorkorders(); }
-        catch(e) { window.showToast(e.message, "error"); btn.disabled = false; btn.textContent = "Voltooid"; }
+      btn.addEventListener("click", () => {
+        const wo = workorders.find(w => w.id === btn.dataset.id);
+        if (wo) openWorkorderSheet(wo);
       });
     });
 
@@ -1585,6 +1599,12 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
       <span class="emp-pill ${done?"emp-pill-green":inProg?"emp-pill-amber":"emp-pill-blue"}" style="white-space:nowrap;">${esc(tStatus(wo.status)||"-")}</span>
     </div>
     ${wo.number ? `<div style="font-size:12px;color:var(--gray-400);font-family:monospace;margin-top:2px;">#${esc(wo.number)}</div>` : ""}
+    <div class="emp-wo-flow" aria-label="Voortgang werkbon">
+      <span class="done"><i>✓</i>Opdracht</span><b></b>
+      <span class="${inProg || done ? "done" : "active"}"><i>${inProg || done ? "✓" : "2"}</i>Uitvoering</span><b class="${inProg || done ? "done" : ""}"></b>
+      <span class="${done ? "done" : inProg ? "active" : ""}"><i>${done ? "✓" : "3"}</i>Bewijs</span><b class="${done ? "done" : ""}"></b>
+      <span class="${done ? "done" : ""}"><i>${done ? "✓" : "4"}</i>Afronding</span>
+    </div>
   </div>
   <!-- Details -->
   <div style="padding:16px 20px;display:flex;flex-direction:column;gap:12px;">
@@ -1679,8 +1699,16 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
       if (actionDiv) actionDiv.innerHTML = `
 <div style="background:var(--wf-green-l);border-radius:10px;padding:14px;">
   <div style="font-size:13px;font-weight:600;margin-bottom:8px;">${t9("emp.wo.finishTitle","Werkbon afsluiten")}</div>
-  <textarea id="woCompletionNote" rows="3" placeholder="${t9("emp.wo.finishPh","Optionele notitie bij afronding (bijv. uitgevoerde werkzaamheden, materiaal gebruikt…)")}"
+  <label class="emp-finish-label">Uitgevoerde werkzaamheden</label>
+  <textarea id="woCompletionNote" rows="3" placeholder="Beschrijf kort wat werd uitgevoerd"
     style="width:100%;padding:8px;border:1px solid var(--wf-green-l);border-radius:8px;font-size:13px;resize:vertical;"></textarea>
+  <label class="emp-finish-label">Gebruikt materiaal</label>
+  <textarea id="woCompletionMaterials" rows="2" placeholder="Bijvoorbeeld: 2 filters, 4 meter kabel, 1 afsluitkraan"
+    style="width:100%;padding:8px;border:1px solid var(--wf-green-l);border-radius:8px;font-size:13px;resize:vertical;"></textarea>
+  <label class="emp-finish-label">Bevestiging klant</label>
+  <input id="woSignedBy" placeholder="Naam van de klant of contactpersoon" style="width:100%;padding:8px;border:1px solid var(--wf-green-l);border-radius:8px;font-size:13px;">
+  <label class="emp-confirm-check"><input type="checkbox" id="woCustomerConfirmed"><span>De klant bevestigt dat de werkzaamheden werden uitgevoerd.</span></label>
+  <div id="woCompleteError" style="display:none;color:var(--wf-red);font-size:11.5px;margin-top:8px;"></div>
   <div style="display:flex;gap:8px;margin-top:10px;">
     <button id="woCompleteCancelBtn" class="emp-btn emp-btn-secondary" style="flex:1;padding:10px;">${t9("emp.wo.cancel","Annuleren")}</button>
     <button id="woCompleteConfirmBtn" class="emp-btn emp-btn-primary" style="flex:2;padding:10px;background:var(--wf-green);font-weight:600;">${t9("emp.wo.confirm","Bevestigen")}</button>
@@ -1689,8 +1717,21 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
       document.getElementById("woCompleteCancelBtn")?.addEventListener("click", close);
       document.getElementById("woCompleteConfirmBtn")?.addEventListener("click", async () => {
         const note = document.getElementById("woCompletionNote")?.value?.trim();
+        const materials = document.getElementById("woCompletionMaterials")?.value?.trim();
+        const signedBy = document.getElementById("woSignedBy")?.value?.trim();
+        const confirmed = document.getElementById("woCustomerConfirmed")?.checked;
+        const error = document.getElementById("woCompleteError");
+        if (!note) { error.textContent = "Beschrijf kort welke werkzaamheden werden uitgevoerd."; error.style.display = "block"; return; }
+        if (signedBy && !confirmed) { error.textContent = "Vink de bevestiging van de klant aan."; error.style.display = "block"; return; }
         try {
-          await api("PATCH", `/me/workorders/${wo.id}`, { status: "Voltooid", completionNote: note||undefined });
+          await api("PATCH", `/me/workorders/${wo.id}`, {
+            status: "Voltooid",
+            completionNote: note,
+            completionMaterials: materials || undefined,
+            signedBy: signedBy || undefined,
+            customerConfirmed: !!(signedBy && confirmed),
+            signatureAt: signedBy && confirmed ? new Date().toISOString() : undefined
+          });
           window.showToast && window.showToast(t9("emp.wo.completedMsg","Werkbon voltooid"), "success");
           close(); renderWorkorders();
         } catch(e) { window.showToast(e.message, "error"); }
