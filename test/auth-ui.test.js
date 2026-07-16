@@ -48,6 +48,18 @@ test("auth: proefperiode, pakketten en resellerpad zijn direct zichtbaar", () =>
   assert.match(source, /api\("\/api\/resellers\/apply"/);
 });
 
+test("auth: desktopcompositie gebruikt ruimte en verbergt de productpreview niet", () => {
+  const html = read("public/index.html");
+  const css = read("public/css/auth.css");
+  const spacious = css.lastIndexOf("Ruime toegangservaring");
+  assert.ok(spacious > -1);
+  assert.match(html, /class="auth-offer-section"/);
+  assert.match(html, /auth\.businessFeature3/);
+  assert.match(css.slice(spacious), /min-height: 1120px/);
+  assert.match(css.slice(spacious), /\.auth-workspace-card \{\s+display: block;/);
+  assert.match(css.slice(spacious), /grid-template-columns: minmax\(720px, 58fr\) minmax\(560px, 42fr\)/);
+});
+
 test("auth: registratie is een navigeerbare driestappenflow", () => {
   const html = read("public/index.html");
   const source = read("public/main.js");
@@ -93,6 +105,8 @@ test("auth: publieke flows blijven drietalig", () => {
   const source = read("public/js/i18n.js");
   for (const key of [
     "auth.storyTitle",
+    "auth.offerTitle",
+    "auth.businessFeature3",
     "auth.trialTitle",
     "auth.resellerChoiceSub",
     "forgot.title",

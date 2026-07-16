@@ -38,24 +38,48 @@
         </div>
       </div>
 
-      <div class="auth-offer-grid" id="authPublicPlans" aria-label="Monargo One pakketten">
-        <article data-auth-plan-key="starter">
-          <span class="auth-offer-name">Starter</span>
-          <strong data-auth-plan-price>€49</strong><small data-i18n="auth.perMonth">/maand</small>
-          <button type="button" data-auth-plan="starter" data-i18n="auth.startTrialShort">Start gratis</button>
-        </article>
-        <article class="featured" data-auth-plan-key="business">
-          <span class="auth-offer-badge" data-i18n="auth.popular">Meest gekozen</span>
-          <span class="auth-offer-name">Business</span>
-          <strong data-auth-plan-price>€108</strong><small data-i18n="auth.perMonth">/maand</small>
-          <button type="button" data-auth-plan="business" data-i18n="auth.startTrialShort">Start gratis</button>
-        </article>
-        <article class="custom" data-auth-plan-key="enterprise">
-          <span class="auth-offer-name">Enterprise</span>
-          <strong data-i18n="auth.customPrice">Op maat</strong><small data-i18n="auth.customPlan">Voor grotere organisaties</small>
-          <span class="auth-offer-action" data-i18n="auth.contactPlan">Persoonlijke aanpak</span>
-        </article>
-      </div>
+      <section class="auth-offer-section" aria-labelledby="authOfferTitle">
+        <div class="auth-offer-intro">
+          <span data-i18n="auth.offerEyebrow">Pakketten die meegroeien</span>
+          <strong id="authOfferTitle" data-i18n="auth.offerTitle">Begin helder. Schaal wanneer je wil.</strong>
+        </div>
+        <div class="auth-offer-grid" id="authPublicPlans" aria-label="Monargo One pakketten">
+          <article data-auth-plan-key="starter">
+            <span class="auth-offer-name">Starter</span>
+            <div class="auth-offer-price"><strong data-auth-plan-price>€49</strong><small data-i18n="auth.perMonth">/maand</small></div>
+            <p data-i18n="auth.starterDesc">De heldere basis voor kleine teams.</p>
+            <ul>
+              <li data-i18n="auth.starterFeature1">Planning en afspraken</li>
+              <li data-i18n="auth.starterFeature2">Prikklok en tijdregistratie</li>
+              <li data-i18n="auth.starterFeature3">Klanten en werven</li>
+            </ul>
+            <button type="button" data-auth-plan="starter" data-i18n="auth.startTrialShort">Start gratis</button>
+          </article>
+          <article class="featured" data-auth-plan-key="business">
+            <span class="auth-offer-badge" data-i18n="auth.popular">Meest gekozen</span>
+            <span class="auth-offer-name">Business</span>
+            <div class="auth-offer-price"><strong data-auth-plan-price>€108</strong><small data-i18n="auth.perMonth">/maand</small></div>
+            <p data-i18n="auth.businessDesc">Voor teams die hun volledige werking willen verbinden.</p>
+            <ul>
+              <li data-i18n="auth.businessFeature1">Volledige werkbonflow</li>
+              <li data-i18n="auth.businessFeature2">Offertes en facturatie</li>
+              <li data-i18n="auth.businessFeature3">Stock, onkosten en rapportage</li>
+            </ul>
+            <button type="button" data-auth-plan="business" data-i18n="auth.startTrialShort">Start gratis</button>
+          </article>
+          <article class="custom" data-auth-plan-key="enterprise">
+            <span class="auth-offer-name">Enterprise</span>
+            <div class="auth-offer-price"><strong data-i18n="auth.customPrice">Op maat</strong></div>
+            <p data-i18n="auth.enterpriseDesc">Voor organisaties met extra schaal en integraties.</p>
+            <ul>
+              <li data-i18n="auth.enterpriseFeature1">Alles van Business</li>
+              <li data-i18n="auth.enterpriseFeature2">Integraties, SSO en AI</li>
+              <li data-i18n="auth.enterpriseFeature3">Persoonlijke afspraken</li>
+            </ul>
+            <span class="auth-offer-action" data-i18n="auth.contactPlan">Persoonlijke aanpak</span>
+          </article>
+        </div>
+      </section>
 
       <div class="auth-workspace-card" aria-hidden="true">
         <div class="auth-workspace-head">
