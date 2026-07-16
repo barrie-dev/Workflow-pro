@@ -64,3 +64,23 @@ Bij grotere afwijkingen van de aangeleverde UI-plannen toont de frontend sessie 
 - API-contracten voor action queue, reports, stock, fleet, expenses en integrations.
 - Keuze voor Supabase/PostgreSQL schema en tenant scoping.
 - Beslissing over eerste pilotsector, omdat dat labels, lege toestanden en demo-data beinvloedt.
+
+## Login en registratie — backendhandoff 2026-07-16
+
+De publieke toegangservaring is frontendmatig afgerond en gebruikt de officiële Monargo One-identiteit. Voor de backendontwikkelaar gelden deze bestaande contracten als grens:
+
+| UI-flow | Bestaand contract | Verwachting van backend |
+| --- | --- | --- |
+| Trial en pakketten | `GET /api/plans` | Levert `trialDays` en per plan minstens `key` en `baseMonthly`; de UI toont deze waarden als bron van waarheid. |
+| Bedrijfsregistratie | `POST /api/auth/register` | Ontvangt `companyName`, `name`, `email`, `plan`, `vatNumber`, `billingPeriod`; account blijft veilig pending tot activatie. |
+| Resellerregistratie | `POST /api/resellers/apply` | Ontvangt `name` en `email`; aanvraag blijft pending tot beoordeling en goedkeuring. |
+| Activatie | bestaande activatieflow | Geen tijdelijk of gedeeld wachtwoord introduceren; bestaande wachtwoorden nooit resetten vanuit signup. |
+| Testmail | Render QA-omgeving | Mail is momenteel niet actief. De UI meldt dit eerlijk in NL, FR en EN en belooft daar geen activatiemail. |
+
+Nog te borgen door backend/mailbeheer:
+
+- Houd `trialDays` centraal configureerbaar via `/api/plans`; de zichtbare fallback is 14 dagen.
+- Laat planprijzen en beschikbaarheid uit dezelfde catalogus komen als checkout en facturatie.
+- Bewaar resellergoedkeuring als expliciete statusovergang; publieke aanvraag mag niet meteen kunnen inloggen.
+- Activeer mail pas met een echte provider, geldige afzenderdomeinen en gecontroleerde activatie-/resettemplates.
+- Geef in de testomgeving alleen een `activationLink` terug wanneer dat bewust en veilig als testhulpmiddel is ingeschakeld.
