@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Monargo One</title>
   <link rel="manifest" href="/manifest.json">
-  <meta name="theme-color" content="#f5f5f7">
+  <meta name="theme-color" content="#0B1320">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Monargo One">
@@ -22,14 +22,39 @@
   <section id="loginPage" class="login-page auth-v2">
     <aside class="login-brand" aria-label="Monargo One productoverzicht">
       <a class="auth-brand" href="/" aria-label="Monargo One startpagina">
-        <span class="auth-logo-mark">M</span>
-        <span><strong>Monargo One</strong><small>Werkruimte voor KMO-teams</small></span>
+        <img class="auth-logo-symbol" src="/brand/one-symbol.svg" alt="">
+        <span class="auth-brand-lockup"><strong>One</strong><small>by Monargo</small></span>
       </a>
 
       <div class="auth-story-copy">
-        <span class="auth-eyebrow" data-i18n="auth.storyEyebrow">Van planning tot betaling</span>
-        <h1 data-i18n="auth.storyTitle">Iedereen weet wat nu telt.</h1>
-        <p data-i18n="auth.storyText">Breng klanten, team, planning en facturatie samen in één rustige werkruimte.</p>
+        <span class="auth-eyebrow" data-i18n="auth.storyEyebrow">Powering Modern Business.</span>
+        <div class="auth-trial-pill"><strong><span data-trial-days>14</span> <span data-i18n="auth.daysFree">dagen gratis</span></strong><span data-i18n="auth.trialPillText">Ontdek One met je eigen team en planning.</span></div>
+        <h1 data-i18n="auth.storyTitle">Meer gedaan. Minder gedoe.</h1>
+        <p data-i18n="auth.storyText">Plan je team, volg elk project en factureer sneller vanuit één heldere werkruimte.</p>
+        <div class="auth-proof-row" aria-label="Productvoordelen">
+          <span data-i18n="auth.proofSetup">Snel gestart</span>
+          <span data-i18n="auth.proofBelgium">Gemaakt voor België</span>
+          <span data-i18n="auth.proofCancel">Flexibel pakket</span>
+        </div>
+      </div>
+
+      <div class="auth-offer-grid" id="authPublicPlans" aria-label="Monargo One pakketten">
+        <article data-auth-plan-key="starter">
+          <span class="auth-offer-name">Starter</span>
+          <strong data-auth-plan-price>€49</strong><small data-i18n="auth.perMonth">/maand</small>
+          <button type="button" data-auth-plan="starter" data-i18n="auth.startTrialShort">Start gratis</button>
+        </article>
+        <article class="featured" data-auth-plan-key="business">
+          <span class="auth-offer-badge" data-i18n="auth.popular">Meest gekozen</span>
+          <span class="auth-offer-name">Business</span>
+          <strong data-auth-plan-price>€108</strong><small data-i18n="auth.perMonth">/maand</small>
+          <button type="button" data-auth-plan="business" data-i18n="auth.startTrialShort">Start gratis</button>
+        </article>
+        <article class="custom" data-auth-plan-key="enterprise">
+          <span class="auth-offer-name">Enterprise</span>
+          <strong data-i18n="auth.customPrice">Op maat</strong><small data-i18n="auth.customPlan">Voor grotere organisaties</small>
+          <span class="auth-offer-action" data-i18n="auth.contactPlan">Persoonlijke aanpak</span>
+        </article>
       </div>
 
       <div class="auth-workspace-card" aria-hidden="true">
@@ -57,13 +82,13 @@
 
       <div class="auth-story-footer">
         <span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2l6 2.5v4.7c0 4-2.6 7.2-6 8.8-3.4-1.6-6-4.8-6-8.8V4.5L10 2z"/><path d="M7.3 10.1l1.8 1.8 3.7-4"/></svg>Veilige Europese werkruimte</span>
-        <span>Gemaakt voor België</span>
+        <span>Powering Modern Business.</span>
       </div>
     </aside>
 
     <main class="login-panel">
       <div class="login-panel-inner">
-        <div class="auth-mobile-brand"><span class="auth-logo-mark">M</span><strong>Monargo One</strong></div>
+        <div class="auth-mobile-brand"><img class="auth-logo-symbol" src="/brand/one-symbol.svg" alt=""><span class="auth-brand-lockup"><strong>One</strong><small>by Monargo</small></span></div>
         <div class="login-panel-lang" role="group" aria-label="Taalkeuze">
           <button class="lpv-lang-btn active" type="button" id="langNL" data-lang-btn="nl" aria-label="Nederlands" lang="nl">NL</button>
           <button class="lpv-lang-btn" type="button" id="langFR" data-lang-btn="fr" aria-label="Frans" lang="fr">FR</button>
@@ -75,6 +100,12 @@
             <span class="auth-kicker" data-i18n="login.kicker">Beveiligde werkruimte</span>
             <h2 class="login-welcome" data-i18n="login.welcome">Welkom terug</h2>
             <p class="login-welcome-sub" data-i18n="login.subtitle">Ga verder waar je team gebleven is.</p>
+          </div>
+
+          <div class="auth-login-trial" id="authTrialBanner">
+            <span class="auth-login-trial-days"><strong data-trial-days>14</strong><small data-i18n="auth.daysFree">dagen gratis</small></span>
+            <span><strong data-i18n="auth.trialTitle">Klaar om One te ervaren?</strong><small data-i18n="auth.trialText">Kies je pakket en zet je werkruimte in drie korte stappen klaar.</small></span>
+            <button type="button" id="authTrialStart" data-i18n="auth.startTrialShort">Start gratis</button>
           </div>
 
           <form id="loginForm" class="login-card" novalidate>
@@ -125,9 +156,9 @@
             </div>
           </div>
 
-          <div id="loginToRegister" class="auth-switch">
-            <span data-i18n="login.noAccount">Nog geen account?</span>
-            <a href="#" id="showRegister" data-i18n="login.registerCompany">Start je bedrijfsaccount</a>
+          <div id="loginToRegister" class="auth-signup-choices">
+            <button type="button" id="showRegister" class="auth-signup-primary"><span data-i18n="reg.submit">Start gratis proefperiode</span><small data-i18n="auth.trialChoiceSub">Bekijk eerst de pakketten</small></button>
+            <button type="button" id="showResellerApplyLogin" class="auth-signup-reseller"><span data-i18n="reg.becomeReseller">Reseller worden</span><small data-i18n="auth.resellerChoiceSub">Vraag een partneraccount aan</small></button>
           </div>
 
           <form id="forgotForm" class="login-card auth-flow-card" hidden novalidate>
@@ -148,14 +179,19 @@
           <form id="registerForm" class="login-card auth-flow-card auth-register-card" hidden novalidate>
             <button type="button" class="auth-back-link" id="showLogin"><span>←</span><span data-i18n="auth.backLogin">Terug naar inloggen</span></button>
             <div class="login-form-header">
-              <span class="auth-kicker" data-i18n="reg.kicker">14 dagen gratis proberen</span>
-              <h2 class="login-welcome" data-i18n="reg.title">Maak je bedrijfsaccount</h2>
-              <p class="login-welcome-sub" data-i18n="reg.subtitle">Drie korte stappen. Geen betaalkaart nodig.</p>
+              <span class="auth-kicker" id="registerKicker" data-i18n="reg.kicker">14 dagen gratis proberen</span>
+              <h2 class="login-welcome" id="registerTitle" data-i18n="reg.title">Maak je bedrijfsaccount</h2>
+              <p class="login-welcome-sub" id="registerSubtitle" data-i18n="reg.subtitle">Kies je pakket en zet je werkruimte in drie korte stappen klaar.</p>
+            </div>
+
+            <div class="auth-reseller-intro" id="resellerIntro" hidden>
+              <strong data-i18n="reseller.introTitle">Bouw mee aan het Monargo-netwerk</strong>
+              <span data-i18n="reseller.introText">Vraag een partneraccount aan. Na controle en goedkeuring activeer je jouw reselleromgeving veilig.</span>
             </div>
 
             <div class="auth-step-nav" role="tablist" aria-label="Registratiestappen">
-              <button type="button" class="active" data-reg-go="1"><i>1</i><span data-i18n="reg.stepCompany">Bedrijf</span></button>
-              <button type="button" data-reg-go="2"><i>2</i><span data-i18n="reg.stepContact">Contact</span></button>
+              <button type="button" class="active" data-reg-go="1"><i>1</i><span id="registerStepCompany" data-i18n="reg.stepCompany">Bedrijf</span></button>
+              <button type="button" data-reg-go="2"><i>2</i><span id="registerStepContact" data-i18n="reg.stepContact">Contact</span></button>
               <button type="button" data-reg-go="3"><i>3</i><span data-i18n="reg.stepPlan">Pakket</span></button>
             </div>
 
@@ -219,8 +255,8 @@
 
           <section id="registerSuccess" class="auth-success-card" hidden aria-live="polite">
             <span class="auth-success-icon">✓</span>
-            <span class="auth-kicker" data-i18n="reg.successKicker">Account aangemaakt</span>
-            <h2 data-i18n="reg.successTitle">Je werkruimte wacht op activatie</h2>
+            <span class="auth-kicker" id="registerSuccessKicker" data-i18n="reg.successKicker">Account aangemaakt</span>
+            <h2 id="registerSuccessTitle" data-i18n="reg.successTitle">Je werkruimte wacht op activatie</h2>
             <p id="registerSuccessText"></p>
             <div id="registerSuccessMailState" class="auth-info-note"></div>
             <a id="registerActivationLink" class="login-btn" href="#" hidden data-i18n="reg.activateTest">Account activeren in testomgeving</a>

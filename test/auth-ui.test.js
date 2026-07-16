@@ -19,6 +19,35 @@ test("auth: login gebruikt de nieuwe rustige toegangsshell", () => {
   assert.match(css, /prefers-reduced-motion/);
 });
 
+test("auth: gebruikt de officiële Monargo Apex-assets en brandtokens", () => {
+  const html = read("public/index.html");
+  const css = read("public/css/auth.css");
+  const symbol = read("public/brand/one-symbol.svg");
+  const icon = read("public/icon.svg");
+  assert.match(html, /src="\/brand\/one-symbol\.svg"/);
+  assert.match(html, /<strong>One<\/strong><small>by Monargo<\/small>/);
+  assert.match(symbol, /M150 392 L150 164 L320 84 L320 392/);
+  assert.match(icon, /aria-label="One app icon"/);
+  assert.match(css, /--monargo-ink: #0B1320/);
+  assert.match(css, /--monargo-blue: #2563FF/);
+  assert.match(css, /--monargo-soft-white: #F7F8FA/);
+  assert.doesNotMatch(icon, /INTERIM|#0071e3/);
+});
+
+test("auth: proefperiode, pakketten en resellerpad zijn direct zichtbaar", () => {
+  const html = read("public/index.html");
+  const source = read("public/main.js");
+  for (const plan of ["starter", "business", "enterprise"]) {
+    assert.match(html, new RegExp(`data-auth-plan-key="${plan}"`));
+  }
+  assert.match(html, /id="authTrialBanner"/);
+  assert.match(html, /id="showResellerApplyLogin"/);
+  assert.match(source, /async function loadAuthOffer\(\)/);
+  assert.match(source, /showRegisterForm\("reseller"\)/);
+  assert.match(source, /registerLastStep\(\).*reseller.*\? 2 : 3/s);
+  assert.match(source, /api\("\/api\/resellers\/apply"/);
+});
+
 test("auth: registratie is een navigeerbare driestappenflow", () => {
   const html = read("public/index.html");
   const source = read("public/main.js");
@@ -64,10 +93,14 @@ test("auth: publieke flows blijven drietalig", () => {
   const source = read("public/js/i18n.js");
   for (const key of [
     "auth.storyTitle",
+    "auth.trialTitle",
+    "auth.resellerChoiceSub",
     "forgot.title",
     "reg.stepCompany",
     "reg.activationHint",
     "reg.successTitle",
+    "reseller.introTitle",
+    "reseller.successTitle",
     "reset.kicker"
   ]) {
     const matches = source.match(new RegExp(`"${key.replace(".", "\\.")}"`, "g")) || [];

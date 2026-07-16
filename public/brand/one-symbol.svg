@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="One app icon">
-  <title>One app icon</title>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Monargo Apex-symbool">
+  <title>Monargo Apex-symbool</title>
   <defs>
     <linearGradient id="apexBlue" x1="115" y1="395" x2="385" y2="55" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#0F46FF"/>
@@ -7,7 +7,6 @@
       <stop offset="1" stop-color="#4F7BFF"/>
     </linearGradient>
   </defs>
-  <rect width="512" height="512" rx="112" fill="#0B1320"/>
   <g transform="translate(74 38) scale(0.86)">
     <path d="M150 392 L150 164 L320 84 L320 392" fill="none" stroke="url(#apexBlue)" stroke-width="58" stroke-linecap="round" stroke-linejoin="round"/>
     <path d="M150 164 L320 84" fill="none" stroke="#FFFFFF" stroke-width="18" stroke-linecap="round" opacity="0.12"/>
