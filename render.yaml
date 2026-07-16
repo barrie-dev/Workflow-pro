@@ -42,6 +42,16 @@ services:
         sync: false
       - key: STRIPE_WEBHOOK_SECRET
         sync: false
+      - key: EMAIL_PROVIDER
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: PEPPOL_PROVIDER
+        sync: false
+      - key: PEPPOL_API_KEY
+        sync: false
       - key: WORKFLOWPRO_INITIAL_ADMIN_EMAIL
         sync: false
       - key: WORKFLOWPRO_INITIAL_ADMIN_PASSWORD
