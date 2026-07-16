@@ -109,3 +109,21 @@ Feedback voor de backendontwikkelaar:
 - Autoriseer elk onderliggend object server-side. `targetView` of een verborgen frontendmodule mag nooit als permissiecontrole gelden.
 - Lever canonieke status- en prioriteitswaarden wanneer het datamodel wordt gestabiliseerd; de frontend normaliseert voorlopig bestaande Nederlandse en Engelse varianten voor backwards compatibility.
 - Houd mutaties domeinspecifiek. Goedkeuren, weigeren, factuurstatus aanpassen en werkbon afronden blijven in hun bestaande flows met de bestaande validatie en audittrail.
+
+## Backend-terugkoppeling op de handoff — 2026-07-16 (avond)
+
+Alle P0-punten uit `Monargo-One-backend-handoff.docx` zijn geland. Non-breaking: bestaande velden en flows blijven werken; onderstaande velden zijn toegevoegd.
+
+| Contract | Wijziging | Detail |
+| --- | --- | --- |
+| Error envelope | uitgebreid | Elke JSON-fout draagt naast `error` nu ook `message` (alias), `requestId` (`req_…`, ook als `x-request-id` header op elke respons) en waar van toepassing `code` en `fieldErrors`. 500-fouten loggen het `requestId` mee in de error-log. |
+| `GET /api/me` | veld toegevoegd | `capabilities: { mail: boolean }` — `false` betekent: geen actieve mailprovider; verzendknoppen tonen setup-uitleg. |
+| `POST /offertes/:id/send` | delivery-contract | Respons bevat `delivery: { status: disabled/sent/failed, reason?, provider?, to?, retryable? }` + `acceptUrl`. Offerte-status (`verzonden`) is de in-app-waarheid; `delivery` beschrijft uitsluitend de e-mail en liegt nooit bij ontbrekende provider (`disabled` · `mail_not_configured`) of ontbrekende klant-e-mail (`failed` · `no_recipient`). |
+| `POST /offertes/:id/convert` | idempotent | Tweede conversie geeft het bestaande document terug met `alreadyConverted: true` en `code: QUOTE_ALREADY_CONVERTED` (200). Afgewezen offertes: 409 `QUOTE_REJECTED`. |
+| `POST/PATCH /planning` | conflicten | Overlappende shift van dezelfde medewerker: 409 `SHIFT_OVERLAP` met `conflict: { shiftId, date, start, end, venueId }`. Verlofconflict: 409 `LEAVE_CONFLICT` met `conflict`. PATCH valideert nu ook tijdvolgorde, verplichte velden en tenant-eigendom. |
+| `PATCH /facturen/:id` | statusguard | Status-whitelist `open/paid/overdue/cancelled` (400 `INVALID_STATUS`); `paid` is eindtoestand (409 `INVOICE_PAID_FINAL`). DELETE van een verzonden factuur: 409 `INVOICE_ALREADY_SENT`. |
+| `POST /api/admin/users/:id/activation-link` | nieuw | Superadmin-actie (platformscope `tenants`, geauditeerd): geeft een verse activatielink voor een wachtwoordloos pending account, zonder mail-afhankelijkheid. Actieve accounts of accounts met wachtwoord: 409 `NOT_PENDING` — nooit een reset. Hiermee is o.a. `barrie@abmsconsultancy.be` op de QA-omgeving activeerbaar. |
+
+Al gedekt, geen actie nodig: `GET /api/plans` (trialDays + catalogus), pending registratie/reseller, onboarding-persistentie, servertotalen/btw/nummering, werkbon→factuur-idempotentie (409), tenant-isolatie met server-side rollen, betaallink met expliciete `provider: stripe/mock`.
+
+Procesafspraak na het merge-incident van vandaag: frontend-branches vóór merge rebasen op actuele `main`. De frontend-PR's (#4-#18) vertrokken van een oudere snapshot en overschreven daarbij de op 15/07 gereleasede modules Afspraken, Werkongevallen, Klantvragen-inbox en AI-estimatie (hersteld in commit 4f669bd, SW wfp-v75). Gedeelde bestanden: `public/js/platforms/*.js`, `public/js/i18n.js`, `public/sw.js`.

@@ -69,6 +69,12 @@ function corsHeaders(req) {
 }
 
 function sendJson(res, status, payload, extraHeaders = {}) {
+  // Fout-envelope (backend-handoff): elke fout draagt een message-alias en het
+  // requestId van deze request, zodat de UI en support niet hoeven te gokken.
+  if (status >= 400 && payload && payload.ok === false) {
+    if (payload.error !== undefined && payload.message === undefined) payload.message = payload.error;
+    if (res.wfpRequestId && payload.requestId === undefined) payload.requestId = res.wfpRequestId;
+  }
   res.writeHead(status, {
     ...securityHeaders(),
     "Content-Type": "application/json; charset=utf-8",

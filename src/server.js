@@ -371,12 +371,14 @@ function handleError(req, res, error, tenantId = null) {
       path: new URL(req.url, config.appUrl).pathname,
       status,
       message: error.message || "Server error",
+      requestId: res.wfpRequestId || null,
       stack: String(error.stack || "").split("\n").slice(0, 4).join("\n")
     });
   }
   const payload = { ok: false, error: error.message || "Server error" };
   if (error.code) payload.code = error.code;       // bv. module_disabled / submodule_disabled
   if (error.module) payload.module = error.module;
+  if (error.fieldErrors) payload.fieldErrors = error.fieldErrors;
   sendJson(res, status, payload);
 }
 
@@ -560,6 +562,10 @@ function serveStatic(req, res) {
 http.createServer(async (req, res) => {
   const url = new URL(req.url, config.appUrl);
   let errorTenantId = url.pathname.match(/^\/api\/tenants\/([^/]+)\//)?.[1] || null;
+  // Correlatie-id (backend-handoff): elk antwoord draagt een requestId zodat een
+  // testerscreenshot naar de juiste serverlog leidt. Geen gevoelige data.
+  res.wfpRequestId = `req_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+  res.setHeader("x-request-id", res.wfpRequestId);
 
   try {
     const rateLimit = checkRateLimit(req, url.pathname);
@@ -1081,7 +1087,10 @@ http.createServer(async (req, res) => {
           onboarding = { completed: !!(myTenant && myTenant.onboarding && myTenant.onboarding.completed) };
         }
       }
-      sendJson(res, 200, { ok: true, user: safeUser(user), entitlements, supportSession, platform, onboarding, terminology });
+      // Capabilities (backend-handoff): de UI mag nooit over maildelivery liegen ·
+      // mail=false betekent dat verzendknoppen een setup-uitleg tonen.
+      const capabilities = { mail: isMailLive() };
+      sendJson(res, 200, { ok: true, user: safeUser(user), entitlements, supportSession, platform, onboarding, terminology, capabilities });
       return;
     }
 
@@ -1539,6 +1548,28 @@ http.createServer(async (req, res) => {
       // persoonsgegevens van tenant-medewerkers. Die raadpleeg je via consent-impersonatie.
       const users = store.data.users.filter(u => u.role === "super_admin").map(safe);
       sendJson(res, 200, { ok: true, users });
+      return;
+    }
+
+    // Activatielink her-uitgeven voor een pending account (backend-handoff):
+    // bewuste, geauditeerde superadmin-actie voor omgevingen zonder mail.
+    // Werkt ALLEEN voor wachtwoordloze pending accounts · bestaande wachtwoorden
+    // blijven onaangeroerd; dit is nooit een reset.
+    const adminActivationMatch = url.pathname.match(/^\/api\/admin\/users\/([^/]+)\/activation-link$/);
+    if (adminActivationMatch && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "tenants");
+      const target = store.getUserById(adminActivationMatch[1]);
+      if (!target) return sendJson(res, 404, { ok: false, error: "Account niet gevonden" });
+      if (target.active !== false || target.passwordHash) {
+        return sendJson(res, 409, { ok: false, error: "Dit account is geen pending account · het bestaande wachtwoord blijft onaangeroerd", code: "NOT_PENDING" });
+      }
+      const { secret, record } = startActivation();
+      store.update("users", target.id, { activation: record, updatedAt: new Date().toISOString() });
+      const link = `${config.appUrl}/?activate=${encodeURIComponent(activationToken(target.id, secret))}`;
+      store.audit({ actor: user.email, tenantId: target.tenantId || null, action: "activation_link_issued", area: "auth", detail: target.email });
+      sendJson(res, 200, { ok: true, activationLink: link, expiresAt: record.expiresAt });
       return;
     }
 
@@ -3341,6 +3372,14 @@ http.createServer(async (req, res) => {
       }
 
       // ── Planning shift aanmaken ────────────────────────────────────────────────
+      // Overlap-detectie planning: zelfde medewerker, zelfde datum, overlappend
+      // tijdvenster (excludeId voor PATCH op de eigen shift).
+      const shiftOverlapOn = (userId, date, start, end, excludeId) =>
+        store.list("shifts", tenantId).find(s =>
+          s.userId === userId && s.date === date && s.id !== excludeId &&
+          String(start) < String(s.end || "24:00") && String(end) > String(s.start || "00:00")
+        ) || null;
+
       if (action === "planning" && req.method === "POST") {
         assertCan(user, "planning");
         assertApiKeyWriteAllowed(user, req);
@@ -3352,7 +3391,10 @@ http.createServer(async (req, res) => {
         if (String(body.end) <= String(body.start)) return sendJson(res, 400, { ok: false, error: "Eindtijd moet na de starttijd liggen" });
         // Verlof-aware planning: medewerker met goedgekeurd verlof niet inplannen.
         const leaveClash = leaveConflictOn(store, tenantId, body.userId, body.date);
-        if (leaveClash) return sendJson(res, 409, { ok: false, error: `Medewerker heeft goedgekeurd verlof op ${body.date} (${leaveClash.startDate} t/m ${leaveClash.endDate}) en kan niet ingepland worden.` });
+        if (leaveClash) return sendJson(res, 409, { ok: false, error: `Medewerker heeft goedgekeurd verlof op ${body.date} (${leaveClash.startDate} t/m ${leaveClash.endDate}) en kan niet ingepland worden.`, code: "LEAVE_CONFLICT", conflict: { leaveId: leaveClash.id, startDate: leaveClash.startDate, endDate: leaveClash.endDate } });
+        // Dubbele boeking (backend-handoff): zelfde medewerker, overlappend tijdvenster → 409 met conflictdata.
+        const overlap = shiftOverlapOn(body.userId, body.date, body.start, body.end, null);
+        if (overlap) return sendJson(res, 409, { ok: false, error: `Overlapt met een bestaande shift van ${overlap.start} tot ${overlap.end}.`, code: "SHIFT_OVERLAP", conflict: { shiftId: overlap.id, date: overlap.date, start: overlap.start, end: overlap.end, venueId: overlap.venueId || null } });
         const shift = store.insert("shifts", {
           id: `shift_${Date.now()}_${Math.random().toString(16).slice(2)}`,
           tenantId,
@@ -3376,8 +3418,19 @@ http.createServer(async (req, res) => {
       if (planningItemMatch && req.method === "PATCH") {
         assertCan(user, "planning");
         assertApiKeyWriteAllowed(user, req);
+        const existingShift = store.list("shifts", tenantId).find(s => s.id === planningItemMatch[1]);
+        if (!existingShift) return sendJson(res, 404, { ok: false, error: "Shift niet gevonden" });
         const body = await readBody(req);
-        const shift = store.update("shifts", planningItemMatch[1], { ...body, updatedAt: new Date().toISOString() });
+        // Zelfde regels als bij aanmaken: tijdvolgorde, verlof en overlap gelden
+        // ook voor het gewijzigde resultaat (backend-handoff).
+        const next = { ...existingShift, ...body };
+        if (!next.userId || !next.date || !next.start || !next.end) return sendJson(res, 400, { ok: false, error: "Medewerker, datum, start- en eindtijd zijn verplicht" });
+        if (String(next.end) <= String(next.start)) return sendJson(res, 400, { ok: false, error: "Eindtijd moet na de starttijd liggen" });
+        const patchLeave = leaveConflictOn(store, tenantId, next.userId, next.date);
+        if (patchLeave) return sendJson(res, 409, { ok: false, error: `Medewerker heeft goedgekeurd verlof op ${next.date} (${patchLeave.startDate} t/m ${patchLeave.endDate}).`, code: "LEAVE_CONFLICT", conflict: { leaveId: patchLeave.id, startDate: patchLeave.startDate, endDate: patchLeave.endDate } });
+        const patchOverlap = shiftOverlapOn(next.userId, next.date, next.start, next.end, existingShift.id);
+        if (patchOverlap) return sendJson(res, 409, { ok: false, error: `Overlapt met een bestaande shift van ${patchOverlap.start} tot ${patchOverlap.end}.`, code: "SHIFT_OVERLAP", conflict: { shiftId: patchOverlap.id, date: patchOverlap.date, start: patchOverlap.start, end: patchOverlap.end, venueId: patchOverlap.venueId || null } });
+        const shift = store.update("shifts", existingShift.id, { ...body, updatedAt: new Date().toISOString() });
         store.audit({ actor: user.email, tenantId, action: "shift_updated", area: "planning", detail: planningItemMatch[1] });
         sendJson(res, 200, { ok: true, shift });
         return;
@@ -3674,6 +3727,14 @@ http.createServer(async (req, res) => {
         const patch = { updatedAt: new Date().toISOString() };
         const allowedFields = ["status", "notes", "dueDate", "invoiceDate", "customerAddress", "customerVatNumber"];
         allowedFields.forEach(k => { if (body[k] !== undefined) patch[k] = body[k]; });
+        // Statusmachine (backend-handoff): beperkte set waarden; "paid" is een
+        // eindtoestand (serverwaarheid via betaling/webhook) en kan niet worden
+        // teruggedraaid of overschreven via een gewone PATCH.
+        if (patch.status !== undefined) {
+          const INVOICE_STATUSES = ["open", "paid", "overdue", "cancelled"];
+          if (!INVOICE_STATUSES.includes(patch.status)) return sendJson(res, 400, { ok: false, error: `Ongeldige factuurstatus '${patch.status}'`, code: "INVALID_STATUS" });
+          if (inv.status === "paid" && patch.status !== "paid") return sendJson(res, 409, { ok: false, error: "Een betaalde factuur kan niet van status veranderen", code: "INVOICE_PAID_FINAL" });
+        }
         if (body.status === "paid" && !inv.paidAt) patch.paidAt = new Date().toISOString();
         const updated = store.update("invoices", invoiceItemMatch[1], patch);
         store.audit({ actor: user.email, tenantId, action: `invoice_${patch.status||"updated"}`, area: "facturen", detail: inv.number });
@@ -3685,7 +3746,8 @@ http.createServer(async (req, res) => {
         assertInteractiveUser(user);
         const inv = store.get("invoices", invoiceItemMatch[1]);
         if (!inv || inv.tenantId !== tenantId) return sendJson(res, 404, { ok: false, error: "Factuur niet gevonden" });
-        if (inv.status === "paid") return sendJson(res, 400, { ok: false, error: "Betaalde facturen kunnen niet worden verwijderd" });
+        if (inv.status === "paid") return sendJson(res, 400, { ok: false, error: "Betaalde facturen kunnen niet worden verwijderd", code: "INVOICE_PAID_FINAL" });
+        if (inv.sentAt) return sendJson(res, 409, { ok: false, error: "Deze factuur is al verzonden · annuleer ze in plaats van ze te verwijderen", code: "INVOICE_ALREADY_SENT" });
         store.remove("invoices", invoiceItemMatch[1]);
         store.audit({ actor: user.email, tenantId, action: "invoice_deleted", area: "facturen", detail: inv.number });
         sendJson(res, 200, { ok: true });
@@ -3755,14 +3817,36 @@ http.createServer(async (req, res) => {
         if (!q || q.tenantId !== tenantId) return sendJson(res, 404, { ok: false, error: "Offerte niet gevonden" });
         const updated = store.update("quotes", q.id, { status: q.status === "concept" ? "verzonden" : q.status, sentAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
         const acceptUrl = `${config.appUrl}/offerte/${q.publicToken}`;
-        // E-mail (log-fallback tot echte provider geconfigureerd is)
-        try {
-          const cust = q.customerId ? store.get("customers", q.customerId) : null;
-          const to = cust?.email;
-          if (to) sendMail({ to, subject: `Offerte ${q.number} van ${tenant.name || "Monargo One"}`, text: `Bekijk en aanvaard je offerte: ${acceptUrl}`, html: `<p>Beste,</p><p>Uw offerte <strong>${q.number}</strong> (totaal €${q.total.toFixed(2)}) staat klaar.</p><p><a href="${acceptUrl}">Bekijk en aanvaard de offerte</a></p>` });
-        } catch (_) {}
-        store.audit({ actor: user.email, tenantId, action: "quote_sent", area: "offertes", detail: q.number });
-        sendJson(res, 200, { ok: true, quote: updated, acceptUrl });
+        // Eerlijke delivery-state (backend-handoff): de offerte-status is de
+        // in-app-waarheid; `delivery` beschrijft wat er met de e-mail gebeurde.
+        // Nooit "verzonden" claimen zonder actieve provider.
+        const cust = q.customerId ? store.get("customers", q.customerId) : null;
+        const to = cust?.email || null;
+        const mail = to ? {
+          to,
+          subject: `Offerte ${q.number} van ${tenant.name || "Monargo One"}`,
+          text: `Bekijk en aanvaard je offerte: ${acceptUrl}`,
+          html: `<p>Beste,</p><p>Uw offerte <strong>${q.number}</strong> (totaal €${q.total.toFixed(2)}) staat klaar.</p><p><a href="${acceptUrl}">Bekijk en aanvaard de offerte</a></p>`,
+        } : null;
+        let delivery;
+        if (!to) {
+          delivery = { status: "failed", reason: "no_recipient", retryable: false };
+        } else if (!isMailLive()) {
+          // Log-provider voor QA-zichtbaarheid, maar rapporteer eerlijk "disabled".
+          await sendMail(mail).catch(() => {});
+          delivery = { status: "disabled", reason: "mail_not_configured", to };
+        } else {
+          try {
+            const sent = await sendMail(mail);
+            delivery = sent.ok === false
+              ? { status: "failed", reason: sent.error || "provider_error", retryable: true, to }
+              : { status: "sent", provider: sent.provider || null, to };
+          } catch (e2) {
+            delivery = { status: "failed", reason: e2.message, retryable: true, to };
+          }
+        }
+        store.audit({ actor: user.email, tenantId, action: "quote_sent", area: "offertes", detail: `${q.number} · mail ${delivery.status}` });
+        sendJson(res, 200, { ok: true, quote: updated, acceptUrl, delivery });
         return;
       }
       const quoteConvertMatch = action.match(/^offertes\/([^/]+)\/convert$/);
@@ -3771,6 +3855,17 @@ http.createServer(async (req, res) => {
         const body = await readBody(req);
         const q = store.get("quotes", quoteConvertMatch[1]);
         if (!q || q.tenantId !== tenantId) return sendJson(res, 404, { ok: false, error: "Offerte niet gevonden" });
+        // Idempotent (backend-handoff): een tweede conversie geeft het bestaande
+        // vervolgdocument terug in plaats van stil een duplicaat te maken.
+        if (body.target === "workorder" && q.workorderId) {
+          const existingWo = store.get("workorders", q.workorderId);
+          if (existingWo) return sendJson(res, 200, { ok: true, workorder: existingWo, alreadyConverted: true, code: "QUOTE_ALREADY_CONVERTED" });
+        }
+        if (body.target !== "workorder" && q.invoiceId) {
+          const existingInv = store.get("invoices", q.invoiceId);
+          if (existingInv) return sendJson(res, 200, { ok: true, invoice: existingInv, alreadyConverted: true, code: "QUOTE_ALREADY_CONVERTED" });
+        }
+        if (q.status === "afgewezen") return sendJson(res, 409, { ok: false, error: "Een afgewezen offerte kan niet worden omgezet", code: "QUOTE_REJECTED" });
         if (body.target === "workorder") {
           const wos = store.list("workorders", tenantId);
           const yr = new Date().getFullYear();
