@@ -98,9 +98,23 @@ test("auth: testomgeving belooft geen mail die niet verstuurd kan worden", () =>
 
 test("auth: publieke Render-preview is herkenbaar als test, niet als ontwikkelomgeving", () => {
   const source = read("public/main.js");
+  const css = read("public/styles.css");
   assert.match(source, /const TEST_HOSTS = \["workflow-pro-w6v1\.onrender\.com"\]/);
   assert.match(source, /if \(isTestHost && \(!env \|\| env === "production"\)\) env = "test"/);
-  assert.match(source, /bar\.textContent = "Test · QA"/);
+  assert.match(source, /bar\.textContent = "Testomgeving"/);
+  assert.match(css, /\.env-banner\{position:fixed;left:auto;right:18px;bottom:16px/);
+  assert.doesNotMatch(css, /\.env-banner\{position:fixed;left:0;right:0/);
+});
+
+test("auth: pakketkaarten tonen hun volledige inhoud vóór de keuze", () => {
+  const source = read("public/main.js");
+  const css = read("public/css/auth.css");
+  assert.match(source, /class="reg-plan-details"/);
+  assert.match(source, /class="reg-plan-features"/);
+  assert.match(source, /featureLabels\(p\)/);
+  assert.match(source, /includedSeats/);
+  assert.match(css, /\.auth-v2 \.reg-plan-features/);
+  assert.match(css, /grid-template-columns: 1fr/);
 });
 
 test("auth: publieke flows blijven drietalig", () => {
@@ -115,6 +129,9 @@ test("auth: publieke flows blijven drietalig", () => {
     "reg.stepCompany",
     "reg.activationHint",
     "reg.activationHintTest",
+    "reg.includedTitle",
+    "reg.includedSeats",
+    "reg.planDescription.business",
     "reg.successTitle",
     "reseller.introTitle",
     "reseller.successTitle",
