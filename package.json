@@ -28,6 +28,7 @@
     "production:mfa": "node scripts/bootstrap-admin-mfa.js",
     "production:mfa:json": "node scripts/bootstrap-admin-mfa.js --json",
     "production:mfa:apply": "node scripts/bootstrap-admin-mfa.js --apply",
+    "account:activate-pending": "node scripts/activate-pending-user.js",
     "production:backups": "node scripts/check-backup-readiness.js",
     "production:backups:json": "node scripts/check-backup-readiness.js --json",
     "production:backups:apply": "node scripts/check-backup-readiness.js --apply",
