@@ -1181,8 +1181,8 @@
 
 .auth-sso-row { margin-top: 22px; }
 .auth-divider { margin-bottom: 18px; }
-.auth-signup-choices { margin-top: 22px; gap: 12px; }
-.auth-signup-choices button { min-height: 68px; padding: 13px 15px; gap: 5px; border-radius: 14px; }
+.auth-signup-choices { margin-top: 22px; grid-template-columns: 1fr; gap: 12px; }
+.auth-signup-choices button { min-height: 70px; padding: 14px 16px; gap: 5px; border-radius: 14px; }
 .auth-signup-choices span { font-size: 12.5px; }
 .auth-signup-choices small { font-size: 9.5px; line-height: 1.4; }
 .auth-v2 .login-demo-section { margin-top: 29px; }
