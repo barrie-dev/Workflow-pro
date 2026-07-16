@@ -16,7 +16,12 @@
       }
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Actie mislukt");
+    if (!res.ok) {
+      throw Object.assign(new Error(data.error || "Actie mislukt"), {
+        status: res.status,
+        data
+      });
+    }
     return data;
   }
 

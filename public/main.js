@@ -2473,10 +2473,57 @@ async function loginAs(email, password, intro) {
   await refreshAdmin();
 }
 
+const AUTH_VIEW_IDS = ["loginForm", "forgotForm", "registerForm", "registerSuccess", "activateForm", "resetForm"];
+
+function setAuthView(viewId) {
+  AUTH_VIEW_IDS.forEach(id => {
+    const node = document.getElementById(id);
+    if (node) node.hidden = id !== viewId;
+  });
+  const loginOnly = viewId === "loginForm";
+  const header = document.getElementById("loginFormHeader");
+  const sso = document.getElementById("ssoLoginRow");
+  const registerLink = document.getElementById("loginToRegister");
+  const demo = document.getElementById("loginDemoSection");
+  if (header) header.hidden = !loginOnly;
+  if (sso) sso.hidden = !loginOnly;
+  if (registerLink) registerLink.hidden = !loginOnly;
+  if (demo) demo.hidden = !loginOnly;
+  if (loginOnly) {
+    const ssoInline = document.getElementById("ssoInline");
+    if (ssoInline) ssoInline.hidden = true;
+  }
+}
+
+function setFormBusy(form, busy, label) {
+  const button = form && form.querySelector('button[type="submit"]');
+  if (!button) return;
+  if (!button.dataset.idleLabel) button.dataset.idleLabel = button.querySelector("[data-submit-label]")?.textContent || button.textContent;
+  button.disabled = !!busy;
+  const target = button.querySelector("[data-submit-label]") || button;
+  target.textContent = busy ? label : button.dataset.idleLabel;
+  form.setAttribute("aria-busy", busy ? "true" : "false");
+}
+
+function showAuthNotice(element, message, tone = "bad") {
+  if (!element) return;
+  element.textContent = message || "";
+  element.classList.remove("bad", "success", "warning");
+  if (message) element.classList.add(tone);
+}
+
+function authErrorMessage(error, fallback) {
+  if (error?.status === 423) return "Dit account is tijdelijk vergrendeld. Wacht even en probeer opnieuw.";
+  if (error?.status === 429) return "Te veel pogingen. Wacht even voor je opnieuw probeert.";
+  return error?.message || fallback;
+}
+
 async function submitLoginForm(form) {
   const data = formData(form);
-  el("loginNotice").textContent = "";
-  el("loginNotice").classList.remove("bad");
+  const notice = el("loginNotice");
+  showAuthNotice(notice, "");
+  if (!form.checkValidity()) { form.reportValidity(); return; }
+  setFormBusy(form, true, "Inloggen…");
 
   try {
     // Stap 1: authenticeer en haal token op
@@ -2492,11 +2539,12 @@ async function submitLoginForm(form) {
     if (result.mfaRequired && !data.mfaCode) {
       const mfaField = el("loginMfaField");
       if (mfaField) {
-        mfaField.style.display = "";
+        mfaField.hidden = false;
         const input = mfaField.querySelector("input");
         if (input) { input.value = ""; setTimeout(() => input.focus(), 50); }
       }
-      el("loginNotice").textContent = "Voer je authenticator-code in om in te loggen.";
+      showAuthNotice(notice, "Voer je authenticator-code in om veilig verder te gaan.", "warning");
+      setFormBusy(form, false);
       return;
     }
 
@@ -2512,6 +2560,7 @@ async function submitLoginForm(form) {
     }
 
     const role = result.user?.role || "";
+    setFormBusy(form, false);
 
     // Stap 3: verberg login en toon platform
     const loginPage = document.getElementById("loginPage");
@@ -2530,8 +2579,8 @@ async function submitLoginForm(form) {
     ]).catch(() => {});
 
   } catch (error) {
-    el("loginNotice").textContent = error.message || "Inloggen mislukt";
-    el("loginNotice").classList.add("bad");
+    showAuthNotice(notice, authErrorMessage(error, "Inloggen mislukt"), "bad");
+    setFormBusy(form, false);
   }
 }
 
@@ -2539,17 +2588,56 @@ el("login").addEventListener("click", () => {
   setShellAuthenticated(false);
 });
 
-// Wachtwoord vergeten · vraag e-mail, stuur reset-link (geen account-enumeratie).
-document.getElementById("loginForgot")?.addEventListener("click", async event => {
+// Inline herstelpad: geen browserprompt en geen wijziging aan het bestaande
+// wachtwoord vóór de gebruiker zelf een geldige reset/activatie afrondt.
+let _recoveryMode = "reset";
+function showRecoveryForm(mode = "reset") {
+  _recoveryMode = mode;
+  const source = mode === "activation" ? document.getElementById("regEmail") : document.getElementById("loginEmail");
+  const form = document.getElementById("forgotForm");
+  if (form && source?.value) form.elements.email.value = source.value.trim();
+  const title = form?.querySelector(".login-welcome");
+  const sub = form?.querySelector(".login-welcome-sub");
+  const submit = form?.querySelector("[data-submit-label]");
+  const submitButton = form?.querySelector('button[type="submit"]');
+  if (submitButton) delete submitButton.dataset.idleLabel;
+  if (mode === "activation") {
+    if (title) title.textContent = "Nieuwe activatielink";
+    if (sub) sub.textContent = "Vul het e-mailadres van je pending account in. Je wachtwoord blijft onaangeroerd.";
+    if (submit) submit.textContent = "Activatielink aanvragen";
+  } else {
+    if (title) title.textContent = window.wfpI18n?.t("forgot.title") || "Wachtwoord vergeten?";
+    if (sub) sub.textContent = window.wfpI18n?.t("forgot.subtitle") || "Vul je e-mailadres in. Je bestaande wachtwoord blijft ongewijzigd tot je zelf een reset afrondt.";
+    if (submit) submit.textContent = window.wfpI18n?.t("forgot.submit") || "Herstellink aanvragen";
+  }
+  showAuthNotice(document.getElementById("forgotNotice"), "");
+  setAuthView("forgotForm");
+  setTimeout(() => form?.elements.email?.focus(), 50);
+}
+
+document.getElementById("loginForgot")?.addEventListener("click", event => {
   event.preventDefault();
-  const f = document.getElementById("loginForm");
-  const prefill = (f && f.elements.email && f.elements.email.value.trim()) || "";
-  const email = prompt("Wachtwoord vergeten? Vul je e-mailadres in · we sturen je een reset-link.", prefill);
-  if (!email) return;
-  try {
-    await api("/api/auth/forgot", { method: "POST", body: JSON.stringify({ email: email.trim() }) });
-  } catch (_) { /* stil: zelfde melding ongeacht uitkomst */ }
-  showToast("Als er een account met dit e-mailadres bestaat, is er een reset-link verstuurd. Check je mailbox.", "success");
+  showRecoveryForm("reset");
+});
+
+document.getElementById("forgotToLogin")?.addEventListener("click", () => showLoginForm());
+
+document.getElementById("forgotForm")?.addEventListener("submit", async event => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const notice = document.getElementById("forgotNotice");
+  if (!form.checkValidity()) { form.reportValidity(); return; }
+  setFormBusy(form, true, "Aanvragen…");
+  const email = form.elements.email.value.trim();
+  const endpoint = _recoveryMode === "activation" ? "/api/auth/activate/resend" : "/api/auth/forgot";
+  try { await api(endpoint, { method: "POST", body: JSON.stringify({ email }) }); }
+  catch (_) { /* identieke melding voorkomt account-enumeratie */ }
+  const isTest = location.hostname === "workflow-pro-w6v1.onrender.com";
+  const message = isTest
+    ? "Aanvraag ontvangen. E-mailverzending is in deze testomgeving niet actief; laat het account veilig door de beheerder activeren."
+    : "Aanvraag ontvangen. Als het account bestaat, ontvang je de volgende stap per e-mail.";
+  showAuthNotice(notice, message, isTest ? "warning" : "success");
+  setFormBusy(form, false);
 });
 
 // Taalkeuze · EN is voorbereid maar nog niet beschikbaar (eerlijk i.p.v. dode knop)
@@ -2582,57 +2670,95 @@ el("loginForm").addEventListener("submit", event => {
 // ── Self-service registratie + reseller-aanvraag ──────────────────────────────
 let _registerMode = "tenant"; // "tenant" of "reseller"
 let _plansLoaded = false;
+let _registerStep = 1;
 const regForm = document.getElementById("registerForm");
+
+function registerLastStep() { return _registerMode === "reseller" ? 2 : 3; }
+
+function setRegisterStep(next) {
+  const last = registerLastStep();
+  _registerStep = Math.max(1, Math.min(last, Number(next) || 1));
+  regForm?.querySelectorAll("[data-reg-step]").forEach(panel => {
+    const active = Number(panel.dataset.regStep) === _registerStep;
+    panel.hidden = !active;
+    panel.classList.toggle("active", active);
+  });
+  regForm?.querySelectorAll("[data-reg-go]").forEach(button => {
+    const index = Number(button.dataset.regGo);
+    button.hidden = index > last;
+    button.classList.toggle("active", index === _registerStep);
+    button.classList.toggle("done", index < _registerStep);
+    button.setAttribute("aria-selected", index === _registerStep ? "true" : "false");
+  });
+  const back = document.getElementById("registerBack");
+  const nextButton = document.getElementById("registerNext");
+  const submit = document.getElementById("registerSubmit");
+  if (back) back.hidden = _registerStep === 1;
+  if (nextButton) nextButton.hidden = _registerStep === last;
+  if (submit) submit.hidden = _registerStep !== last;
+}
+
+function validateRegisterStep(step) {
+  const panel = regForm?.querySelector(`[data-reg-step="${step}"]`);
+  if (!panel) return true;
+  const invalid = [...panel.querySelectorAll("input,select")].find(field => !field.checkValidity());
+  if (invalid) { invalid.reportValidity(); invalid.focus(); return false; }
+  if (step === 3 && !document.getElementById("registerPlan")?.value) {
+    showAuthNotice(document.getElementById("registerNotice"), "Kies eerst het pakket waarmee je wilt starten.", "bad");
+    return false;
+  }
+  return true;
+}
+
 function showRegisterForm(mode) {
   _registerMode = mode;
-  document.getElementById("loginForm").style.display = "none";
-  document.getElementById("loginToRegister").style.display = "none";
-  const demo = document.getElementById("loginDemoSection"); if (demo) demo.style.display = "none";
-  // Login-kop en SSO horen niet boven het registratieformulier (heeft eigen kop)
-  const lfh = document.getElementById("loginFormHeader"); if (lfh) lfh.style.display = "none";
-  const sso = document.getElementById("ssoLoginRow"); if (sso) sso.style.display = "none";
-  regForm.style.display = "";
-  const planField = document.getElementById("registerPlan")?.closest(".login-field");
+  setAuthView("registerForm");
+  const planStep = regForm?.querySelector('[data-reg-step="3"]');
   const title = regForm.querySelector(".login-welcome");
   const sub = regForm.querySelector(".login-welcome-sub");
-  const btn = regForm.querySelector("button[type=submit]");
-  document.getElementById("registerNotice").textContent = "";
-  document.getElementById("registerNotice").classList.remove("bad");
+  const btn = document.getElementById("registerSubmit")?.querySelector("[data-submit-label]");
+  showAuthNotice(document.getElementById("registerNotice"), "");
   // Toggle-links: toon altijd het pad naar de ANDERE modus, zodat een verkeerde
   // keuze (reseller i.p.v. bedrijf of omgekeerd) altijd terug te draaien is.
   const toReseller = document.getElementById("showResellerApply");
   const toTenant = document.getElementById("showTenantRegister");
-  const pwHint = document.getElementById("registerPwHint");
   // Zet zowel het data-i18n-attribuut (zodat een latere taalwissel het juiste
   // label kiest) als de actuele tekst via wfpI18n.t().
   const i18n = window.wfpI18n;
   const setI18n = (el, key) => { if (!el) return; el.setAttribute("data-i18n", key); el.textContent = i18n ? i18n.t(key) : el.textContent; };
   if (mode === "reseller") {
-    if (planField) planField.style.display = "none";
-    if (pwHint) pwHint.style.display = "none"; // mail volgt pas na goedkeuring
+    if (planStep) planStep.hidden = true;
     setI18n(title, "reseller.title");
     setI18n(sub, "reseller.subtitle");
     setI18n(btn, "reseller.submit");
-    if (toReseller) toReseller.style.display = "none";
-    if (toTenant) toTenant.style.display = "";
+    if (toReseller) toReseller.hidden = true;
+    if (toTenant) toTenant.hidden = false;
   } else {
-    if (planField) planField.style.display = "";
+    if (planStep) planStep.hidden = false;
     setI18n(title, "reg.title");
     setI18n(sub, "reg.subtitle");
     setI18n(btn, "reg.submit");
-    if (toReseller) toReseller.style.display = "";
-    if (toTenant) toTenant.style.display = "none";
-    if (pwHint) pwHint.style.display = "";
+    if (toReseller) toReseller.hidden = true; // partnerpad blijft bereikbaar via directe deep-link
+    if (toTenant) toTenant.hidden = true;
     loadRegisterPlans();
   }
+  const mailHint = document.getElementById("registerMailHint");
+  if (mailHint) {
+    const isTest = location.hostname === "workflow-pro-w6v1.onrender.com";
+    mailHint.classList.toggle("warning", isTest);
+    const text = mailHint.querySelector("span");
+    if (text && isTest) text.textContent = "E-mail is in deze testomgeving niet actief. Na registratie blijft je account veilig pending tot een beheerder het activeert.";
+  }
+  setRegisterStep(1);
+  setTimeout(() => regForm?.querySelector('[data-reg-step="1"] input')?.focus(), 50);
 }
 function showLoginForm() {
-  regForm.style.display = "none";
-  document.getElementById("loginForm").style.display = "";
-  document.getElementById("loginToRegister").style.display = "";
-  const demo = document.getElementById("loginDemoSection"); if (demo) demo.style.display = "";
-  const lfh = document.getElementById("loginFormHeader"); if (lfh) lfh.style.display = "";
-  const sso = document.getElementById("ssoLoginRow"); if (sso) sso.style.display = "";
+  setAuthView("loginForm");
+  const success = document.getElementById("registerSuccess");
+  if (success) success.hidden = true;
+  const mfa = document.getElementById("loginMfaField");
+  if (mfa) mfa.hidden = true;
+  setTimeout(() => document.getElementById("loginEmail")?.focus(), 50);
 }
 // Deep-link vanaf de marketingsite (monargo.com): ?plan=<key>&period=<year|month>
 // en/of #register. Geeft de bundel + facturatieperiode terug om voor te selecteren.
@@ -2708,62 +2834,115 @@ async function loadRegisterPlans() {
     const addonBox = document.getElementById("registerAddons");
     const addons = (r.addons || []).filter(a => a.monthly != null);
     if (addonBox && addons.length) {
-      addonBox.style.display = "";
+      addonBox.hidden = false;
       addonBox.className = "reg-addons";
       addonBox.innerHTML = `<div class="reg-addons-title">Later uit te breiden met add-ons</div>`
         + addons.map(a => `<div class="reg-addons-row"><span>${escP(a.label)}</span><small>+ €${a.monthly}/mnd</small></div>`).join("");
     }
     _plansLoaded = true;
-  } catch (_) { /* laat placeholder staan */ }
+  } catch (_) {
+    const cardsBox = document.getElementById("registerPlanCards");
+    if (cardsBox) cardsBox.innerHTML = `<div class="reg-plans-loading">Pakketten konden niet geladen worden. Open de registratie opnieuw om te proberen.</div>`;
+    _plansLoaded = false;
+  }
 }
 // BTW-autofill: haal bedrijfsnaam/adres op via KBO en vul het formulier in.
 document.getElementById("registerKboBtn")?.addEventListener("click", async () => {
   const vat = (document.getElementById("registerVat")?.value || "").trim();
   const hint = document.getElementById("registerKboHint");
-  if (vat.length < 8) { if (hint) { hint.style.display = ""; hint.style.color = "var(--wf-red)"; hint.textContent = "Geef een geldig BTW-/ondernemingsnummer."; } return; }
+  const button = document.getElementById("registerKboBtn");
+  if (vat.length < 8) { if (hint) { hint.hidden = false; hint.style.color = "var(--wf-red)"; hint.textContent = "Geef een geldig BTW-/ondernemingsnummer."; } return; }
+  if (button) { button.disabled = true; button.textContent = "Zoeken…"; }
   try {
     const r = await api(`/api/public/kbo?vat=${encodeURIComponent(vat)}`);
     const c = r.company || {};
     if (regForm && c.name) regForm.elements.companyName.value = c.name;
     if (hint) {
-      hint.style.display = ""; hint.style.color = "var(--wf-green)";
+      hint.hidden = false; hint.style.color = "var(--wf-green)";
       const addr = [c.street, [c.zip, c.city].filter(Boolean).join(" ")].filter(Boolean).join(", ");
       hint.textContent = c.name ? `✓ ${c.name}${addr ? " · " + addr : ""}` : "Geen gegevens gevonden · vul handmatig in.";
     }
   } catch (e) {
-    if (hint) { hint.style.display = ""; hint.style.color = "var(--wf-red)"; hint.textContent = e.message || "Opzoeken mislukt."; }
+    if (hint) { hint.hidden = false; hint.style.color = "var(--wf-red)"; hint.textContent = e.message || "Opzoeken mislukt."; }
+  } finally {
+    if (button) { button.disabled = false; button.textContent = window.wfpI18n?.t("reg.vatFetch") || "Ophalen"; }
   }
 });
 document.getElementById("showRegister")?.addEventListener("click", e => { e.preventDefault(); showRegisterForm("tenant"); });
 document.getElementById("showResellerApply")?.addEventListener("click", e => { e.preventDefault(); showRegisterForm("reseller"); });
 document.getElementById("showTenantRegister")?.addEventListener("click", e => { e.preventDefault(); showRegisterForm("tenant"); });
 document.getElementById("showLogin")?.addEventListener("click", e => { e.preventDefault(); showLoginForm(); });
+
+document.getElementById("registerBack")?.addEventListener("click", () => setRegisterStep(_registerStep - 1));
+document.getElementById("registerNext")?.addEventListener("click", () => {
+  showAuthNotice(document.getElementById("registerNotice"), "");
+  if (validateRegisterStep(_registerStep)) setRegisterStep(_registerStep + 1);
+});
+regForm?.querySelectorAll("[data-reg-go]").forEach(button => button.addEventListener("click", () => {
+  const target = Number(button.dataset.regGo);
+  if (target > registerLastStep()) return;
+  if (target > _registerStep) {
+    for (let step = _registerStep; step < target; step += 1) {
+      if (!validateRegisterStep(step)) { setRegisterStep(step); return; }
+    }
+  }
+  showAuthNotice(document.getElementById("registerNotice"), "");
+  setRegisterStep(target);
+}));
+
+document.getElementById("registerSuccessLogin")?.addEventListener("click", () => showLoginForm());
+
 regForm?.addEventListener("submit", async event => {
   event.preventDefault();
   const notice = document.getElementById("registerNotice");
-  notice.textContent = ""; notice.classList.remove("bad");
+  showAuthNotice(notice, "");
+  for (let step = 1; step <= registerLastStep(); step += 1) {
+    if (!validateRegisterStep(step)) { setRegisterStep(step); return; }
+  }
   const f = event.currentTarget;
   const companyName = f.elements.companyName.value.trim();
   const name = f.elements.name.value.trim();
   const email = f.elements.email.value.trim();
   const vatNumber = (f.elements.vatNumber && f.elements.vatNumber.value.trim()) || "";
+  setFormBusy(f, true, _registerMode === "reseller" ? "Aanvraag indienen…" : "Werkruimte aanmaken…");
   try {
     if (_registerMode === "reseller") {
       await api("/api/resellers/apply", { method: "POST", body: JSON.stringify({ name: companyName || name, email }) });
-      showLoginForm();
-      showToast("Reseller-aanvraag ontvangen. Je account wordt na goedkeuring geactiveerd.", "success");
+      setAuthView("registerSuccess");
+      document.getElementById("registerSuccessText").textContent = `De partneraanvraag voor ${companyName || name} is ontvangen.`;
+      const state = document.getElementById("registerSuccessMailState");
+      if (state) { state.className = "auth-info-note"; state.textContent = "Na goedkeuring kan het account veilig worden geactiveerd. Er is geen wachtwoord ingesteld of gewijzigd."; }
       return;
     }
     const plan = f.elements.plan.value;
     const billingPeriod = (f.elements.billingPeriod && f.elements.billingPeriod.value) === "month" ? "month" : "year";
     // Geen wachtwoord meer bij registratie: de klant verifieert zijn e-mail en
     // stelt zelf zijn wachtwoord in via de activatielink. BTW-nummer → KBO-autofill.
-    await api("/api/auth/register", { method: "POST", body: JSON.stringify({ companyName, name, email, plan, vatNumber, billingPeriod }) });
-    showLoginForm();
-    showToast("Account aangemaakt · open de activatiemail om je wachtwoord in te stellen.", "success");
+    const result = await api("/api/auth/register", { method: "POST", body: JSON.stringify({ companyName, name, email, plan, vatNumber, billingPeriod }) });
+    const loginEmail = document.getElementById("loginEmail");
+    if (loginEmail) loginEmail.value = email;
+    setAuthView("registerSuccess");
+    const text = document.getElementById("registerSuccessText");
+    if (text) text.textContent = `${companyName} is aangemaakt voor ${email}. Je bestaande wachtwoorden zijn niet gewijzigd.`;
+    const mailState = document.getElementById("registerSuccessMailState");
+    const activation = document.getElementById("registerActivationLink");
+    const isTest = location.hostname === "workflow-pro-w6v1.onrender.com";
+    if (activation) {
+      activation.hidden = !result.activationLink;
+      if (result.activationLink) activation.href = result.activationLink;
+    }
+    if (mailState) {
+      mailState.className = `auth-info-note${isTest && !result.activationLink ? " warning" : ""}`;
+      mailState.textContent = result.activationLink
+        ? "De testactivatie is klaar. Open de beveiligde link hieronder om zelf een wachtwoord te kiezen."
+        : isTest
+          ? "E-mailverzending is hier niet actief. Het account blijft pending tot de backendbeheerder het veilig activeert."
+          : "Open de activatielink zodra je die ontvangt. Ontvang je niets, vraag dan een nieuwe link aan; je account blijft intussen veilig pending.";
+    }
   } catch (error) {
-    notice.textContent = error.message || "Registratie mislukt";
-    notice.classList.add("bad");
+    showAuthNotice(notice, authErrorMessage(error, "Registratie mislukt"), "bad");
+  } finally {
+    setFormBusy(f, false);
   }
 });
 
@@ -3286,10 +3465,7 @@ function showActivateForm() {
   if (!_activateToken) return false;
   const af = document.getElementById("activateForm");
   if (!af) return false;
-  ["loginForm", "registerForm", "loginToRegister", "loginDemoSection"].forEach(id => {
-    const n = document.getElementById(id); if (n) n.style.display = "none";
-  });
-  af.style.display = "";
+  setAuthView("activateForm");
   const loginPage = document.getElementById("loginPage");
   if (loginPage) loginPage.classList.remove("hidden");
   return true;
@@ -3298,11 +3474,13 @@ document.getElementById("activateForm")?.addEventListener("submit", async event 
   event.preventDefault();
   const f = event.currentTarget;
   const notice = document.getElementById("activateNotice");
-  notice.textContent = ""; notice.classList.remove("bad");
+  showAuthNotice(notice, "");
+  if (!f.checkValidity()) { f.reportValidity(); return; }
   const password = f.elements.password.value;
   if (password !== f.elements.password2.value) {
-    notice.textContent = "De wachtwoorden komen niet overeen."; notice.classList.add("bad"); return;
+    showAuthNotice(notice, "De wachtwoorden komen niet overeen.", "bad"); return;
   }
+  setFormBusy(f, true, "Account activeren…");
   try {
     const result = await api("/api/auth/activate", { method: "POST", body: JSON.stringify({ token: _activateToken, password }) });
     if (!result.token) throw new Error(result.error || "Activatie mislukt");
@@ -3315,21 +3493,11 @@ document.getElementById("activateForm")?.addEventListener("submit", async event 
     if (loginPage) loginPage.classList.add("hidden");
     if (window.WorkFlowProPlatformRouter) window.WorkFlowProPlatformRouter.showPlatform(result.user.role);
   } catch (error) {
-    notice.textContent = error.message || "Activatie mislukt"; notice.classList.add("bad");
+    showAuthNotice(notice, authErrorMessage(error, "Activatie mislukt"), "bad");
+    setFormBusy(f, false);
   }
 });
-document.getElementById("activateResend")?.addEventListener("click", async e => {
-  e.preventDefault();
-  const notice = document.getElementById("activateNotice");
-  const email = prompt("Met welk e-mailadres is je account aangemaakt?");
-  if (!email) return;
-  try {
-    await api("/api/auth/activate/resend", { method: "POST", body: JSON.stringify({ email: email.trim() }) });
-    notice.textContent = "Als er een account in afwachting is, is er een nieuwe activatiemail verstuurd."; notice.classList.remove("bad");
-  } catch (_) {
-    notice.textContent = "Kon de activatiemail niet versturen."; notice.classList.add("bad");
-  }
-});
+document.getElementById("activateResend")?.addEventListener("click", () => showRecoveryForm("activation"));
 document.addEventListener("DOMContentLoaded", showActivateForm);
 window.addEventListener("load", showActivateForm);
 setTimeout(showActivateForm, 0);
@@ -3342,10 +3510,7 @@ function showResetForm() {
   if (!_resetToken) return false;
   const rf = document.getElementById("resetForm");
   if (!rf) return false;
-  ["loginForm", "registerForm", "activateForm", "loginToRegister", "loginDemoSection", "ssoLoginRow"].forEach(id => {
-    const n = document.getElementById(id); if (n) n.style.display = "none";
-  });
-  rf.style.display = "";
+  setAuthView("resetForm");
   const loginPage = document.getElementById("loginPage");
   if (loginPage) loginPage.classList.remove("hidden");
   return true;
@@ -3354,11 +3519,13 @@ document.getElementById("resetForm")?.addEventListener("submit", async event => 
   event.preventDefault();
   const f = event.currentTarget;
   const notice = document.getElementById("resetNotice");
-  notice.textContent = ""; notice.classList.remove("bad");
+  showAuthNotice(notice, "");
+  if (!f.checkValidity()) { f.reportValidity(); return; }
   const password = f.elements.password.value;
   if (password !== f.elements.password2.value) {
-    notice.textContent = "De wachtwoorden komen niet overeen."; notice.classList.add("bad"); return;
+    showAuthNotice(notice, "De wachtwoorden komen niet overeen.", "bad"); return;
   }
+  setFormBusy(f, true, "Wachtwoord opslaan…");
   try {
     const result = await api("/api/auth/reset", { method: "POST", body: JSON.stringify({ token: _resetToken, password }) });
     if (!result.token) throw new Error(result.error || "Reset mislukt");
@@ -3371,14 +3538,42 @@ document.getElementById("resetForm")?.addEventListener("submit", async event => 
     if (loginPage) loginPage.classList.add("hidden");
     if (window.WorkFlowProPlatformRouter) window.WorkFlowProPlatformRouter.showPlatform(result.user.role);
   } catch (error) {
-    notice.textContent = error.message || "Reset mislukt"; notice.classList.add("bad");
+    showAuthNotice(notice, authErrorMessage(error, "Reset mislukt"), "bad");
+    setFormBusy(f, false);
   }
 });
 document.getElementById("resetToLogin")?.addEventListener("click", e => {
   e.preventDefault();
   history.replaceState(null, "", location.pathname);
-  document.getElementById("resetForm").style.display = "none";
   showLoginForm();
+});
+
+// Wachtwoordzichtbaarheid en sterktefeedback zijn puur client-side: de server
+// blijft de definitieve sterktecontrole uitvoeren.
+document.querySelectorAll("[data-toggle-password]").forEach(button => {
+  button.addEventListener("click", () => {
+    const input = document.getElementById(button.dataset.togglePassword);
+    if (!input) return;
+    const reveal = input.type === "password";
+    input.type = reveal ? "text" : "password";
+    button.setAttribute("aria-label", reveal ? "Wachtwoord verbergen" : "Wachtwoord tonen");
+    if (!button.querySelector("svg")) button.textContent = reveal ? "Verberg" : "Tonen";
+  });
+});
+
+function passwordStrength(value) {
+  let score = 0;
+  if (value.length >= 12) score += 1;
+  if (/[a-z]/.test(value) && /[A-Z]/.test(value) && /\d/.test(value)) score += 1;
+  if (/[^A-Za-z0-9]/.test(value) && value.length >= 14) score += 1;
+  return score;
+}
+
+document.querySelectorAll("[data-password-meter]").forEach(meter => {
+  const input = document.getElementById(meter.dataset.passwordMeter);
+  input?.addEventListener("input", () => {
+    meter.dataset.strength = String(passwordStrength(input.value));
+  });
 });
 document.addEventListener("DOMContentLoaded", showResetForm);
 window.addEventListener("load", showResetForm);
@@ -3388,16 +3583,33 @@ setTimeout(showResetForm, 0);
 // 1) Knop: vraag werk-e-mail → resolve domein → redirect naar de IdP-login.
 // 2) Terugkeer: de ACS-redirect zet #sso_token=… ; we pikken het op en loggen in
 //    (zelfde patroon als de support-flow). 3) ?sso_error=… toont een melding.
-document.getElementById("ssoLoginBtn")?.addEventListener("click", async () => {
+document.getElementById("ssoLoginBtn")?.addEventListener("click", () => {
+  const inline = document.getElementById("ssoInline");
+  const email = document.getElementById("ssoEmail");
+  if (!inline) return;
+  inline.hidden = !inline.hidden;
+  if (!inline.hidden) {
+    const loginEmail = document.getElementById("loginEmail")?.value.trim();
+    if (email && loginEmail && !email.value) email.value = loginEmail;
+    setTimeout(() => email?.focus(), 40);
+  }
+});
+
+document.getElementById("ssoContinue")?.addEventListener("click", async () => {
   const notice = document.getElementById("loginNotice");
-  const email = prompt("Met welk werk-e-mailadres wil je via SSO inloggen?");
-  if (!email) return;
+  const input = document.getElementById("ssoEmail");
+  const button = document.getElementById("ssoContinue");
+  const email = input?.value.trim();
+  if (!email || !input.checkValidity()) { input?.reportValidity(); return; }
+  if (button) { button.disabled = true; button.textContent = "Controleren…"; }
   try {
-    const r = await api(`/api/auth/sso/resolve?email=${encodeURIComponent(email.trim())}`);
+    const r = await api(`/api/auth/sso/resolve?email=${encodeURIComponent(email)}`);
     if (r && r.sso && r.loginUrl) { window.location.href = r.loginUrl; return; }
-    if (notice) { notice.textContent = "Voor dit e-maildomein is geen SSO geconfigureerd. Log in met je wachtwoord."; notice.classList.add("bad"); }
+    showAuthNotice(notice, "Voor dit e-maildomein is geen SSO ingesteld. Gebruik je gewone wachtwoord.", "warning");
   } catch (e) {
-    if (notice) { notice.textContent = e.message || "SSO kon niet gestart worden."; notice.classList.add("bad"); }
+    showAuthNotice(notice, e.message || "SSO kon niet gestart worden.", "bad");
+  } finally {
+    if (button) { button.disabled = false; button.textContent = window.wfpI18n?.t("login.continue") || "Verder"; }
   }
 });
 const SSO_ERRORS = {

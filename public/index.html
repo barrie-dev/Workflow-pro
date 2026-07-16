@@ -11,6 +11,7 @@
   <meta name="apple-mobile-web-app-title" content="Monargo One">
   <meta name="description" content="Planning, werkbonnen en tijdregistratie voor Belgische KMO-teams.">
   <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/css/auth.css">
   <link rel="stylesheet" href="/css/admin.css">
 </head>
 <body class="guest">
@@ -18,242 +19,265 @@
   <!-- ══════════════════════════════════════════════════════════
        LOGIN PAGINA
   ══════════════════════════════════════════════════════════ -->
-  <section id="loginPage" class="login-page">
-    <!-- Links: branding -->
-    <div class="login-brand">
-      <div class="login-brand-top">
-        <div class="login-logo-wrap">
-          <svg class="login-logo-icon" viewBox="0 0 40 40" fill="none">
-            <rect width="40" height="40" rx="10" fill="#0071e3"/>
-            <path d="M13 20l5 5 9-10" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          <div>
-            <div class="login-brand-name">Monargo One</div>
-            <div class="login-brand-tag">Belgische B2B SaaS voor KMO's op locatie</div>
+  <section id="loginPage" class="login-page auth-v2">
+    <aside class="login-brand" aria-label="Monargo One productoverzicht">
+      <a class="auth-brand" href="/" aria-label="Monargo One startpagina">
+        <span class="auth-logo-mark">M</span>
+        <span><strong>Monargo One</strong><small>Werkruimte voor KMO-teams</small></span>
+      </a>
+
+      <div class="auth-story-copy">
+        <span class="auth-eyebrow" data-i18n="auth.storyEyebrow">Van planning tot betaling</span>
+        <h1 data-i18n="auth.storyTitle">Iedereen weet wat nu telt.</h1>
+        <p data-i18n="auth.storyText">Breng klanten, team, planning en facturatie samen in één rustige werkruimte.</p>
+      </div>
+
+      <div class="auth-workspace-card" aria-hidden="true">
+        <div class="auth-workspace-head">
+          <span><i></i><i></i><i></i></span>
+          <strong>Vandaag · Demo Bouw</strong>
+          <em>Live</em>
+        </div>
+        <div class="auth-workspace-body">
+          <div class="auth-day-rail">
+            <span>08</span><span>10</span><span>12</span><span>14</span><span>16</span>
           </div>
+          <div class="auth-day-board">
+            <div class="auth-day-row"><b>08:30</b><span class="blue"><strong>Keuring · Gent</strong><small>Thomas · Werkbon 1042</small></span></div>
+            <div class="auth-day-row"><b>10:15</b><span class="purple"><strong>Installatie · Aalst</strong><small>Lina + Sam · ingepland</small></span></div>
+            <div class="auth-day-row"><b>13:00</b><span class="green"><strong>Onderhoud · Brussel</strong><small>Factuur klaar na uitvoering</small></span></div>
+          </div>
+        </div>
+        <div class="auth-workspace-foot">
+          <span><small>Vandaag</small><strong>8 opdrachten</strong></span>
+          <span><small>Op schema</small><strong>87%</strong></span>
+          <span><small>Te factureren</small><strong>€ 4.280</strong></span>
         </div>
       </div>
 
-      <div class="login-brand-body">
-        <h1 class="login-tagline"><span data-i18n="hero.l1">Plan slimmer.</span><br><span data-i18n="hero.l2">Werk efficiënter.</span><br><span style="color:var(--wf-blue)" data-i18n="hero.l3">Factureer sneller.</span></h1>
-        <p class="login-sub" data-i18n="hero.sub">Eén platform voor planning, werkbonnen, tijdregistratie, facturen en facturatie · voor Belgische KMO's met teams op locatie.</p>
-        <ul class="login-bullets">
-          <li>
-            <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" fill="rgba(0,113,227,0.12)"/><path d="M7 10l2 2 4-4" stroke="#0071e3" stroke-width="1.5" stroke-linecap="round"/></svg>
-            <span data-i18n="hero.b1">Real-time overzicht voor kantoor en baan</span>
-          </li>
-          <li>
-            <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" fill="rgba(0,113,227,0.12)"/><path d="M7 10l2 2 4-4" stroke="#0071e3" stroke-width="1.5" stroke-linecap="round"/></svg>
-            <span data-i18n="hero.b2">Slimme planning &amp; urenbeheer</span>
-          </li>
-          <li>
-            <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" fill="rgba(0,113,227,0.12)"/><path d="M7 10l2 2 4-4" stroke="#0071e3" stroke-width="1.5" stroke-linecap="round"/></svg>
-            <span data-i18n="hero.b3">Automatische facturatie &amp; Peppol e-invoicing</span>
-          </li>
-          <li>
-            <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" fill="rgba(0,113,227,0.12)"/><path d="M7 10l2 2 4-4" stroke="#0071e3" stroke-width="1.5" stroke-linecap="round"/></svg>
-            <span data-i18n="hero.b4">Admin controle &amp; rapportage</span>
-          </li>
-        </ul>
-
-        <!-- Mini preview card -->
-        <div class="login-preview-card">
-          <div class="login-preview-bar">
-            <span class="login-preview-dot" style="background:var(--wf-red)"></span>
-            <span class="login-preview-dot" style="background:var(--wf-yellow)"></span>
-            <span class="login-preview-dot" style="background:var(--wf-green)"></span>
-            <span style="font-size:10px;color:var(--muted);margin-left:8px">monargo.be · Demo Bouw BV</span>
-          </div>
-          <div class="login-preview-body">
-            <div class="login-preview-sidebar">
-              <div class="lpv-logo">M</div>
-              <div class="lpv-nav-item lpv-active"></div>
-              <div class="lpv-nav-item"></div>
-              <div class="lpv-nav-item"></div>
-              <div class="lpv-nav-item"></div>
-              <div class="lpv-nav-item"></div>
-            </div>
-            <div class="login-preview-main">
-              <div class="lpv-kpis">
-                <div class="lpv-kpi"><div class="lpv-num">5</div><div class="lpv-lbl"></div></div>
-                <div class="lpv-kpi"><div class="lpv-num" style="color:var(--wf-yellow)">11</div><div class="lpv-lbl"></div></div>
-                <div class="lpv-kpi"><div class="lpv-num" style="color:var(--wf-red)">3</div><div class="lpv-lbl"></div></div>
-                <div class="lpv-kpi"><div class="lpv-num" style="color:var(--wf-green)">18</div><div class="lpv-lbl"></div></div>
-              </div>
-              <div class="lpv-rows">
-                <div class="lpv-row"><span class="lpv-badge" style="background:var(--wf-blue-l);color:var(--wf-blue)">Goedkeuring</span><div class="lpv-line"></div><div class="lpv-line short"></div></div>
-                <div class="lpv-row"><span class="lpv-badge" style="background:var(--wf-green-l);color:var(--wf-green)">Voltooid</span><div class="lpv-line"></div><div class="lpv-line short"></div></div>
-                <div class="lpv-row"><span class="lpv-badge" style="background:var(--wf-yellow-l);color:var(--wf-yellow)">Bezig</span><div class="lpv-line"></div><div class="lpv-line short"></div></div>
-              </div>
-            </div>
-          </div>
-        </div>
+      <div class="auth-story-footer">
+        <span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2l6 2.5v4.7c0 4-2.6 7.2-6 8.8-3.4-1.6-6-4.8-6-8.8V4.5L10 2z"/><path d="M7.3 10.1l1.8 1.8 3.7-4"/></svg>Veilige Europese werkruimte</span>
+        <span>Gemaakt voor België</span>
       </div>
+    </aside>
 
-      <div class="login-brand-footer">
-        <div class="login-trust-badge">
-          <svg viewBox="0 0 16 16" fill="#16a34a"><path d="M8 0l1.8 5.5H16l-4.9 3.6 1.8 5.5L8 11l-4.9 3.6 1.8-5.5L0 5.5h6.2z"/></svg>
-          <span data-i18n="hero.trustBE">Vertrouwd in België</span>
-        </div>
-        <div class="login-trust-badge">
-          <svg viewBox="0 0 16 16" fill="#0071e3"><path d="M8 1L2 4v4c0 3.5 2.5 6.8 6 7.7 3.5-.9 6-4.2 6-7.7V4L8 1z"/></svg>
-          <span data-i18n="hero.trustGDPR">AVG / GDPR compliant</span>
-        </div>
-      </div>
-      <div class="login-powered" style="margin-top:14px;font-size:12px;color:var(--muted)">Powered by <strong style="color:var(--text)">Monargo</strong></div>
-    </div>
-
-    <!-- Rechts: login formulier -->
-    <div class="login-panel">
+    <main class="login-panel">
       <div class="login-panel-inner">
+        <div class="auth-mobile-brand"><span class="auth-logo-mark">M</span><strong>Monargo One</strong></div>
         <div class="login-panel-lang" role="group" aria-label="Taalkeuze">
           <button class="lpv-lang-btn active" type="button" id="langNL" data-lang-btn="nl" aria-label="Nederlands" lang="nl">NL</button>
           <button class="lpv-lang-btn" type="button" id="langFR" data-lang-btn="fr" aria-label="Frans" lang="fr">FR</button>
           <button class="lpv-lang-btn" type="button" id="langEN" data-lang-btn="en" aria-label="English" lang="en">EN</button>
         </div>
 
-        <div class="login-form-header" id="loginFormHeader">
-          <h2 class="login-welcome" data-i18n="login.welcome">Welkom terug!</h2>
-          <p class="login-welcome-sub" data-i18n="login.subtitle">Log in bij Monargo One</p>
-        </div>
+        <div class="auth-panel-shell">
+          <div class="login-form-header" id="loginFormHeader">
+            <span class="auth-kicker" data-i18n="login.kicker">Beveiligde werkruimte</span>
+            <h2 class="login-welcome" data-i18n="login.welcome">Welkom terug</h2>
+            <p class="login-welcome-sub" data-i18n="login.subtitle">Ga verder waar je team gebleven is.</p>
+          </div>
 
-        <form id="loginForm" class="login-card">
-          <div class="login-field">
-            <label class="login-label" for="loginEmail" data-i18n="login.email">E-mail</label>
-            <input class="login-input" id="loginEmail" name="email" type="email" required autocomplete="username" placeholder="naam@bedrijf.be" autofocus>
-          </div>
-          <div class="login-field">
-            <label class="login-label" for="loginPassword" style="position:relative">
-              <span data-i18n="login.password">Wachtwoord</span>
-              <a href="#" id="loginForgot" class="login-forgot" style="position:absolute;right:0;top:0;font-size:0.75rem" data-i18n="login.forgot">Vergeten?</a>
-            </label>
-            <input class="login-input" id="loginPassword" name="password" type="password" required autocomplete="current-password" placeholder="••••••••••••">
-          </div>
-          <div class="login-field" id="loginMfaField" style="display:none">
-            <label class="login-label" for="loginMfaCode" data-i18n="login.mfa">Authenticator-code</label>
-            <input class="login-input login-input-mono" id="loginMfaCode" name="mfaCode" inputmode="numeric" autocomplete="one-time-code" maxlength="20" placeholder="6-cijferige code of recovery code" style="letter-spacing:2px;text-align:center" aria-describedby="loginMfaHint">
-            <span id="loginMfaHint" class="login-forgot" style="cursor:default;color:var(--muted)" data-i18n="login.mfaHint">Open je authenticator-app of gebruik een recovery code</span>
-          </div>
-          <div id="loginNotice" class="login-notice" role="alert" aria-live="assertive"></div>
-          <button class="login-btn" type="submit">
-            <span data-i18n="login.submit">Inloggen</span>
-            <svg viewBox="0 0 20 20" fill="currentColor" style="width:16px;height:16px"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
-          </button>
-        </form>
-
-        <div id="ssoLoginRow" style="text-align:center;margin-top:12px">
-          <button type="button" id="ssoLoginBtn" class="login-btn" style="background:#fff;color:var(--ink);border:1px solid var(--line)" data-i18n="login.sso">
-            Inloggen met SSO (Single Sign-On)
-          </button>
-        </div>
-
-        <div id="loginToRegister" style="text-align:center;margin-top:14px;font-size:0.8125rem;color:var(--muted)">
-          <span data-i18n="login.noAccount">Nog geen account?</span> <a href="#" id="showRegister" style="color:var(--wf-blue);font-weight:600" data-i18n="login.registerCompany">Registreer je bedrijf</a>
-        </div>
-
-        <form id="registerForm" class="login-card" style="display:none">
-          <div class="login-form-header" style="margin-bottom:8px">
-            <h2 class="login-welcome" data-i18n="reg.title">Account aanmaken</h2>
-            <p class="login-welcome-sub" data-i18n="reg.subtitle">Probeer Monargo One 14 dagen gratis · kies je pakket</p>
-          </div>
-          <div class="login-field"><label class="login-label" for="registerVat" data-i18n="reg.vat">BTW-/ondernemingsnummer</label>
-            <div style="display:flex;gap:8px">
-              <input class="login-input" name="vatNumber" id="registerVat" placeholder="BE0123.456.789" style="flex:1">
-              <button type="button" class="login-btn" id="registerKboBtn" style="width:auto;padding:0 14px;background:#fff;color:var(--ink);border:1px solid var(--line)" data-i18n="reg.vatFetch">Ophalen</button>
-            </div>
-            <div id="registerKboHint" style="font-size:0.72rem;color:var(--wf-green);margin-top:4px;display:none"></div>
-          </div>
-          <div class="login-field"><label class="login-label" for="regCompany" data-i18n="reg.company">Bedrijfsnaam</label>
-            <input class="login-input" id="regCompany" name="companyName" required placeholder="Mijn Bedrijf BV"></div>
-          <div class="login-field"><label class="login-label" for="regName" data-i18n="reg.yourName">Jouw naam</label>
-            <input class="login-input" id="regName" name="name" placeholder="Voornaam Naam"></div>
-          <div class="login-field"><label class="login-label" for="regEmail" data-i18n="login.email">E-mail</label>
-            <input class="login-input" id="regEmail" name="email" type="email" required autocomplete="email" placeholder="naam@bedrijf.be"></div>
-          <div class="login-field">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:2px">
-              <label class="login-label" style="margin:0" data-i18n="reg.plan">Pakket</label>
-              <div class="reg-period" role="group" aria-label="Facturatieperiode">
-                <button type="button" class="reg-period-btn sel" data-period="year" id="regPeriodYear">Jaarlijks <span class="reg-period-disc">−17%</span></button>
-                <button type="button" class="reg-period-btn" data-period="month" id="regPeriodMonth">Maandelijks</button>
+          <form id="loginForm" class="login-card" novalidate>
+            <div class="login-field">
+              <label class="login-label" for="loginEmail" data-i18n="login.email">Werk-e-mail</label>
+              <div class="auth-input-wrap">
+                <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5.5h14v9H3z"/><path d="M3.5 6l6.5 5 6.5-5"/></svg>
+                <input class="login-input" id="loginEmail" name="email" type="email" required autocomplete="username" inputmode="email" placeholder="naam@bedrijf.be" autofocus>
               </div>
             </div>
-            <div id="registerPlanCards" class="reg-plans"><div class="reg-plans-loading" data-i18n="reg.plansLoading">Pakketten laden…</div></div>
-            <input type="hidden" name="plan" id="registerPlan">
-            <input type="hidden" name="billingPeriod" id="registerBillingPeriod" value="year">
-          </div>
-          <div id="registerAddons" style="display:none"></div>
-          <p id="registerPwHint" class="login-welcome-sub" style="font-size:0.75rem;margin:0 0 4px" data-i18n="reg.pwHint">Je ontvangt een e-mail om je wachtwoord veilig in te stellen.</p>
-          <div id="registerNotice" class="login-notice" role="alert" aria-live="assertive"></div>
-          <button class="login-btn" type="submit" data-i18n="reg.submit">Start gratis proefperiode</button>
-          <div class="reg-trial-note" data-i18n="reg.trialNote">14 dagen gratis · geen betaalgegevens nodig · maandelijks opzegbaar</div>
-          <div style="text-align:center;margin-top:12px;font-size:0.8125rem;color:var(--muted)">
-            <span data-i18n="reg.haveAccount">Al een account?</span> <a href="#" id="showLogin" style="color:var(--wf-blue);font-weight:600" data-i18n="reg.login">Inloggen</a>
-            · <a href="#" id="showResellerApply" style="color:var(--muted)" data-i18n="reg.becomeReseller">Reseller worden</a>
-            · <a href="#" id="showTenantRegister" style="color:var(--muted);display:none" data-i18n="reg.registerCompany">Bedrijf registreren</a>
-          </div>
-        </form>
-
-        <form id="activateForm" class="login-card" style="display:none">
-          <div class="login-form-header" style="margin-bottom:8px">
-            <h2 class="login-welcome" data-i18n="activate.title">Stel je wachtwoord in</h2>
-            <p class="login-welcome-sub" data-i18n="activate.subtitle">Activeer je Monargo One-account</p>
-          </div>
-          <div class="login-field"><label class="login-label" for="actPw" data-i18n="activate.newPw">Nieuw wachtwoord</label>
-            <input class="login-input" id="actPw" name="password" type="password" required autocomplete="new-password" placeholder="Sterk wachtwoord (12+ tekens)" autofocus></div>
-          <div class="login-field"><label class="login-label" for="actPw2" data-i18n="activate.repeatPw">Herhaal wachtwoord</label>
-            <input class="login-input" id="actPw2" name="password2" type="password" required autocomplete="new-password" placeholder="Herhaal je wachtwoord"></div>
-          <div id="activateNotice" class="login-notice" role="alert" aria-live="assertive"></div>
-          <button class="login-btn" type="submit" data-i18n="activate.submit">Wachtwoord instellen &amp; inloggen</button>
-          <div style="text-align:center;margin-top:12px;font-size:0.8125rem;color:var(--muted)">
-            <a href="#" id="activateResend" style="color:var(--wf-blue);font-weight:600" data-i18n="activate.resend">Activatielink verlopen? Stuur opnieuw</a>
-          </div>
-        </form>
-
-        <form id="resetForm" class="login-card" style="display:none">
-          <div class="login-form-header" style="margin-bottom:8px">
-            <h2 class="login-welcome" data-i18n="reset.title">Nieuw wachtwoord</h2>
-            <p class="login-welcome-sub" data-i18n="reset.subtitle">Kies een nieuw wachtwoord voor je account</p>
-          </div>
-          <div class="login-field"><label class="login-label" for="resPw" data-i18n="activate.newPw">Nieuw wachtwoord</label>
-            <input class="login-input" id="resPw" name="password" type="password" required autocomplete="new-password" placeholder="Sterk wachtwoord (12+ tekens)" autofocus></div>
-          <div class="login-field"><label class="login-label" for="resPw2" data-i18n="activate.repeatPw">Herhaal wachtwoord</label>
-            <input class="login-input" id="resPw2" name="password2" type="password" required autocomplete="new-password" placeholder="Herhaal je wachtwoord"></div>
-          <div id="resetNotice" class="login-notice" role="alert" aria-live="assertive"></div>
-          <button class="login-btn" type="submit" data-i18n="reset.submit">Wachtwoord opslaan &amp; inloggen</button>
-          <div style="text-align:center;margin-top:12px;font-size:0.8125rem;color:var(--muted)">
-            <a href="#" id="resetToLogin" style="color:var(--wf-blue);font-weight:600" data-i18n="reset.backToLogin">Terug naar inloggen</a>
-          </div>
-        </form>
-
-        <details class="login-demo-section" id="loginDemoSection">
-          <summary class="login-demo-summary" data-i18n="login.demoTry">Liever eerst de demo proberen?</summary>
-          <div class="login-demo-roles">
-            <button class="login-role-btn" type="button" data-demo-email="admin@demobouw.be">
-              <span style="font-size:1.25rem"></span>
-              <div><strong style="font-size:0.8125rem;color:var(--ink)">Admin</strong><div style="font-size:0.7rem;color:var(--muted);margin-top:1px">Volledig beheer</div></div>
+            <div class="login-field">
+              <div class="auth-label-row">
+                <label class="login-label" for="loginPassword" data-i18n="login.password">Wachtwoord</label>
+                <a href="#" id="loginForgot" class="login-forgot" data-i18n="login.forgot">Wachtwoord vergeten?</a>
+              </div>
+              <div class="auth-input-wrap">
+                <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="8" width="12" height="9" rx="2"/><path d="M7 8V6a3 3 0 016 0v2"/></svg>
+                <input class="login-input" id="loginPassword" name="password" type="password" required autocomplete="current-password" placeholder="Je wachtwoord">
+                <button type="button" class="auth-visibility" data-toggle-password="loginPassword" aria-label="Wachtwoord tonen">
+                  <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2.5 10s2.5-4 7.5-4 7.5 4 7.5 4-2.5 4-7.5 4-7.5-4-7.5-4z"/><circle cx="10" cy="10" r="1.8"/></svg>
+                </button>
+              </div>
+            </div>
+            <div class="login-field auth-mfa" id="loginMfaField" hidden>
+              <label class="login-label" for="loginMfaCode" data-i18n="login.mfa">Authenticator-code</label>
+              <input class="login-input login-input-mono" id="loginMfaCode" name="mfaCode" inputmode="numeric" autocomplete="one-time-code" maxlength="20" placeholder="6 cijfers of recovery code" aria-describedby="loginMfaHint">
+              <span id="loginMfaHint" class="auth-field-hint" data-i18n="login.mfaHint">Open je authenticator-app of gebruik een recovery code.</span>
+            </div>
+            <div id="loginNotice" class="login-notice" role="alert" aria-live="assertive"></div>
+            <button class="login-btn" id="loginSubmit" type="submit">
+              <span data-submit-label data-i18n="login.submit">Inloggen</span>
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M11 6l4 4-4 4"/></svg>
             </button>
-            <button class="login-role-btn" type="button" data-demo-email="manager@demobouw.be">
-              <span style="font-size:1.25rem"></span>
-              <div><strong style="font-size:0.8125rem;color:var(--ink)">Manager</strong><div style="font-size:0.7rem;color:var(--muted);margin-top:1px">Team &amp; planning</div></div>
-            </button>
-            <button class="login-role-btn" type="button" data-demo-email="jan@demobouw.be">
-              <span style="font-size:1.25rem"></span>
-              <div><strong style="font-size:0.8125rem;color:var(--ink)">Medewerker</strong><div style="font-size:0.7rem;color:var(--muted);margin-top:1px">Mobiele view</div></div>
-            </button>
-            <button class="login-role-btn" type="button" data-demo-email="super@monargo.be">
-              <span style="font-size:1.25rem"></span>
-              <div><strong style="font-size:0.8125rem;color:var(--ink)">Super Admin</strong><div style="font-size:0.7rem;color:var(--muted);margin-top:1px">Platform beheer</div></div>
-            </button>
-          </div>
-        </details>
+          </form>
 
-        <div class="login-legal">
-          <a href="/privacy.html" target="_blank" rel="noopener" data-i18n="login.privacy">Privacybeleid</a>
-          <span aria-hidden="true">·</span>
-          <a href="/voorwaarden.html" target="_blank" rel="noopener" data-i18n="login.terms">Algemene voorwaarden</a>
+          <div id="ssoLoginRow" class="auth-sso-row">
+            <div class="auth-divider"><span data-i18n="login.or">of</span></div>
+            <button type="button" id="ssoLoginBtn" class="auth-secondary-btn">
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2l6 2.5v4.7c0 4-2.6 7.2-6 8.8-3.4-1.6-6-4.8-6-8.8V4.5L10 2z"/><path d="M7.2 10h5.6"/></svg>
+              <span data-i18n="login.sso">Inloggen met bedrijfs-SSO</span>
+            </button>
+            <div id="ssoInline" class="auth-inline-panel" hidden>
+              <label class="login-label" for="ssoEmail" data-i18n="login.ssoEmail">Werk-e-mail voor SSO</label>
+              <div class="auth-inline-actions">
+                <input class="login-input" id="ssoEmail" type="email" autocomplete="email" placeholder="naam@bedrijf.be">
+                <button type="button" class="auth-compact-btn" id="ssoContinue" data-i18n="login.continue">Verder</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="loginToRegister" class="auth-switch">
+            <span data-i18n="login.noAccount">Nog geen account?</span>
+            <a href="#" id="showRegister" data-i18n="login.registerCompany">Start je bedrijfsaccount</a>
+          </div>
+
+          <form id="forgotForm" class="login-card auth-flow-card" hidden novalidate>
+            <button type="button" class="auth-back-link" id="forgotToLogin"><span>←</span><span data-i18n="auth.backLogin">Terug naar inloggen</span></button>
+            <div class="login-form-header">
+              <span class="auth-kicker" data-i18n="forgot.kicker">Account herstellen</span>
+              <h2 class="login-welcome" data-i18n="forgot.title">Wachtwoord vergeten?</h2>
+              <p class="login-welcome-sub" data-i18n="forgot.subtitle">Vul je e-mailadres in. Je bestaande wachtwoord blijft ongewijzigd tot je zelf een reset afrondt.</p>
+            </div>
+            <div class="login-field">
+              <label class="login-label" for="forgotEmail" data-i18n="login.email">Werk-e-mail</label>
+              <input class="login-input" id="forgotEmail" name="email" type="email" required autocomplete="email" placeholder="naam@bedrijf.be">
+            </div>
+            <div id="forgotNotice" class="login-notice" role="status" aria-live="polite"></div>
+            <button type="submit" class="login-btn" id="forgotSubmit"><span data-submit-label data-i18n="forgot.submit">Herstellink aanvragen</span></button>
+          </form>
+
+          <form id="registerForm" class="login-card auth-flow-card auth-register-card" hidden novalidate>
+            <button type="button" class="auth-back-link" id="showLogin"><span>←</span><span data-i18n="auth.backLogin">Terug naar inloggen</span></button>
+            <div class="login-form-header">
+              <span class="auth-kicker" data-i18n="reg.kicker">14 dagen gratis proberen</span>
+              <h2 class="login-welcome" data-i18n="reg.title">Maak je bedrijfsaccount</h2>
+              <p class="login-welcome-sub" data-i18n="reg.subtitle">Drie korte stappen. Geen betaalkaart nodig.</p>
+            </div>
+
+            <div class="auth-step-nav" role="tablist" aria-label="Registratiestappen">
+              <button type="button" class="active" data-reg-go="1"><i>1</i><span data-i18n="reg.stepCompany">Bedrijf</span></button>
+              <button type="button" data-reg-go="2"><i>2</i><span data-i18n="reg.stepContact">Contact</span></button>
+              <button type="button" data-reg-go="3"><i>3</i><span data-i18n="reg.stepPlan">Pakket</span></button>
+            </div>
+
+            <section class="auth-reg-step active" data-reg-step="1">
+              <div class="auth-step-copy"><strong data-i18n="reg.companyTitle">Start met je onderneming</strong><span data-i18n="reg.companyText">We gebruiken dit voor je werkruimte en facturatiedocumenten.</span></div>
+              <div class="login-field">
+                <label class="login-label" for="registerVat" data-i18n="reg.vat">BTW-/ondernemingsnummer</label>
+                <div class="auth-inline-actions">
+                  <input class="login-input" name="vatNumber" id="registerVat" placeholder="BE0123.456.789" autocomplete="off">
+                  <button type="button" class="auth-compact-btn" id="registerKboBtn" data-i18n="reg.vatFetch">Ophalen</button>
+                </div>
+                <div id="registerKboHint" class="auth-field-hint" hidden></div>
+              </div>
+              <div class="login-field">
+                <label class="login-label" for="regCompany" data-i18n="reg.company">Bedrijfsnaam</label>
+                <input class="login-input" id="regCompany" name="companyName" required autocomplete="organization" placeholder="Mijn Bedrijf BV">
+              </div>
+            </section>
+
+            <section class="auth-reg-step" data-reg-step="2" hidden>
+              <div class="auth-step-copy"><strong data-i18n="reg.contactTitle">Wie beheert de werkruimte?</strong><span data-i18n="reg.contactText">Dit wordt het eerste beheerdersaccount van je organisatie.</span></div>
+              <div class="login-field">
+                <label class="login-label" for="regName" data-i18n="reg.yourName">Jouw naam</label>
+                <input class="login-input" id="regName" name="name" required autocomplete="name" placeholder="Voornaam Naam">
+              </div>
+              <div class="login-field">
+                <label class="login-label" for="regEmail" data-i18n="login.email">Werk-e-mail</label>
+                <input class="login-input" id="regEmail" name="email" type="email" required autocomplete="email" inputmode="email" placeholder="naam@bedrijf.be">
+              </div>
+              <div id="registerMailHint" class="auth-info-note">
+                <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2l6 2.5v4.7c0 4-2.6 7.2-6 8.8-3.4-1.6-6-4.8-6-8.8V4.5L10 2z"/><path d="M10 7v4M10 14h.01"/></svg>
+                <span data-i18n="reg.activationHint">Je kiest pas een wachtwoord via een veilige activatielink. We slaan hier geen tijdelijk wachtwoord op.</span>
+              </div>
+            </section>
+
+            <section class="auth-reg-step" data-reg-step="3" hidden>
+              <div class="auth-step-copy"><strong data-i18n="reg.planTitle">Kies wat vandaag past</strong><span data-i18n="reg.planText">Je kunt later altijd wisselen of uitbreiden.</span></div>
+              <div class="auth-plan-heading">
+                <label class="login-label" data-i18n="reg.plan">Pakket</label>
+                <div class="reg-period" role="group" aria-label="Facturatieperiode">
+                  <button type="button" class="reg-period-btn sel" data-period="year" id="regPeriodYear">Jaarlijks <span class="reg-period-disc">−17%</span></button>
+                  <button type="button" class="reg-period-btn" data-period="month" id="regPeriodMonth">Maandelijks</button>
+                </div>
+              </div>
+              <div id="registerPlanCards" class="reg-plans"><div class="reg-plans-loading" data-i18n="reg.plansLoading">Pakketten laden…</div></div>
+              <input type="hidden" name="plan" id="registerPlan">
+              <input type="hidden" name="billingPeriod" id="registerBillingPeriod" value="year">
+              <div id="registerAddons" hidden></div>
+              <div class="reg-trial-note" data-i18n="reg.trialNote">14 dagen gratis · geen betaalgegevens · stop wanneer je wilt</div>
+            </section>
+
+            <div id="registerNotice" class="login-notice" role="alert" aria-live="assertive"></div>
+            <div class="auth-reg-actions">
+              <button type="button" class="auth-secondary-btn" id="registerBack" hidden data-i18n="auth.back">Terug</button>
+              <span></span>
+              <button type="button" class="login-btn" id="registerNext"><span data-i18n="login.continue">Verder</span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M11 6l4 4-4 4"/></svg></button>
+              <button class="login-btn" id="registerSubmit" type="submit" hidden><span data-submit-label data-i18n="reg.submit">Start gratis proefperiode</span></button>
+            </div>
+            <div class="auth-partner-link"><a href="#" id="showResellerApply" hidden data-i18n="reg.becomeReseller">Reseller worden</a><a href="#" id="showTenantRegister" hidden data-i18n="reg.registerCompany">Bedrijf registreren</a></div>
+          </form>
+
+          <section id="registerSuccess" class="auth-success-card" hidden aria-live="polite">
+            <span class="auth-success-icon">✓</span>
+            <span class="auth-kicker" data-i18n="reg.successKicker">Account aangemaakt</span>
+            <h2 data-i18n="reg.successTitle">Je werkruimte wacht op activatie</h2>
+            <p id="registerSuccessText"></p>
+            <div id="registerSuccessMailState" class="auth-info-note"></div>
+            <a id="registerActivationLink" class="login-btn" href="#" hidden data-i18n="reg.activateTest">Account activeren in testomgeving</a>
+            <button type="button" class="auth-secondary-btn" id="registerSuccessLogin" data-i18n="auth.backLogin">Terug naar inloggen</button>
+          </section>
+
+          <form id="activateForm" class="login-card auth-flow-card" hidden novalidate>
+            <div class="login-form-header">
+              <span class="auth-kicker" data-i18n="activate.kicker">Laatste stap</span>
+              <h2 class="login-welcome" data-i18n="activate.title">Kies je wachtwoord</h2>
+              <p class="login-welcome-sub" data-i18n="activate.subtitle">Activeer je Monargo One-account veilig.</p>
+            </div>
+            <div class="login-field"><label class="login-label" for="actPw" data-i18n="activate.newPw">Nieuw wachtwoord</label>
+              <div class="auth-input-wrap"><input class="login-input" id="actPw" name="password" type="password" minlength="12" required autocomplete="new-password" placeholder="Minimaal 12 tekens" autofocus><button type="button" class="auth-visibility" data-toggle-password="actPw" aria-label="Wachtwoord tonen">Tonen</button></div></div>
+            <div class="auth-password-meter" data-password-meter="actPw"><span></span><span></span><span></span><small data-i18n="auth.passwordHint">Gebruik 12+ tekens, hoofdletters, cijfers en een teken.</small></div>
+            <div class="login-field"><label class="login-label" for="actPw2" data-i18n="activate.repeatPw">Herhaal wachtwoord</label>
+              <input class="login-input" id="actPw2" name="password2" type="password" minlength="12" required autocomplete="new-password" placeholder="Herhaal je wachtwoord"></div>
+            <div id="activateNotice" class="login-notice" role="alert" aria-live="assertive"></div>
+            <button class="login-btn" type="submit"><span data-submit-label data-i18n="activate.submit">Wachtwoord instellen &amp; inloggen</span></button>
+            <button type="button" id="activateResend" class="auth-text-btn" data-i18n="activate.resend">Activatielink verlopen? Vraag een nieuwe aan</button>
+          </form>
+
+          <form id="resetForm" class="login-card auth-flow-card" hidden novalidate>
+            <div class="login-form-header">
+              <span class="auth-kicker" data-i18n="reset.kicker">Account herstellen</span>
+              <h2 class="login-welcome" data-i18n="reset.title">Kies een nieuw wachtwoord</h2>
+              <p class="login-welcome-sub" data-i18n="reset.subtitle">Je huidige wachtwoord verandert pas wanneer dit lukt.</p>
+            </div>
+            <div class="login-field"><label class="login-label" for="resPw" data-i18n="activate.newPw">Nieuw wachtwoord</label>
+              <div class="auth-input-wrap"><input class="login-input" id="resPw" name="password" type="password" minlength="12" required autocomplete="new-password" placeholder="Minimaal 12 tekens" autofocus><button type="button" class="auth-visibility" data-toggle-password="resPw" aria-label="Wachtwoord tonen">Tonen</button></div></div>
+            <div class="auth-password-meter" data-password-meter="resPw"><span></span><span></span><span></span><small data-i18n="auth.passwordHint">Gebruik 12+ tekens, hoofdletters, cijfers en een teken.</small></div>
+            <div class="login-field"><label class="login-label" for="resPw2" data-i18n="activate.repeatPw">Herhaal wachtwoord</label>
+              <input class="login-input" id="resPw2" name="password2" type="password" minlength="12" required autocomplete="new-password" placeholder="Herhaal je wachtwoord"></div>
+            <div id="resetNotice" class="login-notice" role="alert" aria-live="assertive"></div>
+            <button class="login-btn" type="submit"><span data-submit-label data-i18n="reset.submit">Wachtwoord opslaan &amp; inloggen</span></button>
+            <button type="button" id="resetToLogin" class="auth-text-btn" data-i18n="reset.backToLogin">Terug naar inloggen</button>
+          </form>
+
+          <details class="login-demo-section" id="loginDemoSection">
+            <summary class="login-demo-summary" data-i18n="login.demoTry">Een demo-account gebruiken</summary>
+            <div class="login-demo-roles">
+              <button class="login-role-btn" type="button" data-demo-email="admin@demobouw.be"><span>A</span><div><strong>Admin</strong><small>Volledig beheer</small></div></button>
+              <button class="login-role-btn" type="button" data-demo-email="manager@demobouw.be"><span>M</span><div><strong>Manager</strong><small>Team &amp; planning</small></div></button>
+              <button class="login-role-btn" type="button" data-demo-email="jan@demobouw.be"><span>W</span><div><strong>Medewerker</strong><small>Mobiele werkdag</small></div></button>
+              <button class="login-role-btn" type="button" data-demo-email="super@monargo.be"><span>S</span><div><strong>Superadmin</strong><small>Platformbeheer</small></div></button>
+            </div>
+          </details>
+
+          <div class="login-legal">
+            <a href="/privacy.html" target="_blank" rel="noopener" data-i18n="login.privacy">Privacy</a>
+            <span aria-hidden="true">·</span>
+            <a href="/voorwaarden.html" target="_blank" rel="noopener" data-i18n="login.terms">Voorwaarden</a>
+            <span aria-hidden="true">·</span><span>© Monargo</span>
+          </div>
         </div>
       </div>
-    </div>
+    </main>
   </section>
 
   <!-- ══════════════════════════════════════════════════════════
