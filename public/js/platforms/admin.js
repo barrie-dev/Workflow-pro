@@ -119,49 +119,101 @@
     const sectors = data.sectors || []; const teamSizes = data.teamSizes || [];
     const ov = document.createElement("div");
     ov.id = "admObWizard";
-    ov.style.cssText = "position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:16px;";
+    ov.className = "adm-onboarding-overlay";
     ov.innerHTML = `
-      <div style="background:#fff;border-radius:16px;max-width:560px;width:100%;max-height:92vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
-        <div style="padding:20px 22px;border-bottom:1px solid var(--gray-100)">
-          <h2 style="margin:0;font-size:18px;color:var(--gray-900)">Welkom bij Monargo One</h2>
-          <p style="margin:6px 0 0;font-size:13px;color:var(--gray-500)">Vul je bedrijfsgegevens aan zodat we ${esc(t.name || "je organisatie")} correct kunnen instellen.</p>
+      <div class="adm-onboarding-dialog" role="dialog" aria-modal="true" aria-labelledby="admObTitle">
+        <div class="adm-onboarding-head">
+          <span class="adm-onboarding-mark">M</span>
+          <div>
+            <span class="adm-eyebrow">Welkom in je werkruimte</span>
+            <h2 id="admObTitle">Maak Monargo One van jou</h2>
+            <p>Drie korte stappen. Daarna kun je meteen je eerste klant of team toevoegen.</p>
+          </div>
         </div>
-        <form id="admObForm" style="padding:20px 22px;display:flex;flex-direction:column;gap:14px">
-          <div class="adm-form-group"><label>Sector</label>
-            <select name="sector" required>
-              <option value="">Kies je sector…</option>
-              ${sectors.map(s => `<option value="${esc(s.key)}" ${t.sector===s.key?"selected":""}>${esc(s.label)}</option>`).join("")}
-            </select></div>
-          <div class="adm-form-group"><label>Teamgrootte</label>
-            <select name="teamSize" required>
-              <option value="">Aantal medewerkers…</option>
-              ${teamSizes.map(s => `<option value="${esc(s)}" ${t.teamSize===s?"selected":""}>${esc(s)} medewerkers</option>`).join("")}
-            </select></div>
-          <div class="adm-form-section">Facturatiegegevens ${ip.vat ? "(via KBO opgehaald)" : ""}</div>
-          <div class="adm-form-row" style="display:flex;gap:10px">
-            <div class="adm-form-group" style="flex:1"><label>BTW-nummer</label><input name="vat" value="${esc(ip.vat||"")}" placeholder="BE0123.456.789"></div>
-            <div class="adm-form-group" style="flex:1"><label>Ondernemingsnr.</label><input name="companyNumber" value="${esc(ip.companyNumber||"")}" placeholder="0123.456.789"></div>
-          </div>
-          <div class="adm-form-group"><label>Straat + nummer</label><input name="street" value="${esc(ip.street||"")}" placeholder="Kerkstraat 12"></div>
-          <div class="adm-form-row" style="display:flex;gap:10px">
-            <div class="adm-form-group" style="width:120px"><label>Postcode</label><input name="zip" value="${esc(ip.zip||"")}" placeholder="9000"></div>
-            <div class="adm-form-group" style="flex:1"><label>Gemeente</label><input name="city" value="${esc(ip.city||"")}" placeholder="Gent"></div>
-          </div>
-          <div class="adm-form-group"><label>Facturatie-e-mail</label><input name="billingEmail" type="email" value="${esc(t.billingEmail||"")}" placeholder="facturatie@bedrijf.be"></div>
-          <div class="adm-form-section">Contactpersoon</div>
-          <div class="adm-form-row" style="display:flex;gap:10px">
-            <div class="adm-form-group" style="flex:1"><label>Naam</label><input name="contactName" value="${esc(ct.contactName||"")}" placeholder="Voornaam Naam"></div>
-            <div class="adm-form-group" style="flex:1"><label>Functie</label><input name="contactRole" value="${esc(ct.contactRole||"")}" placeholder="Zaakvoerder"></div>
-          </div>
-          <div class="adm-form-group"><label>Telefoon</label><input name="phone" value="${esc(ct.phone||"")}" placeholder="+32 ..."></div>
-          <div id="admObErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:8px;font-size:12px"></div>
-          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
-            <button type="button" class="adm-btn adm-btn-secondary" id="admObLater">Later invullen</button>
-            <button type="submit" class="adm-btn adm-btn-primary">Opslaan &amp; starten</button>
+        <div class="adm-onboarding-progress" aria-label="Onboarding voortgang">
+          <button type="button" class="active" data-ob-go="1"><i>1</i><span>Organisatie<small>Jouw werkcontext</small></span></button>
+          <button type="button" data-ob-go="2"><i>2</i><span>Facturatie<small>Correcte documenten</small></span></button>
+          <button type="button" data-ob-go="3"><i>3</i><span>Contact<small>Wie mogen we helpen?</small></span></button>
+        </div>
+        <form id="admObForm" class="adm-onboarding-form">
+          <section class="adm-onboarding-step active" data-ob-step="1">
+            <div class="adm-onboarding-step-copy"><span>Stap 1 van 3</span><h3>Hoe ziet je organisatie eruit?</h3><p>We passen terminologie en de dagelijkse werkruimte hierop aan.</p></div>
+            <div class="adm-onboarding-grid">
+              <div class="adm-form-group"><label>Sector</label>
+                <select name="sector" required>
+                  <option value="">Kies je sector…</option>
+                  ${sectors.map(s => `<option value="${esc(s.key)}" ${t.sector===s.key?"selected":""}>${esc(s.label)}</option>`).join("")}
+                </select></div>
+              <div class="adm-form-group"><label>Teamgrootte</label>
+                <select name="teamSize" required>
+                  <option value="">Aantal medewerkers…</option>
+                  ${teamSizes.map(s => `<option value="${esc(s)}" ${t.teamSize===s?"selected":""}>${esc(s)} medewerkers</option>`).join("")}
+                </select></div>
+            </div>
+            <div class="adm-onboarding-note"><span>✓</span><p><b>Je kunt dit later wijzigen.</b> Modules en gegevens worden niet automatisch verwijderd.</p></div>
+          </section>
+          <section class="adm-onboarding-step" data-ob-step="2" hidden>
+            <div class="adm-onboarding-step-copy"><span>Stap 2 van 3</span><h3>Gegevens voor correcte facturen</h3><p>${ip.vat ? "De beschikbare KBO-gegevens zijn alvast ingevuld. Controleer ze even." : "Vul de basisgegevens in die op offertes en facturen horen."}</p></div>
+            <div class="adm-form-row">
+              <div class="adm-form-group"><label>BTW-nummer</label><input name="vat" value="${esc(ip.vat||"")}" placeholder="BE0123.456.789"></div>
+              <div class="adm-form-group"><label>Ondernemingsnummer</label><input name="companyNumber" value="${esc(ip.companyNumber||"")}" placeholder="0123.456.789"></div>
+            </div>
+            <div class="adm-form-group"><label>Straat + nummer</label><input name="street" value="${esc(ip.street||"")}" placeholder="Kerkstraat 12"></div>
+            <div class="adm-form-row adm-onboarding-address">
+              <div class="adm-form-group"><label>Postcode</label><input name="zip" value="${esc(ip.zip||"")}" placeholder="9000"></div>
+              <div class="adm-form-group"><label>Gemeente</label><input name="city" value="${esc(ip.city||"")}" placeholder="Gent"></div>
+            </div>
+            <div class="adm-form-group"><label>Facturatie-e-mail</label><input name="billingEmail" type="email" value="${esc(t.billingEmail||"")}" placeholder="facturatie@bedrijf.be"></div>
+          </section>
+          <section class="adm-onboarding-step" data-ob-step="3" hidden>
+            <div class="adm-onboarding-step-copy"><span>Stap 3 van 3</span><h3>Wie is ons eerste aanspreekpunt?</h3><p>We gebruiken dit alleen voor onboarding, support en belangrijke accountmeldingen.</p></div>
+            <div class="adm-form-row">
+              <div class="adm-form-group"><label>Naam</label><input name="contactName" value="${esc(ct.contactName||"")}" placeholder="Voornaam Naam"></div>
+              <div class="adm-form-group"><label>Functie</label><input name="contactRole" value="${esc(ct.contactRole||"")}" placeholder="Zaakvoerder"></div>
+            </div>
+            <div class="adm-form-group"><label>Telefoon</label><input name="phone" value="${esc(ct.phone||"")}" placeholder="+32 ..."></div>
+            <div class="adm-onboarding-ready"><span>✓</span><div><b>Klaar om te starten</b><p>Hierna kies je zelf of je eerst een klant, een teamlid of je overzicht opent.</p></div></div>
+          </section>
+          <div id="admObErr" class="adm-onboarding-error" role="alert"></div>
+          <div class="adm-onboarding-actions">
+            <button type="button" class="adm-btn adm-btn-ghost" id="admObLater">Later</button>
+            <span></span>
+            <button type="button" class="adm-btn adm-btn-secondary" id="admObBack" hidden>Terug</button>
+            <button type="button" class="adm-btn adm-btn-primary" id="admObNext">Volgende <span aria-hidden="true">→</span></button>
+            <button type="submit" class="adm-btn adm-btn-primary" id="admObSubmit" hidden>Opslaan &amp; starten</button>
           </div>
         </form>
       </div>`;
     document.body.appendChild(ov);
+    let obStep = 1;
+    const setObStep = next => {
+      obStep = Math.max(1, Math.min(3, Number(next) || 1));
+      ov.querySelectorAll("[data-ob-step]").forEach(panel => {
+        const active = Number(panel.dataset.obStep) === obStep;
+        panel.hidden = !active; panel.classList.toggle("active", active);
+      });
+      ov.querySelectorAll("[data-ob-go]").forEach(button => {
+        const index = Number(button.dataset.obGo);
+        button.classList.toggle("active", index === obStep);
+        button.classList.toggle("done", index < obStep);
+      });
+      document.getElementById("admObBack").hidden = obStep === 1;
+      document.getElementById("admObNext").hidden = obStep === 3;
+      document.getElementById("admObSubmit").hidden = obStep !== 3;
+    };
+    const validateObStep = () => {
+      const panel = ov.querySelector(`[data-ob-step="${obStep}"]`);
+      const invalid = [...panel.querySelectorAll("input,select")].find(field => !field.checkValidity());
+      if (invalid) { invalid.reportValidity(); invalid.focus(); return false; }
+      return true;
+    };
+    ov.querySelectorAll("[data-ob-go]").forEach(button => button.addEventListener("click", () => {
+      const next = Number(button.dataset.obGo);
+      if (next > obStep && !validateObStep()) return;
+      setObStep(next);
+    }));
+    document.getElementById("admObNext").addEventListener("click", () => { if (validateObStep()) setObStep(obStep + 1); });
+    document.getElementById("admObBack").addEventListener("click", () => setObStep(obStep - 1));
     document.getElementById("admObLater").addEventListener("click", () => {
       try { localStorage.setItem(obSnoozeKey(), new Date().toISOString()); } catch (_) {}
       ov.remove();
@@ -185,12 +237,26 @@
       };
       try {
         await api("POST", "/onboarding", payload);
-        ov.remove();
+        ov.querySelector(".adm-onboarding-dialog").innerHTML = `
+          <div class="adm-onboarding-launch">
+            <span class="adm-onboarding-launch-icon">✓</span>
+            <span class="adm-eyebrow">Je werkruimte staat klaar</span>
+            <h2>Waar wil je beginnen?</h2>
+            <p>Start met wat voor ${esc(t.name || "je organisatie")} vandaag het meest logisch is.</p>
+            <div class="adm-onboarding-launch-grid">
+              <button type="button" id="admObLaunchCustomer"><i>+</i><span><b>Eerste klant toevoegen</b><small>Start daarna meteen een offerte of werkbon</small></span><em>→</em></button>
+              <button type="button" id="admObLaunchTeam"><i>+</i><span><b>Team instellen</b><small>Voeg medewerkers toe en plan hun werk</small></span><em>→</em></button>
+            </div>
+            <button type="button" class="adm-btn adm-btn-ghost" id="admObLaunchOverview">Eerst naar mijn overzicht</button>
+          </div>`;
         try { localStorage.removeItem(obSnoozeKey()); } catch (_) {}
         document.getElementById("admObNudge")?.remove();
-        window.showToast && window.showToast("Bedrijfsgegevens opgeslagen.", "success");
+        document.getElementById("admObLaunchCustomer")?.addEventListener("click", () => { ov.remove(); openCustomerDrawer(null); });
+        document.getElementById("admObLaunchTeam")?.addEventListener("click", () => { ov.remove(); switchView("employees"); });
+        document.getElementById("admObLaunchOverview")?.addEventListener("click", () => { ov.remove(); switchView("dashboard"); });
+        window.showToast && window.showToast("Bedrijfsgegevens opgeslagen", "success");
       } catch (err) {
-        const eEl = document.getElementById("admObErr"); eEl.style.display = "block"; eEl.textContent = err.message;
+        const eEl = document.getElementById("admObErr"); eEl.classList.add("visible"); eEl.textContent = err.message;
       }
     });
   }
@@ -4798,7 +4864,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
     const isEdit = !!quote;
     document.getElementById("admDrawerTitle").textContent = isEdit ? `${tA("adm.quote.singular","Offerte")} ${quote.number}` : tA("adm.quote.newTitle","Nieuwe offerte");
 
-    const lineRow = (l) => `<div class="q-line-row" style="display:grid;grid-template-columns:1fr 60px 90px 60px 24px;gap:6px;align-items:center;margin-bottom:8px;">
+    const lineRow = (l) => `<div class="q-line-row adm-document-line">
         <input placeholder="${tA("adm.quote.description","Omschrijving")}" value="${esc(l.description||"")}" class="q-line-desc" ${isEdit?"disabled":""}>
         <input type="number" min="1" value="${l.qty||1}" class="q-line-qty" style="text-align:right" ${isEdit?"disabled":""}>
         <input type="number" min="0" step="0.01" value="${Number(l.unitPrice||0).toFixed(2)}" class="q-line-price" style="text-align:right" ${isEdit?"disabled":""}>
@@ -4879,6 +4945,9 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
     document.getElementById("qForm")?.addEventListener("submit", async e => {
       e.preventDefault();
       const errEl=document.getElementById("qFormErr");
+      const submitButton=e.submitter;
+      const submitLabel=submitButton?.textContent;
+      if(submitButton){ submitButton.disabled=true; submitButton.textContent=tA("adm.busy","Bezig…"); }
       const body=Object.fromEntries(new FormData(e.target).entries());
       body.lines=Array.from(document.querySelectorAll(".q-line-row")).map(r=>({
         description:r.querySelector(".q-line-desc").value,
@@ -4887,7 +4956,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
         vatRate:Number(r.querySelector(".q-line-vat").value||21)
       }));
       try { await api("POST", "/offertes", body); closeDrawer(); renderOffertes(); window.showToast && window.showToast(tA("adm.quote.createdToast","Offerte aangemaakt"),"success"); }
-      catch(err){ if(errEl){errEl.textContent=err.message;errEl.style.display="";} }
+      catch(err){ if(errEl){errEl.textContent=err.message;errEl.style.display="";} if(submitButton){submitButton.disabled=false;submitButton.textContent=submitLabel;} }
     });
   }
 
@@ -5148,7 +5217,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
 </form>`;
 
     function renderInvLine(l, i) {
-      return `<div class="inv-line-row" style="display:grid;grid-template-columns:1fr 60px 90px 60px 24px;gap:6px;align-items:center;margin-bottom:8px;" data-idx="${i}">
+      return `<div class="inv-line-row adm-document-line" data-idx="${i}">
         <input placeholder="${tA("adm.quote.description","Omschrijving")}" value="${esc(l.description||"")}" class="inv-line-desc">
         <input type="number" min="1" placeholder="Qty" value="${l.qty||1}" class="inv-line-qty" style="text-align:right">
         <input type="number" min="0" step="0.01" placeholder="${tA("adm.inv.price","Prijs")}" value="${Number(l.unitPrice||0).toFixed(2)}" class="inv-line-price" style="text-align:right">
@@ -5231,6 +5300,9 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
     document.getElementById("invForm")?.addEventListener("submit", async e => {
       e.preventDefault();
       const errEl = document.getElementById("invFormErr");
+      const submitButton = e.submitter;
+      const submitLabel = submitButton?.textContent;
+      if (submitButton) { submitButton.disabled = true; submitButton.textContent = tA("adm.busy","Bezig…"); }
       const fd = new FormData(e.target);
       const body = Object.fromEntries(fd.entries());
       // Collect lines
@@ -5247,6 +5319,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
         window.showToast && window.showToast(tA("adm.inv.createdToast","Factuur aangemaakt"), "success");
       } catch(err) {
         if (errEl) { errEl.textContent = err.message; errEl.style.display = ""; }
+        if (submitButton) { submitButton.disabled = false; submitButton.textContent = submitLabel; }
       }
     });
   }

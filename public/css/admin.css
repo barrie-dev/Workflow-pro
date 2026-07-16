@@ -780,3 +780,90 @@ button.adm-board-row:hover { background:#fafafe; }
   .person-capacity { grid-column:1/4; }
   .adm-empty-slot { opacity:1; }
 }
+
+/* ── Monargo onboarding · compacte driestapsflow ─────────────────────────── */
+.adm-onboarding-overlay { position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center; padding:22px; background:rgba(28,30,52,.54); backdrop-filter:blur(8px); }
+.adm-onboarding-dialog { width:min(760px,100%); max-height:94vh; overflow:auto; background:#fff; border:1px solid rgba(255,255,255,.7); border-radius:18px; box-shadow:0 28px 80px rgba(31,33,60,.24); }
+.adm-onboarding-head { display:flex; align-items:center; gap:14px; padding:22px 26px 18px; border-bottom:1px solid #eeeef3; }
+.adm-onboarding-mark { width:42px; height:42px; display:grid; place-items:center; flex:none; color:#fff; background:#5b5ce2; border-radius:12px; font-size:17px; font-weight:750; letter-spacing:-.06em; box-shadow:0 8px 20px rgba(91,92,226,.24); }
+.adm-onboarding-head .adm-eyebrow { margin-bottom:3px; font-size:9px; }
+.adm-onboarding-head h2 { margin:0; color:#24263a; font-size:20px; line-height:1.2; letter-spacing:-.35px; }
+.adm-onboarding-head p { margin:4px 0 0; color:#77798c; font-size:11.5px; }
+.adm-onboarding-progress { display:grid; grid-template-columns:repeat(3,1fr); gap:5px; padding:12px 20px; background:#fafafe; border-bottom:1px solid #eeeef3; }
+.adm-onboarding-progress button { min-width:0; display:flex; align-items:center; gap:9px; padding:8px 10px; color:#8a8c9d; background:transparent; border:0; border-radius:9px; font:inherit; text-align:left; cursor:pointer; }
+.adm-onboarding-progress button:hover { color:#4d4f65; background:#f1f1f7; }
+.adm-onboarding-progress button.active { color:#4f51c7; background:#eeeeff; }
+.adm-onboarding-progress button.done { color:#28785d; }
+.adm-onboarding-progress button i { width:25px; height:25px; display:grid; place-items:center; flex:none; background:#fff; border:1px solid #dfe0e8; border-radius:50%; font-size:9px; font-style:normal; font-weight:700; }
+.adm-onboarding-progress button.active i { color:#fff; background:#5b5ce2; border-color:#5b5ce2; }
+.adm-onboarding-progress button.done i { color:#fff; background:#43a47d; border-color:#43a47d; }
+.adm-onboarding-progress button span,.adm-onboarding-progress button small { display:block; min-width:0; }
+.adm-onboarding-progress button span { overflow:hidden; font-size:10px; font-weight:650; text-overflow:ellipsis; white-space:nowrap; }
+.adm-onboarding-progress button small { margin-top:2px; color:#a1a3b1; font-size:8px; font-weight:450; }
+.adm-onboarding-form { padding:24px 26px 20px; }
+.adm-onboarding-step { min-height:306px; animation:adm-onboarding-in .2s ease; }
+.adm-onboarding-step[hidden] { display:none; }
+@keyframes adm-onboarding-in { from { opacity:0; transform:translateX(7px); } to { opacity:1; transform:none; } }
+.adm-onboarding-step-copy { margin-bottom:20px; }
+.adm-onboarding-step-copy>span { color:#5b5ce2; font-size:8.5px; font-weight:750; text-transform:uppercase; letter-spacing:.08em; }
+.adm-onboarding-step-copy h3 { margin:4px 0 5px; color:#24263a; font-size:17px; letter-spacing:-.25px; }
+.adm-onboarding-step-copy p { margin:0; color:#77798c; font-size:11.5px; line-height:1.45; }
+.adm-onboarding-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.adm-onboarding-form .adm-form-group { margin:0 0 13px; }
+.adm-onboarding-form .adm-form-group label { display:block; margin:0 0 5px; color:#55576b; font-size:9.5px; font-weight:650; }
+.adm-onboarding-form input,.adm-onboarding-form select { min-height:39px; width:100%; padding:0 11px; color:#303245; background:#fff; border:1px solid #dfe0e8; border-radius:9px; font:500 11px var(--font-sans); outline:none; }
+.adm-onboarding-form input:focus,.adm-onboarding-form select:focus { border-color:#7779e7; box-shadow:0 0 0 3px rgba(91,92,226,.1); }
+.adm-onboarding-form .adm-form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.adm-onboarding-form .adm-onboarding-address { grid-template-columns:132px 1fr; }
+.adm-onboarding-note,.adm-onboarding-ready { display:flex; align-items:flex-start; gap:9px; padding:11px 12px; color:#4d4f65; background:#f7f7fb; border:1px solid #ebebf1; border-radius:10px; }
+.adm-onboarding-note { margin-top:10px; }
+.adm-onboarding-note>span,.adm-onboarding-ready>span { width:21px; height:21px; display:grid; place-items:center; flex:none; color:#28785d; background:#eaf7f1; border-radius:50%; font-size:9px; font-weight:800; }
+.adm-onboarding-note p,.adm-onboarding-ready p { margin:0; font-size:9px; line-height:1.45; }
+.adm-onboarding-ready { margin-top:8px; padding:14px; background:#f3f3ff; border-color:#e2e2ff; }
+.adm-onboarding-ready b { display:block; margin-bottom:3px; color:#3f418b; font-size:10.5px; }
+.adm-onboarding-error { display:none; margin:4px 0 12px; padding:9px 11px; color:#be3e4d; background:#fff0f2; border-radius:8px; font-size:10px; }
+.adm-onboarding-error.visible { display:block; }
+.adm-onboarding-actions { display:grid; grid-template-columns:auto 1fr auto auto; align-items:center; gap:8px; padding-top:16px; border-top:1px solid #eeeef3; }
+.adm-onboarding-actions .adm-btn { min-height:36px; }
+.adm-onboarding-launch { padding:42px 38px 36px; text-align:center; }
+.adm-onboarding-launch-icon { width:48px; height:48px; display:grid; place-items:center; margin:0 auto 15px; color:#fff; background:#43a47d; border-radius:15px; font-size:18px; box-shadow:0 10px 24px rgba(67,164,125,.22); }
+.adm-onboarding-launch .adm-eyebrow { margin-bottom:5px; }
+.adm-onboarding-launch h2 { margin:0; color:#24263a; font-size:22px; letter-spacing:-.4px; }
+.adm-onboarding-launch>p { margin:7px 0 24px; color:#77798c; font-size:11.5px; }
+.adm-onboarding-launch-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:17px; text-align:left; }
+.adm-onboarding-launch-grid button { display:grid; grid-template-columns:32px 1fr auto; align-items:center; gap:10px; min-height:76px; padding:13px; color:#3c3e53; background:#fff; border:1px solid #dfe0e8; border-radius:11px; font:inherit; cursor:pointer; }
+.adm-onboarding-launch-grid button:hover { background:#fafafe; border-color:#bfc0ec; box-shadow:0 8px 22px rgba(36,38,58,.07); }
+.adm-onboarding-launch-grid button i { width:32px; height:32px; display:grid; place-items:center; color:#5b5ce2; background:#f0f0ff; border-radius:9px; font-size:16px; font-style:normal; }
+.adm-onboarding-launch-grid button b,.adm-onboarding-launch-grid button small { display:block; }
+.adm-onboarding-launch-grid button b { font-size:10.5px; }
+.adm-onboarding-launch-grid button small { margin-top:3px; color:#8b8d9f; font-size:8.5px; line-height:1.35; }
+.adm-onboarding-launch-grid button em { color:#898b9d; font-style:normal; }
+
+@media (max-width:640px) {
+  .adm-onboarding-overlay { align-items:flex-end; padding:0; }
+  .adm-onboarding-dialog { max-height:96vh; border-radius:18px 18px 0 0; }
+  .adm-onboarding-head { padding:18px; }
+  .adm-onboarding-progress { padding:9px 10px; }
+  .adm-onboarding-progress button { justify-content:center; padding:7px 5px; }
+  .adm-onboarding-progress button span { display:none; }
+  .adm-onboarding-form { padding:20px 18px 16px; }
+  .adm-onboarding-step { min-height:0; }
+  .adm-onboarding-grid,.adm-onboarding-form .adm-form-row,.adm-onboarding-form .adm-onboarding-address,.adm-onboarding-launch-grid { grid-template-columns:1fr; }
+  .adm-onboarding-actions { grid-template-columns:auto 1fr auto; }
+  .adm-onboarding-actions #admObBack { grid-column:1; grid-row:2; }
+  .adm-onboarding-actions #admObNext,.adm-onboarding-actions #admObSubmit { grid-column:3; grid-row:2; }
+  .adm-onboarding-launch { padding:30px 18px 24px; }
+}
+
+/* Offerte- en factuurregels blijven bruikbaar in de mobiele drawer. */
+.adm-document-line { display:grid; grid-template-columns:minmax(150px,1fr) 60px 90px 62px 26px; align-items:center; gap:6px; margin-bottom:8px; }
+.adm-document-line input,.adm-document-line select { min-width:0; }
+.adm-document-line button { min-width:24px; min-height:28px; }
+@media (max-width:560px) {
+  .adm-document-line { grid-template-columns:1fr 1fr 70px 30px; padding:10px; background:#fafafe; border:1px solid #e7e7ee; border-radius:10px; }
+  .adm-document-line .q-line-desc,.adm-document-line .inv-line-desc { grid-column:1/5; }
+  .adm-document-line .q-line-qty,.adm-document-line .inv-line-qty { grid-column:1; }
+  .adm-document-line .q-line-price,.adm-document-line .inv-line-price { grid-column:2; }
+  .adm-document-line .q-line-vat,.adm-document-line .inv-line-vat { grid-column:3; }
+  .adm-document-line .q-line-del,.adm-document-line .inv-line-del { grid-column:4; }
+}

@@ -18,6 +18,17 @@ test("admin: klanttraject is zichtbaar en navigeerbaar", () => {
   assert.match(source, /if \(created\.customer\?\.id\) renderCustomerDetail/);
 });
 
+test("admin: onboarding is een korte flow met logische vervolgstappen", () => {
+  const source = read("public/js/platforms/admin.js");
+  for (const step of ["1", "2", "3"]) assert.match(source, new RegExp(`data-ob-step=\\"${step}\\"`));
+  assert.match(source, /validateObStep/);
+  assert.match(source, /admObLaunchCustomer/);
+  assert.match(source, /admObLaunchTeam/);
+  assert.match(source, /admObLaunchOverview/);
+  assert.match(source, /openCustomerDrawer\(null\)/);
+  assert.match(source, /switchView\("employees"\)/);
+});
+
 test("admin: snelle acties openen de bedoelde aanmaakflow", () => {
   const source = read("public/js/platforms/admin.js");
   assert.match(source, /data-quick-click="admAddShift"/);
@@ -25,6 +36,17 @@ test("admin: snelle acties openen de bedoelde aanmaakflow", () => {
   assert.match(source, /data-quick-drawer="customer"/);
   assert.match(source, /Na het aanmaken meteen inplannen/);
   assert.match(source, /adm-operations-board/);
+});
+
+test("admin: documentregels en submits zijn mobiel en dubbelklikveilig", () => {
+  const source = read("public/js/platforms/admin.js");
+  const css = read("public/css/admin.css");
+  assert.match(source, /q-line-row adm-document-line/);
+  assert.match(source, /inv-line-row adm-document-line/);
+  assert.match(source, /submitButton\.disabled=true/);
+  assert.match(source, /submitButton\.disabled = true/);
+  assert.match(css, /\.adm-document-line/);
+  assert.match(css, /max-width:560px/);
 });
 
 test("admin: planning ondersteunt week, dag en capaciteit zonder vaste klantvoortgangslijn", () => {
