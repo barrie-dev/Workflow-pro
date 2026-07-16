@@ -2484,10 +2484,12 @@ function setAuthView(viewId) {
   const header = document.getElementById("loginFormHeader");
   const sso = document.getElementById("ssoLoginRow");
   const registerLink = document.getElementById("loginToRegister");
+  const trialBanner = document.getElementById("authTrialBanner");
   const demo = document.getElementById("loginDemoSection");
   if (header) header.hidden = !loginOnly;
   if (sso) sso.hidden = !loginOnly;
   if (registerLink) registerLink.hidden = !loginOnly;
+  if (trialBanner) trialBanner.hidden = !loginOnly;
   if (demo) demo.hidden = !loginOnly;
   if (loginOnly) {
     const ssoInline = document.getElementById("ssoInline");
@@ -2673,6 +2675,41 @@ let _plansLoaded = false;
 let _registerStep = 1;
 const regForm = document.getElementById("registerForm");
 
+function setAuthI18nText(element, key, fallback = "") {
+  if (!element) return;
+  element.setAttribute("data-i18n", key);
+  element.textContent = window.wfpI18n?.t(key) || fallback || element.textContent;
+}
+
+function prefillRegisterPlan(key) {
+  const hidden = document.getElementById("registerPlan");
+  if (hidden) hidden.value = key || "";
+  document.querySelectorAll("#registerPlanCards .reg-plan-card").forEach(card => {
+    const active = card.dataset.plan === key;
+    card.classList.toggle("sel", active);
+    card.setAttribute("aria-checked", active ? "true" : "false");
+  });
+}
+
+async function loadAuthOffer() {
+  try {
+    const result = await api("/api/plans");
+    const trialDays = Number(result.trialDays) || 14;
+    document.querySelectorAll("[data-trial-days]").forEach(node => { node.textContent = String(trialDays); });
+    (result.plans || []).forEach(plan => {
+      const card = document.querySelector(`[data-auth-plan-key="${CSS.escape(plan.key)}"]`);
+      const price = card?.querySelector("[data-auth-plan-price]");
+      if (!price) return;
+      const monthly = Number(plan.baseMonthly);
+      price.textContent = Number.isFinite(monthly) ? `€${Math.round(monthly)}` : (window.wfpI18n?.t("auth.customPrice") || "Op maat");
+    });
+  } catch (_) {
+    // De zichtbare fallback komt uit dezelfde cataloguswaarden als de huidige release.
+  }
+}
+
+loadAuthOffer();
+
 function registerLastStep() { return _registerMode === "reseller" ? 2 : 3; }
 
 function setRegisterStep(next) {
@@ -2714,31 +2751,39 @@ function showRegisterForm(mode) {
   _registerMode = mode;
   setAuthView("registerForm");
   const planStep = regForm?.querySelector('[data-reg-step="3"]');
-  const title = regForm.querySelector(".login-welcome");
-  const sub = regForm.querySelector(".login-welcome-sub");
+  const kicker = document.getElementById("registerKicker");
+  const title = document.getElementById("registerTitle");
+  const sub = document.getElementById("registerSubtitle");
+  const resellerIntro = document.getElementById("resellerIntro");
+  const stepCompany = document.getElementById("registerStepCompany");
+  const stepContact = document.getElementById("registerStepContact");
   const btn = document.getElementById("registerSubmit")?.querySelector("[data-submit-label]");
   showAuthNotice(document.getElementById("registerNotice"), "");
   // Toggle-links: toon altijd het pad naar de ANDERE modus, zodat een verkeerde
   // keuze (reseller i.p.v. bedrijf of omgekeerd) altijd terug te draaien is.
   const toReseller = document.getElementById("showResellerApply");
   const toTenant = document.getElementById("showTenantRegister");
-  // Zet zowel het data-i18n-attribuut (zodat een latere taalwissel het juiste
-  // label kiest) als de actuele tekst via wfpI18n.t().
-  const i18n = window.wfpI18n;
-  const setI18n = (el, key) => { if (!el) return; el.setAttribute("data-i18n", key); el.textContent = i18n ? i18n.t(key) : el.textContent; };
   if (mode === "reseller") {
     if (planStep) planStep.hidden = true;
-    setI18n(title, "reseller.title");
-    setI18n(sub, "reseller.subtitle");
-    setI18n(btn, "reseller.submit");
+    if (resellerIntro) resellerIntro.hidden = false;
+    setAuthI18nText(kicker, "reseller.kicker", "Partner worden");
+    setAuthI18nText(title, "reseller.title", "Reseller worden");
+    setAuthI18nText(sub, "reseller.subtitle", "Vraag in twee korte stappen je partneraccount aan.");
+    setAuthI18nText(stepCompany, "reseller.stepCompany", "Partnerbedrijf");
+    setAuthI18nText(stepContact, "reseller.stepContact", "Contact");
+    setAuthI18nText(btn, "reseller.submit", "Aanvraag indienen");
     if (toReseller) toReseller.hidden = true;
     if (toTenant) toTenant.hidden = false;
   } else {
     if (planStep) planStep.hidden = false;
-    setI18n(title, "reg.title");
-    setI18n(sub, "reg.subtitle");
-    setI18n(btn, "reg.submit");
-    if (toReseller) toReseller.hidden = true; // partnerpad blijft bereikbaar via directe deep-link
+    if (resellerIntro) resellerIntro.hidden = true;
+    setAuthI18nText(kicker, "reg.kicker", "14 dagen gratis proberen");
+    setAuthI18nText(title, "reg.title", "Maak je bedrijfsaccount");
+    setAuthI18nText(sub, "reg.subtitle", "Kies je pakket en zet je werkruimte in drie korte stappen klaar.");
+    setAuthI18nText(stepCompany, "reg.stepCompany", "Bedrijf");
+    setAuthI18nText(stepContact, "reg.stepContact", "Contact");
+    setAuthI18nText(btn, "reg.submit", "Start gratis proefperiode");
+    if (toReseller) toReseller.hidden = false;
     if (toTenant) toTenant.hidden = true;
     loadRegisterPlans();
   }
@@ -2869,9 +2914,16 @@ document.getElementById("registerKboBtn")?.addEventListener("click", async () =>
   }
 });
 document.getElementById("showRegister")?.addEventListener("click", e => { e.preventDefault(); showRegisterForm("tenant"); });
+document.getElementById("authTrialStart")?.addEventListener("click", () => showRegisterForm("tenant"));
+document.getElementById("showResellerApplyLogin")?.addEventListener("click", () => showRegisterForm("reseller"));
 document.getElementById("showResellerApply")?.addEventListener("click", e => { e.preventDefault(); showRegisterForm("reseller"); });
 document.getElementById("showTenantRegister")?.addEventListener("click", e => { e.preventDefault(); showRegisterForm("tenant"); });
 document.getElementById("showLogin")?.addEventListener("click", e => { e.preventDefault(); showLoginForm(); });
+
+document.querySelectorAll("[data-auth-plan]").forEach(button => button.addEventListener("click", () => {
+  prefillRegisterPlan(button.dataset.authPlan);
+  showRegisterForm("tenant");
+}));
 
 document.getElementById("registerBack")?.addEventListener("click", () => setRegisterStep(_registerStep - 1));
 document.getElementById("registerNext")?.addEventListener("click", () => {
@@ -2908,6 +2960,8 @@ regForm?.addEventListener("submit", async event => {
   try {
     if (_registerMode === "reseller") {
       await api("/api/resellers/apply", { method: "POST", body: JSON.stringify({ name: companyName || name, email }) });
+      setAuthI18nText(document.getElementById("registerSuccessKicker"), "reseller.successKicker", "Aanvraag ontvangen");
+      setAuthI18nText(document.getElementById("registerSuccessTitle"), "reseller.successTitle", "Je partneraanvraag wordt beoordeeld");
       setAuthView("registerSuccess");
       document.getElementById("registerSuccessText").textContent = `De partneraanvraag voor ${companyName || name} is ontvangen.`;
       const state = document.getElementById("registerSuccessMailState");
@@ -2921,6 +2975,8 @@ regForm?.addEventListener("submit", async event => {
     const result = await api("/api/auth/register", { method: "POST", body: JSON.stringify({ companyName, name, email, plan, vatNumber, billingPeriod }) });
     const loginEmail = document.getElementById("loginEmail");
     if (loginEmail) loginEmail.value = email;
+    setAuthI18nText(document.getElementById("registerSuccessKicker"), "reg.successKicker", "Account aangemaakt");
+    setAuthI18nText(document.getElementById("registerSuccessTitle"), "reg.successTitle", "Je werkruimte wacht op activatie");
     setAuthView("registerSuccess");
     const text = document.getElementById("registerSuccessText");
     if (text) text.textContent = `${companyName} is aangemaakt voor ${email}. Je bestaande wachtwoorden zijn niet gewijzigd.`;
