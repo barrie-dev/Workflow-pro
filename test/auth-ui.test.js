@@ -102,7 +102,7 @@ test("auth: publieke Render-preview is herkenbaar als test, niet als ontwikkelom
   assert.match(source, /const TEST_HOSTS = \["workflow-pro-w6v1\.onrender\.com"\]/);
   assert.match(source, /if \(isTestHost && \(!env \|\| env === "production"\)\) env = "test"/);
   assert.match(source, /bar\.textContent = "Testomgeving"/);
-  assert.match(css, /\.env-banner\{position:fixed;left:auto;right:18px;bottom:16px/);
+  assert.match(css, /\.env-banner\{position:fixed;left:auto;right:152px;top:34px;bottom:auto/);
   assert.doesNotMatch(css, /\.env-banner\{position:fixed;left:0;right:0/);
 });
 
