@@ -58,6 +58,7 @@ test("auth: desktopcompositie gebruikt ruimte en verbergt de productpreview niet
   assert.match(css.slice(spacious), /min-height: 1120px/);
   assert.match(css.slice(spacious), /\.auth-workspace-card \{\s+display: block;/);
   assert.match(css.slice(spacious), /grid-template-columns: minmax\(720px, 58fr\) minmax\(560px, 42fr\)/);
+  assert.match(css.slice(spacious), /\.auth-signup-choices \{[^}]*grid-template-columns: 1fr;/s);
 });
 
 test("auth: registratie is een navigeerbare driestappenflow", () => {
