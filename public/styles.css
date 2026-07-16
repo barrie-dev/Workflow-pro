@@ -578,12 +578,13 @@ body.authenticated #loginPage {
 .reg-plans { display: flex; flex-direction: column; gap: 8px; }
 .reg-plans-loading { font-size: 12.5px; color: var(--muted); padding: 6px 2px; }
 .reg-plan-card {
-  display: flex; align-items: center; gap: 12px;
+  display: block;
   padding: 14px;
   border: 1px solid var(--line); border-radius: var(--radius-card);
   background: var(--surface); cursor: pointer;
   transition: border-color .15s, box-shadow .15s, background .15s;
 }
+.reg-plan-summary { display: flex; align-items: center; gap: 12px; }
 .reg-plan-card:hover { border-color: #9bcbff; background: #fafcff; }
 .reg-plan-card.sel { border-color: var(--wf-blue); background: var(--blue-soft); box-shadow: 0 8px 24px rgba(0,113,227,.10); }
 .reg-plan-radio {
@@ -598,6 +599,14 @@ body.authenticated #loginPage {
 .reg-plan-desc { font-size: 11.5px; color: var(--muted); margin-top: 2px; line-height: 1.4; }
 .reg-plan-price { font-size: 14px; font-weight: 600; color: var(--ink); white-space: nowrap; }
 .reg-plan-price small { font-size: 11px; color: var(--muted); font-weight: 500; }
+.reg-plan-billing { display: block; margin: 7px 0 0 28px; font-size: 10.5px; color: var(--muted); }
+.reg-plan-details { display: block; margin: 13px 0 0 28px; padding-top: 12px; border-top: 1px solid var(--line); }
+.reg-plan-details-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.reg-plan-details-head strong { color: var(--ink); font-size: 11.5px; font-weight: 650; }
+.reg-plan-details-head small { color: var(--muted); font-size: 10px; }
+.reg-plan-features { margin-top: 10px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px 14px; }
+.reg-plan-features > span { min-width: 0; display: flex; align-items: flex-start; gap: 7px; color: var(--text); font-size: 11px; line-height: 1.35; }
+.reg-plan-features i { width: 16px; height: 16px; display: inline-grid; place-items: center; flex: 0 0 auto; border-radius: 50%; background: var(--wf-blue-l); color: var(--wf-blue); font-size: 9px; font-style: normal; font-weight: 800; }
 .reg-addons { font-size: 12px; color: var(--text); background: var(--gray-50); border: 1px solid var(--line); border-radius: 12px; padding: 11px 13px; }
 .reg-addons-title { font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
 .reg-addons-row { display: flex; justify-content: space-between; gap: 10px; padding: 2px 0; }
@@ -969,10 +978,12 @@ label {
 .mon-radio-card.selected .mon-radio-check{display:flex;}
 
 /* Omgevings-banner (dev/test/staging) — nooit in production. Klik-neutraal. */
-.env-banner{position:fixed;left:0;right:0;bottom:0;height:22px;z-index:99998;display:flex;align-items:center;justify-content:center;gap:8px;font:600 11px/1 var(--font-sans);letter-spacing:.06em;text-transform:uppercase;color:#fff;pointer-events:none;box-shadow:0 -1px 4px rgba(11,19,32,.14)}
-.env-banner-dev{background:#475569}
-.env-banner-test{background:#f59e0b}
-.env-banner-staging{background:#7c3aed}
+.env-banner{position:fixed;left:auto;right:18px;bottom:16px;width:auto;height:32px;padding:0 12px;z-index:99998;display:flex;align-items:center;justify-content:center;gap:8px;border:1px solid rgba(255,255,255,.16);border-radius:999px;background:rgba(11,19,32,.88);backdrop-filter:blur(14px);font:650 10.5px/1 var(--font-sans);letter-spacing:.02em;color:#fff;pointer-events:none;box-shadow:0 8px 24px rgba(11,19,32,.2)}
+.env-banner::before{content:"";width:7px;height:7px;border-radius:50%;background:#94a3b8;box-shadow:0 0 0 3px rgba(148,163,184,.14)}
+.env-banner-dev::before{background:#94a3b8}
+.env-banner-test::before{background:#f59e0b;box-shadow:0 0 0 3px rgba(245,158,11,.16)}
+.env-banner-staging::before{background:#a78bfa;box-shadow:0 0 0 3px rgba(167,139,250,.16)}
+@media (max-width:640px){.env-banner{right:12px;bottom:12px;height:28px;padding:0 10px;font-size:9.5px}}
 
 .ops-form,
 .ops-tool {
