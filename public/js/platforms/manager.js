@@ -67,12 +67,12 @@
   <aside class="mgr-sidebar" id="mgrSidebar">
     <div class="mgr-logo">
       <span class="mgr-logo-mark">M</span>
-      <span class="mgr-logo-text">Monargo One</span>
+      <span class="mgr-logo-text">Monargo <small>Manager</small></span>
     </div>
     <nav class="mgr-nav">
       <a class="mgr-nav-item active" data-view="dashboard" href="#" tabindex="0">
         <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
-        <span data-i18n="nav.dashboard">Dashboard</span>
+        <span data-i18n="nav.dashboard">Dagstart</span>
       </a>
       <a class="mgr-nav-item" data-view="team" href="#">
         <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
@@ -164,7 +164,7 @@
 <style>
 #platform-manager { font-family:var(--font-sans); height:100vh; overflow:hidden; }
 .mgr-layout { display:flex; height:100vh; background:var(--bg); }
-.mgr-sidebar { width:220px; background:var(--ink); color:rgba(255,255,255,.80); border-right:none; display:flex; flex-direction:column; flex-shrink:0; }
+.mgr-sidebar { width:248px; background:linear-gradient(180deg,#091525 0%,#0b1320 62%,#101d30 100%); color:rgba(255,255,255,.80); border-right:none; display:flex; flex-direction:column; flex-shrink:0; }
 .mgr-logo { display:flex; align-items:center; gap:10px; padding:20px 16px; border-bottom:1px solid rgba(255,255,255,.10); }
 .mgr-logo-mark { background:var(--wf-blue); color:#fff; width:32px; height:32px; border-radius:9px; display:grid; place-items:center; font-weight:600; font-size:13px; flex-shrink:0; box-shadow:0 4px 12px rgba(0,113,227,.35); }
 .mgr-logo-text { font-weight:600; font-size:15px; letter-spacing:-.2px; color:#fff; }
@@ -173,7 +173,7 @@
 .mgr-nav-item svg { width:18px; height:18px; fill:currentColor; flex-shrink:0; opacity:.7; }
 .mgr-nav-item:hover { background:rgba(255,255,255,.07); color:#fff; }
 .mgr-nav-item:hover svg { opacity:1; }
-.mgr-nav-item.active { background:var(--wf-blue); color:#fff; font-weight:600; box-shadow:0 4px 12px rgba(0,113,227,.30); }
+.mgr-nav-item.active { background:linear-gradient(135deg,#0b7bf1,#0067d4); color:#fff; font-weight:600; box-shadow:0 8px 22px rgba(0,113,227,.28),inset 0 1px 0 rgba(255,255,255,.18); }
 .mgr-nav-item.active svg { opacity:1; }
 .mgr-badge { margin-left:auto; background:var(--wf-red); color:#fff; border-radius:999px; font-size:11px; padding:1px 6px; font-weight:600; }
 .mgr-nav-flyout { position:fixed; z-index:240; min-width:200px; max-width:270px; background:var(--ink); border:1px solid rgba(255,255,255,.12); border-radius:12px; padding:8px; box-shadow:var(--shadow-elevated); display:none; flex-direction:column; gap:2px; }
@@ -205,6 +205,18 @@
 .mgr-menu-toggle svg { width:20px; height:20px; fill:currentColor; display:block; }
 .mgr-page-title { font-size:21px; font-weight:600; flex:1; color:var(--ink); margin:0; letter-spacing:-.4px; }
 .mgr-content { flex:1; overflow-y:auto; padding:22px 24px; }
+.mgr-daystart { position:relative; overflow:hidden; display:flex; align-items:center; justify-content:space-between; gap:24px; margin-bottom:18px; padding:22px; border:1px solid rgba(0,113,227,.14); border-radius:20px; background:linear-gradient(120deg,#fff 0%,#f7fbff 58%,#edf6ff 100%); box-shadow:0 18px 55px rgba(11,19,32,.055); }
+.mgr-daystart::after { content:""; position:absolute; width:240px; height:240px; right:-90px; top:-150px; border-radius:50%; background:radial-gradient(circle,rgba(0,113,227,.17),transparent 68%); pointer-events:none; }
+.mgr-daystart-copy { position:relative; z-index:1; }
+.mgr-daystart-copy small { color:var(--wf-blue); font-size:10px; font-weight:750; letter-spacing:.09em; text-transform:uppercase; }
+.mgr-daystart-copy h2 { margin:4px 0 5px; color:var(--ink); font-size:23px; letter-spacing:-.6px; }
+.mgr-daystart-copy p { margin:0; color:var(--muted); font-size:12.5px; }
+.mgr-focus-actions { position:relative; z-index:1; display:grid; grid-template-columns:repeat(4,minmax(112px,1fr)); gap:8px; }
+.mgr-focus-btn { border:1px solid rgba(11,19,32,.08); border-radius:13px; background:rgba(255,255,255,.88); min-height:58px; padding:9px 11px; color:var(--ink); text-align:left; font-family:inherit; cursor:pointer; transition:transform .16s,box-shadow .16s,border-color .16s; }
+.mgr-focus-btn:hover { transform:translateY(-2px); border-color:rgba(0,113,227,.28); box-shadow:0 12px 28px rgba(11,19,32,.08); }
+.mgr-focus-btn strong,.mgr-focus-btn small { display:block; }
+.mgr-focus-btn strong { font-size:12px; }
+.mgr-focus-btn small { margin-top:2px; color:var(--muted); font-size:9.5px; }
 .mgr-btn { min-height:40px; padding:0 18px; border-radius:var(--radius-sm); font-size:14px; font-weight:600; cursor:pointer; border:1px solid transparent; font-family:inherit; line-height:1; white-space:nowrap; display:inline-flex; align-items:center; justify-content:center; gap:6px; transition:background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
 .mgr-btn:focus-visible { outline:none; box-shadow:0 0 0 2px rgba(0,113,227,.20); }
 .mgr-btn-primary { background:var(--wf-blue); color:#fff; }
@@ -251,7 +263,50 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
   .mgr-sidebar { position:fixed; left:0; top:0; z-index:100; transform:translateX(-100%); transition:transform .25s; }
   .mgr-sidebar.open { transform:translateX(0); }
   .mgr-menu-toggle { display:block; }
+  .mgr-daystart { align-items:flex-start; flex-direction:column; }
+  .mgr-focus-actions { width:100%; grid-template-columns:repeat(2,minmax(0,1fr)); }
 }
+
+/* Monargo Workspace · manager */
+.mgr-layout { background:#f6f6f9; }
+.mgr-sidebar { width:232px; background:#202343; }
+.mgr-logo { min-height:64px; padding:14px; border-color:rgba(255,255,255,.08); }
+.mgr-logo-mark { width:34px; height:34px; background:#5b5ce2; border-radius:9px; box-shadow:none; }
+.mgr-logo-text { color:#fff; font-size:14px; }
+.mgr-logo-text small { margin-left:4px; color:rgba(255,255,255,.45); font-size:9px; }
+.mgr-nav { padding:8px 9px; overflow-y:auto; }
+.mgr-nav-item { min-height:36px; padding:7px 9px; border-radius:7px; color:rgba(255,255,255,.65); font-size:12px; }
+.mgr-nav-item svg { width:16px; height:16px; }
+.mgr-nav-item.active { background:#5b5ce2; box-shadow:none; }
+.mgr-sidebar-footer { padding:12px 14px; }
+.mgr-main { min-width:0; background:#f6f6f9; }
+.mgr-topbar { height:58px; padding:0 20px; background:#fff; border-color:#e7e7ed; backdrop-filter:none; }
+.mgr-page-title { color:#34364b; font-size:15px; }
+.mgr-clockbtn { height:33px; padding:0 11px; border-radius:8px; font-size:10.5px; }
+.mgr-content { padding:20px 24px 36px; }
+.mgr-daystart { min-height:98px; padding:16px 18px; margin-bottom:10px; background:#fff; border:1px solid #e1e2e8; border-radius:12px; box-shadow:none; }
+.mgr-daystart::after { display:none; }
+.mgr-daystart-copy small { color:#595bcd; font-size:8.5px; }
+.mgr-daystart-copy h2 { margin:4px 0; color:#292b40; font-size:22px; }
+.mgr-daystart-copy p { color:#8b8d9e; font-size:10.5px; }
+.mgr-focus-actions { gap:4px; }
+.mgr-focus-btn { min-height:50px; padding:8px 10px; background:#fafafd; border:0; border-radius:8px; }
+.mgr-focus-btn:hover { transform:none; background:#f2f2ff; border-color:transparent; box-shadow:none; }
+.mgr-focus-btn strong { color:#46485d; font-size:9.5px; }
+.mgr-focus-btn small { color:#9294a4; font-size:7.5px; }
+.mgr-kpis { grid-template-columns:repeat(6,minmax(125px,1fr)); gap:9px; margin-bottom:10px; }
+.mgr-kpi { min-height:88px; position:relative; padding:14px 15px; border-color:#e1e2e8; border-radius:11px; overflow:hidden; }
+.mgr-kpi::before { content:""; width:20px; height:3px; position:absolute; top:0; left:15px; background:#5b5ce2; border-radius:0 0 3px 3px; }
+.mgr-kpi:nth-child(2)::before { background:#00a86b; }.mgr-kpi:nth-child(3)::before,.mgr-kpi:nth-child(4)::before { background:#e98c24; }.mgr-kpi:nth-child(5)::before { background:#df5867; }
+.mgr-kpi-link:hover { transform:none; border-color:#cfd0ea; }
+.mgr-kpi-label { margin-bottom:5px; font-size:8.5px; }.mgr-kpi-value { font-size:22px; }.mgr-kpi-sub { font-size:8px; }
+.mgr-card { margin-bottom:10px; border-color:#e1e2e8; border-radius:12px; box-shadow:none; }
+.mgr-card-header { min-height:52px; padding:11px 15px; }.mgr-card-title { font-size:12.5px; }.mgr-card-body { padding:14px; }
+.mgr-team-grid { gap:8px; }.mgr-team-card { padding:12px; border-color:#e4e4ea; border-radius:9px; }.mgr-team-card-name { font-size:11px; }.mgr-team-card-role { font-size:8.5px; }
+.mgr-btn { min-height:35px; padding:0 13px; border-radius:8px; font-size:11px; }.mgr-btn-sm { min-height:29px; padding:0 9px; font-size:9.5px; }
+.mgr-table th { padding:10px 12px; font-size:9px; }.mgr-table td { padding:11px 12px; font-size:11px; }.mgr-status { height:22px; border-radius:5px; font-size:9px; }
+@media (max-width:1200px) { .mgr-kpis { grid-template-columns:repeat(3,1fr); }.mgr-daystart { align-items:flex-start; flex-direction:column; }.mgr-focus-actions { width:100%; } }
+@media (max-width:768px) { .mgr-sidebar { width:270px; }.mgr-content { padding:16px 13px 32px; }.mgr-kpis { grid-template-columns:repeat(2,1fr); } }
 </style>`;
 
     el.querySelectorAll(".mgr-nav-item[data-view]").forEach(a => {
@@ -482,7 +537,20 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     const dash = await api("GET", "/manager/dashboard");
     const content = document.getElementById("mgrContent");
 
+    const hour = new Date().getHours();
+    const greeting = hour < 12 ? "Goedemorgen" : hour < 18 ? "Goedemiddag" : "Goedenavond";
+    const firstName = (document.getElementById("mgrUserName")?.textContent || "").trim().split(" ")[0];
+    const dateLabel = new Intl.DateTimeFormat("nl-BE", { weekday:"long", day:"numeric", month:"long" }).format(new Date());
     content.innerHTML = `
+<section class="mgr-daystart">
+  <div class="mgr-daystart-copy"><small>${esc(dateLabel)}</small><h2>${greeting}${firstName && firstName !== "Manager" ? `, ${esc(firstName)}` : ""}</h2><p>Stuur bij op uitzonderingen en laat je team doorwerken.</p></div>
+  <div class="mgr-focus-actions">
+    <button class="mgr-focus-btn" data-focus-view="planning"><strong>Planning</strong><small>Bezetting bijsturen</small></button>
+    <button class="mgr-focus-btn" data-focus-view="workorders"><strong>Werkbonnen</strong><small>Uitvoering opvolgen</small></button>
+    <button class="mgr-focus-btn" data-focus-view="leaves"><strong>Verlof</strong><small>${dash.pendingLeaves || 0} te verwerken</small></button>
+    <button class="mgr-focus-btn" data-focus-view="expenses"><strong>Onkosten</strong><small>${dash.pendingExpenses || 0} te verwerken</small></button>
+  </div>
+</section>
 <div class="mgr-kpis">
   <div class="mgr-kpi mgr-kpi-link" data-goto="team" title="${tM("mgr.toTeam","Naar team")}">
     <div class="mgr-kpi-label">${tM("nav.team","Team")}</div>
@@ -541,6 +609,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
 </div>`;
 
     document.getElementById("mgrViewTeam")?.addEventListener("click", () => switchView("team"));
+    document.querySelectorAll("[data-focus-view]").forEach(btn => btn.addEventListener("click", () => switchView(btn.dataset.focusView)));
     // KPI-kaarten → doorklikken
     document.querySelectorAll(".mgr-kpi-link").forEach(card => {
       card.addEventListener("click", () => switchView(card.dataset.goto));

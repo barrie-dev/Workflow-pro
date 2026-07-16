@@ -43,14 +43,19 @@ function tenantPaidBreaks(tenant) {
 // Verweesde prikking (vergeten uit te klokken op een vorige dag): sluit af op
 // 23:59 van die dag met status needs_review, zodat de medewerker nooit vast
 // komt te zitten en de beheerder de tijd kan corrigeren.
-function closeStaleClocks(store, tenant, userId, actorEmail) {
-  const todayStr = today();
+function closeStaleClocks(store, tenant, userId, actorEmail, referenceDate = today()) {
+  // Vergelijk met de datum van de actie. Bij een expliciet gedateerde of
+  // geïmporteerde registratie mag de kalenderdatum van de server die registratie
+  // niet automatisch afsluiten.
+  const reference = /^\d{4}-\d{2}-\d{2}$/.test(String(referenceDate || ""))
+    ? String(referenceDate)
+    : today();
   // Zowel canonieke rijen (date + clockIn) als legacy-rijen (ISO clockedIn
   // zonder date) van vóór vandaag worden afgesloten.
   const stale = store.list("clocks", tenant.id).filter(c => {
     if (c.userId !== userId || c.clockOut || c.clockedOut) return false;
     const d = c.date || String(c.clockedIn || "").slice(0, 10);
-    return d && d < todayStr;
+    return d && d < reference;
   });
   stale.forEach(c => {
     const date = c.date || String(c.clockedIn || "").slice(0, 10);
@@ -77,7 +82,7 @@ function closeStaleClocks(store, tenant, userId, actorEmail) {
 
 function clockIn(store, tenant, payload, actor) {
   // Een blijven hangen prikking van gisteren mag inklokken vandaag niet blokkeren.
-  closeStaleClocks(store, tenant, payload.userId || actor.id, actor.email);
+  closeStaleClocks(store, tenant, payload.userId || actor.id, actor.email, payload.date || today());
   const normalized = normalizeClockIn(store, tenant.id, payload, actor, new Date().toTimeString().slice(0, 5));
   const clockUser = store.getUserById ? store.getUserById(normalized.userId) : null;
   const row = store.insert("clocks", {
@@ -111,7 +116,7 @@ function clockOut(store, tenant, payload, actor) {
   if (!active) {
     // Geen prikking van vandaag, maar mogelijk wel een verweesde van eerder:
     // sluit die netjes af zodat de knop niet in een dood spoor eindigt.
-    const closed = closeStaleClocks(store, tenant, userId, actor.email);
+    const closed = closeStaleClocks(store, tenant, userId, actor.email, date);
     if (closed > 0) {
       const latest = store.list("clocks", tenant.id)
         .filter(c => c.userId === userId && c.autoClosed)

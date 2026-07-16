@@ -15,6 +15,7 @@ const { peppolTransportReadiness, buildUbl, validatePeppol } = require("../src/m
 const { liveServiceReadiness } = require("../src/modules/live-services");
 const { importEmployees } = require("../src/modules/imports");
 const { productionConfigRisk } = require("../src/modules/production");
+const { clockIn, clockOut } = require("../src/modules/operations");
 const crypto = require("node:crypto");
 
 class MemAdapter {
@@ -1280,4 +1281,33 @@ test("security: fout wachtwoord tijdens lock blijft geweigerd (423)", () => {
 test("security: onbekend e-mailadres geeft null (geen enumeratie-shortcut)", () => {
   const store = fakeAuthStore([]);
   assert.equal(authMod.login(store, "bestaat-niet@x.be", "wat dan ook"), null);
+});
+
+// ── Tijdregistratie: expliciete actiedatum is leidend ─────────────────────────
+test("clocking: historische clock-in blijft actief tot de bijhorende clock-out", () => {
+  const tenant = { id: "t_clock", name: "Clock test", clockingPrefs: { paidBreaks: false } };
+  const actor = { id: "u_clock", name: "Test gebruiker", email: "clock@test.be" };
+  const store = reviewStore([tenant]);
+
+  const active = clockIn(store, tenant, {
+    userId: actor.id,
+    date: "2026-05-13",
+    clockIn: "08:05"
+  }, actor);
+
+  assert.throws(() => clockIn(store, tenant, {
+    userId: actor.id,
+    date: "2026-05-13",
+    clockIn: "09:00"
+  }, actor), error => error.status === 409);
+  assert.equal(store.get("clocks", active.id).clockOut, null, "dubbele clock-in mag de actieve rij niet auto-afsluiten");
+
+  const completed = clockOut(store, tenant, {
+    userId: actor.id,
+    date: "2026-05-13",
+    clockOut: "16:10"
+  }, actor);
+  assert.equal(completed.clockOut, "16:10");
+  assert.equal(completed.durationMinutes, 485);
+  assert.equal(completed.status, "ready_for_approval");
 });

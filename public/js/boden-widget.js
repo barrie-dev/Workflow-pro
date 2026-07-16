@@ -59,7 +59,7 @@
   function buildShell() {
     if (document.getElementById("bodenFab")) return;
     const fab = document.createElement("button");
-    fab.id = "bodenFab"; fab.title = "Boden · AI-assistent"; fab.innerHTML = '<svg viewBox="0 0 24 24" style="width:26px;height:26px;fill:currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>';
+    fab.id = "bodenFab"; fab.title = "Mona · slimme assistent"; fab.innerHTML = '<span style="font-size:18px;font-weight:750;letter-spacing:-.06em">M</span>';
     fab.addEventListener("click", toggle);
     document.body.appendChild(fab);
 
@@ -68,7 +68,7 @@
     panel.innerHTML = `
       <div class="boden-head">
         <div class="av">B</div>
-        <div><div class="nm">Boden</div><div class="sub">Je AI-assistent</div></div>
+        <div><div class="nm">Mona</div><div class="sub">Je slimme assistent</div></div>
         <button class="x" id="bodenClose" title="Sluiten">×</button>
       </div>
       <div class="boden-body" id="bodenBody"></div>
@@ -82,7 +82,7 @@
     document.getElementById("bodenInput").addEventListener("keydown", e => { if (e.key === "Enter") send(); });
 
     if (!_history.length) {
-      addBot("Hoi! Ik ben **Boden**, je assistent. Vraag me iets over je planning, werkbonnen, klanten, facturen… Ik help binnen jouw rechten.");
+      addBot("Hoi! Ik ben **Mona**, je slimme assistent. Vraag me iets over je planning, werkbonnen, klanten of facturen. Ik help binnen jouw rechten.");
     }
   }
 
@@ -156,7 +156,7 @@
     document.getElementById("bodenSend").disabled = true;
 
     const typing = document.createElement("div");
-    typing.className = "boden-typing"; typing.textContent = "Boden denkt na…";
+    typing.className = "boden-typing"; typing.textContent = "Mona denkt na…";
     bodyEl().appendChild(typing); scroll();
 
     try {
