@@ -3431,15 +3431,14 @@ setTimeout(registerDeepLinkBootstrap, 300);
 
 // ── Omgevings-banner (dev/test/staging) ──────────────────────────────────────
 // Onmiskenbaar tonen op welke omgeving je zit; nooit in echte production.
-// Bekende demo-/dev-hosts (bv. de Render-preview) tonen altijd de dev-banner,
-// ook als APP_ENV daar (nog) op production staat. Zet op zo'n host bij voorkeur
-// ook APP_ENV=dev zodat de guardrails (geen echte mail/Stripe-live) meelopen.
-const DEV_HOSTS = ["workflow-pro-w6v1.onrender.com"];
+// Bekende publieke preview-hosts krijgen het klantvriendelijke QA-label, ook
+// wanneer APP_ENV daar op production staat om de productie-guardrails te testen.
+const TEST_HOSTS = ["workflow-pro-w6v1.onrender.com"];
 (function envBanner() {
-  const isDevHost = DEV_HOSTS.includes(location.hostname);
+  const isTestHost = TEST_HOSTS.includes(location.hostname);
   fetch("/api/health").then(r => r.json()).then(h => {
     let env = h && h.appEnv;
-    if (isDevHost && (!env || env === "production")) env = "dev";
+    if (isTestHost && (!env || env === "production")) env = "test";
     if (!env || env === "production" || document.querySelector(".env-banner")) return;
     const labels = { dev: "Dev · ontwikkelomgeving", test: "Test · QA", staging: "Staging · klant-preview" };
     const bar = document.createElement("div");
@@ -3447,10 +3446,10 @@ const DEV_HOSTS = ["workflow-pro-w6v1.onrender.com"];
     bar.textContent = labels[env] || env;
     document.body.appendChild(bar);
   }).catch(() => {
-    if (!isDevHost || document.querySelector(".env-banner")) return;
+    if (!isTestHost || document.querySelector(".env-banner")) return;
     const bar = document.createElement("div");
-    bar.className = "env-banner env-banner-dev";
-    bar.textContent = "Dev · ontwikkelomgeving";
+    bar.className = "env-banner env-banner-test";
+    bar.textContent = "Test · QA";
     document.body.appendChild(bar);
   });
 })();
