@@ -2710,15 +2710,8 @@ async function loadAuthOffer() {
     const result = await api("/api/plans");
     const trialDays = Number(result.trialDays) || 14;
     document.querySelectorAll("[data-trial-days]").forEach(node => { node.textContent = String(trialDays); });
-    (result.plans || []).forEach(plan => {
-      const card = document.querySelector(`[data-auth-plan-key="${CSS.escape(plan.key)}"]`);
-      const price = card?.querySelector("[data-auth-plan-price]");
-      if (!price) return;
-      const monthly = Number(plan.baseMonthly);
-      price.textContent = Number.isFinite(monthly) ? `€${Math.round(monthly)}` : (window.wfpI18n?.t("auth.customPrice") || "Op maat");
-    });
   } catch (_) {
-    // De zichtbare fallback komt uit dezelfde cataloguswaarden als de huidige release.
+    // De zichtbare trialfallback blijft 14 dagen wanneer de catalogus tijdelijk niet reageert.
   }
 }
 
