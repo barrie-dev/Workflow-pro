@@ -296,12 +296,15 @@
     <!-- Brand -->
     <div class="adm-brand">
       <div class="adm-brand-icon">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M13 3L4 14h7l-1 7 9-11h-7l1-7z" fill="currentColor"/></svg>
+        <span aria-hidden="true">M</span>
       </div>
       <div class="adm-brand-text">
-        <div class="adm-brand-name">Monargo One</div>
-        <div class="adm-brand-tenant" id="admCompanyName">Laden…</div>
+        <div class="adm-brand-name">Monargo <span>One</span></div>
+        <div class="adm-brand-tenant" id="admCompanyName">Workspace laden…</div>
       </div>
+      <button class="adm-sidebar-collapse" id="admSidebarCollapse" type="button" aria-label="Navigatie inklappen" title="Navigatie inklappen">
+        <svg viewBox="0 0 24 24"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+      </button>
     </div>
 
     <nav class="adm-nav" aria-label="Hoofdnavigatie">
@@ -320,10 +323,6 @@
       <a class="adm-nav-item" data-view="planning" href="#">
         <svg viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/></svg>
         <span data-i18n="nav.planning">Planning</span>
-      </a>
-      <a class="adm-nav-item" data-view="appointments" href="#">
-        <svg viewBox="0 0 24 24"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
-        <span data-i18n="nav.appointments">Afspraken</span>
       </a>
       <a class="adm-nav-item" data-view="workorders" href="#">
         <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
@@ -353,11 +352,6 @@
       <a class="adm-nav-item" data-view="customers" href="#">
         <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
         <span data-i18n="nav.customers">Klanten</span>
-      </a>
-      <a class="adm-nav-item" data-view="inbox" href="#">
-        <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 12h-4c0 1.66-1.35 3-3 3s-3-1.34-3-3H5V5h14v10z"/></svg>
-        <span data-i18n="nav.inbox">Klantvragen</span>
-        <span class="adm-nav-badge" id="admInboxBadge" style="display:none">0</span>
       </a>
       <a class="adm-nav-item" data-view="offertes" href="#">
         <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13zM10.5 11.5l1.4 1.4 2.6-2.6.7.7-3.3 3.3-2.1-2.1z"/></svg>
@@ -394,10 +388,6 @@
       </a>
 
       <div class="adm-nav-label" data-i18n="nav.sec.compliance">Compliance</div>
-      <a class="adm-nav-item" data-view="incidents" href="#">
-        <svg viewBox="0 0 24 24"><path d="M12 2L1 21h22L12 2zm1 14h-2v2h2v-2zm0-6h-2v4h2v-4z"/></svg>
-        <span data-i18n="nav.incidents">Werkongevallen</span>
-      </a>
       <a class="adm-nav-item" data-view="ciaw" href="#">
         <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
         <span data-i18n="nav.ciaw">Checkin@Work</span>
@@ -456,7 +446,7 @@
       <!-- Search -->
       <div class="adm-search-box">
         <svg class="adm-search-icon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-        <input type="text" class="adm-search-input" id="admGlobalSearch" data-i18n-ph="nav.searchPh" placeholder="Zoek klant, werkbon, factuur, medewerker…" autocomplete="off">
+        <input type="text" class="adm-search-input" id="admGlobalSearch" data-i18n-ph="nav.searchPh" placeholder="Zoek of vraag Mona om iets te doen…" autocomplete="off">
         <span class="adm-search-kbd">⌘K</span>
         <div class="adm-search-results" id="admSearchResults"></div>
       </div>
@@ -501,6 +491,7 @@
     <div class="adm-page-head" id="admPageHead">
       <h1 class="adm-page-title" id="admPageTitle">Dashboard</h1>
     </div>
+    <div class="adm-flow-nav" id="admFlowNav" aria-label="Commerciële en operationele flow"></div>
     <div class="adm-content" id="admContent">
       <div class="adm-loading"><div class="adm-spinner"></div>Laden…</div>
     </div>
@@ -536,6 +527,19 @@
       document.getElementById("admSidebar").classList.toggle("open");
     });
 
+    // Compacte desktopnavigatie. De voorkeur blijft per browser bewaard.
+    const layout = el.querySelector(".adm-layout");
+    const collapseBtn = document.getElementById("admSidebarCollapse");
+    const applySidebarState = collapsed => {
+      layout.classList.toggle("nav-collapsed", collapsed);
+      collapseBtn?.setAttribute("aria-expanded", String(!collapsed));
+      collapseBtn?.setAttribute("title", collapsed ? "Navigatie uitklappen" : "Navigatie inklappen");
+      localStorage.setItem("monargo_admin_nav_collapsed", collapsed ? "1" : "0");
+      hideNavFlyout(true);
+    };
+    applySidebarState(localStorage.getItem("monargo_admin_nav_collapsed") === "1");
+    collapseBtn?.addEventListener("click", () => applySidebarState(!layout.classList.contains("nav-collapsed")));
+
     // logout
     document.getElementById("admLogoutBtn").addEventListener("click", () => {
       localStorage.removeItem("wfp_token");
@@ -554,9 +558,7 @@
         customers: () => d.customer(null), offertes: () => d.offerte(null),
         facturen: () => d.factuur(null), venues: () => d.venue(null),
         vehicles: () => d.vehicle(null), stock: () => d.stock(null),
-        appointments: () => d.appointment(null),
-        incidents: () => d.incident(null),
-        inbox: () => d.inquiry(null)
+        planning: () => d.shift(null), workorders: () => d.workorder(null)
       };
       if (map[_currentView]) map[_currentView]();
     });
@@ -580,21 +582,42 @@
   // ── Navigation ─────────────────────────────────────────────
   const VIEW_LABELS = {
     dashboard: "Dashboard", employees: "Medewerkers", planning: "Planning",
-    appointments: "Afspraken",
     clocking: "Prikklok", leaves: "Verlof", expenses: "Onkosten",
     workorders: "Werkbonnen", messages: "Berichten", reports: "Rapportages",
-    customers: "Klanten", inbox: "Klantvragen", offertes: "Offertes", facturen: "Facturen", venues: "Locaties", vehicles: "Voertuigen",
+    customers: "Klanten", offertes: "Offertes", facturen: "Facturen", venues: "Locaties", vehicles: "Voertuigen",
     stock: "Stock", billing: "Facturatie",
-    incidents: "Werkongevallen",
     ciaw: "Checkin@Work (CIAW)", posted_workers: "A1 / Limosa detachering",
     integrations: "Koppelingen", templates: "Documentsjablonen", roadmap: "Roadmap", audit: "Audittrail", settings: "Instellingen"
   };
 
   const VIEW_BTN_LABEL = {
-    employees: "+ Medewerker", messages: "+ Bericht", customers: "+ Klant", appointments: "+ Afspraak",
-    incidents: "+ Werkongeval", inbox: "+ Klantvraag",
-    offertes: "+ Offerte", facturen: "+ Factuur", venues: "+ Locatie", vehicles: "+ Voertuig", stock: "+ Artikel"
+    employees: "+ Medewerker", messages: "+ Bericht", customers: "+ Klant",
+    planning: "+ Inplannen", workorders: "+ Werkbon", offertes: "+ Offerte", facturen: "+ Factuur", venues: "+ Locatie", vehicles: "+ Voertuig", stock: "+ Artikel"
   };
+
+  const FLOW_VIEWS = [
+    { view:"customers", label:"Klant" },
+    { view:"offertes", label:"Offerte", optional:true },
+    { view:"planning", label:"Planning" },
+    { view:"workorders", label:"Werkbon" },
+    { view:"facturen", label:"Factuur" }
+  ];
+
+  function updateFlowNav(activeView) {
+    const host = document.getElementById("admFlowNav");
+    if (!host) return;
+    const visibleSteps = FLOW_VIEWS.filter(step => viewEnabled(step.view));
+    const inFlow = visibleSteps.some(step => step.view === activeView);
+    host.classList.toggle("visible", inFlow);
+    if (!inFlow) { host.innerHTML = ""; return; }
+    const activeIndex = visibleSteps.findIndex(step => step.view === activeView);
+    host.innerHTML = `<span class="adm-flow-label">Van aanvraag tot betaling</span><div class="adm-flow-steps">${visibleSteps.map((step, index) => `
+      <button type="button" class="adm-flow-step ${index < activeIndex ? "done" : ""} ${index === activeIndex ? "active" : ""}" data-flow-view="${step.view}" aria-current="${index === activeIndex ? "step" : "false"}">
+        <span class="adm-flow-index">${index < activeIndex ? "✓" : index + 1}</span>
+        <span>${step.label}${step.optional ? `<small>optioneel</small>` : ""}</span>
+      </button>${index < visibleSteps.length - 1 ? `<span class="adm-flow-line ${index < activeIndex ? "done" : ""}"></span>` : ""}`).join("")}</div>`;
+    host.querySelectorAll("[data-flow-view]").forEach(btn => btn.addEventListener("click", () => switchView(btn.dataset.flowView)));
+  }
 
   // ── Hover-submenu per module (flyout naast de zijbalk) ─────
   // Geen lijstfilters hier (die staan al in de view zelf): het submenu is
@@ -605,15 +628,6 @@
     return {
       planning: [
         { label: "+ Nieuwe shift", go: { view: "planning", click: "admAddShift" } }
-      ],
-      appointments: [
-        { label: "+ Afspraak", go: { view: "appointments", click: "admNewApt" } }
-      ],
-      incidents: [
-        { label: "+ Werkongeval", go: { view: "incidents", click: "admNewInc" } }
-      ],
-      inbox: [
-        { label: "+ Klantvraag", go: { view: "inbox", click: "admNewInq" } }
       ],
       clocking: [
         { label: "+ Manuele registratie", go: { view: "clocking", click: "admClockAdd" } },
@@ -750,6 +764,7 @@
 
   function switchView(view) {
     _currentView = view;
+    document.getElementById("admMain")?.setAttribute("data-view", view);
     document.querySelectorAll(".adm-nav-item").forEach(a => {
       const isActive = a.dataset.view === view;
       a.classList.toggle("active", isActive);
@@ -759,6 +774,7 @@
     // anders de vertaalde nav-naam.
     const termTitle = window.wfpTerms && (view === "workorders" ? window.wfpTerms.t("jobPlural") : view === "venues" ? window.wfpTerms.t("venuePlural") : null);
     document.getElementById("admPageTitle").textContent = termTitle || tA("nav." + view, VIEW_LABELS[view] || view);
+    updateFlowNav(view);
 
     const btn = document.getElementById("admPrimaryAction");
     const hasBtn = VIEW_BTN_LABEL[view];
@@ -785,14 +801,55 @@
     const hasPersonal = !!(b.personal && (b.personal.widgets || []).length);
     if (_dashMode === "org" && !hasOrg) _dashMode = "standaard";
     const chip = (mode, label) => `<button class="adm-btn ${_dashMode === mode ? "adm-btn-primary" : "adm-btn-secondary"} adm-btn-sm" data-dashmode="${mode}">${label}</button>`;
+    const hour = new Date().getHours();
+    const greeting = hour < 12 ? "Goedemorgen" : hour < 18 ? "Goedemiddag" : "Goedenavond";
+    const person = (document.getElementById("admTopbarName")?.textContent || "").trim().split(" ")[0];
+    const dateLabel = new Intl.DateTimeFormat("nl-BE", { weekday:"long", day:"numeric", month:"long" }).format(new Date());
     content.innerHTML = `
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px">
+      <section class="adm-workspace-head" aria-label="Dagstart">
+        <div>
+          <span class="adm-eyebrow">Werkruimte · ${esc(dateLabel)}</span>
+          <h2>Operationeel overzicht</h2>
+          <p>${greeting}${person && person !== "Admin" ? `, ${esc(person)}` : ""}. Alles wat vandaag beweegt, staat hier samen.</p>
+        </div>
+        <div class="adm-workspace-state"><span><i></i> Live werkruimte</span><small>Planning, uitvoering en omzet verbonden</small></div>
+      </section>
+      <section class="adm-guided-entry" aria-label="Klantflow">
+        <span class="adm-guided-icon">M</span>
+        <div>
+          <span class="adm-eyebrow">Monargo Flow</span>
+          <h3>Start een volledig klanttraject</h3>
+          <p>Maak een klant aan en ga logisch verder naar offerte, planning, werkbon en factuur.</p>
+          <div class="adm-guided-steps"><span>Klant</span><span>Offerte</span><span>Planning</span><span>Werkbon</span><span>Factuur</span></div>
+        </div>
+        <button type="button" class="adm-btn adm-btn-primary adm-guided-start" id="admStartFlow">Start klantflow <span aria-hidden="true">→</span></button>
+      </section>
+      <section class="adm-command-strip" aria-label="Snelle acties">
+        <div class="adm-command-intro"><span class="adm-command-spark">+</span><span><strong>Wat wil je in beweging zetten?</strong><small>Start direct vanuit je dagelijkse flow</small></span></div>
+        <div class="adm-quick-actions">
+          <button type="button" class="adm-quick-action" data-quick-view="planning" data-quick-click="admAddShift"><span class="adm-quick-icon">+</span><span><strong>Nieuwe planning</strong><small>Plan een medewerker in</small></span><b aria-hidden="true">→</b></button>
+          <button type="button" class="adm-quick-action" data-quick-view="workorders" data-quick-click="admNewWO"><span class="adm-quick-icon">+</span><span><strong>Nieuwe werkbon</strong><small>Maak en plan meteen</small></span><b aria-hidden="true">→</b></button>
+          <button type="button" class="adm-quick-action" data-quick-view="customers" data-quick-drawer="customer"><span class="adm-quick-icon">+</span><span><strong>Nieuwe klant</strong><small>Start het klanttraject</small></span><b aria-hidden="true">→</b></button>
+          <button type="button" class="adm-quick-action" id="admQuickAi"><span class="adm-quick-icon">M</span><span><strong>Vraag Mona</strong><small>Bekijk wat aandacht vraagt</small></span><b aria-hidden="true">→</b></button>
+        </div>
+      </section>
+      <div class="adm-dashboard-toolbar">
+        <div class="adm-segmented" role="tablist" aria-label="Dashboardweergave">
         ${chip("standaard", tA("dash.mode.overview","Overzicht"))}
         ${chip("personal", tA("dash.mode.personal","Mijn dashboard"))}
         ${hasOrg ? chip("org", tA("dash.mode.org","Organisatie")) : ""}
+        </div>
         ${_dashMode === "personal" ? `<button class="adm-btn adm-btn-secondary adm-btn-sm" id="dashConfigToggle" style="margin-left:auto">${tA("dash.mode.customize","Aanpassen")}</button>` : ""}
       </div>
       <div id="dashBody"></div>`;
+    content.querySelectorAll("[data-quick-view]").forEach(btn => btn.addEventListener("click", () => {
+      navFlyoutGo(btn.dataset.quickView, {
+        go:{ view:btn.dataset.quickView, click:btn.dataset.quickClick || undefined },
+        drawer:btn.dataset.quickDrawer || undefined
+      });
+    }));
+    document.getElementById("admQuickAi")?.addEventListener("click", () => admAskBoden("Geef me een korte samenvatting van wat vandaag mijn aandacht nodig heeft."));
+    document.getElementById("admStartFlow")?.addEventListener("click", () => openCustomerDrawer(null));
     content.querySelectorAll("[data-dashmode]").forEach(btn => btn.addEventListener("click", () => { _dashMode = btn.dataset.dashmode; renderDashboard(); }));
     document.getElementById("dashConfigToggle")?.addEventListener("click", () => {
       const p = document.getElementById("dashConfigPanel"); if (p) p.style.display = p.style.display === "none" ? "" : "none";
@@ -1052,24 +1109,80 @@
   </div>`;
     const aiCard = document.getElementById("bodenFab") ? `
   <div class="adm-ai-card">
-    <div class="adm-ai-head"><span class="adm-ai-badge">AI</span> ${tA("dash.aiTitle","Boden · AI-assistent")}</div>
-    <p class="adm-ai-text">${tA("dash.aiText","Stel een vraag over je cijfers, planning of klanten. Boden kijkt enkel naar gegevens waar jij rechten op hebt.")}</p>
+    <div class="adm-ai-head"><span class="adm-ai-badge">AI</span> ${tA("dash.aiTitle","Mona · slimme assistent")}</div>
+    <p class="adm-ai-text">${tA("dash.aiText","Stel een vraag over je cijfers, planning of klanten. Mona kijkt enkel naar gegevens waar jij rechten op hebt.")}</p>
     <div class="adm-ai-chips">
       <button class="adm-ai-chip" data-q="${tA("dash.aiQ1","Welke facturen zijn vervallen?")}">${tA("dash.aiQ1","Welke facturen zijn vervallen?")}</button>
       <button class="adm-ai-chip" data-q="${tA("dash.aiQ2","Wat staat er vandaag gepland?")}">${tA("dash.aiQ2","Wat staat er vandaag gepland?")}</button>
       <button class="adm-ai-chip" data-q="${tA("dash.aiQ3","Hoeveel werkbonnen staan open?")}">${tA("dash.aiQ3","Hoeveel werkbonnen staan open?")}</button>
     </div>
-    <div style="margin-top:auto"><button class="adm-btn adm-btn-primary adm-btn-sm" id="admAiOpen">${tA("dash.aiOpen","Open Boden")}</button></div>
+    <div style="margin-top:auto"><button class="adm-btn adm-btn-primary adm-btn-sm" id="admAiOpen">${tA("dash.aiOpen","Open Mona")}</button></div>
   </div>` : "";
     const cockpitRows = `
 ${planCard || donutCard ? `<div class="adm-grid-2" style="margin-bottom:18px">${planCard}${donutCard}</div>` : ""}
 <div class="adm-grid-2" style="margin-bottom:18px">${actCard}${aiCard}</div>`;
+
+    // Live werkbord op basis van echte operationele data. De tijdsfilter werkt
+    // lokaal zodat een beheerder zonder extra wachttijd tussen vandaag en week
+    // kan schakelen.
+    const boardStatus = status => ({
+      open: "Gepland", in_progress: "In uitvoering", Voltooid: "Te factureren",
+      Afgewerkt: "Te factureren", overdue: "Vervallen", paid: "Betaald"
+    }[status] || status || "Open");
+    const boardClass = status => String(status || "open").toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    const weekEndIso = new Date(Date.now() + (6 - dow) * 864e5).toISOString().slice(0, 10);
+    const workBoardRows = workorders
+      .filter(w => !["geannuleerd", "cancelled"].includes(w.status))
+      .map(w => {
+        const date = w.scheduledDate || String(w.createdAt || "").slice(0, 10);
+        const owner = nameById[w.userId] || uName(w) || tA("dash.employee", "Medewerker");
+        const title = w.title || w.description || w.number || tA("dash.act.workorder", "Werkbon");
+        return { id:w.id, view:"workorders", date, title, code:w.number || String(w.id || "").slice(-8), customer:w.clientName || w.customerName || "Geen klant", status:boardStatus(w.status), rawStatus:w.status, owner };
+      });
+    const invoiceBoardRows = invoices
+      .filter(i => ["open", "overdue"].includes(i.status))
+      .map(i => ({ id:i.id, view:"facturen", date:i.dueDate || i.invoiceDate || "", title:`Factuur ${i.number || ""}`.trim(), code:eur0.format(Number(i.total || 0)), customer:i.customerName || "Geen klant", status:boardStatus(i.status), rawStatus:i.status, owner:"Financieel" }));
+    const boardRows = [...workBoardRows, ...invoiceBoardRows]
+      .sort((a, b) => String(a.date || "9999").localeCompare(String(b.date || "9999")))
+      .slice(0, 12);
+    const boardMarkup = `
+<section class="adm-operations-board" aria-label="Operationele flow">
+  <div class="adm-board-head">
+    <div><span class="adm-eyebrow">Live werkbord</span><h3>Operationele flow</h3></div>
+    <div class="adm-board-tools">
+      <button type="button" class="adm-board-filter active" data-board-period="today">Vandaag</button>
+      <button type="button" class="adm-board-filter" data-board-period="week">Deze week</button>
+      <button type="button" class="adm-board-add" id="admBoardNew">+ Nieuwe opdracht</button>
+    </div>
+  </div>
+  <div class="adm-board-group"><div><i></i><b>Actief</b><span id="admBoardCount">${boardRows.filter(r => r.date === todayIso).length} items</span></div><button type="button" id="admBoardCollapse" aria-label="Werkbord inklappen">⌃</button></div>
+  <div id="admBoardBody">
+    <div class="adm-board-table">
+      <div class="adm-board-row adm-board-labels"><span>Opdracht</span><span>Klant</span><span>Status</span><span>Verantwoordelijke</span><span>Planning</span><span></span></div>
+      ${boardRows.map(r => {
+        const inWeek = r.date >= weekStartIso && r.date <= weekEndIso;
+        const initials = r.owner.split(/\s+/).filter(Boolean).slice(0,2).map(part => part[0]).join("").toUpperCase();
+        const planning = r.date ? (r.date === todayIso ? "Vandaag" : new Date(`${r.date}T12:00:00`).toLocaleDateString("nl-BE", { weekday:"short", day:"numeric", month:"short" })) : "Niet gepland";
+        return `<button type="button" class="adm-board-row adm-board-item" data-board-view="${r.view}" data-board-id="${esc(r.id || "")}" data-board-today="${r.date === todayIso ? "1" : "0"}" data-board-week="${inWeek ? "1" : "0"}">
+          <span class="adm-board-task"><b>${esc(r.title)}</b><small>${esc(r.code || "")}</small></span>
+          <span>${esc(r.customer)}</span>
+          <span><em class="adm-board-status ${boardClass(r.rawStatus)}">${esc(r.status)}</em></span>
+          <span class="adm-board-owner"><i>${esc(initials || "M")}</i><small>${esc(r.owner)}</small></span>
+          <span>${esc(planning)}</span><span aria-hidden="true">→</span>
+        </button>`;
+      }).join("")}
+      <div class="adm-board-empty" id="admBoardEmpty" style="display:none">Geen actieve items in deze periode.</div>
+    </div>
+  </div>
+</section>`;
 
     const content = document.getElementById("dashBody") || document.getElementById("admContent");
     content.innerHTML = `
 <div class="adm-kpis adm-kpis-cockpit">
 ${kpiCards.join("")}
 </div>
+
+${boardMarkup}
 
 ${cockpitRows}
 
@@ -1166,6 +1279,34 @@ ${(() => {
       el.addEventListener("mouseleave", () => el.style.background = "");
     });
 
+    const filterBoard = period => {
+      let visible = 0;
+      document.querySelectorAll(".adm-board-item").forEach(row => {
+        const show = row.dataset[period === "today" ? "boardToday" : "boardWeek"] === "1";
+        row.style.display = show ? "" : "none";
+        if (show) visible += 1;
+      });
+      document.querySelectorAll(".adm-board-filter").forEach(btn => btn.classList.toggle("active", btn.dataset.boardPeriod === period));
+      const count = document.getElementById("admBoardCount"); if (count) count.textContent = `${visible} ${visible === 1 ? "item" : "items"}`;
+      const empty = document.getElementById("admBoardEmpty"); if (empty) empty.style.display = visible ? "none" : "block";
+    };
+    document.querySelectorAll(".adm-board-filter").forEach(btn => btn.addEventListener("click", () => filterBoard(btn.dataset.boardPeriod)));
+    document.getElementById("admBoardCollapse")?.addEventListener("click", event => {
+      const body = document.getElementById("admBoardBody");
+      const collapsed = body?.classList.toggle("hidden");
+      event.currentTarget.textContent = collapsed ? "⌄" : "⌃";
+      event.currentTarget.setAttribute("aria-label", collapsed ? "Werkbord uitklappen" : "Werkbord inklappen");
+    });
+    document.getElementById("admBoardNew")?.addEventListener("click", () => openWorkorderDrawer(null, workorders, { planAfterSave:true }));
+    document.querySelectorAll(".adm-board-item").forEach(row => row.addEventListener("click", () => {
+      if (row.dataset.boardView === "workorders") {
+        const item = workorders.find(w => w.id === row.dataset.boardId);
+        if (item) return openWorkorderDrawer(item, workorders);
+      }
+      switchView(row.dataset.boardView);
+    }));
+    filterBoard("today");
+
     // Cockpit-widgets: planning, activiteit en Boden
     document.getElementById("admDashPlanning")?.addEventListener("click", e => { e.preventDefault(); switchView("planning"); });
     document.querySelectorAll(".adm-act-link").forEach(el => el.addEventListener("click", () => switchView(el.dataset.view)));
@@ -1181,24 +1322,21 @@ ${(() => {
       const gpEl = document.getElementById("admContent");
       if (gpEl) {
         const gpDiv = document.createElement("div");
-        gpDiv.className = "adm-card";
+        gpDiv.className = "adm-readiness-card";
         gpDiv.style.marginTop = "16px";
         gpDiv.innerHTML = `
-<div class="adm-card-header" style="cursor:pointer;" id="admGpHeader">
-  <h3 class="adm-card-title">Pilot voortgang <span style="font-size:12px;font-weight:400;color:var(--gray-500);">${doneCount}/${steps.length} stappen</span></h3>
-  <div style="display:flex;align-items:center;gap:12px;">
-    <div style="font-size:18px;font-weight:600;color:${pct===100?"var(--wf-green)":pct>50?"var(--wf-yellow)":"var(--wf-purple)"};">${pct}%</div>
-    <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admGpDetails">Details</button>
-    <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admGpRoadmap">Roadmap →</button>
+<div class="adm-readiness-head" id="admGpHeader">
+  <span class="adm-readiness-icon">${pct === 100 ? "✓" : "M"}</span>
+  <div><span class="adm-eyebrow">Werkruimte gereedheid</span><h3>${doneCount} van ${steps.length} kernstappen actief</h3><p>Open alleen wanneer je de configuratie of pilotstatus wilt controleren.</p></div>
+  <div class="adm-readiness-actions">
+    <span class="adm-readiness-score">${pct}%</span>
+    <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admGpDetails">Bekijk status</button>
+    <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admGpRoadmap">Roadmap</button>
   </div>
 </div>
-<div style="height:8px;background:var(--gray-100);border-radius:4px;overflow:hidden;margin:-8px 20px 0;">
-  <div style="height:100%;width:${pct}%;background:${pct===100?"var(--wf-green)":pct>50?"var(--wf-yellow)":"var(--wf-purple)"};transition:width .6s;border-radius:4px;"></div>
-</div>
-<div class="hidden" id="admGpSteps" style="padding:12px 20px 4px;">
-  ${steps.map(s=>`<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px;">
-    <span style="color:${s.done?"var(--wf-green)":"var(--gray-400)"};font-size:16px;">${s.done?"✓":"○"}</span>
-    <span style="color:${s.done?"var(--gray-700)":"var(--gray-400)"}">${esc(s.key||"")}</span>
+<div class="hidden adm-readiness-steps" id="admGpSteps">
+  ${steps.map(s=>`<div class="${s.done ? "done" : ""}">
+    <span>${s.done?"✓":"·"}</span><b>${esc(s.key||"")}</b>
   </div>`).join("")}
 </div>`;
         gpEl.appendChild(gpDiv);
@@ -1531,6 +1669,9 @@ ${emp ? `
 
   // ── Planning ───────────────────────────────────────────────
   let _planningWeekOffset = 0; // weeks relative to current week
+  let _planningMode = "week"; // week | day | capacity
+  let _planningEmployee = "";
+  let _planningLocation = "";
 
   async function renderPlanning() {
     const today = new Date().toISOString().slice(0, 10);
@@ -1540,11 +1681,16 @@ ${emp ? `
     const from = baseWeek.toISOString().slice(0, 10);
     const to = weekEnd.toISOString().slice(0, 10);
 
-    const [planData, leaveData] = await Promise.all([
+    const [planData, leaveData, employeeData, workorderData] = await Promise.all([
       api("GET", `/manager/planning?from=${from}&to=${to}`),
-      api("GET", `/leaves?from=${from}&to=${to}&status=goedgekeurd`).catch(() => ({ leaves: [] }))
+      api("GET", `/leaves?from=${from}&to=${to}&status=goedgekeurd`).catch(() => ({ leaves: [] })),
+      api("GET", "/employees").catch(() => ({ employees: [] })),
+      viewEnabled("workorders") ? api("GET", "/workorders").catch(() => ({ workorders: [] })) : { workorders: [] }
     ]);
-    const shifts = Array.isArray(planData) ? planData : (planData.shifts || []);
+    const allShifts = Array.isArray(planData) ? planData : (planData.shifts || []);
+    const employees = (employeeData.employees || employeeData || [])
+      .filter(user => !["tenant_admin", "super_admin"].includes(user.role) && user.active !== false);
+    const workorders = workorderData.workorders || workorderData || [];
     // Build leave map: userId → Set of dates on leave
     const leaveMap = {};
     (leaveData.leaves || []).forEach(l => {
@@ -1556,47 +1702,96 @@ ${emp ? `
       }
     });
 
-    const days = [];
+    const weekDays = [];
     for (let d = new Date(baseWeek); d <= weekEnd; d.setDate(d.getDate() + 1)) {
-      days.push(d.toISOString().slice(0, 10));
+      weekDays.push(d.toISOString().slice(0, 10));
     }
+    const days = _planningMode === "day" ? [today >= from && today <= to ? today : from] : weekDays;
+
+    const locations = [...new Set(allShifts.map(s => s.location || s.venueName || s.venueId).filter(Boolean))].sort((a,b) => String(a).localeCompare(String(b)));
+    const shifts = allShifts.filter(s => (!_planningEmployee || s.userId === _planningEmployee) && (!_planningLocation || [s.location, s.venueName, s.venueId].includes(_planningLocation)));
+    const visibleEmployees = employees.filter(user => !_planningEmployee || user.id === _planningEmployee);
+
+    const toMinutes = value => {
+      const match = /^(\d{1,2}):(\d{2})$/.exec(String(value || ""));
+      return match ? Number(match[1]) * 60 + Number(match[2]) : null;
+    };
+    const plannedMinutes = shifts.reduce((sum, shift) => {
+      const start = toMinutes(shift.start), end = toMinutes(shift.end);
+      return sum + (start != null && end != null ? Math.max(0, end - start) : 0);
+    }, 0);
+    const groups = {};
+    shifts.forEach(shift => { const key = `${shift.userId}::${shift.date}`; (groups[key] ||= []).push(shift); });
+    let conflictCount = 0;
+    Object.values(groups).forEach(rows => {
+      const sorted = rows.map(row => ({ start:toMinutes(row.start), end:toMinutes(row.end) })).filter(row => row.start != null && row.end != null).sort((a,b) => a.start - b.start);
+      for (let index = 1; index < sorted.length; index += 1) if (sorted[index].start < sorted[index - 1].end) conflictCount += 1;
+    });
+    const leavePeople = Object.keys(leaveMap).length;
+    const capacityHours = _planningMode === "day" ? 8 : 40;
+    const capacityBase = Math.max(1, visibleEmployees.length || new Set(shifts.map(s => s.userId)).size) * capacityHours * 60;
+    const capacityPct = Math.round(plannedMinutes / capacityBase * 100);
+    const openWorkorders = workorders.filter(order => !["Voltooid", "Afgewerkt", "geannuleerd", "cancelled"].includes(order.status));
+    const unscheduled = openWorkorders.filter(order => !order.scheduledDate || !order.userId).slice(0, 5);
 
     const weekLabel = `${new Date(from).toLocaleDateString("nl-BE",{day:"numeric",month:"short"})} – ${new Date(to).toLocaleDateString("nl-BE",{day:"numeric",month:"short",year:"numeric"})}`;
 
     const content = document.getElementById("admContent");
     content.innerHTML = `
-<div class="adm-card">
-  <div class="adm-card-header">
-    <h3 class="adm-card-title">${tA("nav.planning","Planning")}</h3>
-    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admPrevWeek" aria-label="Vorige week" title="Vorige week">‹</button>
-      <span style="font-size:13px;font-weight:500;min-width:160px;text-align:center;">${weekLabel}</span>
-      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admNextWeek" aria-label="Volgende week" title="Volgende week">›</button>
-      ${_planningWeekOffset !== 0 ? `<button class="adm-btn adm-btn-secondary adm-btn-sm" id="admTodayWeek">${tA("adm.today","Vandaag")}</button>` : ""}
-      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admCopyWeek" title="Kopieer alle shifts naar volgende week">${tA("adm.plan.copyWeek","⧉ Kopieer week")}</button>
-      <button class="adm-btn adm-btn-primary adm-btn-sm" id="admAddShift">${tA("adm.plan.addShift","+ Shift")}</button>
+<div class="adm-planning-page">
+  <section class="adm-planning-title">
+    <div><span class="adm-eyebrow">Resource planning</span><h2>Teamplanning</h2><p>Zie capaciteit, beschikbaarheid en opdrachten in één rustig werkvlak.</p></div>
+    <button class="adm-btn adm-btn-primary" id="admAddShift">+ Nieuwe planning</button>
+  </section>
+  <section class="adm-planning-toolbar">
+    <div class="adm-week-navigation">
+      <button type="button" id="admPrevWeek" aria-label="Vorige week">‹</button>
+      <button type="button" id="admNextWeek" aria-label="Volgende week">›</button>
+      <button type="button" class="adm-today-button" id="admTodayWeek">Vandaag</button>
+      <strong>${weekLabel}</strong>
     </div>
-  </div>
-  <div class="adm-card-body adm-table-wrap">
-    <table class="adm-table adm-plan-table">
-      <thead><tr><th>${tA("adm.thEmployee","Medewerker")}</th>${days.map(d => {
-        const dayName = new Date(d).toLocaleDateString("nl-BE",{weekday:"short",day:"numeric",month:"numeric"});
-        return `<th style="${d===today?"color:var(--wf-blue);font-weight:600;background:var(--wf-blue-l)":""}">${dayName}</th>`;
-      }).join("")}</tr></thead>
-      <tbody>
-        ${renderPlanningRows(shifts, days, leaveMap)}
-      </tbody>
-    </table>
-  </div>
-  <div style="padding:8px 16px;font-size:11px;color:var(--gray-400);display:flex;gap:14px;border-top:1px solid var(--gray-50);">
-    <span><span class="adm-dot" style="background:var(--wf-blue)"></span> ${tA("adm.plan.shift","Shift")}</span><span style="color:var(--wf-yellow)"><span class="adm-dot" style="background:var(--wf-yellow)"></span> ${tA("adm.plan.leaveAbsent","Verlof (afwezig)")}</span>
-    <span style="margin-left:auto">${tA("adm.plan.summary","{s} shifts · {p} personen op verlof").replace("{s}", shifts.length).replace("{p}", Object.keys(leaveMap).length)}</span>
-  </div>
+    <div class="adm-planning-controls">
+      <select id="admPlanningEmployee" aria-label="Filter medewerker"><option value="">Alle medewerkers</option>${employees.map(user => `<option value="${esc(user.id)}" ${_planningEmployee === user.id ? "selected" : ""}>${esc(user.name || user.email)}</option>`).join("")}</select>
+      <select id="admPlanningLocation" aria-label="Filter locatie"><option value="">Alle locaties</option>${locations.map(location => `<option value="${esc(location)}" ${_planningLocation === location ? "selected" : ""}>${esc(location)}</option>`).join("")}</select>
+      <div class="adm-view-switch" role="group" aria-label="Planningweergave">
+        <button type="button" data-planning-mode="week" class="${_planningMode === "week" ? "active" : ""}">Week</button>
+        <button type="button" data-planning-mode="day" class="${_planningMode === "day" ? "active" : ""}">Dag</button>
+        <button type="button" data-planning-mode="capacity" class="${_planningMode === "capacity" ? "active" : ""}">Capaciteit</button>
+      </div>
+    </div>
+  </section>
+  <section class="adm-planning-metrics">
+    <span><small>Geplande uren</small><b>${(plannedMinutes / 60).toLocaleString("nl-BE", { maximumFractionDigits:1 })} u</b></span>
+    <span><small>Actieve shifts</small><b>${shifts.length}</b></span>
+    <span><small>Op verlof</small><b>${leavePeople}</b></span>
+    <span><small>Conflicten</small><b class="${conflictCount ? "metric-red" : "metric-green"}">${conflictCount}</b></span>
+    <div><span>Weekcapaciteit</span><i><b style="width:${Math.min(100, capacityPct)}%"></b></i><strong>${capacityPct}%</strong></div>
+  </section>
+  ${_planningMode === "capacity" ? renderPlanningCapacity(shifts, visibleEmployees, leaveMap, from) : `
+  <div class="adm-planning-workspace">
+    <section class="adm-modern-planner" style="--day-count:${days.length};--planner-min:${190 + days.length * 160}px">
+      <div class="adm-modern-planner-head"><span>Medewerker</span>${days.map(d => {
+        const date = new Date(`${d}T12:00:00`);
+        return `<div class="${d === today ? "today" : ""}"><small>${date.toLocaleDateString("nl-BE", { weekday:"short" })}</small><b>${date.getDate()}</b>${d === today ? "<i></i>" : ""}</div>`;
+      }).join("")}</div>
+      ${renderPlanningRows(shifts, days, leaveMap, visibleEmployees)}
+    </section>
+    <aside class="adm-planning-side">
+      <section class="adm-planning-side-card"><div class="adm-side-card-head"><span class="adm-eyebrow">Nog te plannen</span><b>${unscheduled.length}</b></div>
+        ${unscheduled.map(order => `<button type="button" class="adm-unscheduled-work" data-id="${esc(order.id)}"><i class="${order.priority === "urgent" ? "urgent" : ""}"></i><span><b>${esc(order.title || order.number || "Werkbon")}</b><small>${esc(order.clientName || order.customerName || "Nog geen klant")} · ${esc(order.status || "open")}</small></span><em>→</em></button>`).join("") || `<p class="adm-side-empty">Alle open opdrachten zijn toegewezen.</p>`}
+      </section>
+      <section class="adm-planning-insight ${conflictCount ? "warning" : "ok"}"><span>${conflictCount ? "!" : "✓"}</span><div><b>${conflictCount ? `${conflictCount} planningsconflict${conflictCount === 1 ? "" : "en"}` : "Planning is conflictvrij"}</b><p>${conflictCount ? "Controleer overlappende shifts voor je de week publiceert." : "Geen overlappende shifts in deze selectie."}</p></div></section>
+      <button type="button" class="adm-copy-week" id="admCopyWeek">⧉ Kopieer deze week</button>
+    </aside>
+  </div>`}
 </div>`;
     document.getElementById("admAddShift")?.addEventListener("click", () => openShiftDrawer(from, to, null, shifts));
     document.getElementById("admPrevWeek")?.addEventListener("click", () => { _planningWeekOffset--; renderPlanning(); });
     document.getElementById("admNextWeek")?.addEventListener("click", () => { _planningWeekOffset++; renderPlanning(); });
     document.getElementById("admTodayWeek")?.addEventListener("click", () => { _planningWeekOffset = 0; renderPlanning(); });
+    document.getElementById("admPlanningEmployee")?.addEventListener("change", event => { _planningEmployee = event.target.value; renderPlanning(); });
+    document.getElementById("admPlanningLocation")?.addEventListener("change", event => { _planningLocation = event.target.value; renderPlanning(); });
+    document.querySelectorAll("[data-planning-mode]").forEach(button => button.addEventListener("click", () => { _planningMode = button.dataset.planningMode; renderPlanning(); }));
     document.getElementById("admCopyWeek")?.addEventListener("click", async () => {
       if (!shifts.length) { window.showToast && window.showToast(tA("adm.plan.copyNone","Geen shifts om te kopiëren"), "info"); return; }
       const btn = document.getElementById("admCopyWeek");
@@ -1621,6 +1816,27 @@ ${emp ? `
         if (shift) openShiftDrawer(from, to, shift, shifts);
       });
     });
+    document.querySelectorAll(".adm-empty-slot").forEach(slot => slot.addEventListener("click", () => openShiftDrawer(from, to, null, shifts, { userId:slot.dataset.user, date:slot.dataset.date })));
+    document.querySelectorAll(".adm-unscheduled-work").forEach(button => button.addEventListener("click", () => {
+      const order = workorders.find(row => row.id === button.dataset.id);
+      if (order) openWorkorderDrawer(order, workorders);
+    }));
+  }
+
+  function renderPlanningCapacity(shifts, employees, leaveMap, referenceDate) {
+    const rows = employees.length ? employees : [...new Map(shifts.map(shift => [shift.userId, { id:shift.userId, name:uName(shift) }])).values()];
+    if (!rows.length) return `<div class="adm-planning-empty">Voeg medewerkers en shifts toe om capaciteit te berekenen.</div>`;
+    return `<section class="adm-capacity-board">${rows.map((user, index) => {
+      const userShifts = shifts.filter(shift => shift.userId === user.id);
+      const minutes = userShifts.reduce((sum, shift) => {
+        const [sh, sm] = String(shift.start || "0:0").split(":").map(Number), [eh, em] = String(shift.end || "0:0").split(":").map(Number);
+        return sum + Math.max(0, (eh * 60 + em) - (sh * 60 + sm));
+      }, 0);
+      const pct = Math.round(minutes / (40 * 60) * 100);
+      const initials = String(user.name || user.email || "M").split(/\s+/).slice(0,2).map(value => value[0]).join("").toUpperCase();
+      const onLeave = Object.keys(leaveMap[user.id] || {}).length;
+      return `<article><i class="capacity-avatar color-${index % 5}">${esc(initials)}</i><span class="capacity-person"><b>${esc(user.name || user.email || "Medewerker")}</b><small>${user.function || user.role || "Team"}</small></span><span class="person-capacity"><span><b>${(minutes / 60).toLocaleString("nl-BE", { maximumFractionDigits:1 })} u</b><small>van 40 u</small></span><i><b style="width:${Math.min(100,pct)}%"></b></i></span><em class="${pct >= 95 ? "nearly-full" : "available"}">${onLeave ? `${onLeave}d verlof` : pct >= 95 ? "Bijna vol" : "Beschikbaar"}</em><button type="button" class="adm-empty-slot" data-user="${esc(user.id)}" data-date="${esc(referenceDate)}">+ Inplannen</button></article>`;
+    }).join("")}</section>`;
   }
 
   // Persoonlijke kleuren per medewerker (cyclisch)
@@ -1639,7 +1855,7 @@ ${emp ? `
     return _planColorMap[userId];
   }
 
-  function renderPlanningRows(shifts, days, leaveMap = {}) {
+  function renderPlanningRows(shifts, days, leaveMap = {}, employees = []) {
     const today = new Date().toISOString().slice(0,10);
     const byUser = {};
     shifts.forEach(s => {
@@ -1647,46 +1863,41 @@ ${emp ? `
       if (!byUser[s.userId].days[s.date]) byUser[s.userId].days[s.date] = [];
       byUser[s.userId].days[s.date].push(s);
     });
+    employees.forEach(user => {
+      if (!byUser[user.id]) byUser[user.id] = { id:user.id, name:user.name || user.email, role:user.function || user.role || "Team", days:{} };
+      else { byUser[user.id].id = user.id; byUser[user.id].role = user.function || user.role || "Team"; }
+    });
     // Also add leave-only users to the grid
     Object.keys(leaveMap).forEach(uid => {
       if (!byUser[uid]) {
         const leaveUser = Object.values(leaveMap[uid] || {});
-        byUser[uid] = { name: uid, days: {}, leaveOnly: true };
+        byUser[uid] = { id:uid, name: uid, role:"Verlof", days: {}, leaveOnly: true };
       }
     });
-    if (!Object.keys(byUser).length) return `<tr><td colspan="${days.length+1}" class="adm-empty">Geen shifts deze week</td></tr>`;
-    return Object.values(byUser).map(u => {
-      const [bg, fg] = planColor(Object.keys(byUser).find(k => byUser[k] === u) || "x");
+    if (!Object.keys(byUser).length) return `<div class="adm-planning-empty">Nog geen medewerkers of shifts in deze selectie.</div>`;
+    return Object.entries(byUser).map(([userId, u], rowIndex) => {
+      const [bg, fg] = planColor(userId || "x");
       const totalShifts = Object.values(u.days).reduce((s,d)=>s+d.length,0);
-      return `<tr>
-        <td style="font-weight:500;">
-          <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${fg};margin-right:5px;vertical-align:middle;"></span>
-          ${esc(u.name)}
-          <span style="font-size:10px;color:var(--gray-400);margin-left:4px;">${totalShifts}×</span>
-        </td>
+      const initials = String(u.name || "M").split(/\s+/).slice(0,2).map(value => value[0]).join("").toUpperCase();
+      return `<div class="adm-modern-planner-row">
+        <div class="adm-planner-person"><i class="color-${rowIndex % 5}">${esc(initials)}</i><span><b>${esc(u.name)}</b><small>${esc(u.role || `${totalShifts} shifts`)} · ${totalShifts} shift${totalShifts === 1 ? "" : "s"}</small></span></div>
         ${days.map(d => {
           const dayShifts = u.days[d] || [];
           const isToday = d === today;
-          const userId = Object.keys(byUser).find(k => byUser[k] === u) || "";
           const onLeave = leaveMap[userId]?.[d];
-          let cellBg = isToday ? "var(--wf-blue-l)" : "";
-          if (onLeave) cellBg = "var(--wf-yellow-l)";
-          return `<td style="${cellBg?"background:"+cellBg+";":""}">
-            ${onLeave && !dayShifts.length ? `<span style="background:var(--wf-yellow-l);color:var(--wf-yellow);border-radius:4px;padding:2px 6px;font-size:10px;font-weight:600;display:inline-block;"><span class="adm-dot" style="background:var(--wf-yellow)"></span> ${esc(onLeave)}</span>` : ""}
+          return `<div class="adm-planner-cell ${isToday ? "today" : ""} ${onLeave ? "on-leave" : ""}">
+            ${onLeave && !dayShifts.length ? `<span class="adm-leave-slot"><i></i>${esc(onLeave)}</span>` : ""}
             ${dayShifts.map(s =>
-              `<span class="adm-shift-pill" data-id="${s.id}" title="${esc(s.note||s.location||"")} · klik om te bewerken"
-                style="background:${bg};color:${fg};border:1px solid ${fg}30;border-radius:5px;padding:2px 7px;font-size:11px;font-weight:600;cursor:pointer;display:inline-block;margin-bottom:2px;white-space:nowrap;">
-                ${esc(s.start||"")}${s.end?`–${esc(s.end)}`:""}${s.location?` <span style="opacity:.7;font-weight:400">${esc(s.location.slice(0,8))}</span>`:""}
-              </span>`
-            ).join("<br>")||(!onLeave?`<span style="color:var(--gray-200);font-size:12px;">-</span>`:"")}
-          </td>`;
+              `<button type="button" class="adm-shift-pill" data-id="${esc(s.id)}" title="${esc(s.note||s.location||"")} · klik om te bewerken" style="--shift-bg:${bg};--shift-color:${fg}"><span><b>${esc(s.note || s.project || s.location || "Geplande opdracht")}</b><em>${esc(s.status || "Shift")}</em></span><small>${esc(s.location || s.venueName || "Locatie nog te bepalen")}</small><time>${esc(s.start||"")}${s.end?` – ${esc(s.end)}`:""}</time></button>`
+            ).join("")||(!onLeave?`<button type="button" class="adm-empty-slot" data-user="${esc(userId)}" data-date="${esc(d)}">+ Inplannen</button>`:"")}
+          </div>`;
         }).join("")}
-      </tr>`;
+      </div>`;
     }).join("");
   }
 
   // ── Shift drawer (admin) ───────────────────────────────────
-  function openShiftDrawer(weekFrom, weekTo, shift = null, allShifts = []) {
+  function openShiftDrawer(weekFrom, weekTo, shift = null, allShifts = [], prefill = {}) {
     const today = new Date().toISOString().slice(0, 10);
     api("GET", "/employees").then(data => {
       const employees = data.employees || [];
@@ -1698,11 +1909,11 @@ ${emp ? `
     <div class="adm-form-group"><label>Medewerker *</label>
       <select name="userId" required>
         <option value="">- Kies medewerker -</option>
-        ${employees.map(u => `<option value="${esc(u.id)}" ${shift?.userId===u.id?"selected":""}>${esc(u.name || u.email)}</option>`).join("")}
+        ${employees.map(u => `<option value="${esc(u.id)}" ${(shift?.userId||prefill.userId)===u.id?"selected":""}>${esc(u.name || u.email)}</option>`).join("")}
       </select>
     </div>
     <div class="adm-form-group"><label>Datum *</label>
-      <input name="date" type="date" value="${shift?.date || weekFrom || today}" required>
+      <input name="date" type="date" value="${shift?.date || prefill.date || weekFrom || today}" required>
     </div>
   </div>
   <div class="adm-form-row">
@@ -1714,10 +1925,10 @@ ${emp ? `
     </div>
   </div>
   <div class="adm-form-group"><label>Locatie / Werf</label>
-    <input name="venueId" placeholder="Locatienaam (optioneel)" value="${esc(shift?.venueId||shift?.location||"")}">
+    <input name="venueId" placeholder="Locatienaam (optioneel)" value="${esc(shift?.venueId||shift?.location||prefill.location||"")}">
   </div>
   <div class="adm-form-group"><label>Notitie</label>
-    <input name="note" placeholder="Optionele notitie" value="${esc(shift?.note||"")}">
+    <input name="note" placeholder="Optionele notitie" value="${esc(shift?.note||prefill.note||"")}">
   </div>
   ${!isEdit ? `
   <div style="background:var(--gray-50);border-radius:8px;padding:12px;margin-bottom:4px;">
@@ -1803,616 +2014,6 @@ ${emp ? `
 
   // ── Clocking ───────────────────────────────────────────────
   let _clockDate = new Date().toISOString().slice(0, 10);
-
-  // ── Afspraken (klantafspraken + automatische reminder-mail) ─────────────
-  let _aptFilter = "komend"; // komend | alle | geannuleerd
-
-  function tAptStatus(s) {
-    const map = { gepland: "adm.apt.stPlanned", bevestigd: "adm.apt.stConfirmed", uitgevoerd: "adm.apt.stDone", geannuleerd: "adm.apt.stCancelled" };
-    return map[s] ? tA(map[s], s) : (s || "-");
-  }
-
-  async function renderAppointments() {
-    const content = document.getElementById("admContent");
-    let rows = [];
-    try { const d = await api("GET", "/appointments"); rows = d.appointments || []; }
-    catch (e) { content.innerHTML = `<div style="padding:20px;color:var(--wf-red)">${tA("adm.error","Fout")}: ${e.message}</div>`; return; }
-
-    const today = new Date().toISOString().slice(0, 10);
-    const filtered = _aptFilter === "komend" ? rows.filter(a => a.date >= today && a.status !== "geannuleerd")
-      : _aptFilter === "geannuleerd" ? rows.filter(a => a.status === "geannuleerd")
-      : rows;
-    const statusCss = { gepland: "adm-status-pending", bevestigd: "adm-status-goedgekeurd", uitgevoerd: "adm-status-active", geannuleerd: "adm-status-inactive" };
-    const reminderCell = a => {
-      if (a.reminderSentAt) return `<span style="color:var(--wf-green);font-weight:600;">✓ ${tA("adm.apt.remSent","verstuurd")} ${new Date(a.reminderSentAt).toLocaleDateString("nl-BE")}</span>`;
-      if (!a.customerEmail) return `<span style="color:var(--gray-400);">${tA("adm.apt.remNoEmail","geen e-mail")}</span>`;
-      if (!a.reminderDays) return `<span style="color:var(--gray-400);">${tA("adm.apt.remOff","uit")}</span>`;
-      return `${a.reminderDays}${tA("adm.leave.daysAbbr","d")} ${tA("adm.apt.remBefore","vooraf")}`;
-    };
-
-    content.innerHTML = `
-<div class="adm-card">
-  <div class="adm-card-header">
-    <h3 class="adm-card-title">${tA("nav.appointments","Afspraken")} <span style="background:var(--wf-blue-l);color:var(--wf-blue);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${filtered.length}</span></h3>
-    <div style="display:flex;gap:8px;align-items:center;">
-      <select id="admAptFilter">
-        <option value="komend" ${_aptFilter==="komend"?"selected":""}>${tA("adm.apt.fUpcoming","Komende")}</option>
-        <option value="alle" ${_aptFilter==="alle"?"selected":""}>${tA("mgr.all","Alle")}</option>
-        <option value="geannuleerd" ${_aptFilter==="geannuleerd"?"selected":""}>${tA("adm.apt.stCancelled","Geannuleerd")}</option>
-      </select>
-      <button class="adm-btn adm-btn-primary adm-btn-sm" id="admNewApt">+ ${tA("adm.apt.singular","Afspraak")}</button>
-    </div>
-  </div>
-  ${filtered.length === 0
-    ? `<div class="adm-empty"><div class="adm-empty-text">${tA("adm.apt.empty","Geen afspraken")}</div><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewApt" style="margin-top:12px">+ ${tA("adm.apt.emptyBtn","Eerste afspraak aanmaken")}</button></div>`
-    : `<div class="adm-card-body adm-table-wrap">
-    <table class="adm-table">
-      <thead><tr><th>${tA("adm.date","Datum")}</th><th>${tA("adm.apt.thTime","Tijd")}</th><th>${tA("adm.thCustomer","Klant")}</th><th>${(window.wfpTerms && window.wfpTerms.t("jobSingular")) || tA("emp.wo.default","Werkbon")}</th><th>${tA("adm.apt.thReminder","Reminder")}</th><th>${tA("adm.status","Status")}</th><th>${tA("adm.actions","Acties")}</th></tr></thead>
-      <tbody>
-        ${filtered.map(a => `
-        <tr class="adm-row-link adm-apt-row" data-id="${esc(a.id)}">
-          <td style="font-weight:600;${a.date === today ? "color:var(--wf-blue);" : ""}">${new Date(`${a.date}T12:00:00`).toLocaleDateString("nl-BE",{weekday:"short",day:"numeric",month:"short",year:"numeric"})}</td>
-          <td>${esc(a.start || "")}${a.end ? ` – ${esc(a.end)}` : ""}</td>
-          <td><strong>${esc(a.customerName || "-")}</strong>${a.customerEmail ? `<div style="font-size:11px;color:var(--gray-400)">${esc(a.customerEmail)}</div>` : ""}</td>
-          <td>${a.workorderNumber ? esc(a.workorderNumber) : (a.workorderId ? esc(String(a.workorderId).slice(-4)) : "-")}</td>
-          <td style="font-size:12px;">${reminderCell(a)}</td>
-          <td><span class="adm-status ${statusCss[a.status]||"adm-status-pending"}">${esc(tAptStatus(a.status))}</span></td>
-          <td style="white-space:nowrap;"><button class="adm-btn adm-btn-secondary adm-btn-sm adm-apt-edit" data-id="${esc(a.id)}">${tA("adm.edit","Bewerken")}</button></td>
-        </tr>`).join("")}
-      </tbody>
-    </table>
-  </div>`}
-</div>`;
-
-    document.getElementById("admAptFilter")?.addEventListener("change", e => { _aptFilter = e.target.value; renderAppointments(); });
-    document.getElementById("admNewApt")?.addEventListener("click", () => openAppointmentDrawer(null));
-    document.getElementById("admEmptyNewApt")?.addEventListener("click", () => openAppointmentDrawer(null));
-    content.querySelectorAll(".adm-apt-edit").forEach(b => b.addEventListener("click", e => { e.stopPropagation(); openAppointmentDrawer(rows.find(x => x.id === b.dataset.id)); }));
-    content.querySelectorAll(".adm-apt-row").forEach(row => row.addEventListener("click", e => {
-      if (e.target.closest("button")) return;
-      openAppointmentDrawer(rows.find(x => x.id === row.dataset.id));
-    }));
-  }
-
-  async function openAppointmentDrawer(apt) {
-    const [custData, woData] = await Promise.all([
-      api("GET", "/customers").catch(() => ({ customers: [] })),
-      api("GET", "/workorders").catch(() => ({ workorders: [] })),
-    ]);
-    const customers = custData.customers || [];
-    const openWos = (woData.workorders || []).filter(w => !["Voltooid", "Afgewerkt", "done", "geannuleerd"].includes(w.status));
-    const today = new Date().toISOString().slice(0, 10);
-    const isEdit = !!apt;
-    document.getElementById("admDrawerTitle").textContent = isEdit ? tA("adm.apt.editTitle","Afspraak bewerken") : tA("adm.apt.newTitle","Nieuwe afspraak");
-    document.getElementById("admDrawerBody").innerHTML = `
-<form id="aptForm">
-  <div class="adm-form-group"><label>${tA("adm.thCustomer","Klant")}</label>
-    <select name="customerId" id="aptCustSel" style="width:100%">
-      <option value="">${tA("adm.quote.manualFill","- Handmatig invullen -")}</option>
-      ${customers.map(c => `<option value="${esc(c.id)}" ${apt?.customerId === c.id ? "selected" : ""} data-name="${esc(c.name||"")}" data-email="${esc(c.email||"")}">${esc(c.name)}</option>`).join("")}
-    </select>
-  </div>
-  <div class="adm-form-row">
-    <div class="adm-form-group"><label>${tA("adm.quote.customerName","Klantnaam")} *</label>
-      <input name="customerName" id="aptCustName" value="${esc(apt?.customerName || "")}" required></div>
-    <div class="adm-form-group"><label>${tA("adm.apt.custEmail","E-mail klant (voor reminder)")}</label>
-      <input name="customerEmail" id="aptCustEmail" type="email" value="${esc(apt?.customerEmail || "")}"></div>
-  </div>
-  <div class="adm-form-row">
-    <div class="adm-form-group"><label>${tA("adm.date","Datum")} *</label>
-      <input name="date" type="date" value="${esc(apt?.date || today)}" required></div>
-    <div class="adm-form-group"><label>${tA("mgr.startTime","Starttijd")} *</label>
-      <input name="start" type="time" value="${esc(apt?.start || "08:00")}" required></div>
-    <div class="adm-form-group"><label>${tA("mgr.endTime","Eindtijd")}</label>
-      <input name="end" type="time" value="${esc(apt?.end || "")}"></div>
-  </div>
-  <div class="adm-form-group"><label>${(window.wfpTerms && window.wfpTerms.t("jobSingular")) || tA("emp.wo.default","Werkbon")} (${tA("adm.apt.optional","optioneel")})</label>
-    <select name="workorderId" style="width:100%">
-      <option value="">${tA("mgr.noWo","Geen werkbon")}</option>
-      ${openWos.map(w => `<option value="${esc(w.id)}" ${apt?.workorderId === w.id ? "selected" : ""}>${esc(w.number ? w.number + " · " : "")}${esc(w.title || "")}</option>`).join("")}
-    </select>
-  </div>
-  <div class="adm-form-row">
-    <div class="adm-form-group"><label>${tA("adm.apt.reminderLabel","Reminder naar klant")}</label>
-      <select name="reminderDays">
-        <option value="0" ${apt?.reminderDays === 0 ? "selected" : ""}>${tA("adm.apt.remNone","Geen reminder")}</option>
-        <option value="1" ${(apt?.reminderDays ?? 1) === 1 ? "selected" : ""}>${tA("adm.apt.rem1","1 dag vooraf")}</option>
-        <option value="2" ${apt?.reminderDays === 2 ? "selected" : ""}>${tA("adm.apt.rem2","2 dagen vooraf")}</option>
-        <option value="3" ${apt?.reminderDays === 3 ? "selected" : ""}>${tA("adm.apt.rem3","3 dagen vooraf")}</option>
-        <option value="7" ${apt?.reminderDays === 7 ? "selected" : ""}>${tA("adm.apt.rem7","1 week vooraf")}</option>
-      </select>
-    </div>
-    ${isEdit ? `<div class="adm-form-group"><label>${tA("adm.status","Status")}</label>
-      <select name="status">
-        <option value="gepland" ${apt.status === "gepland" ? "selected" : ""}>${tA("adm.apt.stPlanned","Gepland")}</option>
-        <option value="bevestigd" ${apt.status === "bevestigd" ? "selected" : ""}>${tA("adm.apt.stConfirmed","Bevestigd")}</option>
-        <option value="uitgevoerd" ${apt.status === "uitgevoerd" ? "selected" : ""}>${tA("adm.apt.stDone","Uitgevoerd")}</option>
-        <option value="geannuleerd" ${apt.status === "geannuleerd" ? "selected" : ""}>${tA("adm.apt.stCancelled","Geannuleerd")}</option>
-      </select>
-    </div>` : ""}
-  </div>
-  <div class="adm-form-group"><label>${tA("adm.apt.noteLabel","Notitie (komt mee in de reminder)")}</label>
-    <textarea name="note" rows="2" style="width:100%">${esc(apt?.note || "")}</textarea>
-  </div>
-  ${isEdit && apt.reminderSentAt ? `<div style="font-size:12px;color:var(--wf-green);margin-bottom:8px;">✓ ${tA("adm.apt.remSentOn","Reminder verstuurd op")} ${new Date(apt.reminderSentAt).toLocaleString("nl-BE")}. ${tA("adm.apt.remResetHint","Wijzig je datum, tijd of reminder-instelling, dan wordt opnieuw een reminder gepland.")}</div>` : ""}
-  <div id="aptFormErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:8px;font-size:12px;margin-bottom:8px;"></div>
-  <div class="adm-form-actions" style="${isEdit ? "justify-content:space-between;" : ""}">
-    ${isEdit ? `<button type="button" class="adm-btn adm-btn-danger adm-btn-sm" id="aptDelete">${tA("adm.delete","Verwijderen")}</button>` : ""}
-    <div style="display:flex;gap:8px;">
-      <button type="button" class="adm-btn adm-btn-secondary" id="aptCancel">${tA("adm.cancel","Annuleren")}</button>
-      <button type="submit" class="adm-btn adm-btn-primary">${isEdit ? tA("adm.save","Opslaan") : tA("adm.createBtn","Aanmaken")}</button>
-    </div>
-  </div>
-</form>`;
-    openDrawer();
-    document.getElementById("aptCancel").addEventListener("click", closeDrawer);
-    document.getElementById("aptCustSel")?.addEventListener("change", e => {
-      const opt = e.target.selectedOptions[0];
-      if (!opt || !opt.value) return;
-      document.getElementById("aptCustName").value = opt.dataset.name || "";
-      document.getElementById("aptCustEmail").value = opt.dataset.email || "";
-    });
-    document.getElementById("aptDelete")?.addEventListener("click", async () => {
-      if (!confirm(tA("adm.apt.deleteConfirm","Afspraak van {d} verwijderen?").replace("{d}", apt.date))) return;
-      try { await api("DELETE", `/appointments/${apt.id}`); closeDrawer(); renderAppointments(); }
-      catch (err) { const el = document.getElementById("aptFormErr"); if (el) { el.textContent = err.message; el.style.display = ""; } }
-    });
-    document.getElementById("aptForm").addEventListener("submit", async e => {
-      e.preventDefault();
-      const errEl = document.getElementById("aptFormErr");
-      const body = Object.fromEntries(new FormData(e.target).entries());
-      body.reminderDays = Number(body.reminderDays || 0);
-      if (!body.workorderId) delete body.workorderId;
-      try {
-        if (isEdit) await api("PATCH", `/appointments/${apt.id}`, body);
-        else await api("POST", "/appointments", body);
-        closeDrawer(); renderAppointments();
-        window.showToast && window.showToast(isEdit ? tA("adm.apt.savedToast","Afspraak opgeslagen") : tA("adm.apt.createdToast","Afspraak aangemaakt"), "success");
-      } catch (err) {
-        if (errEl) { errEl.textContent = err.message; errEl.style.display = ""; }
-      }
-    });
-  }
-
-  // ── Werkongevallen (register + aangifte-opvolging verzekeraar) ────────────
-  let _incFilter = "alle";
-
-  function tIncSeverity(s) {
-    const map = { licht: "adm.inc.sevLight", werkverlet: "adm.inc.sevLostTime", ernstig: "adm.inc.sevSerious", dodelijk: "adm.inc.sevFatal" };
-    return map[s] ? tA(map[s], s) : (s || "-");
-  }
-  function tIncStatus(s) {
-    const map = { open: "adm.inc.stOpen", gemeld: "adm.inc.stReported", gesloten: "adm.inc.stClosed" };
-    return map[s] ? tA(map[s], s) : (s || "-");
-  }
-  // Aangifte-deadline verzekeraar: 8 kalenderdagen na de dag van het ongeval.
-  function incDeadline(i, today) {
-    const d = new Date(`${i.date}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + 8);
-    const deadline = d.toISOString().slice(0, 10);
-    const daysLeft = Math.round((new Date(`${deadline}T00:00:00Z`) - new Date(`${today}T00:00:00Z`)) / 86400000);
-    return { deadline, daysLeft };
-  }
-
-  async function renderIncidents() {
-    const content = document.getElementById("admContent");
-    let rows = [];
-    try { const d = await api("GET", "/incidents"); rows = d.incidents || []; }
-    catch (e) { content.innerHTML = `<div style="padding:20px;color:var(--wf-red)">${tA("adm.error","Fout")}: ${e.message}</div>`; return; }
-
-    const today = new Date().toISOString().slice(0, 10);
-    const filtered = _incFilter === "open" ? rows.filter(i => i.status === "open")
-      : _incFilter === "ernstig" ? rows.filter(i => ["ernstig", "dodelijk"].includes(i.severity))
-      : rows;
-    const sevCss = { licht: "adm-status-active", werkverlet: "adm-status-pending", ernstig: "adm-status-overdue", dodelijk: "adm-status-overdue" };
-    const stCss = { open: "adm-status-open", gemeld: "adm-status-goedgekeurd", gesloten: "adm-status-voltooid" };
-    const reportCell = i => {
-      if (i.insurerReportedAt) return `<span style="color:var(--wf-green);font-weight:600;">✓ ${tA("adm.inc.reported","gemeld")} ${new Date(`${i.insurerReportedAt}T12:00:00`).toLocaleDateString("nl-BE")}</span>`;
-      const { deadline, daysLeft } = incDeadline(i, today);
-      const dl = new Date(`${deadline}T12:00:00`).toLocaleDateString("nl-BE");
-      if (daysLeft < 0) return `<span style="color:var(--wf-red);font-weight:600;">${tA("adm.inc.overdue","Te laat")} · ${dl}</span>`;
-      const urgent = daysLeft <= 2;
-      return `<span style="${urgent ? "color:var(--wf-red);font-weight:600;" : ""}">${tA("adm.inc.dueBy","vóór")} ${dl} (${daysLeft}${tA("adm.leave.daysAbbr","d")})</span>`;
-    };
-
-    content.innerHTML = `
-<div class="adm-card">
-  <div class="adm-card-header">
-    <h3 class="adm-card-title">${tA("nav.incidents","Werkongevallen")} <span style="background:var(--wf-blue-l);color:var(--wf-blue);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${filtered.length}</span></h3>
-    <div style="display:flex;gap:8px;align-items:center;">
-      <select id="admIncFilter">
-        <option value="alle" ${_incFilter==="alle"?"selected":""}>${tA("mgr.all","Alle")}</option>
-        <option value="open" ${_incFilter==="open"?"selected":""}>${tA("adm.inc.stOpen","Open")}</option>
-        <option value="ernstig" ${_incFilter==="ernstig"?"selected":""}>${tA("adm.inc.sevSerious","Ernstig")}</option>
-      </select>
-      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admIncCsv">${tA("adm.inc.csvBtn","CSV verzekeraar")}</button>
-      <button class="adm-btn adm-btn-primary adm-btn-sm" id="admNewInc">+ ${tA("adm.inc.singular","Werkongeval")}</button>
-    </div>
-  </div>
-  <div style="padding:8px 20px;font-size:12px;color:var(--gray-500);border-bottom:1px solid var(--gray-100);">${tA("adm.inc.deadlineHint","Aangifte bij de verzekeraar: binnen 8 kalenderdagen na het ongeval. Ernstig ongeval: omstandig verslag aan de inspectie binnen 10 dagen. Dodelijk ongeval: onmiddellijk melden.")}</div>
-  ${filtered.length === 0
-    ? `<div class="adm-empty"><div class="adm-empty-text">${tA("adm.inc.empty","Geen werkongevallen geregistreerd")}</div><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewInc" style="margin-top:12px">+ ${tA("adm.inc.emptyBtn","Eerste werkongeval registreren")}</button></div>`
-    : `<div class="adm-card-body adm-table-wrap">
-    <table class="adm-table">
-      <thead><tr><th>${tA("adm.date","Datum")}</th><th>${tA("adm.inc.thEmployee","Medewerker")}</th><th>${tA("adm.inc.thLocation","Locatie")}</th><th>${tA("adm.inc.thSeverity","Ernst")}</th><th>${tA("adm.inc.thReport","Aangifte verzekeraar")}</th><th>${tA("adm.status","Status")}</th><th>${tA("adm.actions","Acties")}</th></tr></thead>
-      <tbody>
-        ${filtered.map(i => `
-        <tr class="adm-row-link adm-inc-row" data-id="${esc(i.id)}">
-          <td style="font-weight:600;">${new Date(`${i.date}T12:00:00`).toLocaleDateString("nl-BE",{day:"numeric",month:"short",year:"numeric"})}${i.time ? `<div style="font-size:11px;color:var(--gray-400)">${esc(i.time)}</div>` : ""}</td>
-          <td><strong>${esc(i.employeeName || "-")}</strong></td>
-          <td>${esc(i.location || "-")}</td>
-          <td><span class="adm-status ${sevCss[i.severity]||"adm-status-pending"}">${esc(tIncSeverity(i.severity))}</span></td>
-          <td style="font-size:12px;">${reportCell(i)}</td>
-          <td><span class="adm-status ${stCss[i.status]||"adm-status-open"}">${esc(tIncStatus(i.status))}</span></td>
-          <td style="white-space:nowrap;"><button class="adm-btn adm-btn-secondary adm-btn-sm adm-inc-edit" data-id="${esc(i.id)}">${tA("adm.edit","Bewerken")}</button></td>
-        </tr>`).join("")}
-      </tbody>
-    </table>
-  </div>`}
-</div>`;
-
-    document.getElementById("admIncFilter")?.addEventListener("change", e => { _incFilter = e.target.value; renderIncidents(); });
-    document.getElementById("admNewInc")?.addEventListener("click", () => openIncidentDrawer(null));
-    document.getElementById("admEmptyNewInc")?.addEventListener("click", () => openIncidentDrawer(null));
-    document.getElementById("admIncCsv")?.addEventListener("click", async () => {
-      try {
-        const r = await fetch(`/api/tenants/${tenantId()}/incidents?format=csv`, { headers: { Authorization: "Bearer " + token() } });
-        if (!r.ok) throw new Error(tA("adm.inc.exportErr","Export mislukt"));
-        const blob = await r.blob(); const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob); a.download = `werkongevallen-${today}.csv`;
-        document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(a.href);
-      } catch (e) { window.showToast && window.showToast(e.message, "error"); }
-    });
-    content.querySelectorAll(".adm-inc-edit").forEach(b => b.addEventListener("click", e => { e.stopPropagation(); openIncidentDrawer(rows.find(x => x.id === b.dataset.id)); }));
-    content.querySelectorAll(".adm-inc-row").forEach(row => row.addEventListener("click", e => {
-      if (e.target.closest("button")) return;
-      openIncidentDrawer(rows.find(x => x.id === row.dataset.id));
-    }));
-  }
-
-  async function openIncidentDrawer(inc) {
-    const [empData, venData] = await Promise.all([
-      api("GET", "/employees").catch(() => ({ employees: [] })),
-      api("GET", "/venues").catch(() => ({ venues: [] })),
-    ]);
-    const employees = (empData.employees || []).filter(u => u.active !== false);
-    const venues = venData.venues || [];
-    const today = new Date().toISOString().slice(0, 10);
-    const isEdit = !!inc;
-    document.getElementById("admDrawerTitle").textContent = isEdit ? tA("adm.inc.editTitle","Werkongeval bewerken") : tA("adm.inc.newTitle","Werkongeval registreren");
-    document.getElementById("admDrawerBody").innerHTML = `
-<form id="incForm">
-  <div class="adm-form-group"><label>${tA("adm.inc.thEmployee","Medewerker")}</label>
-    <select name="employeeId" id="incEmpSel" style="width:100%">
-      <option value="">${tA("adm.quote.manualFill","- Handmatig invullen -")}</option>
-      ${employees.map(u => `<option value="${esc(u.id)}" ${inc?.employeeId === u.id ? "selected" : ""} data-name="${esc(u.name||"")}">${esc(u.name || u.email)}</option>`).join("")}
-    </select>
-  </div>
-  <div class="adm-form-group"><label>${tA("adm.inc.empName","Naam medewerker")} *</label>
-    <input name="employeeName" id="incEmpName" value="${esc(inc?.employeeName || "")}" required></div>
-  <div class="adm-form-row">
-    <div class="adm-form-group"><label>${tA("adm.inc.dateLabel","Datum ongeval")} *</label>
-      <input name="date" type="date" value="${esc(inc?.date || today)}" max="${today}" required></div>
-    <div class="adm-form-group"><label>${tA("adm.apt.thTime","Tijd")}</label>
-      <input name="time" type="time" value="${esc(inc?.time || "")}"></div>
-  </div>
-  <div class="adm-form-row">
-    <div class="adm-form-group"><label>${(window.wfpTerms && window.wfpTerms.t("venue")) || tA("adm.inc.thLocation","Locatie")}</label>
-      <select name="venueId" id="incVenueSel" style="width:100%">
-        <option value="">-</option>
-        ${venues.map(v => `<option value="${esc(v.id)}" ${inc?.venueId === v.id ? "selected" : ""} data-name="${esc(v.name||"")}">${esc(v.name)}</option>`).join("")}
-      </select>
-    </div>
-    <div class="adm-form-group"><label>${tA("adm.inc.locLabel","Locatie (vrije tekst)")}</label>
-      <input name="location" id="incLocation" value="${esc(inc?.location || "")}"></div>
-  </div>
-  <div class="adm-form-group"><label>${tA("adm.inc.thSeverity","Ernst")} *</label>
-    <select name="severity" id="incSeverity" required>
-      <option value="licht" ${(inc?.severity ?? "licht") === "licht" ? "selected" : ""}>${tA("adm.inc.sevLight","Licht (EHBO, geen werkverlet)")}</option>
-      <option value="werkverlet" ${inc?.severity === "werkverlet" ? "selected" : ""}>${tA("adm.inc.sevLostTime","Met werkverlet")}</option>
-      <option value="ernstig" ${inc?.severity === "ernstig" ? "selected" : ""}>${tA("adm.inc.sevSerious","Ernstig")}</option>
-      <option value="dodelijk" ${inc?.severity === "dodelijk" ? "selected" : ""}>${tA("adm.inc.sevFatal","Dodelijk")}</option>
-    </select>
-  </div>
-  <div id="incSevWarn" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:8px;font-size:12px;margin-bottom:10px;"></div>
-  <div class="adm-form-group"><label>${tA("adm.inc.descLabel","Omschrijving van het ongeval")} *</label>
-    <textarea name="description" rows="3" style="width:100%" required>${esc(inc?.description || "")}</textarea>
-  </div>
-  <div class="adm-form-group"><label>${tA("adm.inc.witLabel","Getuigen (namen)")}</label>
-    <input name="witnesses" value="${esc(inc?.witnesses || "")}"></div>
-  <div class="adm-form-row">
-    <div class="adm-form-group"><label>${tA("adm.inc.reportedLabel","Aangifte verzekeraar op")}</label>
-      <input name="insurerReportedAt" type="date" value="${esc(inc?.insurerReportedAt || "")}"></div>
-    ${isEdit ? `<div class="adm-form-group"><label>${tA("adm.status","Status")}</label>
-      <select name="status">
-        <option value="open" ${inc.status === "open" ? "selected" : ""}>${tA("adm.inc.stOpen","Open")}</option>
-        <option value="gemeld" ${inc.status === "gemeld" ? "selected" : ""}>${tA("adm.inc.stReported","Gemeld")}</option>
-        <option value="gesloten" ${inc.status === "gesloten" ? "selected" : ""}>${tA("adm.inc.stClosed","Gesloten")}</option>
-      </select>
-    </div>` : ""}
-  </div>
-  <div id="incFormErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:8px;font-size:12px;margin-bottom:8px;"></div>
-  <div class="adm-form-actions" style="${isEdit ? "justify-content:space-between;" : ""}">
-    ${isEdit ? `<button type="button" class="adm-btn adm-btn-danger adm-btn-sm" id="incDelete">${tA("adm.delete","Verwijderen")}</button>` : ""}
-    <div style="display:flex;gap:8px;">
-      <button type="button" class="adm-btn adm-btn-secondary" id="incCancel">${tA("adm.cancel","Annuleren")}</button>
-      <button type="submit" class="adm-btn adm-btn-primary">${isEdit ? tA("adm.save","Opslaan") : tA("adm.createBtn","Aanmaken")}</button>
-    </div>
-  </div>
-</form>`;
-    openDrawer();
-    document.getElementById("incCancel").addEventListener("click", closeDrawer);
-    document.getElementById("incEmpSel")?.addEventListener("change", e => {
-      const opt = e.target.selectedOptions[0];
-      if (!opt || !opt.value) return;
-      document.getElementById("incEmpName").value = opt.dataset.name || "";
-    });
-    document.getElementById("incVenueSel")?.addEventListener("change", e => {
-      const opt = e.target.selectedOptions[0];
-      const loc = document.getElementById("incLocation");
-      if (opt && opt.value && !loc.value) loc.value = opt.dataset.name || "";
-    });
-    const sevWarn = () => {
-      const v = document.getElementById("incSeverity").value;
-      const el = document.getElementById("incSevWarn");
-      if (v === "dodelijk") { el.textContent = tA("adm.inc.fatalWarn","Dodelijk ongeval: verwittig de inspectie (Toezicht Welzijn op het Werk) onmiddellijk en bezorg binnen 10 dagen een omstandig verslag."); el.style.display = ""; }
-      else if (v === "ernstig") { el.textContent = tA("adm.inc.seriousWarn","Ernstig arbeidsongeval: bezorg de inspectie (Toezicht Welzijn op het Werk) binnen 10 dagen een omstandig verslag."); el.style.display = ""; }
-      else el.style.display = "none";
-    };
-    document.getElementById("incSeverity").addEventListener("change", sevWarn);
-    sevWarn();
-    document.getElementById("incDelete")?.addEventListener("click", async () => {
-      if (!confirm(tA("adm.inc.deleteConfirm","Werkongeval van {d} verwijderen?").replace("{d}", inc.date))) return;
-      try { await api("DELETE", `/incidents/${inc.id}`); closeDrawer(); renderIncidents(); }
-      catch (err) { const el = document.getElementById("incFormErr"); if (el) { el.textContent = err.message; el.style.display = ""; } }
-    });
-    document.getElementById("incForm").addEventListener("submit", async e => {
-      e.preventDefault();
-      const errEl = document.getElementById("incFormErr");
-      const body = Object.fromEntries(new FormData(e.target).entries());
-      if (!body.employeeId) delete body.employeeId;
-      if (!body.venueId) delete body.venueId;
-      try {
-        if (isEdit) await api("PATCH", `/incidents/${inc.id}`, body);
-        else await api("POST", "/incidents", body);
-        closeDrawer(); renderIncidents();
-        window.showToast && window.showToast(isEdit ? tA("adm.inc.savedToast","Werkongeval opgeslagen") : tA("adm.inc.createdToast","Werkongeval geregistreerd"), "success");
-      } catch (err) {
-        if (errEl) { errEl.textContent = err.message; errEl.style.display = ""; }
-      }
-    });
-  }
-
-  // ── Klantvragen (Inbox · e-mail-intake) ────────────────────────────────────
-  let _inqFilter = "nieuw";
-
-  function tInqStatus(s) {
-    const map = { nieuw: "adm.inq.stNew", in_behandeling: "adm.inq.stBusy", beantwoord: "adm.inq.stAnswered", gesloten: "adm.inq.stClosed" };
-    return map[s] ? tA(map[s], s) : (s || "-");
-  }
-
-  async function renderInbox() {
-    const content = document.getElementById("admContent");
-    let rows = [], intake = null;
-    try {
-      const [inqData, cfgData] = await Promise.all([
-        api("GET", "/inquiries"),
-        api("GET", "/inquiries/intake-config").catch(() => null),
-      ]);
-      rows = inqData.inquiries || [];
-      intake = cfgData && cfgData.intake;
-    }
-    catch (e) { content.innerHTML = `<div style="padding:20px;color:var(--wf-red)">${tA("adm.error","Fout")}: ${e.message}</div>`; return; }
-
-    const newCount = rows.filter(q => q.status === "nieuw").length;
-    const inboxBadge = document.getElementById("admInboxBadge");
-    if (inboxBadge) { inboxBadge.textContent = newCount; inboxBadge.style.display = newCount ? "" : "none"; }
-
-    const filtered = _inqFilter === "nieuw" ? rows.filter(q => q.status === "nieuw")
-      : _inqFilter === "open" ? rows.filter(q => ["nieuw", "in_behandeling"].includes(q.status))
-      : rows;
-    const stCss = { nieuw: "adm-status-nieuw", in_behandeling: "adm-status-pending", beantwoord: "adm-status-goedgekeurd", gesloten: "adm-status-voltooid" };
-
-    content.innerHTML = `
-${intake ? `<div class="adm-card" style="margin-bottom:14px">
-  <div class="adm-card-body" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:14px 20px;">
-    <div style="flex:1;min-width:260px;">
-      <div style="font-size:12px;color:var(--gray-500);margin-bottom:4px;">${tA("adm.inq.intakeLabel","Jouw intake-adres · stuur (of stuur door) klantmails naar dit adres")}</div>
-      <code id="admIntakeAddr" style="font-size:14px;font-weight:600;">${esc(intake.address || "-")}</code>
-      ${intake.live ? "" : `<span class="adm-status adm-status-pending" style="margin-left:8px;">${tA("adm.inq.testMode","testmodus")}</span>`}
-    </div>
-    <button class="adm-btn adm-btn-secondary adm-btn-sm" id="admIntakeCopy">${tA("adm.inq.copyBtn","Kopieer adres")}</button>
-  </div>
-</div>` : ""}
-<div class="adm-card">
-  <div class="adm-card-header">
-    <h3 class="adm-card-title">${tA("nav.inbox","Klantvragen")} <span style="background:var(--wf-blue-l);color:var(--wf-blue);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${filtered.length}</span></h3>
-    <div style="display:flex;gap:8px;align-items:center;">
-      <select id="admInqFilter">
-        <option value="nieuw" ${_inqFilter==="nieuw"?"selected":""}>${tA("adm.inq.stNew","Nieuw")}</option>
-        <option value="open" ${_inqFilter==="open"?"selected":""}>${tA("adm.inq.fOpen","Open")}</option>
-        <option value="alle" ${_inqFilter==="alle"?"selected":""}>${tA("mgr.all","Alle")}</option>
-      </select>
-      <button class="adm-btn adm-btn-primary adm-btn-sm" id="admNewInq">+ ${tA("adm.inq.singular","Klantvraag")}</button>
-    </div>
-  </div>
-  ${filtered.length === 0
-    ? `<div class="adm-empty"><div class="adm-empty-text">${tA("adm.inq.empty","Geen klantvragen")}</div><div style="font-size:12px;color:var(--gray-400);margin-top:6px;max-width:420px;margin-left:auto;margin-right:auto;">${tA("adm.inq.emptyHint","Mails naar je intake-adres verschijnen hier automatisch, gekoppeld aan de klant. Telefonische vragen voeg je toe met + Klantvraag.")}</div></div>`
-    : `<div class="adm-card-body adm-table-wrap">
-    <table class="adm-table">
-      <thead><tr><th>${tA("adm.inq.thReceived","Ontvangen")}</th><th>${tA("adm.inq.thFrom","Van")}</th><th>${tA("adm.inq.thSubject","Onderwerp")}</th><th>${tA("adm.thCustomer","Klant")}</th><th>${tA("adm.status","Status")}</th></tr></thead>
-      <tbody>
-        ${filtered.map(q => `
-        <tr class="adm-row-link adm-inq-row" data-id="${esc(q.id)}" style="${q.status === "nieuw" ? "font-weight:600;" : ""}">
-          <td style="white-space:nowrap;">${q.receivedAt ? new Date(q.receivedAt).toLocaleString("nl-BE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "-"}</td>
-          <td>${esc(q.fromName || q.fromEmail || "-")}${q.fromName && q.fromEmail && q.fromEmail !== "-" ? `<div style="font-size:11px;color:var(--gray-400);font-weight:400;">${esc(q.fromEmail)}</div>` : ""}</td>
-          <td>${esc(q.subject || "-")}${q.source === "handmatig" ? ` <span style="font-size:11px;color:var(--gray-400);font-weight:400;">· ${tA("adm.inq.manualTag","handmatig")}</span>` : ""}</td>
-          <td>${q.customerName ? esc(q.customerName) : `<span style="color:var(--gray-400);font-weight:400;">${tA("adm.inq.noCustomer","niet gekoppeld")}</span>`}</td>
-          <td><span class="adm-status ${stCss[q.status]||"adm-status-nieuw"}">${esc(tInqStatus(q.status))}</span></td>
-        </tr>`).join("")}
-      </tbody>
-    </table>
-  </div>`}
-</div>`;
-
-    document.getElementById("admInqFilter")?.addEventListener("change", e => { _inqFilter = e.target.value; renderInbox(); });
-    document.getElementById("admNewInq")?.addEventListener("click", () => openInquiryDrawer(null));
-    document.getElementById("admIntakeCopy")?.addEventListener("click", () => {
-      const addr = document.getElementById("admIntakeAddr")?.textContent || "";
-      navigator.clipboard?.writeText(addr).then(() => window.showToast && window.showToast(tA("adm.inq.copiedToast","Intake-adres gekopieerd"), "success"));
-    });
-    content.querySelectorAll(".adm-inq-row").forEach(row => row.addEventListener("click", () => {
-      openInquiryDrawer(rows.find(x => x.id === row.dataset.id));
-    }));
-  }
-
-  async function openInquiryDrawer(inq) {
-    const custData = await api("GET", "/customers").catch(() => ({ customers: [] }));
-    const customers = custData.customers || [];
-    const isEdit = !!inq;
-    document.getElementById("admDrawerTitle").textContent = isEdit ? (inq.subject || tA("adm.inq.singular","Klantvraag")) : tA("adm.inq.newTitle","Klantvraag toevoegen");
-
-    if (!isEdit) {
-      // Handmatige invoer (telefoon/balie).
-      document.getElementById("admDrawerBody").innerHTML = `
-<form id="inqForm">
-  <div class="adm-form-row">
-    <div class="adm-form-group"><label>${tA("adm.inq.fromName","Naam klant")}</label>
-      <input name="fromName" value=""></div>
-    <div class="adm-form-group"><label>${tA("adm.inq.fromEmail","E-mail klant")}</label>
-      <input name="fromEmail" type="email" value=""></div>
-  </div>
-  <div class="adm-form-group"><label>${tA("adm.inq.thSubject","Onderwerp")} *</label>
-    <input name="subject" required></div>
-  <div class="adm-form-group"><label>${tA("adm.inq.textLabel","Vraag / omschrijving")}</label>
-    <textarea name="text" rows="5" style="width:100%"></textarea></div>
-  <div id="inqFormErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:8px;font-size:12px;margin-bottom:8px;"></div>
-  <div class="adm-form-actions">
-    <button type="button" class="adm-btn adm-btn-secondary" id="inqCancel">${tA("adm.cancel","Annuleren")}</button>
-    <button type="submit" class="adm-btn adm-btn-primary">${tA("adm.createBtn","Aanmaken")}</button>
-  </div>
-</form>`;
-      openDrawer();
-      document.getElementById("inqCancel").addEventListener("click", closeDrawer);
-      document.getElementById("inqForm").addEventListener("submit", async e => {
-        e.preventDefault();
-        const errEl = document.getElementById("inqFormErr");
-        const body = Object.fromEntries(new FormData(e.target).entries());
-        try {
-          await api("POST", "/inquiries", body);
-          closeDrawer(); renderInbox();
-          window.showToast && window.showToast(tA("adm.inq.createdToast","Klantvraag toegevoegd"), "success");
-        } catch (err) { if (errEl) { errEl.textContent = err.message; errEl.style.display = ""; } }
-      });
-      return;
-    }
-
-    // Detailweergave met status- en klantkoppeling.
-    document.getElementById("admDrawerBody").innerHTML = `
-<div style="font-size:12px;color:var(--gray-500);margin-bottom:10px;">
-  ${tA("adm.inq.thFrom","Van")}: <strong style="color:var(--ink,#0B1320)">${esc(inq.fromName || "-")}</strong>${inq.fromEmail && inq.fromEmail !== "-" ? ` · ${esc(inq.fromEmail)}` : ""}<br>
-  ${tA("adm.inq.thReceived","Ontvangen")}: ${inq.receivedAt ? new Date(inq.receivedAt).toLocaleString("nl-BE") : "-"} · ${inq.source === "handmatig" ? tA("adm.inq.manualTag","handmatig") : tA("adm.inq.viaMail","via e-mail")}
-</div>
-<div style="background:var(--gray-50);border:1px solid var(--gray-100);border-radius:10px;padding:12px;font-size:13px;white-space:pre-wrap;max-height:300px;overflow:auto;margin-bottom:14px;">${esc(inq.text || "-")}</div>
-${((window._wfpEnt && window._wfpEnt.modules) || []).includes("ai_estimate") ? `<div id="inqAiZone" style="margin-bottom:14px;">
-  <button type="button" class="adm-btn adm-btn-secondary adm-btn-sm" id="inqAiBtn">${tA("adm.est.btn","AI-offerte-concept maken")}</button>
-  <span style="font-size:11px;color:var(--gray-400);margin-left:8px;">${tA("adm.est.hint","AI stelt regels voor · jij controleert en verstuurt")}</span>
-</div>` : ""}
-<form id="inqForm">
-  <div class="adm-form-row">
-    <div class="adm-form-group"><label>${tA("adm.thCustomer","Klant")}</label>
-      <select name="customerId" style="width:100%">
-        <option value="">${tA("adm.inq.noCustomer","niet gekoppeld")}</option>
-        ${customers.map(c => `<option value="${esc(c.id)}" ${inq.customerId === c.id ? "selected" : ""}>${esc(c.name)}</option>`).join("")}
-      </select>
-    </div>
-    <div class="adm-form-group"><label>${tA("adm.status","Status")}</label>
-      <select name="status">
-        <option value="nieuw" ${inq.status === "nieuw" ? "selected" : ""}>${tA("adm.inq.stNew","Nieuw")}</option>
-        <option value="in_behandeling" ${inq.status === "in_behandeling" ? "selected" : ""}>${tA("adm.inq.stBusy","In behandeling")}</option>
-        <option value="beantwoord" ${inq.status === "beantwoord" ? "selected" : ""}>${tA("adm.inq.stAnswered","Beantwoord")}</option>
-        <option value="gesloten" ${inq.status === "gesloten" ? "selected" : ""}>${tA("adm.inq.stClosed","Gesloten")}</option>
-      </select>
-    </div>
-  </div>
-  ${inq.fromEmail && inq.fromEmail !== "-" ? `<div style="font-size:12px;color:var(--gray-500);margin-bottom:10px;">${tA("adm.inq.replyHint","Beantwoorden doe je vanuit je eigen mailbox")}: <a href="mailto:${esc(inq.fromEmail)}?subject=${encodeURIComponent("Re: " + (inq.subject || ""))}">${esc(inq.fromEmail)}</a></div>` : ""}
-  <div id="inqFormErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:8px;font-size:12px;margin-bottom:8px;"></div>
-  <div class="adm-form-actions" style="justify-content:space-between;">
-    <button type="button" class="adm-btn adm-btn-danger adm-btn-sm" id="inqDelete">${tA("adm.delete","Verwijderen")}</button>
-    <div style="display:flex;gap:8px;">
-      <button type="button" class="adm-btn adm-btn-secondary" id="inqCancel">${tA("adm.cancel","Annuleren")}</button>
-      <button type="submit" class="adm-btn adm-btn-primary">${tA("adm.save","Opslaan")}</button>
-    </div>
-  </div>
-</form>`;
-    openDrawer();
-    document.getElementById("inqCancel").addEventListener("click", closeDrawer);
-    // AI-estimatie: eerst de raming + aannames tonen, pas na bevestiging een
-    // concept-offerte aanmaken (menselijke eindcontrole).
-    document.getElementById("inqAiBtn")?.addEventListener("click", async () => {
-      const zone = document.getElementById("inqAiZone");
-      const btn = document.getElementById("inqAiBtn");
-      btn.disabled = true; btn.textContent = tA("adm.est.busy","AI rekent…");
-      let est;
-      try { est = await api("POST", "/estimate", { inquiryId: inq.id }); }
-      catch (err) {
-        btn.disabled = false; btn.textContent = tA("adm.est.btn","AI-offerte-concept maken");
-        window.showToast && window.showToast(err.message, "error");
-        return;
-      }
-      const e = est.estimate;
-      const subtotal = e.lines.reduce((s, l) => s + l.qty * l.unitPrice, 0);
-      const confLabel = { laag: tA("adm.est.confLow","lage zekerheid"), middel: tA("adm.est.confMid","gemiddelde zekerheid"), hoog: tA("adm.est.confHigh","hoge zekerheid") }[e.confidence] || e.confidence;
-      zone.innerHTML = `
-<div style="border:1px solid var(--wf-blue-l);border-radius:10px;padding:12px;background:var(--wf-blue-l);">
-  <div style="font-weight:600;font-size:13px;margin-bottom:8px;">${tA("adm.est.previewTitle","AI-raming")} · ${esc(confLabel)}${e.mock ? ` · <span style="font-weight:400;">${tA("adm.inq.testMode","testmodus")}</span>` : ""}</div>
-  ${e.lines.map(l => `<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;"><span>${esc(String(l.qty))} × ${esc(l.description)}</span><span style="white-space:nowrap;margin-left:10px;">€ ${(l.qty * l.unitPrice).toFixed(2)}</span></div>`).join("")}
-  <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:600;border-top:1px solid rgba(0,0,0,.08);margin-top:6px;padding-top:6px;"><span>${tA("adm.est.subtotal","Totaal excl. btw")}</span><span>€ ${subtotal.toFixed(2)}</span></div>
-  ${e.assumptions.length ? `<div style="font-size:11px;color:var(--gray-500);margin-top:8px;">${tA("adm.est.assumptions","Aannames")}:<br>${e.assumptions.map(a => `· ${esc(a)}`).join("<br>")}</div>` : ""}
-  <div style="display:flex;gap:8px;margin-top:10px;">
-    <button type="button" class="adm-btn adm-btn-primary adm-btn-sm" id="inqAiConfirm">${tA("adm.est.confirmBtn","Concept-offerte aanmaken")}</button>
-    <button type="button" class="adm-btn adm-btn-secondary adm-btn-sm" id="inqAiDismiss">${tA("adm.cancel","Annuleren")}</button>
-  </div>
-</div>`;
-      document.getElementById("inqAiDismiss").addEventListener("click", () => {
-        zone.innerHTML = `<button type="button" class="adm-btn adm-btn-secondary adm-btn-sm" id="inqAiBtn2">${tA("adm.est.btn","AI-offerte-concept maken")}</button>`;
-        document.getElementById("inqAiBtn2").addEventListener("click", () => openInquiryDrawer(inq));
-      });
-      document.getElementById("inqAiConfirm").addEventListener("click", async () => {
-        const cBtn = document.getElementById("inqAiConfirm");
-        cBtn.disabled = true; cBtn.textContent = tA("adm.est.creating","Aanmaken…");
-        try {
-          const created = await api("POST", "/offertes", {
-            customerId: est.prefill.customerId || undefined,
-            customerName: est.prefill.customerName || inq.fromName || inq.fromEmail || "-",
-            lines: e.lines,
-          });
-          if (inq.status === "nieuw") api("PATCH", `/inquiries/${inq.id}`, { status: "in_behandeling" }).catch(() => {});
-          closeDrawer();
-          window.showToast && window.showToast(`${tA("adm.est.createdToast","AI-concept aangemaakt")} · ${created.quote ? created.quote.number : ""} · ${tA("adm.est.reviewToast","controleer regels en prijzen")}`, "success");
-          switchView("offertes");
-          if (created.quote) openOfferteDrawer(created.quote);
-        } catch (err) {
-          cBtn.disabled = false; cBtn.textContent = tA("adm.est.confirmBtn","Concept-offerte aanmaken");
-          window.showToast && window.showToast(err.message, "error");
-        }
-      });
-    });
-    document.getElementById("inqDelete").addEventListener("click", async () => {
-      if (!confirm(tA("adm.inq.deleteConfirm","Deze klantvraag verwijderen?"))) return;
-      try { await api("DELETE", `/inquiries/${inq.id}`); closeDrawer(); renderInbox(); }
-      catch (err) { const el = document.getElementById("inqFormErr"); if (el) { el.textContent = err.message; el.style.display = ""; } }
-    });
-    document.getElementById("inqForm").addEventListener("submit", async e => {
-      e.preventDefault();
-      const errEl = document.getElementById("inqFormErr");
-      const body = Object.fromEntries(new FormData(e.target).entries());
-      try {
-        await api("PATCH", `/inquiries/${inq.id}`, body);
-        closeDrawer(); renderInbox();
-        window.showToast && window.showToast(tA("adm.inq.savedToast","Klantvraag opgeslagen"), "success");
-      } catch (err) { if (errEl) { errEl.textContent = err.message; errEl.style.display = ""; } }
-    });
-  }
 
   async function renderClocking() {
     const content = document.getElementById("admContent");
@@ -3328,7 +2929,7 @@ ${((window._wfpEnt && window._wfpEnt.modules) || []).includes("ai_estimate") ? `
         try {
           const d = await api("POST", `/workorders/${btn.dataset.id}/invoice`, {});
           window.showToast && window.showToast(`Factuur ${d.invoice?.number || ""} aangemaakt`, "success");
-          renderWorkorders();
+          switchView("facturen");
         } catch (err) {
           window.showToast && window.showToast(err.message || "Factureren mislukt", "error");
         }
@@ -3340,7 +2941,7 @@ ${((window._wfpEnt && window._wfpEnt.modules) || []).includes("ai_estimate") ? `
   }
 
   // ── Werkbon drawer ─────────────────────────────────────────
-  function openWorkorderDrawer(workorder, _preloadedWOs) {
+  function openWorkorderDrawer(workorder, _preloadedWOs, prefill = {}) {
     Promise.all([
       api("GET", "/employees"),
       api("GET", "/customers").catch(() => ({ customers: [] }))
@@ -3351,29 +2952,29 @@ ${((window._wfpEnt && window._wfpEnt.modules) || []).includes("ai_estimate") ? `
       document.getElementById("admDrawerBody").innerHTML = `
 <form id="woForm">
   <div class="adm-form-group"><label>Titel *</label>
-    <input name="title" value="${esc(workorder?.title || "")}" required placeholder="Omschrijving van de opdracht">
+    <input name="title" value="${esc(workorder?.title || prefill.title || "")}" required placeholder="Omschrijving van de opdracht">
   </div>
   <div class="adm-form-row">
     <div class="adm-form-group"><label>Medewerker</label>
       <select name="userId">
         <option value="">- Niet toegewezen -</option>
-        ${employees.map(u => `<option value="${esc(u.id)}" ${workorder?.userId === u.id ? "selected" : ""}>${esc(u.name || u.email)}</option>`).join("")}
+        ${employees.map(u => `<option value="${esc(u.id)}" ${(workorder?.userId || prefill.userId) === u.id ? "selected" : ""}>${esc(u.name || u.email)}</option>`).join("")}
       </select>
     </div>
     <div class="adm-form-group"><label>Klant</label>
       <select name="customerId" id="woCustSel">
         <option value="">- Kies klant of typ vrij -</option>
-        ${customers.map(c => `<option value="${c.id}" ${workorder?.customerId===c.id?"selected":""}>${esc(c.name)}</option>`).join("")}
+        ${customers.map(c => `<option value="${c.id}" ${(workorder?.customerId||prefill.customerId)===c.id?"selected":""}>${esc(c.name)}</option>`).join("")}
       </select>
     </div>
   </div>
   <div class="adm-form-group" id="woClientNameWrap">
     <label>Klantnaam</label>
-    <input name="clientName" id="woClientName" value="${esc(workorder?.clientName || "")}" placeholder="Of typ een klantnaam vrij">
+    <input name="clientName" id="woClientName" value="${esc(workorder?.clientName || prefill.clientName || "")}" placeholder="Of typ een klantnaam vrij">
   </div>
   <div class="adm-form-row">
     <div class="adm-form-group"><label>Gepland op</label>
-      <input name="scheduledDate" type="date" value="${esc(workorder?.scheduledDate || "")}">
+      <input name="scheduledDate" type="date" value="${esc(workorder?.scheduledDate || prefill.scheduledDate || "")}">
     </div>
     <div class="adm-form-group"><label>Prioriteit</label>
       <select name="priority">
@@ -3425,6 +3026,7 @@ ${((window._wfpEnt && window._wfpEnt.modules) || []).includes("ai_estimate") ? `
     </label>
   </div>
   ${workorder?.invoiceId ? `<div style="background:var(--wf-green-l);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--wf-green);margin-bottom:8px;">Factuur aangemaakt</div>` : ""}
+  ${!workorder ? `<label class="adm-next-step-option"><input type="checkbox" id="woPlanAfterSave" ${prefill.planAfterSave ? "checked" : ""}><span><strong>Na het aanmaken meteen inplannen</strong><small>De medewerker, datum en opdracht worden overgenomen in de planning.</small></span></label>` : ""}
   <div id="woFormErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:8px;font-size:12px;margin-bottom:8px;"></div>
   <div class="adm-form-actions" style="flex-wrap:wrap;gap:8px;">
     <button type="button" class="adm-btn adm-btn-secondary" id="woCancel">Annuleren</button>
@@ -3518,8 +3120,18 @@ ${((window._wfpEnt && window._wfpEnt.modules) || []).includes("ai_estimate") ? `
         try {
           if (workorder) await api("PATCH", `/workorders/${workorder.id}`, body);
           else await api("POST", "/workorders", body);
+          const planAfterSave = !workorder && document.getElementById("woPlanAfterSave")?.checked;
           closeDrawer();
-          renderWorkorders();
+          if (planAfterSave) {
+            switchView("planning");
+            let tries = 0;
+            const openPlannedShift = () => {
+              const d = window.wfpAdmin?.drawers;
+              if (!d?.shift && tries++ < 25) return setTimeout(openPlannedShift, 120);
+              d?.shift?.({ userId:body.userId, date:body.scheduledDate, note:body.title, location:body.clientName });
+            };
+            openPlannedShift();
+          } else renderWorkorders();
         } catch (err) {
           if (errEl) { errEl.textContent = err.message; errEl.style.display = "block"; }
           else window.showToast(err.message, "error");
@@ -4457,6 +4069,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
       ${customer.address?`<div style="font-size:13px;"><span style="color:var(--gray-400);min-width:110px;display:inline-block">${tA("adm.cust.address","Adres")}</span>${esc(customer.address)}</div>`:""}
       ${customer.notes?`<div style="font-size:13px;margin-top:4px;"><span style="color:var(--gray-400);display:block;margin-bottom:2px;">${tA("adm.cust.notes","Notities")}</span><span style="color:var(--gray-500)">${esc(customer.notes)}</span></div>`:""}
       <div style="margin-top:8px;display:flex;gap:8px;">
+        <button class="adm-btn adm-btn-primary adm-btn-sm" id="custNewQuote">+ ${tA("adm.quote.singular","Offerte")}</button>
         <button class="adm-btn adm-btn-primary adm-btn-sm" id="custNewWO">+ ${(window.wfpTerms && window.wfpTerms.t("jobSingular")) || tA("emp.wo.default","Werkbon")}</button>
         <button class="adm-btn adm-btn-secondary adm-btn-sm" id="custNewInv">${tA("adm.cust.invoiceCap","Factuur")}</button>
       </div>
@@ -4484,13 +4097,16 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
           setTimeout(() => renderCustomerDetail(customerId), 300);
         }, { once: true });
       });
+      content.querySelector("#custNewQuote")?.addEventListener("click", () => {
+        openOfferteDrawer(null, {
+          customerId: customer.id,
+          customerName: customer.name,
+          customerVatNumber: customer.vatNumber || "",
+          customerAddress: customer.address || ""
+        });
+      });
       content.querySelector("#custNewWO")?.addEventListener("click", () => {
-        openWorkorderDrawer(null);
-        // Pre-fill clientName after drawer renders
-        setTimeout(() => {
-          const inp = document.querySelector("#admDrawerBody [name=clientName]");
-          if (inp) inp.value = customer.name;
-        }, 100);
+        openWorkorderDrawer(null, null, { customerId:customer.id, clientName:customer.name });
       });
       content.querySelector("#custNewInv")?.addEventListener("click", () => {
         openFactuurDrawer(null, {
@@ -4581,9 +4197,15 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
       const errEl = document.getElementById("custFormErr");
       const body = Object.fromEntries(new FormData(e.target).entries());
       try {
-        if (customer) await api("PATCH", `/customers/${customer.id}`, body);
-        else await api("POST", "/customers", body);
-        closeDrawer(); renderCustomers();
+        if (customer) {
+          await api("PATCH", `/customers/${customer.id}`, body);
+          closeDrawer(); renderCustomers();
+        } else {
+          const created = await api("POST", "/customers", body);
+          closeDrawer();
+          window.showToast && window.showToast("Klant aangemaakt. Voeg nu een offerte of werkbon toe.", "success");
+          if (created.customer?.id) renderCustomerDetail(created.customer.id); else renderCustomers();
+        }
       } catch(err) {
         if (errEl) { errEl.textContent = err.message; errEl.style.display = "block"; }
         else window.showToast(err.message, "error");
@@ -5156,18 +4778,18 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
       }));
       content.querySelectorAll(".q-toinv").forEach(b => b.addEventListener("click", async () => {
         if(!confirm(tA("adm.quote.toInvConfirm","Offerte omzetten naar factuur?"))) return;
-        try { const d = await api("POST", `/offertes/${b.dataset.id}/convert`, { target:"invoice" }); window.showToast && window.showToast(tA("adm.wo.toInvoice","Factuur")+" "+(d.invoice?.number||"")+" "+tA("adm.created","aangemaakt"),"success"); renderOffertes(); }
+        try { const d = await api("POST", `/offertes/${b.dataset.id}/convert`, { target:"invoice" }); window.showToast && window.showToast(tA("adm.wo.toInvoice","Factuur")+" "+(d.invoice?.number||"")+" "+tA("adm.created","aangemaakt"),"success"); switchView("facturen"); }
         catch(e){ window.showToast && window.showToast(tA("adm.error","Fout")+": "+e.message,"error"); }
       }));
       content.querySelectorAll(".q-towo").forEach(b => b.addEventListener("click", async () => {
         if(!confirm(tA("adm.quote.toWoConfirm","Offerte omzetten naar werkbon?"))) return;
-        try { const d = await api("POST", `/offertes/${b.dataset.id}/convert`, { target:"workorder" }); window.showToast && window.showToast(((window.wfpTerms && window.wfpTerms.t("jobSingular")) || tA("emp.wo.default","Werkbon"))+" "+(d.workorder?.number||"")+" "+tA("adm.created","aangemaakt"),"success"); renderOffertes(); }
+        try { const d = await api("POST", `/offertes/${b.dataset.id}/convert`, { target:"workorder" }); window.showToast && window.showToast(((window.wfpTerms && window.wfpTerms.t("jobSingular")) || tA("emp.wo.default","Werkbon"))+" "+(d.workorder?.number||"")+" "+tA("adm.created","aangemaakt"),"success"); switchView("workorders"); }
         catch(e){ window.showToast && window.showToast(tA("adm.error","Fout")+": "+e.message,"error"); }
       }));
     } catch(e) { content.innerHTML = `<div style="padding:20px;color:var(--wf-red)">${tA("adm.error","Fout")}: ${e.message}</div>`; }
   }
 
-  async function openOfferteDrawer(quote) {
+  async function openOfferteDrawer(quote, prefill = {}) {
     let customers = [];
     try { const d = await api("GET", "/customers"); customers = d.customers || []; } catch(_){}
     const today = new Date().toISOString().slice(0,10);
@@ -5191,15 +4813,15 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
   <div class="adm-form-group"><label>${tA("adm.thCustomer","Klant")} *</label>
     <select name="customerId" id="qCustSel" style="width:100%" ${isEdit?"disabled":""}>
       <option value="">${tA("adm.quote.manualFill","- Handmatig invullen -")}</option>
-      ${customers.map(c=>`<option value="${c.id}" ${quote?.customerId===c.id?"selected":""}>${esc(c.name)}</option>`).join("")}
+      ${customers.map(c=>`<option value="${c.id}" ${(quote?.customerId || prefill.customerId)===c.id?"selected":""}>${esc(c.name)}</option>`).join("")}
     </select>
   </div>
   <div class="adm-form-group"><label>${tA("adm.quote.customerName","Klantnaam")} *</label>
-    <input name="customerName" value="${esc(quote?.customerName||"")}" placeholder="${tA("adm.quote.companyPh","Bedrijfsnaam NV")}" required ${isEdit?"disabled":""}>
+    <input name="customerName" value="${esc(quote?.customerName || prefill.customerName || "")}" placeholder="${tA("adm.quote.companyPh","Bedrijfsnaam NV")}" required ${isEdit?"disabled":""}>
   </div>
   <div class="adm-form-row">
-    <div class="adm-form-group"><label>${tA("adm.cust.vatNumber","BTW-nummer")}</label><input name="customerVatNumber" value="${esc(quote?.customerVatNumber||"")}" placeholder="BE0000.000.000" ${isEdit?"disabled":""}></div>
-    <div class="adm-form-group"><label>${tA("adm.cust.address","Adres")}</label><input name="customerAddress" value="${esc(quote?.customerAddress||"")}" placeholder="${tA("adm.quote.addrPh","Straat, gemeente")}" ${isEdit?"disabled":""}></div>
+    <div class="adm-form-group"><label>${tA("adm.cust.vatNumber","BTW-nummer")}</label><input name="customerVatNumber" value="${esc(quote?.customerVatNumber || prefill.customerVatNumber || "")}" placeholder="BE0000.000.000" ${isEdit?"disabled":""}></div>
+    <div class="adm-form-group"><label>${tA("adm.cust.address","Adres")}</label><input name="customerAddress" value="${esc(quote?.customerAddress || prefill.customerAddress || "")}" placeholder="${tA("adm.quote.addrPh","Straat, gemeente")}" ${isEdit?"disabled":""}></div>
   </div>
   <div class="adm-form-row">
     <div class="adm-form-group"><label>${tA("adm.quote.quoteDate","Offertedatum")}</label><input type="date" name="quoteDate" value="${quote?.quoteDate||today}" ${isEdit?"disabled":""}></div>
@@ -7241,7 +6863,6 @@ ${typeKeys.map(tk => {
   // Kern-renderers registreren (worden gaandeweg naar modules verplaatst).
   Object.assign(A.views, {
     dashboard: renderDashboard, employees: renderEmployees, planning: renderPlanning,
-    appointments: renderAppointments, incidents: renderIncidents, inbox: renderInbox,
     clocking: renderClocking, leaves: renderLeaves, expenses: renderExpenses,
     workorders: renderWorkorders, messages: renderMessages,
     reports: renderReports, customers: renderCustomers, venues: renderVenues,
@@ -7254,8 +6875,12 @@ ${typeKeys.map(tk => {
   Object.assign(A.drawers, {
     employee: openEmployeeDrawer, message: openMessageDrawer, customer: openCustomerDrawer,
     offerte: openOfferteDrawer, factuur: openFactuurDrawer, venue: openVenueDrawer,
-    vehicle: openVehicleDrawer, stock: openStockDrawer, appointment: openAppointmentDrawer,
-    incident: openIncidentDrawer, inquiry: openInquiryDrawer
+    vehicle: openVehicleDrawer, stock: openStockDrawer,
+    workorder: prefill => openWorkorderDrawer(null, null, prefill || {}),
+    shift: prefill => {
+      const today = new Date().toISOString().slice(0,10);
+      openShiftDrawer(today, today, null, [], prefill || {});
+    }
   });
 
   window.wfp_adminInit = init;
