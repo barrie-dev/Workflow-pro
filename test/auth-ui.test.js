@@ -53,6 +53,13 @@ test("auth: testomgeving belooft geen mail die niet verstuurd kan worden", () =>
   assert.match(source, /result\.activationLink/);
 });
 
+test("auth: publieke Render-preview is herkenbaar als test, niet als ontwikkelomgeving", () => {
+  const source = read("public/main.js");
+  assert.match(source, /const TEST_HOSTS = \["workflow-pro-w6v1\.onrender\.com"\]/);
+  assert.match(source, /if \(isTestHost && \(!env \|\| env === "production"\)\) env = "test"/);
+  assert.match(source, /bar\.textContent = "Test · QA"/);
+});
+
 test("auth: publieke flows blijven drietalig", () => {
   const source = read("public/js/i18n.js");
   for (const key of [
