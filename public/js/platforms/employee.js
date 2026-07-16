@@ -175,7 +175,7 @@
   <nav class="emp-tabbar" aria-label="Hoofdnavigatie">
     <div class="emp-side-brand emp-desk-only">
       <div class="emp-side-brand-mark">M</div>
-      <div><div class="emp-side-brand-name">Monargo One</div><div class="emp-side-brand-sub" id="empSideBrandSub">Mijn werkplek</div></div>
+      <div><div class="emp-side-brand-name">Monargo <small>One</small></div><div class="emp-side-brand-sub" id="empSideBrandSub">Mijn werkplek</div></div>
     </div>
     <button class="emp-tab active" data-view="today">
       <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
@@ -512,6 +512,21 @@
 .emp-action-btn-danger svg { color: var(--wf-red); }
 .emp-action-btn-danger:hover { background: var(--wf-red-l); border-color: var(--wf-red); }
 
+/* Werkbonflow: de medewerker ziet altijd wat al afgerond is en wat volgt. */
+.emp-wo-flow { display:flex; align-items:flex-start; margin-top:14px; overflow-x:auto; scrollbar-width:none; }
+.emp-wo-flow::-webkit-scrollbar { display:none; }
+.emp-wo-flow span { display:flex; flex-direction:column; align-items:center; gap:4px; color:var(--gray-400); font-size:9px; font-weight:600; white-space:nowrap; }
+.emp-wo-flow span i { width:23px; height:23px; border-radius:50%; border:1px solid var(--gray-300); background:#fff; color:var(--gray-500); display:grid; place-items:center; font-style:normal; font-size:10px; }
+.emp-wo-flow span.done { color:var(--wf-green); }
+.emp-wo-flow span.done i { color:#fff; border-color:var(--wf-green); background:var(--wf-green); }
+.emp-wo-flow span.active { color:var(--wf-blue); }
+.emp-wo-flow span.active i { color:#fff; border-color:var(--wf-blue); background:var(--wf-blue); box-shadow:0 0 0 4px rgba(0,113,227,.10); }
+.emp-wo-flow b { flex:1 0 24px; height:1px; margin:11px 5px 0; background:var(--gray-200); }
+.emp-wo-flow b.done { background:var(--wf-green); }
+.emp-finish-label { display:block; margin:10px 0 5px; color:var(--gray-700); font-size:11.5px; font-weight:600; }
+.emp-confirm-check { display:flex; align-items:flex-start; gap:8px; margin-top:10px; color:var(--gray-700); font-size:11.5px; cursor:pointer; }
+.emp-confirm-check input { margin-top:1px; flex:0 0 auto; }
+
 /* ── List item ──────────────────────────────── */
 .emp-list-item {
   display: flex;
@@ -741,6 +756,38 @@
   .emp-sheet.hidden { display: none; }
   .emp-sheet-handle { display: none; }
   .emp-cards-2col { grid-template-columns: 1fr 1fr; }
+}
+
+/* Monargo Workspace · medewerker */
+#platform-employee { font-family:var(--font-sans); background:#f6f6f9; }
+.emp-layout { background:#f6f6f9; }
+.emp-header { background:#fff; border-color:#e7e7ed; backdrop-filter:none; }
+.emp-logo-mark,.emp-side-brand-mark { background:#5b5ce2; box-shadow:none; }
+.emp-header-greeting { color:#8b8d9e; font-size:9px; }.emp-header-name { color:#303247; font-size:15px; }
+.emp-icon-btn { background:#f5f5f8; border-radius:8px; }
+.emp-main { background:#f6f6f9; }
+.emp-card { border:1px solid #e1e2e8; border-radius:12px; box-shadow:none; }
+.emp-card-title { color:#393b50; font-size:12px; }
+.emp-action-btn { border-radius:9px; box-shadow:none; }
+.emp-sheet { border-radius:14px 14px 0 0; }
+@media (min-width:1024px) {
+  .emp-layout { grid-template-columns:232px 1fr; background:#f6f6f9; }
+  .emp-tabbar { width:232px; padding:10px 9px; background:#202343; }
+  .emp-header { height:58px; padding:0 24px; }
+  .emp-main { max-width:1400px; padding:22px 28px 40px; }
+  .emp-side-brand { min-height:54px; padding:5px 5px 13px; border-color:rgba(255,255,255,.08); }
+  .emp-side-brand-name { font-size:14px; }.emp-side-brand-name small { margin-left:3px; color:rgba(255,255,255,.42); font-size:9px; }
+  .emp-tab { min-height:36px; padding:7px 9px; border-radius:7px; color:rgba(255,255,255,.65); font-size:12px; }
+  .emp-tab svg { width:16px; height:16px; }
+  .emp-tab.active { background:#5b5ce2; box-shadow:none; }
+  .emp-cards-2col { gap:10px; }
+}
+@media (max-width:1023px) {
+  .emp-layout { max-width:520px; }
+  .emp-header { padding:12px 14px; }
+  .emp-main { padding:15px 13px 90px; }
+  .emp-tabbar { background:rgba(255,255,255,.96); border-color:#e4e4ea; }
+  .emp-tab.active { color:#5658ce; }
 }
 </style>`;
 
@@ -1546,10 +1593,9 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
       });
     });
     main.querySelectorAll(".emp-wo-done").forEach(btn => {
-      btn.addEventListener("click", async () => {
-        btn.disabled = true; btn.textContent = "…";
-        try { await api("PATCH", `/me/workorders/${btn.dataset.id}`, { status: "Voltooid" }); renderWorkorders(); }
-        catch(e) { window.showToast(e.message, "error"); btn.disabled = false; btn.textContent = "Voltooid"; }
+      btn.addEventListener("click", () => {
+        const wo = workorders.find(w => w.id === btn.dataset.id);
+        if (wo) openWorkorderSheet(wo);
       });
     });
 
@@ -1585,6 +1631,12 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
       <span class="emp-pill ${done?"emp-pill-green":inProg?"emp-pill-amber":"emp-pill-blue"}" style="white-space:nowrap;">${esc(tStatus(wo.status)||"-")}</span>
     </div>
     ${wo.number ? `<div style="font-size:12px;color:var(--gray-400);font-family:monospace;margin-top:2px;">#${esc(wo.number)}</div>` : ""}
+    <div class="emp-wo-flow" aria-label="Voortgang werkbon">
+      <span class="done"><i>✓</i>Opdracht</span><b></b>
+      <span class="${inProg || done ? "done" : "active"}"><i>${inProg || done ? "✓" : "2"}</i>Uitvoering</span><b class="${inProg || done ? "done" : ""}"></b>
+      <span class="${done ? "done" : inProg ? "active" : ""}"><i>${done ? "✓" : "3"}</i>Bewijs</span><b class="${done ? "done" : ""}"></b>
+      <span class="${done ? "done" : ""}"><i>${done ? "✓" : "4"}</i>Afronding</span>
+    </div>
   </div>
   <!-- Details -->
   <div style="padding:16px 20px;display:flex;flex-direction:column;gap:12px;">
@@ -1679,8 +1731,16 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
       if (actionDiv) actionDiv.innerHTML = `
 <div style="background:var(--wf-green-l);border-radius:10px;padding:14px;">
   <div style="font-size:13px;font-weight:600;margin-bottom:8px;">${t9("emp.wo.finishTitle","Werkbon afsluiten")}</div>
-  <textarea id="woCompletionNote" rows="3" placeholder="${t9("emp.wo.finishPh","Optionele notitie bij afronding (bijv. uitgevoerde werkzaamheden, materiaal gebruikt…)")}"
+  <label class="emp-finish-label">Uitgevoerde werkzaamheden</label>
+  <textarea id="woCompletionNote" rows="3" placeholder="Beschrijf kort wat werd uitgevoerd"
     style="width:100%;padding:8px;border:1px solid var(--wf-green-l);border-radius:8px;font-size:13px;resize:vertical;"></textarea>
+  <label class="emp-finish-label">Gebruikt materiaal</label>
+  <textarea id="woCompletionMaterials" rows="2" placeholder="Bijvoorbeeld: 2 filters, 4 meter kabel, 1 afsluitkraan"
+    style="width:100%;padding:8px;border:1px solid var(--wf-green-l);border-radius:8px;font-size:13px;resize:vertical;"></textarea>
+  <label class="emp-finish-label">Bevestiging klant</label>
+  <input id="woSignedBy" placeholder="Naam van de klant of contactpersoon" style="width:100%;padding:8px;border:1px solid var(--wf-green-l);border-radius:8px;font-size:13px;">
+  <label class="emp-confirm-check"><input type="checkbox" id="woCustomerConfirmed"><span>De klant bevestigt dat de werkzaamheden werden uitgevoerd.</span></label>
+  <div id="woCompleteError" style="display:none;color:var(--wf-red);font-size:11.5px;margin-top:8px;"></div>
   <div style="display:flex;gap:8px;margin-top:10px;">
     <button id="woCompleteCancelBtn" class="emp-btn emp-btn-secondary" style="flex:1;padding:10px;">${t9("emp.wo.cancel","Annuleren")}</button>
     <button id="woCompleteConfirmBtn" class="emp-btn emp-btn-primary" style="flex:2;padding:10px;background:var(--wf-green);font-weight:600;">${t9("emp.wo.confirm","Bevestigen")}</button>
@@ -1689,8 +1749,21 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
       document.getElementById("woCompleteCancelBtn")?.addEventListener("click", close);
       document.getElementById("woCompleteConfirmBtn")?.addEventListener("click", async () => {
         const note = document.getElementById("woCompletionNote")?.value?.trim();
+        const materials = document.getElementById("woCompletionMaterials")?.value?.trim();
+        const signedBy = document.getElementById("woSignedBy")?.value?.trim();
+        const confirmed = document.getElementById("woCustomerConfirmed")?.checked;
+        const error = document.getElementById("woCompleteError");
+        if (!note) { error.textContent = "Beschrijf kort welke werkzaamheden werden uitgevoerd."; error.style.display = "block"; return; }
+        if (signedBy && !confirmed) { error.textContent = "Vink de bevestiging van de klant aan."; error.style.display = "block"; return; }
         try {
-          await api("PATCH", `/me/workorders/${wo.id}`, { status: "Voltooid", completionNote: note||undefined });
+          await api("PATCH", `/me/workorders/${wo.id}`, {
+            status: "Voltooid",
+            completionNote: note,
+            completionMaterials: materials || undefined,
+            signedBy: signedBy || undefined,
+            customerConfirmed: !!(signedBy && confirmed),
+            signatureAt: signedBy && confirmed ? new Date().toISOString() : undefined
+          });
           window.showToast && window.showToast(t9("emp.wo.completedMsg","Werkbon voltooid"), "success");
           close(); renderWorkorders();
         } catch(e) { window.showToast(e.message, "error"); }
@@ -1989,7 +2062,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
     </div>
     <div>
       <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px;">IBAN <span style="font-weight:400;color:var(--gray-400);">${t9("emp.more.ibanNote","(voor onkostenvergoeding)")}</span></label>
-      <input name="iban" value="${profile.iban||""}" placeholder="BE68 5390 0754 7034" style="width:100%;10px;font-family:monospace" autocomplete="off">
+      <input name="iban" value="${profile.iban||""}" placeholder="BE00 0000 0000 0000" style="width:100%;10px;font-family:monospace" autocomplete="off">
     </div>
     <div id="empProfileMsg" style="display:none;padding:8px 10px;border-radius:8px;font-size:12px;"></div>
     <button type="submit" style="padding:10px;background:var(--wf-blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">${t9("emp.more.save","Opslaan")}</button>
