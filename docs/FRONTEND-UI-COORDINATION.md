@@ -86,3 +86,26 @@ Nog te borgen door backend/mailbeheer:
 - Bewaar resellergoedkeuring als expliciete statusovergang; publieke aanvraag mag niet meteen kunnen inloggen.
 - Activeer mail pas met een echte provider, geldige afzenderdomeinen en gecontroleerde activatie-/resettemplates.
 - Geef in de testomgeving alleen een `activationLink` terug wanneer dat bewust en veilig als testhulpmiddel is ingeschakeld.
+
+## Actiecentrum — frontendintegratie 2026-07-16
+
+Het tenant-admin Actiecentrum is frontendmatig toegevoegd als dagelijkse cockpit. Het is bewust een shell-view en dus geen nieuw backend-entitlement: de UI toont alleen acties uit modules die al in de bestaande tenant-entitlements beschikbaar zijn. Server-side permissies op de onderliggende endpoints blijven de bron van waarheid.
+
+De eerste versie aggregeert read-only gegevens uit bestaande contracten:
+
+| Actietype | Bestaand contract | UI-gedrag |
+| --- | --- | --- |
+| Notificaties | `GET /api/tenants/:tenantId/notifications` | Ongelezen meldingen verschijnen als opvolging of kritiek op basis van bestaande prioriteit. |
+| Melding afronden | `POST /api/tenants/:tenantId/notifications/:id/read` | Alleen dit type krijgt een directe knop `Klaar`; andere domeinobjecten worden niet vanuit de cockpit gemuteerd. |
+| Verlofgoedkeuring | `GET /api/tenants/:tenantId/leaves?status=aangevraagd` | Opent de bestaande verlofflow voor beoordeling. |
+| Onkostengoedkeuring | `GET /api/tenants/:tenantId/expenses` | Pending/ingediende onkosten openen de bestaande onkostenflow. |
+| Vervallen facturen | `GET /api/tenants/:tenantId/facturen` | Vervallen of open facturen na hun vervaldag krijgen kritieke prioriteit. |
+| Achterstallige werkbonnen | `GET /api/tenants/:tenantId/workorders` | Actieve werkbonnen met een verstreken plandatum openen de bestaande werkbonflow. |
+
+Feedback voor de backendontwikkelaar:
+
+- Voor deze UI-release is geen nieuw endpoint nodig; voorkom dubbel werk zolang de bestaande responses performant blijven.
+- Een later geconsolideerd `GET /api/tenants/:tenantId/action-center` kan nuttig worden wanneer paging, SLA-prioriteiten of grote datasets nodig zijn. Laat dat endpoint dan stabiele `id`, `type`, `priority`, `title`, `context`, `dueAt`, `targetView` en optioneel toegestane `actions` leveren.
+- Autoriseer elk onderliggend object server-side. `targetView` of een verborgen frontendmodule mag nooit als permissiecontrole gelden.
+- Lever canonieke status- en prioriteitswaarden wanneer het datamodel wordt gestabiliseerd; de frontend normaliseert voorlopig bestaande Nederlandse en Engelse varianten voor backwards compatibility.
+- Houd mutaties domeinspecifiek. Goedkeuren, weigeren, factuurstatus aanpassen en werkbon afronden blijven in hun bestaande flows met de bestaande validatie en audittrail.
