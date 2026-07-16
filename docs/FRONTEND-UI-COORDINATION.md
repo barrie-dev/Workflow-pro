@@ -81,6 +81,8 @@ Nog te borgen door backend/mailbeheer:
 
 - Houd `trialDays` centraal configureerbaar via `/api/plans`; de zichtbare fallback is 14 dagen.
 - Laat planprijzen en beschikbaarheid uit dezelfde catalogus komen als checkout en facturatie.
+- Publiceer de publieke prijsvergelijking op de marketingwebsite, niet op de login. De login toont alleen productwaarde en de trial-CTA; pakketkeuze volgt pas in de registratieflow.
+- Laat de marketingwebsite desgewenst deep-linken met `?plan=<key>&period=<year|month>`; de registratie-UI kan die keuze al vooraf selecteren.
 - Bewaar resellergoedkeuring als expliciete statusovergang; publieke aanvraag mag niet meteen kunnen inloggen.
 - Activeer mail pas met een echte provider, geldige afzenderdomeinen en gecontroleerde activatie-/resettemplates.
 - Geef in de testomgeving alleen een `activationLink` terug wanneer dat bewust en veilig als testhulpmiddel is ingeschakeld.

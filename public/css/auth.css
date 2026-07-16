@@ -1043,6 +1043,71 @@
   letter-spacing: -.035em;
 }
 
+.auth-value-section {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  gap: 24px;
+}
+
+.auth-value-intro {
+  display: grid;
+  gap: 8px;
+}
+
+.auth-value-intro > span {
+  color: var(--monargo-blue-light);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+
+.auth-value-intro > strong {
+  max-width: 590px;
+  color: var(--monargo-white);
+  font-size: 25px;
+  font-weight: 650;
+  line-height: 1.2;
+  letter-spacing: -.035em;
+}
+
+.auth-value-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 28px;
+}
+
+.auth-value-grid article {
+  min-width: 0;
+  padding-top: 20px;
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  border-top: 1px solid rgba(255,255,255,.14);
+}
+
+.auth-value-grid article > span {
+  color: var(--monargo-blue-light);
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: .12em;
+}
+
+.auth-value-grid article > strong {
+  color: var(--monargo-white);
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.auth-value-grid article > p {
+  margin: 0;
+  color: #AAB6CA;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
 .auth-offer-grid { gap: 13px; }
 
 .auth-offer-grid article {

@@ -34,15 +34,15 @@ test("auth: gebruikt de officiële Monargo Apex-assets en brandtokens", () => {
   assert.doesNotMatch(icon, /INTERIM|#0071e3/);
 });
 
-test("auth: proefperiode, pakketten en resellerpad zijn direct zichtbaar", () => {
+test("auth: proefperiode en resellerpad zijn zichtbaar; tarieven blijven uit de login", () => {
   const html = read("public/index.html");
   const source = read("public/main.js");
-  for (const plan of ["starter", "business", "enterprise"]) {
-    assert.match(html, new RegExp(`data-auth-plan-key="${plan}"`));
-  }
   assert.match(html, /id="authTrialBanner"/);
   assert.match(html, /id="showResellerApplyLogin"/);
+  assert.match(html, /class="auth-value-section"/);
+  assert.doesNotMatch(html, /data-auth-plan-price|auth-offer-grid/);
   assert.match(source, /async function loadAuthOffer\(\)/);
+  assert.match(source, /api\("\/api\/plans"\)/);
   assert.match(source, /showRegisterForm\("reseller"\)/);
   assert.match(source, /registerLastStep\(\).*reseller.*\? 2 : 3/s);
   assert.match(source, /api\("\/api\/resellers\/apply"/);
@@ -53,8 +53,9 @@ test("auth: desktopcompositie gebruikt ruimte en verbergt de productpreview niet
   const css = read("public/css/auth.css");
   const spacious = css.lastIndexOf("Ruime toegangservaring");
   assert.ok(spacious > -1);
-  assert.match(html, /class="auth-offer-section"/);
-  assert.match(html, /auth\.businessFeature3/);
+  assert.match(html, /class="auth-value-section"/);
+  assert.match(html, /auth\.valueInvoiceText/);
+  assert.doesNotMatch(html, /auth-offer-section/);
   assert.match(css.slice(spacious), /min-height: 1120px/);
   assert.match(css.slice(spacious), /\.auth-workspace-card \{\s+display: block;/);
   assert.match(css.slice(spacious), /grid-template-columns: minmax\(720px, 58fr\) minmax\(560px, 42fr\)/);
@@ -106,8 +107,8 @@ test("auth: publieke flows blijven drietalig", () => {
   const source = read("public/js/i18n.js");
   for (const key of [
     "auth.storyTitle",
-    "auth.offerTitle",
-    "auth.businessFeature3",
+    "auth.valueTitle",
+    "auth.valueInvoiceText",
     "auth.trialTitle",
     "auth.resellerChoiceSub",
     "forgot.title",
