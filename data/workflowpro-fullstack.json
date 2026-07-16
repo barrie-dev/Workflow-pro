@@ -54,7 +54,7 @@
     {
       "mfaEnabled": false,
       "mfaEnforced": false,
-      "lastLoginAt": "2026-07-15T21:19:03.195Z",
+      "lastLoginAt": "2026-07-16T20:16:46.430Z",
       "failedLoginCount": 0,
       "lockedUntil": null,
       "id": "u_admin",
@@ -1312,6 +1312,14 @@
       "action": "inquiry_deleted",
       "area": "inbox",
       "detail": "Offerte tuinmuur"
+    },
+    {
+      "id": "audit_1784233006436_6e70c4e9446098",
+      "at": "2026-07-16T20:16:46.436Z",
+      "actor": "admin@demobouw.be",
+      "tenantId": "t_demo",
+      "action": "login",
+      "area": "auth"
     }
   ],
   "errorEvents": [
