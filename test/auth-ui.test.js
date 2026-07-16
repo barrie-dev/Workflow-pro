@@ -98,6 +98,7 @@ test("auth: publieke flows blijven drietalig", () => {
     "forgot.title",
     "reg.stepCompany",
     "reg.activationHint",
+    "reg.activationHintTest",
     "reg.successTitle",
     "reseller.introTitle",
     "reseller.successTitle",
@@ -106,4 +107,5 @@ test("auth: publieke flows blijven drietalig", () => {
     const matches = source.match(new RegExp(`"${key.replace(".", "\\.")}"`, "g")) || [];
     assert.equal(matches.length, 3, `${key} bestaat in NL, FR en EN`);
   }
+  assert.match(read("public/main.js"), /wfp:langchange", refreshRegisterMailHint/);
 });

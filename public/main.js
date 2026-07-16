@@ -2681,6 +2681,20 @@ function setAuthI18nText(element, key, fallback = "") {
   element.textContent = window.wfpI18n?.t(key) || fallback || element.textContent;
 }
 
+function refreshRegisterMailHint() {
+  const mailHint = document.getElementById("registerMailHint");
+  if (!mailHint) return;
+  const isTest = location.hostname === "workflow-pro-w6v1.onrender.com";
+  mailHint.classList.toggle("warning", isTest);
+  const text = mailHint.querySelector("span");
+  if (text && isTest) {
+    text.textContent = window.wfpI18n?.t("reg.activationHintTest")
+      || "E-mail is in deze testomgeving niet actief. Na registratie blijft je account veilig pending tot een beheerder het activeert.";
+  }
+}
+
+document.addEventListener("wfp:langchange", refreshRegisterMailHint);
+
 function prefillRegisterPlan(key) {
   const hidden = document.getElementById("registerPlan");
   if (hidden) hidden.value = key || "";
@@ -2787,13 +2801,7 @@ function showRegisterForm(mode) {
     if (toTenant) toTenant.hidden = true;
     loadRegisterPlans();
   }
-  const mailHint = document.getElementById("registerMailHint");
-  if (mailHint) {
-    const isTest = location.hostname === "workflow-pro-w6v1.onrender.com";
-    mailHint.classList.toggle("warning", isTest);
-    const text = mailHint.querySelector("span");
-    if (text && isTest) text.textContent = "E-mail is in deze testomgeving niet actief. Na registratie blijft je account veilig pending tot een beheerder het activeert.";
-  }
+  refreshRegisterMailHint();
   setRegisterStep(1);
   setTimeout(() => regForm?.querySelector('[data-reg-step="1"] input')?.focus(), 50);
 }
