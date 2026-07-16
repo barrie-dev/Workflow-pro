@@ -978,7 +978,7 @@ label {
 .mon-radio-card.selected .mon-radio-check{display:flex;}
 
 /* Omgevings-banner (dev/test/staging) — nooit in production. Klik-neutraal. */
-.env-banner{position:fixed;left:auto;right:152px;top:34px;bottom:auto;width:auto;height:32px;padding:0 12px;z-index:99998;display:flex;align-items:center;justify-content:center;gap:8px;border:1px solid rgba(255,255,255,.16);border-radius:999px;background:rgba(11,19,32,.88);backdrop-filter:blur(14px);font:650 10.5px/1 var(--font-sans);letter-spacing:.02em;color:#fff;pointer-events:none;box-shadow:0 8px 24px rgba(11,19,32,.2)}
+.env-banner{position:absolute;left:auto;right:152px;top:34px;bottom:auto;width:auto;height:32px;padding:0 12px;z-index:99998;display:flex;align-items:center;justify-content:center;gap:8px;border:1px solid rgba(255,255,255,.16);border-radius:999px;background:rgba(11,19,32,.88);backdrop-filter:blur(14px);font:650 10.5px/1 var(--font-sans);letter-spacing:.02em;color:#fff;pointer-events:none;box-shadow:0 8px 24px rgba(11,19,32,.2)}
 .env-banner::before{content:"";width:7px;height:7px;border-radius:50%;background:#94a3b8;box-shadow:0 0 0 3px rgba(148,163,184,.14)}
 .env-banner-dev::before{background:#94a3b8}
 .env-banner-test::before{background:#f59e0b;box-shadow:0 0 0 3px rgba(245,158,11,.16)}
