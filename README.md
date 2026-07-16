@@ -1,36 +1,44 @@
-# WorkFlow Pro Fullstack
+# Monargo One SaaS
 
-Deze map is de productiegerichte ontwikkellijn. De bestaande flat app blijft de visual/prototype-zone.
+Monargo One is een multi-tenant SaaS-platform voor klanten, offertes, opdrachten, personeelsplanning, tijdregistratie, onkosten en facturatie. De interface gebruikt één compacte workspace voor admin, manager, medewerker, reseller en superadmin.
 
-## Start
+## Lokaal testen
 
-```powershell
-cd "C:\Users\ABMS Consultancy\Documents\New project\WorkFlowPro-fullstack"
-& "C:\Users\ABMS Consultancy\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe" src\server.js
+Vereisten: Node.js 18 of nieuwer.
+
+```bash
+npm ci
+REQUIRE_ADMIN_MFA=false STORAGE_ADAPTER=json npm start
 ```
 
-Open:
+Open `http://localhost:4280`.
 
-```text
-http://localhost:4280
+Lokale demoaccounts gebruiken uitsluitend de meegeleverde JSON-testdata. Initialiseer hun ontwikkelwachtwoord indien nodig met `node scripts/reset-demo-passwords.js`.
+
+| Rol | E-mail | Startscherm |
+| --- | --- | --- |
+| Admin | `admin@demobouw.be` | Operationeel bord en klantflow |
+| Manager | `manager@demobouw.be` | Dagstart en uitzonderingen |
+| Medewerker | `jan@demobouw.be` | Vandaag, prikklok en werkbonnen |
+| Superadmin | `super@workflowpro.be` | Platformbeheer |
+
+`REQUIRE_ADMIN_MFA=false` is alleen bedoeld voor een lokale producttest. In staging en productie hoort MFA verplicht te blijven.
+
+Een logische acceptatietest staat in [docs/SAAS-PRODUCT-STATUS.md](docs/SAAS-PRODUCT-STATUS.md).
+
+## Ontwikkelcontrole
+
+```bash
+npm run check
+npm test
+npm run preflight:production:json
 ```
 
-## Focus
-
-- Auth en sessies
-- Server-side tenant isolation
-- Server-side rechten
-- Auditlog
-- Encrypted credentials
-- Golden path API
-- Stripe/Peppol-ready billing service
-- Mobile-first today API
-
-Deze versie gebruikt lokaal standaard JSON-opslag achter een adapterlaag. De productie-target is Supabase PostgreSQL.
+De lokale app gebruikt JSON-opslag achter een adapterlaag. Het productieprofiel gebruikt Supabase PostgreSQL, server-side tenantisolatie, rollen en rechten, auditlogging, versleutelde credentials, Stripe en Peppol.
 
 ## Configuratie
 
-Kopieer `.env.example` naar `.env` en vul waarden in. De app leest `.env` automatisch zonder extra npm package. Variabelen die al op de server bestaan, krijgen altijd voorrang op `.env`.
+Kopieer `.env.example` naar `.env` en vul waarden in. De app leest `.env` automatisch zonder extra npm-package. Variabelen die al op de server bestaan, krijgen altijd voorrang op `.env`.
 
 ## Supabase PostgreSQL
 
