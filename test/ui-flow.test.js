@@ -38,6 +38,34 @@ test("admin: snelle acties openen de bedoelde aanmaakflow", () => {
   assert.match(source, /adm-operations-board/);
 });
 
+test("admin: actiecentrum bundelt dagelijkse uitzonderingen in een logische flow", () => {
+  const source = read("public/js/platforms/admin.js");
+  const css = read("public/css/admin.css");
+  assert.match(source, /data-view="actions"/);
+  assert.match(source, /id="admActionBadge"/);
+  assert.match(source, /const CORE_UI_VIEWS = new Set\(\["dashboard", "actions"\]\)/);
+  assert.match(source, /async function renderActionCenter\(\)/);
+  for (const endpoint of ["/notifications", "/leaves?status=aangevraagd", "/expenses", "/facturen", "/workorders"]) {
+    assert.match(source, new RegExp(endpoint.replace(/[?]/g, "\\?")));
+  }
+  for (const filter of ["all", "critical", "approvals", "finance", "operations"]) {
+    assert.match(source, new RegExp(`\\["${filter}",`));
+  }
+  assert.match(source, /actions\.next/);
+  assert.match(source, /data-action-view/);
+  assert.match(source, /data-action-read/);
+  assert.match(source, /actions: renderActionCenter/);
+  assert.match(css, /\.adm-action-center/);
+  assert.match(css, /\.adm-action-stats/);
+  assert.match(css, /@media \(max-width:520px\)[\s\S]*\.adm-action-row/);
+});
+
+test("admin: de getoonde globale zoeksneltoets werkt echt", () => {
+  const source = read("public/js/platforms/admin.js");
+  assert.match(source, /\(e\.metaKey \|\| e\.ctrlKey\) && e\.key\.toLowerCase\(\) === "k"/);
+  assert.match(source, /e\.preventDefault\(\);\s*input\.focus\(\);\s*input\.select\(\)/);
+});
+
 test("admin: documentregels en submits zijn mobiel en dubbelklikveilig", () => {
   const source = read("public/js/platforms/admin.js");
   const css = read("public/css/admin.css");

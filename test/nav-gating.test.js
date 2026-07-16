@@ -28,10 +28,11 @@ function aliasMap(file) {
   return map;
 }
 
-test("nav-gating: admin — elk nav-item heeft een catalogus-view", () => {
-  const views = navViews("public/js/platforms/admin.js", "adm-nav-item");
-  const missing = views.filter(v => !catalogViews.has(v));
-  assert.deepEqual(missing, [], `admin nav-items zonder catalogus-view (zouden verborgen worden): ${missing.join(", ")}`);
+test("nav-gating: admin — nav-item zit in catalogus of is een expliciete shell-view", () => {
+  const file = "public/js/platforms/admin.js";
+  const always = setFrom(file, "CORE_UI_VIEWS");
+  const missing = navViews(file, "adm-nav-item").filter(v => !catalogViews.has(v) && !always.has(v));
+  assert.deepEqual(missing, [], `admin nav-items zonder dekking: ${missing.join(", ")}`);
 });
 
 test("nav-gating: manager — nav-item in catalogus of alwaysShow", () => {
