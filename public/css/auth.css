@@ -456,16 +456,24 @@
 .auth-v2 .reg-period-btn.sel { background: #fff; color: #343a47; box-shadow: 0 1px 4px rgba(16,24,40,.08); }
 .auth-v2 .reg-period-disc { color: #23805e; }
 .auth-v2 .reg-plans { gap: 7px; }
-.auth-v2 .reg-plan-card { padding: 11px 12px; gap: 10px; border-color: #e0e2e8; border-radius: 11px; box-shadow: none; }
+.auth-v2 .reg-plan-card { padding: 13px 14px; border-color: #e0e2e8; border-radius: 12px; box-shadow: none; }
+.auth-v2 .reg-plan-summary { gap: 10px; }
 .auth-v2 .reg-plan-card:hover { border-color: #b9bbea; background: #fbfbff; }
 .auth-v2 .reg-plan-card.sel { border-color: #6b6ee0; background: #f7f7ff; box-shadow: 0 0 0 3px rgba(103,105,224,.08); }
 .auth-v2 .reg-plan-radio { width: 15px; height: 15px; }
 .auth-v2 .reg-plan-card.sel .reg-plan-radio::after { width: 7px; height: 7px; }
 .auth-v2 .reg-plan-name { color: #252a35; font-size: 12px; }
 .auth-v2 .reg-plan-badge { padding: 2px 6px; background: #ebeafd; color: #595cc8; font-size: 8.5px; }
-.auth-v2 .reg-plan-desc { max-width: 240px; color: #777d89; font-size: 9.5px; }
+.auth-v2 .reg-plan-desc { max-width: 300px; color: #777d89; font-size: 9.5px; }
 .auth-v2 .reg-plan-price { color: #252a35; font-size: 12px; }
 .auth-v2 .reg-plan-price small { font-size: 9px; }
+.auth-v2 .reg-plan-billing { margin-left: 25px; font-size: 9px; }
+.auth-v2 .reg-plan-details { margin-left: 25px; border-color: #e1e5ed; }
+.auth-v2 .reg-plan-details-head strong { color: #252a35; font-size: 10.5px; }
+.auth-v2 .reg-plan-details-head small { color: #777d89; font-size: 9.5px; }
+.auth-v2 .reg-plan-features { gap: 7px 12px; }
+.auth-v2 .reg-plan-features > span { color: #5f6674; font-size: 9.8px; }
+.auth-v2 .reg-plan-features i { background: #eaf0ff; color: #2563ff; }
 .auth-v2 .reg-plans-loading { padding: 14px 0; color: #7c8290; text-align: center; }
 .auth-v2 .reg-addons { padding: 9px 11px; border-color: #e4e5e9; background: #f6f7f9; }
 .auth-v2 .reg-trial-note { margin-top: 2px; color: #7b818e; font-size: 10.5px; }
@@ -555,6 +563,10 @@
   .auth-v2 .reg-period-btn { flex: 1; }
   .auth-v2 .reg-plan-card { align-items: flex-start; }
   .auth-v2 .reg-plan-price { margin-left: auto; }
+  .auth-v2 .reg-plan-details,
+  .auth-v2 .reg-plan-billing { margin-left: 0; }
+  .auth-v2 .reg-plan-details-head { align-items: flex-start; flex-direction: column; gap: 4px; }
+  .auth-v2 .reg-plan-features { grid-template-columns: 1fr; }
   .auth-reg-actions { grid-template-columns: auto 1fr; }
   .auth-reg-actions > span { display: none; }
   .auth-reg-actions .login-btn { grid-column: 2; }
@@ -1203,7 +1215,7 @@
 .auth-workspace-foot { padding: 16px 22px; }
 .auth-workspace-foot small { font-size: 10px; }
 .auth-workspace-foot strong { font-size: 12px; }
-.auth-story-footer { font-size: 11.5px; }
+.auth-story-footer { margin-top: 2px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,.1); font-size: 11.5px; }
 
 .auth-v2 .login-panel { min-height: 1120px; }
 
@@ -1265,7 +1277,17 @@
 .auth-reseller-intro { margin: 0 0 24px; padding: 18px; gap: 7px; border-radius: 15px; }
 .auth-reseller-intro strong { font-size: 13.5px; }
 .auth-reseller-intro span { font-size: 11.5px; line-height: 1.55; }
-.auth-v2 .reg-plan-card { padding: 14px 15px; gap: 13px; border-radius: 13px; }
+.auth-v2 .reg-plan-card { padding: 16px; border-radius: 14px; }
+.auth-v2 .reg-plan-summary { gap: 13px; }
+.auth-v2 .reg-plan-name { font-size: 13px; }
+.auth-v2 .reg-plan-desc { margin-top: 4px; font-size: 10.5px; line-height: 1.45; }
+.auth-v2 .reg-plan-price { font-size: 13.5px; }
+.auth-v2 .reg-plan-billing { margin-top: 9px; font-size: 10px; }
+.auth-v2 .reg-plan-details { margin-top: 15px; padding-top: 14px; }
+.auth-v2 .reg-plan-details-head strong { font-size: 11.5px; }
+.auth-v2 .reg-plan-details-head small { font-size: 10px; }
+.auth-v2 .reg-plan-features { margin-top: 12px; gap: 9px 14px; }
+.auth-v2 .reg-plan-features > span { font-size: 10.6px; line-height: 1.4; }
 .auth-v2 .reg-plans { gap: 10px; }
 .auth-reg-actions { margin-top: 5px; gap: 11px; }
 .auth-reg-actions .login-btn,

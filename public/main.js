@@ -2828,6 +2828,25 @@ async function loadRegisterPlans() {
     if (!plans.length) { cardsBox.innerHTML = `<div class="reg-plans-loading">Geen pakketten beschikbaar</div>`; return; }
 
     const escP = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+    const trP = (key, fallback = "") => window.wfpI18n?.t(key, fallback) || fallback;
+    const formatP = (key, fallback, values = {}) => Object.entries(values).reduce(
+      (text, [name, value]) => text.replaceAll(`{${name}}`, String(value)),
+      trP(key, fallback)
+    );
+    const moduleKeys = {
+      planning: "nav.planning", clockings: "nav.clocking", messages: "nav.messages",
+      customers: "nav.customers", venues: "nav.venues", workorders: "nav.workorders",
+      leaves: "nav.leaves", expenses: "nav.expenses", offertes: "nav.offertes",
+      invoices: "nav.facturen", stock: "nav.stock", vehicles: "nav.vehicles",
+      reports: "nav.reports", integrations: "nav.integrations"
+    };
+    const featureLabels = plan => {
+      const features = Array.isArray(plan.features) ? plan.features : [];
+      const modules = Array.isArray(plan.modules) ? plan.modules : [];
+      if (!modules.length) return features;
+      return modules.map((moduleKey, index) => trP(moduleKeys[moduleKey], features[index] || moduleKey));
+    };
+    const planDescription = plan => trP(`reg.planDescription.${plan.key}`, plan.description || "");
     const selectPlan = key => {
       hidden.value = key;
       cardsBox.querySelectorAll(".reg-plan-card").forEach(c => {
@@ -2842,16 +2861,37 @@ async function loadRegisterPlans() {
       cardsBox.innerHTML = plans.map(p => {
         const annual = p.baseAnnual || (p.baseMonthly ? p.baseMonthly * 12 : 0);
         const perMonth = period === "year" ? Math.round(annual / 12) : Math.round(annual / 10);
-        const sub = period === "year" ? `€${annual} per jaar, jaarlijks gefactureerd` : `maandelijks gefactureerd, altijd opzegbaar`;
+        const sub = period === "year"
+          ? formatP("reg.billedAnnual", "€{amount} per jaar · jaarlijks gefactureerd", { amount: annual })
+          : trP("reg.billedMonthly", "Maandelijks gefactureerd · altijd opzegbaar");
+        const features = featureLabels(p);
+        const seats = Number(p.includedSeats) || 0;
+        const seatsText = formatP(
+          seats === 1 ? "reg.includedSeat" : "reg.includedSeats",
+          seats === 1 ? "1 gebruiker inbegrepen" : "{count} gebruikers inbegrepen",
+          { count: seats }
+        );
         return `
-      <div class="reg-plan-card" data-plan="${escP(p.key)}" role="radio" aria-checked="false" tabindex="0">
-        <span class="reg-plan-radio"></span>
-        <span class="reg-plan-info">
-          <span class="reg-plan-name">${escP(p.label)}${p.popular ? `<span class="reg-plan-badge">Meest gekozen</span>` : ""}</span>
-          <span class="reg-plan-desc">${escP(p.description || "")}${p.description ? " · " : ""}${sub}</span>
+      <article class="reg-plan-card" data-plan="${escP(p.key)}" role="radio" aria-checked="false" tabindex="0">
+        <span class="reg-plan-summary">
+          <span class="reg-plan-radio" aria-hidden="true"></span>
+          <span class="reg-plan-info">
+            <span class="reg-plan-name">${escP(p.label)}${p.popular ? `<span class="reg-plan-badge">${escP(trP("reg.popular", "Meest gekozen"))}</span>` : ""}</span>
+            <span class="reg-plan-desc">${escP(planDescription(p))}</span>
+          </span>
+          <span class="reg-plan-price">€${perMonth}<small>${escP(trP("reg.perMonth", "/maand"))}</small></span>
         </span>
-        <span class="reg-plan-price">€${perMonth}<small>/maand</small></span>
-      </div>`;
+        <span class="reg-plan-billing">${escP(sub)}</span>
+        <span class="reg-plan-details">
+          <span class="reg-plan-details-head">
+            <strong>${escP(trP("reg.includedTitle", "Inbegrepen in dit pakket"))}</strong>
+            ${seats ? `<small>${escP(seatsText)}</small>` : ""}
+          </span>
+          <span class="reg-plan-features">
+            ${features.map(feature => `<span><i aria-hidden="true">✓</i>${escP(feature)}</span>`).join("")}
+          </span>
+        </span>
+      </article>`;
       }).join("");
       selectPlan(hidden.value || (plans.find(p => p.popular) || plans[0]).key);
       cardsBox.querySelectorAll(".reg-plan-card").forEach(c => {
@@ -2879,12 +2919,15 @@ async function loadRegisterPlans() {
     // Optionele betaalde add-ons (activeren kan later in het account).
     const addonBox = document.getElementById("registerAddons");
     const addons = (r.addons || []).filter(a => a.monthly != null);
-    if (addonBox && addons.length) {
+    const renderAddons = () => {
+      if (!addonBox || !addons.length) return;
       addonBox.hidden = false;
       addonBox.className = "reg-addons";
-      addonBox.innerHTML = `<div class="reg-addons-title">Later uit te breiden met add-ons</div>`
-        + addons.map(a => `<div class="reg-addons-row"><span>${escP(a.label)}</span><small>+ €${a.monthly}/mnd</small></div>`).join("");
-    }
+      addonBox.innerHTML = `<div class="reg-addons-title">${escP(trP("reg.addonsTitle", "Later uit te breiden met add-ons"))}</div>`
+        + addons.map(a => `<div class="reg-addons-row"><span>${escP(a.label)}</span><small>+ €${a.monthly}${escP(trP("reg.perMonthShort", "/mnd"))}</small></div>`).join("");
+    };
+    renderAddons();
+    document.addEventListener("wfp:langchange", () => { renderCards(); renderAddons(); });
     _plansLoaded = true;
   } catch (_) {
     const cardsBox = document.getElementById("registerPlanCards");
@@ -3497,7 +3540,7 @@ const TEST_HOSTS = ["workflow-pro-w6v1.onrender.com"];
     let env = h && h.appEnv;
     if (isTestHost && (!env || env === "production")) env = "test";
     if (!env || env === "production" || document.querySelector(".env-banner")) return;
-    const labels = { dev: "Dev · ontwikkelomgeving", test: "Test · QA", staging: "Staging · klant-preview" };
+    const labels = { dev: "Ontwikkelomgeving", test: "Testomgeving", staging: "Klant-preview" };
     const bar = document.createElement("div");
     bar.className = "env-banner env-banner-" + env;
     bar.textContent = labels[env] || env;
@@ -3506,7 +3549,7 @@ const TEST_HOSTS = ["workflow-pro-w6v1.onrender.com"];
     if (!isTestHost || document.querySelector(".env-banner")) return;
     const bar = document.createElement("div");
     bar.className = "env-banner env-banner-test";
-    bar.textContent = "Test · QA";
+    bar.textContent = "Testomgeving";
     document.body.appendChild(bar);
   });
 })();
