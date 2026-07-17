@@ -149,6 +149,18 @@ const migrations = [
       });
       return context;
     }
+  },
+  {
+    // Service & Assets-pack (master-spec E16/R3): idem voor "service_assets".
+    version: 11,
+    name: "tenant-admin-service-assets-permission",
+    apply(data, context) {
+      data.users = (data.users || []).map(user => {
+        if (user.role !== "tenant_admin") return user;
+        return { ...user, permissions: unique([...(user.permissions || []), ...context.businessAdminPermissions]) };
+      });
+      return context;
+    }
   }
 ];
 

@@ -92,6 +92,11 @@ const MODULE_CATALOG = [
     submodules: [{ key: "maintenance", label: "Onderhoudsplanning" }] },
   { key: "venues", label: "Locaties / werven", group: "Middelen", core: false,
     view: "venues", actions: ["venues"], submodules: [] },
+  // Service & Assets (master-spec E16/h44): generiek assetmodel (machines,
+  // gereedschap, installaties bij klanten) + onderhoudsschema's met
+  // idempotente beurt-generatie. Verticale pack voor HVAC/installatie/service.
+  { key: "service_assets", label: "Service & Assets", group: "Middelen", core: false,
+    view: "assets", actions: ["assets", "maintenance"], submodules: [] },
 
   // ── Construction Core (Belgische bouw · capability pack) ──
   // Werven (worksites) met projectpartijen, meerwerk/change orders. Bovenop

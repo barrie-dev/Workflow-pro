@@ -24,7 +24,8 @@ const BUSINESS_ADMIN_PERMISSIONS = [
   "leaves",
   "incidents",
   "projects",
-  "construction"
+  "construction",
+  "service_assets"
 ];
 
 // Manager: team planning + goedkeuringen, geen billing/settings
@@ -67,6 +68,8 @@ const REQUIRED_COLLECTIONS = [
   "projects",
   "worksites",
   "changeOrders",
+  "assets",
+  "maintenancePlans",
   "workorders",
   "clocks",
   "expenses",

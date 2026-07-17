@@ -96,6 +96,7 @@ const WRITE_GATE_MAP = {
   workorders: ["workorders"], shifts: ["planning"], planning: ["planning"], appointments: ["planning"],
   incidents: ["incidents"], inquiries: ["customers"], estimate: ["invoicing", "billing"],
   projects: ["projects"], worksites: ["construction"], changeorders: ["construction"],
+  assets: ["service_assets"], maintenance: ["service_assets"],
   expenses: ["expenses"], leaves: ["leaves"], messages: ["messages"],
   customers: ["customers"], venues: ["venues"], stock: ["stock"], vehicles: ["vehicles"],
   facturen: ["invoicing", "billing"], offertes: ["invoicing", "billing"],
@@ -220,6 +221,7 @@ const { listPlanningItems, planningOverlap } = require("./platform/planning");
 const { makeWorksiteRepository } = require("./platform/worksites");
 const { makeChangeOrderRepository } = require("./platform/change-orders");
 const { buildComplianceOverview } = require("./platform/compliance");
+const { makeAssetRepository, makeMaintenancePlanRepository } = require("./platform/assets");
 const {
   createSetupIntent,
   billingQuote,
@@ -314,6 +316,8 @@ const customerRepo = makeCustomerRepository(store);
 const projectRepo = makeProjectRepository(store);
 const worksiteRepo = makeWorksiteRepository(store);
 const changeOrderRepo = makeChangeOrderRepository(store);
+const assetRepo = makeAssetRepository(store);
+const maintenancePlanRepo = makeMaintenancePlanRepository(store);
 
 function csvCell(value) {
   const text = value == null ? "" : Array.isArray(value) || typeof value === "object" ? JSON.stringify(value) : String(value);
@@ -3685,6 +3689,130 @@ http.createServer(async (req, res) => {
         try { changeOrderRepo.remove(tenantId, changeOrderItemMatch[1]); }
         catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
         store.audit({ actor: user.email, tenantId, action: "change_order_deleted", area: "construction", detail: changeOrderItemMatch[1] });
+        sendJson(res, 200, { ok: true });
+        return;
+      }
+
+      // ── Service & Assets (E16/h44) ────────────────────────────────────────────
+      if (action === "assets" && req.method === "GET") {
+        assertCan(user, "service_assets");
+        sendJson(res, 200, { ok: true, assets: assetRepo.list(tenantId, { type: url.searchParams.get("type") || undefined, customerId: url.searchParams.get("customerId") || undefined }) });
+        return;
+      }
+      if (action === "assets" && req.method === "POST") {
+        assertCan(user, "service_assets");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        let row;
+        try { row = assetRepo.insert(tenantId, body, user.email); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "asset_created", area: "assets", detail: `${row.name}${row.serial ? " · " + row.serial : ""}` });
+        emitDomainEvent(store, { tenantId, eventType: "asset.created", aggregateType: "asset", aggregateId: row.id, actor: user.email, correlationId: res.wfpRequestId });
+        sendJson(res, 201, { ok: true, asset: row });
+        return;
+      }
+      const assetItemMatch = action.match(/^assets\/([^/]+)$/);
+      if (assetItemMatch && req.method === "PATCH") {
+        assertCan(user, "service_assets");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        let row;
+        try { row = assetRepo.update(tenantId, assetItemMatch[1], body, user.email, body.expectedVersion); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code, currentVersion: e.currentVersion }); }
+        store.audit({ actor: user.email, tenantId, action: "asset_updated", area: "assets", detail: assetItemMatch[1] });
+        sendJson(res, 200, { ok: true, asset: row });
+        return;
+      }
+      if (assetItemMatch && req.method === "DELETE") {
+        assertCan(user, "service_assets");
+        assertInteractiveUser(user);
+        try { assetRepo.remove(tenantId, assetItemMatch[1]); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message }); }
+        store.audit({ actor: user.email, tenantId, action: "asset_deleted", area: "assets", detail: assetItemMatch[1] });
+        sendJson(res, 200, { ok: true });
+        return;
+      }
+
+      // ── Onderhoudsschema's (E16/h34) ──────────────────────────────────────────
+      if (action === "maintenance/plans" && req.method === "GET") {
+        assertCan(user, "service_assets");
+        sendJson(res, 200, { ok: true, plans: maintenancePlanRepo.list(tenantId, { assetId: url.searchParams.get("assetId") || undefined, status: url.searchParams.get("status") || undefined }) });
+        return;
+      }
+      if (action === "maintenance/plans" && req.method === "POST") {
+        assertCan(user, "service_assets");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        let row;
+        try {
+          const asset = body.assetId ? assetRepo.findById(tenantId, body.assetId) : null;
+          if (body.assetId && !asset) return sendJson(res, 404, { ok: false, error: "Asset niet gevonden" });
+          row = maintenancePlanRepo.insert(tenantId, body, user.email);
+        }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "maintenance_plan_created", area: "assets", detail: `${row.title} · ${row.frequency}` });
+        sendJson(res, 201, { ok: true, plan: row });
+        return;
+      }
+      if (action === "maintenance/due" && req.method === "GET") {
+        assertCan(user, "service_assets");
+        const horizon = Math.min(Number(url.searchParams.get("horizonDays")) || 14, 90);
+        sendJson(res, 200, { ok: true, due: maintenancePlanRepo.listDue(tenantId, horizon) });
+        return;
+      }
+      const planItemMatch = action.match(/^maintenance\/plans\/([^/]+)$/);
+      if (planItemMatch && req.method === "PATCH") {
+        assertCan(user, "service_assets");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        let row;
+        try { row = maintenancePlanRepo.update(tenantId, planItemMatch[1], body, user.email, body.expectedVersion); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code, currentVersion: e.currentVersion }); }
+        store.audit({ actor: user.email, tenantId, action: "maintenance_plan_updated", area: "assets", detail: planItemMatch[1] });
+        sendJson(res, 200, { ok: true, plan: row });
+        return;
+      }
+      const planGenerateMatch = action.match(/^maintenance\/plans\/([^/]+)\/generate$/);
+      if (planGenerateMatch && req.method === "POST") {
+        assertCan(user, "service_assets");
+        assertApiKeyWriteAllowed(user, req);
+        let result;
+        try {
+          result = maintenancePlanRepo.generateDueJob(tenantId, planGenerateMatch[1], user.email, (plan, dueDate) => {
+            // Onderhoudsbeurt = werkbon (h44: technicus krijgt checklist mee).
+            const asset = plan.assetId ? assetRepo.findById(tenantId, plan.assetId) : null;
+            const woNum = issueNumber(store, { tenant, docType: "workorder" }).number;
+            return store.insert("workorders", {
+              id: `wo_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+              tenantId, number: woNum,
+              title: `${plan.title}${asset ? ` · ${asset.name}` : ""}`,
+              clientName: asset && asset.customerId ? (customerRepo.findById(tenantId, asset.customerId) || {}).name || "" : "",
+              customerId: asset ? asset.customerId : null,
+              venueId: asset ? asset.venueId : null,
+              assetId: plan.assetId || null,
+              maintenancePlanId: plan.id,
+              date: dueDate,
+              status: "open", priority: "normaal",
+              description: `Periodiek onderhoud (${plan.frequency})${asset && asset.serial ? ` · serienr ${asset.serial}` : ""}`,
+              checklist: (plan.checklist || []).map(label => ({ label, done: false })),
+              createdBy: user.id, createdAt: new Date().toISOString(),
+            });
+          });
+        }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        if (!result.alreadyGenerated) {
+          store.audit({ actor: user.email, tenantId, action: "maintenance_job_generated", area: "assets", detail: `${planGenerateMatch[1]} · ${result.dueDate}` });
+          emitDomainEvent(store, { tenantId, eventType: "maintenance.job_generated", aggregateType: "maintenance_plan", aggregateId: planGenerateMatch[1], actor: user.email, correlationId: res.wfpRequestId, data: { dueDate: result.dueDate, jobId: result.job.id } });
+        }
+        sendJson(res, result.alreadyGenerated ? 200 : 201, { ok: true, job: result.job, dueDate: result.dueDate, alreadyGenerated: result.alreadyGenerated, plan: result.plan });
+        return;
+      }
+      if (planItemMatch && req.method === "DELETE") {
+        assertCan(user, "service_assets");
+        assertInteractiveUser(user);
+        try { maintenancePlanRepo.remove(tenantId, planItemMatch[1]); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message }); }
+        store.audit({ actor: user.email, tenantId, action: "maintenance_plan_deleted", area: "assets", detail: planItemMatch[1] });
         sendJson(res, 200, { ok: true });
         return;
       }
