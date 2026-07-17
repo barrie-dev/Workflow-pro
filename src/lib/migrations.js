@@ -136,6 +136,19 @@ const migrations = [
       });
       return context;
     }
+  },
+  {
+    // Construction Core-pack (master-spec E12/R2): bestaande tenant-admins
+    // krijgen het "construction"-recht (werkt pas als de module aanstaat).
+    version: 10,
+    name: "tenant-admin-construction-permission",
+    apply(data, context) {
+      data.users = (data.users || []).map(user => {
+        if (user.role !== "tenant_admin") return user;
+        return { ...user, permissions: unique([...(user.permissions || []), ...context.businessAdminPermissions]) };
+      });
+      return context;
+    }
   }
 ];
 

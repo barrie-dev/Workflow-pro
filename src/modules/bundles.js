@@ -43,6 +43,8 @@ const BUNDLE_BACKFILL = {
   inbox: ["business", "enterprise"],
   // Projecten (centraal dossier): vanaf Business.
   projects: ["business", "enterprise"],
+  // Construction Core-pack: enkel in Enterprise (à-la-carte voor bouw).
+  construction: ["enterprise"],
 };
 
 function ensureArray(store) {

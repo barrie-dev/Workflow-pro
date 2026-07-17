@@ -121,6 +121,7 @@ const OPERATIONAL_PERMISSIONS = [
   { key: "planning", label: "Planning", modules: ["planning", "appointments"] },
   { key: "workorders", label: "Werkbonnen" },
   { key: "projects", label: "Projecten" },
+  { key: "construction", label: "Werven & bouw", modules: ["construction"] },
   { key: "expenses", label: "Onkosten" },
   { key: "leaves", label: "Verlof" },
   { key: "messages", label: "Berichten" },

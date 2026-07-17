@@ -95,7 +95,7 @@ function sanitizeEmployeePermissions(store, tenant, role, requested) {
 const WRITE_GATE_MAP = {
   workorders: ["workorders"], shifts: ["planning"], planning: ["planning"], appointments: ["planning"],
   incidents: ["incidents"], inquiries: ["customers"], estimate: ["invoicing", "billing"],
-  projects: ["projects"],
+  projects: ["projects"], worksites: ["construction"], changeorders: ["construction"],
   expenses: ["expenses"], leaves: ["leaves"], messages: ["messages"],
   customers: ["customers"], venues: ["venues"], stock: ["stock"], vehicles: ["vehicles"],
   facturen: ["invoicing", "billing"], offertes: ["invoicing", "billing"],
@@ -217,6 +217,8 @@ const { makeCustomerRepository } = require("./platform/crm");
 const { makeProjectRepository } = require("./platform/projects");
 const { freezeSentVersion, reviseQuote, computeDocumentHash } = require("./platform/quote-versions");
 const { listPlanningItems, planningOverlap } = require("./platform/planning");
+const { makeWorksiteRepository } = require("./platform/worksites");
+const { makeChangeOrderRepository } = require("./platform/change-orders");
 const {
   createSetupIntent,
   billingQuote,
@@ -309,6 +311,8 @@ const {
 const store = new Store();
 const customerRepo = makeCustomerRepository(store);
 const projectRepo = makeProjectRepository(store);
+const worksiteRepo = makeWorksiteRepository(store);
+const changeOrderRepo = makeChangeOrderRepository(store);
 
 function csvCell(value) {
   const text = value == null ? "" : Array.isArray(value) || typeof value === "object" ? JSON.stringify(value) : String(value);
@@ -3571,6 +3575,108 @@ http.createServer(async (req, res) => {
         catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message }); }
         store.audit({ actor: user.email, tenantId, action: "project_deleted", area: "projects", detail: projectItemMatch[1] });
         emitDomainEvent(store, { tenantId, eventType: "project.deleted", aggregateType: "project", aggregateId: projectItemMatch[1], actor: user.email, correlationId: res.wfpRequestId });
+        sendJson(res, 200, { ok: true });
+        return;
+      }
+
+      // ── Werven / worksites (Construction Core · E12) ──────────────────────────
+      if (action === "worksites" && req.method === "GET") {
+        assertCan(user, "construction");
+        sendJson(res, 200, { ok: true, worksites: worksiteRepo.list(tenantId, { projectId: url.searchParams.get("projectId") || undefined }) });
+        return;
+      }
+      if (action === "worksites" && req.method === "POST") {
+        assertCan(user, "construction");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        let row;
+        try { row = worksiteRepo.insert(tenantId, body, user.email); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "worksite_created", area: "construction", detail: row.name });
+        emitDomainEvent(store, { tenantId, eventType: "worksite.created", aggregateType: "worksite", aggregateId: row.id, actor: user.email, correlationId: res.wfpRequestId });
+        sendJson(res, 201, { ok: true, worksite: row });
+        return;
+      }
+      const worksiteItemMatch = action.match(/^worksites\/([^/]+)$/);
+      if (worksiteItemMatch && req.method === "PATCH") {
+        assertCan(user, "construction");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        let row;
+        try { row = worksiteRepo.update(tenantId, worksiteItemMatch[1], body, user.email, body.expectedVersion); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code, currentVersion: e.currentVersion }); }
+        store.audit({ actor: user.email, tenantId, action: "worksite_updated", area: "construction", detail: worksiteItemMatch[1] });
+        sendJson(res, 200, { ok: true, worksite: row });
+        return;
+      }
+      if (worksiteItemMatch && req.method === "DELETE") {
+        assertCan(user, "construction");
+        assertInteractiveUser(user);
+        try { worksiteRepo.remove(tenantId, worksiteItemMatch[1]); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message }); }
+        store.audit({ actor: user.email, tenantId, action: "worksite_deleted", area: "construction", detail: worksiteItemMatch[1] });
+        sendJson(res, 200, { ok: true });
+        return;
+      }
+
+      // ── Meerwerk / change orders (Construction Core · E12) ────────────────────
+      if (action === "changeorders" && req.method === "GET") {
+        assertCan(user, "construction");
+        sendJson(res, 200, { ok: true, changeOrders: changeOrderRepo.list(tenantId, { projectId: url.searchParams.get("projectId") || undefined }) });
+        return;
+      }
+      if (action === "changeorders" && req.method === "POST") {
+        assertCan(user, "construction");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        let row;
+        try { row = changeOrderRepo.insert(tenantId, body, user.email); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "change_order_created", area: "construction", detail: `${row.number} · €${row.total.toFixed(2)}` });
+        emitDomainEvent(store, { tenantId, eventType: "change_order.created", aggregateType: "change_order", aggregateId: row.id, actor: user.email, correlationId: res.wfpRequestId });
+        sendJson(res, 201, { ok: true, changeOrder: row });
+        return;
+      }
+      const changeOrderItemMatch = action.match(/^changeorders\/([^/]+)$/);
+      if (changeOrderItemMatch && req.method === "PATCH") {
+        assertCan(user, "construction");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        let row;
+        try { row = changeOrderRepo.update(tenantId, changeOrderItemMatch[1], body, user.email, body.expectedVersion); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code, currentVersion: e.currentVersion }); }
+        store.audit({ actor: user.email, tenantId, action: "change_order_updated", area: "construction", detail: changeOrderItemMatch[1] });
+        sendJson(res, 200, { ok: true, changeOrder: row });
+        return;
+      }
+      const changeOrderTransitionMatch = action.match(/^changeorders\/([^/]+)\/transition$/);
+      if (changeOrderTransitionMatch && req.method === "POST") {
+        assertCan(user, "construction");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        let result;
+        try { result = changeOrderRepo.transition(tenantId, changeOrderTransitionMatch[1], body.status, user.email); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        // Geaccepteerde change wijzigt het contractbudget van het project (h43.4).
+        if (result.budgetDelta && result.changeOrder.projectId) {
+          const proj = projectRepo.findById(tenantId, result.changeOrder.projectId);
+          if (proj) {
+            const newBudget = round2(Number(proj.budgetAmount || 0) + result.budgetDelta);
+            store.update("projects", proj.id, { budgetAmount: newBudget, version: Number(proj.version || 1) + 1, updatedAt: new Date().toISOString() });
+            emitDomainEvent(store, { tenantId, eventType: "project.budget_changed", aggregateType: "project", aggregateId: proj.id, actor: user.email, correlationId: res.wfpRequestId, data: { delta: result.budgetDelta, changeOrderId: result.changeOrder.id } });
+          }
+        }
+        store.audit({ actor: user.email, tenantId, action: "change_order_transition", area: "construction", detail: `${changeOrderTransitionMatch[1]} → ${body.status}` });
+        emitDomainEvent(store, { tenantId, eventType: "change_order.status_changed", aggregateType: "change_order", aggregateId: result.changeOrder.id, actor: user.email, correlationId: res.wfpRequestId, data: { status: result.changeOrder.status } });
+        sendJson(res, 200, { ok: true, changeOrder: result.changeOrder, budgetDelta: result.budgetDelta });
+        return;
+      }
+      if (changeOrderItemMatch && req.method === "DELETE") {
+        assertCan(user, "construction");
+        assertInteractiveUser(user);
+        try { changeOrderRepo.remove(tenantId, changeOrderItemMatch[1]); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "change_order_deleted", area: "construction", detail: changeOrderItemMatch[1] });
         sendJson(res, 200, { ok: true });
         return;
       }

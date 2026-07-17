@@ -93,6 +93,11 @@ const MODULE_CATALOG = [
   { key: "venues", label: "Locaties / werven", group: "Middelen", core: false,
     view: "venues", actions: ["venues"], submodules: [] },
 
+  // ── Construction Core (Belgische bouw · capability pack) ──
+  // Werven (worksites) met projectpartijen, meerwerk/change orders. Bovenop
+  // projecten/offertes/planning; à-la-carte pack voor aannemers/installateurs.
+  { key: "construction", label: "Werven & bouw (Construction)", group: "Compliance", core: false,
+    view: "worksites", actions: ["worksites", "changeorders"], submodules: [] },
   // ── Compliance (Belgische bouw) ───────────────────────────
   // Werkongevallen-register: wettelijk verplichte registratie + opvolging van
   // de aangifte bij de verzekeraar (8 dagen) en CSV-export van het register.
