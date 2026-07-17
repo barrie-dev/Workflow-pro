@@ -8,6 +8,7 @@
 
 const { round2, structuredCommunication } = require("./be-locale");
 const { emitDomainEvent } = require("../platform/events");
+const { issueNumber } = require("../platform/companies");
 
 // Btw-regimes met verlegging (0% btw) + de wettelijk verplichte vermelding.
 const REGIME_NOTES = {
@@ -15,12 +16,8 @@ const REGIME_NOTES = {
   medecontractant: "Btw verlegd · medecontractant (KB nr. 1, art. 20 W.Btw).",
 };
 
-function nextInvoiceNumber(store, tenantId) {
-  const existing = store.list("invoices", tenantId);
-  const year = new Date().getFullYear();
-  const seq = existing.filter(i => String(i.number || "").startsWith(String(year))).length + 1;
-  return `${year}-${String(seq).padStart(3, "0")}`;
-}
+// Nummering loopt via de persistente reeks per onderneming (E01/PLT-BR-005);
+// zie platform/companies.js. Geen hergebruik van nummers na een delete.
 
 // Normaliseer ruwe lijnen → factuurlijnen + totalen, rekening houdend met btw-regime.
 function computeLines(rawLines, reverseCharge) {
@@ -46,10 +43,12 @@ function createCustomerInvoice(store, tenant, user, payload) {
   const reverseCharge = regime !== "binnen";
   const vatNote = reverseCharge ? REGIME_NOTES[regime] : "";
   const { lines, subtotal, vatAmount, total } = computeLines(rawLines, reverseCharge);
-  const number = nextInvoiceNumber(store, tenant.id);
+  const issued = issueNumber(store, { tenant, docType: "invoice" });
+  const number = issued.number;
   const invoice = store.insert("invoices", {
     id: `inv_${Date.now()}_${Math.random().toString(16).slice(2)}`,
     tenantId: tenant.id,
+    companyId: issued.companyId,
     number,
     customerId: payload.customerId || null,
     customerName: payload.customerName || "",
@@ -133,4 +132,4 @@ function workorderInvoicePayload(store, tenant, workorder, extraLines = []) {
   };
 }
 
-module.exports = { createCustomerInvoice, workorderInvoicePayload, computeLines, nextInvoiceNumber, REGIME_NOTES };
+module.exports = { createCustomerInvoice, workorderInvoicePayload, computeLines, REGIME_NOTES };

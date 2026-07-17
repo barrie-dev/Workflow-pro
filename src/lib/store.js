@@ -60,6 +60,8 @@ const REQUIRED_COLLECTIONS = [
   "incidents",
   "inquiries",
   "outbox",
+  "companies",
+  "numberSequences",
   "workorders",
   "clocks",
   "expenses",
@@ -290,9 +292,13 @@ class Store {
   }
 
   migrate() {
+    // Lazy require: platform/companies gebruikt platform/events; geen cykel
+    // met de store zelf, maar zo blijft de module-load-volgorde eenvoudig.
+    const { companyFromTenant } = require("../platform/companies");
     const changed = runMigrations(this.data, {
       businessAdminPermissions: BUSINESS_ADMIN_PERMISSIONS,
-      requiredCollections: REQUIRED_COLLECTIONS
+      requiredCollections: REQUIRED_COLLECTIONS,
+      companyFromTenant
     });
     if (changed) this.save();
   }

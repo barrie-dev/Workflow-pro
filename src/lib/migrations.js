@@ -108,6 +108,21 @@ const migrations = [
       });
       return context;
     }
+  },
+  {
+    // Company-laag (master-spec E01/R0-b): elke tenant krijgt een
+    // default-company, gevuld vanuit het bestaande invoiceProfile.
+    version: 8,
+    name: "default-company-per-tenant",
+    apply(data, context) {
+      ensureCollection(data, "companies");
+      ensureCollection(data, "numberSequences");
+      for (const tenant of data.tenants || []) {
+        if (data.companies.some(c => c.tenantId === tenant.id && c.isDefault)) continue;
+        data.companies.push(context.companyFromTenant(tenant));
+      }
+      return context;
+    }
   }
 ];
 

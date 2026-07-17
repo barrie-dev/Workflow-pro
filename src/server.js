@@ -208,6 +208,7 @@ const { normalizeIncident, incidentsToCsv } = require("./modules/incidents");
 const { INQUIRY_STATUSES, ensureIntake, intakeAddress, newIntakeToken, parseInboundPayload, resolveIntakeTenant, createInquiry } = require("./modules/inbox");
 const { estimateFromQuestion } = require("./modules/estimator");
 const { emitDomainEvent, listOutbox } = require("./platform/events");
+const { ensureDefaultCompany, issueNumber } = require("./platform/companies");
 const {
   createSetupIntent,
   billingQuote,
@@ -3793,10 +3794,9 @@ http.createServer(async (req, res) => {
         const body = await readBody(req);
         if (!body.customerName && !body.customerId) return sendJson(res, 400, { ok: false, error: "Klant is verplicht" });
         if (!Array.isArray(body.lines) || !body.lines.length) return sendJson(res, 400, { ok: false, error: "Minimaal 1 offerteregel vereist" });
-        const existing = store.list("quotes", tenantId);
-        const year = new Date().getFullYear();
-        const seq = existing.filter(q => String(q.number || "").startsWith(`OFF-${year}-`)).length + 1;
-        const number = `OFF-${year}-${String(seq).padStart(3, "0")}`;
+        // Nummerreeks per onderneming (E01/PLT-BR-005): monotoon, geen hergebruik na delete.
+        const issuedQuoteNo = issueNumber(store, { tenant, docType: "quote" });
+        const number = issuedQuoteNo.number;
         const lines = body.lines.map(l => {
           const qty = Number(l.qty || 1);
           const unitPrice = Number(l.unitPrice || 0);
@@ -3811,6 +3811,7 @@ http.createServer(async (req, res) => {
         const quote = store.insert("quotes", {
           id: `quote_${Date.now()}_${Math.random().toString(16).slice(2)}`,
           tenantId,
+          companyId: issuedQuoteNo.companyId,
           number,
           customerId: body.customerId || null,
           customerName: body.customerName || "",
@@ -3893,9 +3894,7 @@ http.createServer(async (req, res) => {
         // (statusnamen worden pas bij E05 quote-versioning gecanonicaliseerd).
         if (["afgewezen", "geweigerd"].includes(q.status)) return sendJson(res, 409, { ok: false, error: "Een afgewezen offerte kan niet worden omgezet", code: "QUOTE_REJECTED" });
         if (body.target === "workorder") {
-          const wos = store.list("workorders", tenantId);
-          const yr = new Date().getFullYear();
-          const woNum = `WO-${yr}-${String(wos.filter(w => (w.number||"").startsWith(`WO-${yr}-`)).length + 1).padStart(3, "0")}`;
+          const woNum = issueNumber(store, { tenant, docType: "workorder" }).number;
           const wo = store.insert("workorders", {
             id: `wo_${Date.now()}_${Math.random().toString(16).slice(2)}`,
             tenantId, number: woNum,
@@ -3912,12 +3911,11 @@ http.createServer(async (req, res) => {
           return;
         }
         // default: naar factuur
-        const inv = store.list("invoices", tenantId);
-        const yr = new Date().getFullYear();
-        const invNum = `${yr}-${String(inv.filter(i => String(i.number||"").startsWith(String(yr))).length + 1).padStart(3, "0")}`;
+        const issuedInvNo = issueNumber(store, { tenant, docType: "invoice" });
+        const invNum = issuedInvNo.number;
         const invoice = store.insert("invoices", {
           id: `inv_${Date.now()}_${Math.random().toString(16).slice(2)}`,
-          tenantId, number: invNum,
+          tenantId, companyId: issuedInvNo.companyId, number: invNum,
           customerId: q.customerId || null, customerName: q.customerName,
           customerAddress: q.customerAddress, customerVatNumber: q.customerVatNumber,
           status: "open",
@@ -4068,6 +4066,14 @@ http.createServer(async (req, res) => {
         store.remove("incidents", existingInc.id);
         store.audit({ actor: user.email, tenantId, action: "incident_deleted", area: "incidents", detail: `${existingInc.date} · ${existingInc.employeeName}` });
         sendJson(res, 200, { ok: true });
+        return;
+      }
+
+      // ── Onderneming (E01): default-company van deze tenant ──────────────
+      if (action === "company" && req.method === "GET") {
+        assertCan(user, "settings");
+        const company = ensureDefaultCompany(store, tenant);
+        sendJson(res, 200, { ok: true, company });
         return;
       }
 
