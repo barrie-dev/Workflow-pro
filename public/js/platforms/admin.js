@@ -1181,7 +1181,7 @@
     return String(ts).slice(0, 10);
   }
 
-  // Opent de Boden-widget, optioneel met een voorgestelde vraag.
+  // Opent de Mona-widget, optioneel met een voorgestelde vraag.
   function admAskBoden(question) {
     const fab = document.getElementById("bodenFab");
     if (!fab) return;
@@ -1542,7 +1542,7 @@ ${(() => {
     }));
     filterBoard("today");
 
-    // Cockpit-widgets: planning, activiteit en Boden
+    // Cockpit-widgets: planning, activiteit en Mona
     document.getElementById("admDashPlanning")?.addEventListener("click", e => { e.preventDefault(); switchView("planning"); });
     document.querySelectorAll(".adm-act-link").forEach(el => el.addEventListener("click", () => switchView(el.dataset.view)));
     document.getElementById("admAiOpen")?.addEventListener("click", () => admAskBoden());

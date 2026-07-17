@@ -1,5 +1,5 @@
 /* ============================================================
-   Boden · AI-assistent chat-widget (gedeeld over alle platforms)
+   Mona · AI-assistent chat-widget (gedeeld over alle platforms)
    CSP-veilig: alles via addEventListener, geen inline handlers.
    Mount per platform met: window.WfpBoden.mount({ navigate })
    ============================================================ */

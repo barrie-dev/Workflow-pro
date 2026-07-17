@@ -1,18 +1,21 @@
 "use strict";
 /**
- * Boden · de AI-assistent van Monargo One.
+ * Mona · de AI-assistent van Monargo One (voorheen Boden; interne identifiers
+ * zoals de /boden-route en bodenChat blijven voor compatibiliteit).
  *
- * Kernregel (beveiliging): Boden heeft GEEN directe DB-toegang. Hij werkt met
- * tools die onder de identiteit van de ingelogde gebruiker draaien en exact
- * dezelfde poort passeren als de gebruiker zelf: rol-rechten (can/assertCan),
- * pakket-entitlements (isModuleEnabled) én own:-scoping. Mag de gebruiker iets
- * niet zien, dan geeft de tool het niet terug → Boden kan het niet vertellen.
+ * Contract: master-spec hoofdstuk 48 (Mona Assist/Actions/Estimate/Signals/
+ * Governance). Kernregel (beveiliging): Mona heeft GEEN directe DB-toegang en
+ * krijgt nooit meer rechten dan de uitvoerende gebruiker. Tools draaien onder
+ * de identiteit van de ingelogde gebruiker en passeren exact dezelfde poort:
+ * rol-rechten (can/assertCan), pakket-entitlements (isModuleEnabled) én
+ * own:-scoping. Mag de gebruiker iets niet zien, dan geeft de tool het niet
+ * terug → Mona kan het niet vertellen.
  *
- * Acties (aanmaken/wijzigen) voert Boden NOOIT zelf uit. Hij geeft een
- * voorstel-kaart terug; de gebruiker bevestigt en de UI roept het bestaande,
- * reeds-beveiligde endpoint aan.
+ * Acties (aanmaken/wijzigen) voert Mona NOOIT zelf uit. Ze geeft een
+ * voorstel-kaart terug (preview); de gebruiker bevestigt en de UI roept het
+ * bestaande, reeds-beveiligde endpoint aan. Elk voorstel wordt geauditeerd.
  *
- * Zonder echte OpenAI-key draait Boden in mock-modus (gratis, voor QA).
+ * Zonder echte OpenAI-key draait Mona in mock-modus (gratis, voor QA).
  */
 
 const { can } = require("../lib/auth");
@@ -175,7 +178,7 @@ function runTool(store, tenant, user, name, input, proposals) {
     // 'navigate' is gratis UX (geen kost, geen wijziging). Écht handelen (alles met
     // een endpoint) zit achter de betaalde add-on 'ai_actions'.
     if (a.path && !isModuleEnabled(store, tenant, ACTIONS_ADDON)) {
-      return { error: "actions_addon_uit: Boden mag in dit pakket geen acties uitvoeren. Verwijs de gebruiker naar het juiste scherm of vermeld dat de AI-acties-add-on nodig is." };
+      return { error: "actions_addon_uit: Mona mag in dit pakket geen acties uitvoeren. Verwijs de gebruiker naar het juiste scherm of vermeld dat de AI-acties-add-on nodig is." };
     }
     if (a.perm && (a.full ? !hasFull(user, a.perm) : !hasAny(user, a.perm))) {
       return { error: `Geen toegang om '${a.label}' uit te voeren.` };
@@ -190,6 +193,11 @@ function runTool(store, tenant, user, name, input, proposals) {
     };
     if (a.path) { proposal.method = a.method; proposal.path = a.path; }
     proposals.push(proposal);
+    // Governance (master-spec h48): elk actievoorstel wordt geauditeerd met
+    // actor en veldnamen (geen waarden · geen gevoelige data in de audittrail).
+    if (a.path && store.audit) {
+      store.audit({ actor: user.email, tenantId: tenant.id, action: "mona_action_proposed", area: "mona", detail: `${action} · velden: ${Object.keys(params).join(",") || "-"}` });
+    }
     return { ok: true, melding: "Voorstel klaar. Vraag de gebruiker om te bevestigen · voer niets uit." };
   }
 
@@ -231,7 +239,7 @@ function systemPrompt(store, tenant, user) {
   const today = new Date();
   const dateNL = today.toLocaleDateString("nl-BE", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
   return [
-    "Je bent Boden, de behulpzame AI-assistent in Monargo One · een Belgische B2B SaaS voor KMO's (planning, werkbonnen, tijdregistratie, verlof, onkosten, offertes, facturen/Peppol, klanten, stock, wagenpark).",
+    "Je bent Mona, de behulpzame AI-assistent in Monargo One · een Belgische B2B SaaS voor KMO's (planning, werkbonnen, tijdregistratie, verlof, onkosten, offertes, facturen/Peppol, klanten, stock, wagenpark).",
     `Vandaag is ${dateNL} (${today.toISOString().slice(0, 10)}). Reken 'deze maand', 'deze week', 'vandaag' hier vanaf.`,
     `De gebruiker is ${user.name || user.email}, rol "${user.role}", organisatie "${tenant.name}".`,
     `Toegankelijke schermen: ${ent.views.join(", ")}.`,
@@ -251,6 +259,7 @@ function systemPrompt(store, tenant, user) {
     "2) Toon nooit data van andere gebruikers of modules dan wat de tools teruggeven · de tools bewaken de rechten, jij mag die niet omzeilen.",
     "3) Je voert zelf NOOIT wijzigingen uit. Voor elke aanmaak/wijziging/navigatie gebruik je propose_action en zeg je duidelijk dat de gebruiker moet bevestigen. Beweer nooit dat je iets hebt uitgevoerd.",
     "4) Antwoord in het Nederlands, kort en concreet. Geef getallen helder weer (bv. bedragen met €). Verwijs naar het juiste scherm waar nuttig.",
+    "5) Maak het onderscheid duidelijk tussen FEITEN (rechtstreeks uit tooldata · benoem de bron, bv. 'volgens je facturen'), AFLEIDINGEN (jouw berekening of interpretatie daarvan) en SUGGESTIES (jouw advies). Presenteer een afleiding of suggestie nooit als vaststaand feit.",
   ].join("\n");
 }
 
@@ -305,7 +314,7 @@ function mockChat(store, tenant, user, msgs) {
   const last = msgs[msgs.length - 1].content;
   const ctx = runTool(store, tenant, user, "get_my_context", {}, []);
   const found = runTool(store, tenant, user, "search", { query: last.slice(0, 40) }, []);
-  let reply = `🤖 Boden draait in **demo-modus** (nog geen AI-sleutel ingesteld door de beheerder).\n\n`;
+  let reply = `Mona draait in **demo-modus** (nog geen AI-sleutel ingesteld door de beheerder).\n\n`;
   reply += `Je bent ingelogd als ${ctx.gebruiker} (${ctx.rol}). Ik kan je helpen met: ${ctx.toegankelijke_record_types.join(", ") || "-"}.\n`;
   if (found.aantal) {
     reply += `\nIk vond ${found.aantal} resultaat(en) voor "${last.slice(0, 40)}":\n`;

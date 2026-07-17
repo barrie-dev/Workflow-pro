@@ -10,7 +10,7 @@
  * aannames, bevestigt, en pas dan wordt een concept-offerte aangemaakt via het
  * bestaande (beveiligde) offertes-endpoint. Er wordt nooit automatisch verzonden.
  *
- * Provider: OpenAI via platform-config (zelfde infra als Boden); zonder echte
+ * Provider: OpenAI via platform-config (zelfde infra als Mona); zonder echte
  * key draait de estimator in mock-modus (deterministische raming, gratis QA).
  */
 

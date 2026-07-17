@@ -116,10 +116,10 @@ const MODULE_CATALOG = [
   { key: "sso", label: "Single Sign-On (SAML)", group: "Systeem", core: false,
     addon: true, actions: ["sso", "saml"], submodules: [],
     addonMonthly: 49, addonDesc: "Veilig aanmelden via je eigen identiteitsprovider (Azure AD, Okta, Google). Per organisatie." },
-  // Add-on: laat de AI-assistent (Boden) écht acties uitvoeren namens de gebruiker
+  // Add-on: laat de AI-assistent (Mona) écht acties uitvoeren namens de gebruiker
   // (na bevestiging). Betaalde add-on want de AI-kost van handelen is vooraf niet
-  // te bepalen. Zonder deze add-on blijft Boden read-only (vragen/analyse/KPI's).
-  { key: "ai_actions", label: "AI-acties (Boden voert uit)", group: "Systeem", core: false,
+  // te bepalen. Zonder deze add-on blijft Mona read-only (vragen/analyse/KPI's).
+  { key: "ai_actions", label: "AI-acties (Mona voert uit)", group: "Systeem", core: false,
     addon: true, actions: [], submodules: [],
     addonMonthly: 29, addonDesc: "Laat de AI-assistent taken uitvoeren (verlof, onkosten, klanten, werkbonnen…) na jouw bevestiging." },
   // Add-on: AI-estimatie · klantvraag → offerte-concept (regels met materiaal,

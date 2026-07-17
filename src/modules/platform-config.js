@@ -48,7 +48,7 @@ const DUMMY = {
     baseHost: "api.checkinatwork.be",
   },
   openai: {
-    apiKey: "sk-DUMMY000000000000000000",   // echte OpenAI-key → Boden AI live; anders mock-modus
+    apiKey: "sk-DUMMY000000000000000000",   // echte OpenAI-key → Mona AI live; anders mock-modus
     model: "gpt-4o-mini",                    // instelbaar bij go-live (bv. gpt-4o voor meer kwaliteit)
   },
 };
@@ -202,7 +202,7 @@ function publicPlatformConfig(store) {
     openai: {
       apiKey: mask(cfg.openai.apiKey),
       model: cfg.openai.model,
-      configured: isReal(cfg.openai.apiKey),  // echte key → Boden AI actief (anders mock)
+      configured: isReal(cfg.openai.apiKey),  // echte key → Mona AI actief (anders mock)
     },
     addons: cfg.addons || {}, // overrides (naam/prijs/omschrijving/actief) · geen secrets
     planPrices: cfg.planPrices || {},

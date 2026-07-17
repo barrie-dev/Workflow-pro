@@ -2043,8 +2043,8 @@ http.createServer(async (req, res) => {
       // Alleen-lezen-handhaving: read:X-gebruikers kunnen niets muteren.
       assertNotReadOnly(user, action, req.method);
 
-      // ── Boden AI-assistent (beschikbaar voor elke ingelogde tenant-gebruiker;
-      //    de tools binnen Boden bewaken zelf de data-rechten) ──
+      // ── Mona AI-assistent (route-naam boden blijft voor compatibiliteit) (beschikbaar voor elke ingelogde tenant-gebruiker;
+      //    de tools binnen Mona bewaken zelf de data-rechten) ──
       if (action === "boden" && req.method === "POST") {
         assertInteractiveUser(user);
         const body = await readBody(req);

@@ -50,7 +50,7 @@ sector-specifieks in.
 
 ## Differentiatie (geldt voor álle sectoren)
 Mobiel-first, strakke UX, snelle onboarding ("in 1 dag live"), transparante
-modulaire prijs, AI-assistent (Boden), realtime kantoor↔veld. Dat is de wig tegen
+modulaire prijs, AI-assistent (Mona), realtime kantoor↔veld. Dat is de wig tegen
 zowel sector-specifieke (Robaws = bouw) als logge generieke concurrenten.
 
 ## Guardrail (één regel)

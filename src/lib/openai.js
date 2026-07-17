@@ -4,7 +4,7 @@
  * past bij de zero-dep huisstijl van deze app, net als payments/peppol).
  *
  * De super-admin zet de echte key + model in de Integraties-console
- * (platform-config → openai). Zonder echte key draait Boden in mock-modus
+ * (platform-config → openai). Zonder echte key draait Mona in mock-modus
  * (zie modules/boden.js) en wordt deze client niet aangeroepen.
  */
 
