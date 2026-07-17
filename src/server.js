@@ -212,6 +212,7 @@ const { estimateFromQuestion } = require("./modules/estimator");
 const { emitDomainEvent, listOutbox } = require("./platform/events");
 const { ensureDefaultCompany, issueNumber } = require("./platform/companies");
 const { applyScope, redactSensitive } = require("./platform/policy");
+const { makeCustomerRepository } = require("./platform/crm");
 const {
   createSetupIntent,
   billingQuote,
@@ -302,6 +303,7 @@ const {
 } = require("./modules/vehicles");
 
 const store = new Store();
+const customerRepo = makeCustomerRepository(store);
 
 function csvCell(value) {
   const text = value == null ? "" : Array.isArray(value) || typeof value === "object" ? JSON.stringify(value) : String(value);
@@ -3470,19 +3472,19 @@ http.createServer(async (req, res) => {
       // ── Klanten (customers) ───────────────────────────────────────────────────
       if (action === "customers" && req.method === "GET") {
         assertCan(user, "customers");
-        sendJson(res, 200, { ok: true, customers: store.list("customers", tenantId) });
+        // Compatibility read (E03/M1): legacy platte records worden naar het
+        // canonieke model getild; gevoelige velden (creditLimit) gered. voor niet-beheerders.
+        sendJson(res, 200, { ok: true, customers: redactSensitive(user, "customers", customerRepo.list(tenantId)) });
         return;
       }
       if (action === "customers" && req.method === "POST") {
         assertCan(user, "customers");
         assertApiKeyWriteAllowed(user, req);
         const body = await readBody(req);
-        if (!String(body.name||"").trim()) return sendJson(res, 400, { ok: false, error: "Naam is verplicht" });
-        const row = store.insert("customers", {
-          id: `cust_${Date.now()}_${Math.random().toString(16).slice(2)}`,
-          tenantId, ...body, createdAt: new Date().toISOString()
-        });
-        store.audit({ actor: user.email, tenantId, action: "customer_created", area: "customers", detail: body.name });
+        let row;
+        try { row = customerRepo.insert(tenantId, body, user.email); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "customer_created", area: "customers", detail: row.name });
         emitDomainEvent(store, { tenantId, eventType: "customer.created", aggregateType: "customer", aggregateId: row.id, actor: user.email, correlationId: res.wfpRequestId });
         sendJson(res, 201, { ok: true, customer: row });
         return;
@@ -3492,7 +3494,9 @@ http.createServer(async (req, res) => {
         assertCan(user, "customers");
         assertApiKeyWriteAllowed(user, req);
         const body = await readBody(req);
-        const row = store.update("customers", customerMatch[1], { ...body, updatedAt: new Date().toISOString() });
+        let row;
+        try { row = customerRepo.update(tenantId, customerMatch[1], body, user.email, body.expectedVersion); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code, currentVersion: e.currentVersion }); }
         store.audit({ actor: user.email, tenantId, action: "customer_updated", area: "customers", detail: customerMatch[1] });
         emitDomainEvent(store, { tenantId, eventType: "customer.updated", aggregateType: "customer", aggregateId: customerMatch[1], actor: user.email, correlationId: res.wfpRequestId, data: { changedFields: Object.keys(body) } });
         sendJson(res, 200, { ok: true, customer: row });
