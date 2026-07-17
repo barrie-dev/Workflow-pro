@@ -219,6 +219,7 @@ const { freezeSentVersion, reviseQuote, computeDocumentHash } = require("./platf
 const { listPlanningItems, planningOverlap } = require("./platform/planning");
 const { makeWorksiteRepository } = require("./platform/worksites");
 const { makeChangeOrderRepository } = require("./platform/change-orders");
+const { buildComplianceOverview } = require("./platform/compliance");
 const {
   createSetupIntent,
   billingQuote,
@@ -3576,6 +3577,13 @@ http.createServer(async (req, res) => {
         store.audit({ actor: user.email, tenantId, action: "project_deleted", area: "projects", detail: projectItemMatch[1] });
         emitDomainEvent(store, { tenantId, eventType: "project.deleted", aggregateType: "project", aggregateId: projectItemMatch[1], actor: user.email, correlationId: res.wfpRequestId });
         sendJson(res, 200, { ok: true });
+        return;
+      }
+
+      // ── Compliance-overzicht (Construction Core · h43.5) ──────────────────────
+      if (action === "compliance/overview" && req.method === "GET") {
+        assertCan(user, "construction");
+        sendJson(res, 200, { ok: true, overview: buildComplianceOverview(store, tenant) });
         return;
       }
 

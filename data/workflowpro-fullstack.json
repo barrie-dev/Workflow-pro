@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 7,
+  "schemaVersion": 10,
   "tenants": [
     {
       "invoiceProfile": {},
@@ -81,7 +81,9 @@
         "stock",
         "vehicles",
         "leaves",
-        "incidents"
+        "incidents",
+        "projects",
+        "construction"
       ],
       "active": true,
       "updatedAt": "2026-06-09T18:12:54.127Z",
@@ -1458,6 +1460,21 @@
       "version": 7,
       "name": "tenant-admin-incidents-permission",
       "appliedAt": "2026-07-15T21:02:08.577Z"
+    },
+    {
+      "version": 8,
+      "name": "default-company-per-tenant",
+      "appliedAt": "2026-07-17T10:01:46.090Z"
+    },
+    {
+      "version": 9,
+      "name": "tenant-admin-projects-permission",
+      "appliedAt": "2026-07-17T10:09:51.809Z"
+    },
+    {
+      "version": 10,
+      "name": "tenant-admin-construction-permission",
+      "appliedAt": "2026-07-17T14:41:35.325Z"
     }
   ],
   "quotes": [
@@ -1761,5 +1778,24 @@
   "templates": [],
   "appointments": [],
   "incidents": [],
-  "inquiries": []
+  "inquiries": [],
+  "companies": [
+    {
+      "id": "co_8VRCRQXK10XM8Z9K0QNK23Q6MP",
+      "tenantId": "t_demo",
+      "legalName": "Demo Bouwgroep NV",
+      "vat": "",
+      "companyNumber": "",
+      "iban": "",
+      "peppolId": "",
+      "isDefault": true,
+      "createdAt": "2026-07-17T10:01:46.088Z",
+      "updatedAt": "2026-07-17T10:01:46.090Z"
+    }
+  ],
+  "numberSequences": [],
+  "outbox": [],
+  "projects": [],
+  "worksites": [],
+  "changeOrders": []
 }
