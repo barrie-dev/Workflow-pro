@@ -207,6 +207,7 @@ const { normalizeAppointment, runAppointmentReminders } = require("./modules/app
 const { normalizeIncident, incidentsToCsv } = require("./modules/incidents");
 const { INQUIRY_STATUSES, ensureIntake, intakeAddress, newIntakeToken, parseInboundPayload, resolveIntakeTenant, createInquiry } = require("./modules/inbox");
 const { estimateFromQuestion } = require("./modules/estimator");
+const { emitDomainEvent, listOutbox } = require("./platform/events");
 const {
   createSetupIntent,
   billingQuote,
@@ -735,6 +736,7 @@ http.createServer(async (req, res) => {
           if (decision === "aanvaard") patch.acceptedAt = new Date().toISOString(); else patch.rejectedAt = new Date().toISOString();
           store.update("quotes", q.id, patch);
           store.audit({ actor: q.customerName || "klant", tenantId: t.id, action: `quote_${decision}_public`, area: "offertes", detail: q.number });
+          emitDomainEvent(store, { tenantId: t.id, eventType: decision === "aanvaard" ? "quote.accepted" : "quote.rejected", aggregateType: "quote", aggregateId: q.id, actor: "public-accept", correlationId: res.wfpRequestId });
           return sendJson(res, 200, { ok: true, status: decision });
         }
       }
@@ -1548,6 +1550,21 @@ http.createServer(async (req, res) => {
       // persoonsgegevens van tenant-medewerkers. Die raadpleeg je via consent-impersonatie.
       const users = store.data.users.filter(u => u.role === "super_admin").map(safe);
       sendJson(res, 200, { ok: true, users });
+      return;
+    }
+
+    // Outbox-inzage voor platform-ops (master-spec h46 · delivery volgt in E19).
+    if (url.pathname === "/api/admin/events" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "system");
+      const events = listOutbox(store, {
+        status: url.searchParams.get("status") || undefined,
+        tenantId: url.searchParams.get("tenantId") || undefined,
+        eventType: url.searchParams.get("eventType") || undefined,
+        limit: url.searchParams.get("limit") || 50,
+      });
+      sendJson(res, 200, { ok: true, events });
       return;
     }
 
@@ -3461,6 +3478,7 @@ http.createServer(async (req, res) => {
           tenantId, ...body, createdAt: new Date().toISOString()
         });
         store.audit({ actor: user.email, tenantId, action: "customer_created", area: "customers", detail: body.name });
+        emitDomainEvent(store, { tenantId, eventType: "customer.created", aggregateType: "customer", aggregateId: row.id, actor: user.email, correlationId: res.wfpRequestId });
         sendJson(res, 201, { ok: true, customer: row });
         return;
       }
@@ -3471,6 +3489,7 @@ http.createServer(async (req, res) => {
         const body = await readBody(req);
         const row = store.update("customers", customerMatch[1], { ...body, updatedAt: new Date().toISOString() });
         store.audit({ actor: user.email, tenantId, action: "customer_updated", area: "customers", detail: customerMatch[1] });
+        emitDomainEvent(store, { tenantId, eventType: "customer.updated", aggregateType: "customer", aggregateId: customerMatch[1], actor: user.email, correlationId: res.wfpRequestId, data: { changedFields: Object.keys(body) } });
         sendJson(res, 200, { ok: true, customer: row });
         return;
       }
@@ -3738,6 +3757,9 @@ http.createServer(async (req, res) => {
         if (body.status === "paid" && !inv.paidAt) patch.paidAt = new Date().toISOString();
         const updated = store.update("invoices", invoiceItemMatch[1], patch);
         store.audit({ actor: user.email, tenantId, action: `invoice_${patch.status||"updated"}`, area: "facturen", detail: inv.number });
+        if (patch.status === "paid" && inv.status !== "paid") {
+          emitDomainEvent(store, { tenantId, eventType: "invoice.paid", aggregateType: "invoice", aggregateId: inv.id, actor: user.email, correlationId: res.wfpRequestId, data: { source: "manual" } });
+        }
         sendJson(res, 200, { ok: true, invoice: updated });
         return;
       }
@@ -3807,6 +3829,7 @@ http.createServer(async (req, res) => {
           updatedAt: new Date().toISOString()
         });
         store.audit({ actor: user.email, tenantId, action: "quote_created", area: "offertes", detail: `${number} · €${total.toFixed(2)}` });
+        emitDomainEvent(store, { tenantId, eventType: "quote.created", aggregateType: "quote", aggregateId: quote.id, actor: user.email, correlationId: res.wfpRequestId });
         sendJson(res, 201, { ok: true, quote });
         return;
       }
@@ -3846,6 +3869,7 @@ http.createServer(async (req, res) => {
           }
         }
         store.audit({ actor: user.email, tenantId, action: "quote_sent", area: "offertes", detail: `${q.number} · mail ${delivery.status}` });
+        emitDomainEvent(store, { tenantId, eventType: "quote.version_sent", aggregateType: "quote", aggregateId: q.id, actor: user.email, correlationId: res.wfpRequestId, data: { deliveryStatus: delivery.status } });
         sendJson(res, 200, { ok: true, quote: updated, acceptUrl, delivery });
         return;
       }
@@ -3865,7 +3889,9 @@ http.createServer(async (req, res) => {
           const existingInv = store.get("invoices", q.invoiceId);
           if (existingInv) return sendJson(res, 200, { ok: true, invoice: existingInv, alreadyConverted: true, code: "QUOTE_ALREADY_CONVERTED" });
         }
-        if (q.status === "afgewezen") return sendJson(res, 409, { ok: false, error: "Een afgewezen offerte kan niet worden omgezet", code: "QUOTE_REJECTED" });
+        // Zowel intern afgewezen als publiek geweigerd blokkeert conversie
+        // (statusnamen worden pas bij E05 quote-versioning gecanonicaliseerd).
+        if (["afgewezen", "geweigerd"].includes(q.status)) return sendJson(res, 409, { ok: false, error: "Een afgewezen offerte kan niet worden omgezet", code: "QUOTE_REJECTED" });
         if (body.target === "workorder") {
           const wos = store.list("workorders", tenantId);
           const yr = new Date().getFullYear();
@@ -3881,6 +3907,7 @@ http.createServer(async (req, res) => {
           });
           store.update("quotes", q.id, { workorderId: wo.id, updatedAt: new Date().toISOString() });
           store.audit({ actor: user.email, tenantId, action: "quote_to_workorder", area: "offertes", detail: `${q.number} → ${woNum}` });
+          emitDomainEvent(store, { tenantId, eventType: "quote.converted", aggregateType: "quote", aggregateId: q.id, actor: user.email, correlationId: res.wfpRequestId, data: { target: "workorder", resultId: wo.id } });
           sendJson(res, 201, { ok: true, workorder: wo });
           return;
         }
@@ -3903,6 +3930,8 @@ http.createServer(async (req, res) => {
         });
         store.update("quotes", q.id, { invoiceId: invoice.id, updatedAt: new Date().toISOString() });
         store.audit({ actor: user.email, tenantId, action: "quote_to_invoice", area: "offertes", detail: `${q.number} → ${invNum}` });
+        emitDomainEvent(store, { tenantId, eventType: "quote.converted", aggregateType: "quote", aggregateId: q.id, actor: user.email, correlationId: res.wfpRequestId, data: { target: "invoice", resultId: invoice.id } });
+        emitDomainEvent(store, { tenantId, eventType: "invoice.created", aggregateType: "invoice", aggregateId: invoice.id, actor: user.email, correlationId: res.wfpRequestId, data: { source: "quote" } });
         sendJson(res, 201, { ok: true, invoice });
         return;
       }
@@ -4169,6 +4198,7 @@ http.createServer(async (req, res) => {
           tenantId, ...body, active: body.active !== false, createdAt: new Date().toISOString()
         });
         store.audit({ actor: user.email, tenantId, action: "venue_created", area: "venues", detail: body.name });
+        emitDomainEvent(store, { tenantId, eventType: "location.created", aggregateType: "location", aggregateId: row.id, actor: user.email, correlationId: res.wfpRequestId });
         sendJson(res, 201, { ok: true, venue: row });
         return;
       }

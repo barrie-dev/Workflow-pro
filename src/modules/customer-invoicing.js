@@ -7,6 +7,7 @@
  */
 
 const { round2, structuredCommunication } = require("./be-locale");
+const { emitDomainEvent } = require("../platform/events");
 
 // Btw-regimes met verlegging (0% btw) + de wettelijk verplichte vermelding.
 const REGIME_NOTES = {
@@ -68,6 +69,7 @@ function createCustomerInvoice(store, tenant, user, payload) {
     updatedAt: new Date().toISOString(),
   });
   store.audit({ actor: user.email, tenantId: tenant.id, action: "invoice_created", area: "facturen", detail: `${number} · €${total.toFixed(2)}` });
+  emitDomainEvent(store, { tenantId: tenant.id, eventType: "invoice.created", aggregateType: "invoice", aggregateId: invoice.id, actor: user.email, data: { source: payload.workorderId ? "workorder" : "manual" } });
   return invoice;
 }
 

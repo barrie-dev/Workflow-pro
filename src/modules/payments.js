@@ -10,6 +10,7 @@
 const { httpsRequest } = require("../lib/http-client");
 const crypto = require("crypto");
 const { config } = require("../lib/config");
+const { emitDomainEvent } = require("../platform/events");
 const { loadPlatformConfig } = require("./platform-config");
 
 function isRealStripeKey(k) {
@@ -89,6 +90,7 @@ function markInvoicePaidById(store, invoiceId, source = "betaling") {
     status: "paid", paidAt: new Date().toISOString(), paymentSource: source, updatedAt: new Date().toISOString(),
   });
   store.audit({ actor: source, tenantId: inv.tenantId, action: "invoice_paid", area: "facturen", detail: `${inv.number} via ${source}` });
+  emitDomainEvent(store, { tenantId: inv.tenantId, eventType: "invoice.paid", aggregateType: "invoice", aggregateId: inv.id, actor: source, data: { source } });
   return updated;
 }
 
