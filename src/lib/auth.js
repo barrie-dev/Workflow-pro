@@ -400,41 +400,31 @@ function verifyMfaSetup(store, user, code) {
 /**
  * Permissieniveaus per module (door de tenant-admin instelbaar per gebruiker):
  *   "X"       → schrijven (volledige scope)
+ *   "team:X"  → schrijven, beperkt tot het eigen team (E02, h8.1)
  *   "own:X"   → schrijven, beperkt tot eigen data (employees)
  *   "read:X"  → alleen-lezen (ziet de module, kan niets wijzigen)
  *   afwezig   → geen toegang
- * can() = mag zien (alle niveaus); canWrite() = mag wijzigen (niet bij read:).
+ *
+ * De beslislogica leeft sinds R0-c centraal in platform/policy.js (E02);
+ * deze functies blijven als compatibiliteitslaag met identieke signatures.
  */
+const policy = require("../platform/policy");
+
 function can(user, permission) {
-  if (!user) return false;
-  if (user.role === "super_admin") return true;
-  const permissions = user.permissions || [];
-  if (permissions.includes("*")) return true;
-  // employee kan via "own:X" ook de basis X-scope claimen voor eigen data
-  if (permissions.includes(permission)) return true;
-  if (permissions.includes(`own:${permission}`)) return true;
-  if (permissions.includes(`read:${permission}`)) return true;
-  return false;
+  return policy.can(user, permission);
 }
 
 function canWrite(user, permission) {
-  if (!user) return false;
-  if (user.role === "super_admin") return true;
-  const permissions = user.permissions || [];
-  if (permissions.includes("*")) return true;
-  if (permissions.includes(permission)) return true;
-  if (permissions.includes(`own:${permission}`)) return true;
-  return false; // enkel read:X → niet schrijven
+  return policy.canWrite(user, permission);
 }
 
 // Heeft deze gebruiker ENKEL eigen-data-toegang voor dit onderdeel?
-// (own:X zonder vol X, read:X of *) → lijsten server-side filteren op eigen
-// userId. GDPR: een veldwerker hoort geen verlof/uren van collega's te zien.
+// (scope "own" · team- en tenant-scope geven false; de bredere filtering
+// gebeurt via policy.applyScope). GDPR: een veldwerker hoort geen verlof/uren
+// van collega's te zien.
 function ownScopeOnly(user, permission) {
   if (!user || user.role === "super_admin") return false;
-  const p = user.permissions || [];
-  if (p.includes("*") || p.includes(permission) || p.includes(`read:${permission}`)) return false;
-  return p.includes(`own:${permission}`);
+  return policy.scopeOnly(user, permission) === "own";
 }
 
 function assertCanWrite(user, permission) {

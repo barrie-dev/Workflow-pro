@@ -75,9 +75,11 @@ function sanitizeEmployeePermissions(store, tenant, role, requested) {
   for (const raw of (Array.isArray(requested) ? requested : [])) {
     const p = String(raw);
     const readOnly = p.startsWith("read:");
-    const key = p.replace(/^read:/, "").replace(/^own:/, "");
+    const teamLevel = p.startsWith("team:");
+    const key = p.replace(/^read:/, "").replace(/^team:/, "").replace(/^own:/, "");
     if (!grantable.has(key)) continue;
     if (readOnly) scoped.push(`read:${key}`);
+    else if (teamLevel) scoped.push(`team:${key}`); // E02/h8.1: expliciet team-scope
     else scoped.push(role === "employee" ? `own:${key}` : key);
   }
   // Altijd-rechten (bv. prikklok) forceren · iedereen kan in-/uitprikken ongeacht functie.
@@ -209,6 +211,7 @@ const { INQUIRY_STATUSES, ensureIntake, intakeAddress, newIntakeToken, parseInbo
 const { estimateFromQuestion } = require("./modules/estimator");
 const { emitDomainEvent, listOutbox } = require("./platform/events");
 const { ensureDefaultCompany, issueNumber } = require("./platform/companies");
+const { applyScope, redactSensitive } = require("./platform/policy");
 const {
   createSetupIntent,
   billingQuote,
@@ -2862,7 +2865,8 @@ http.createServer(async (req, res) => {
           to: url.searchParams.get("to")
         };
         const leaveResult = listLeaves(store, tenantId, opts);
-        leaveResult.leaves = withUserNames(store, leaveResult.leaves);
+        // Dossierscope (E02): own = alleen eigen, team = eigen team, anders alles.
+        leaveResult.leaves = withUserNames(store, applyScope(store, user, "leaves", leaveResult.leaves));
         sendJson(res, 200, { ok: true, ...leaveResult });
         return;
       }
@@ -4236,7 +4240,8 @@ http.createServer(async (req, res) => {
         const users = store.list("users", tenantId)
           .filter(u => (includeInactive || u.active !== false) && !["super_admin"].includes(u.role))
           .map(u => { const { passwordHash, mfaSecret, mfaPendingSecret, recoveryCodes, ...safe } = u; return safe; });
-        sendJson(res, 200, { ok: true, employees: users, grantable: grantablePermissions(store, tenant) });
+        // Gevoelige velden (h8.2): kostvelden enkel voor beheerders.
+        sendJson(res, 200, { ok: true, employees: redactSensitive(user, "employees", users), grantable: grantablePermissions(store, tenant) });
         return;
       }
 
@@ -4247,12 +4252,17 @@ http.createServer(async (req, res) => {
         assertApiKeyWriteAllowed(user, req);
         const body = await readBody(req);
         const { passwordHash, mfaSecret, mfaPendingSecret, recoveryCodes, newPassword, role: bodyRole, permissions: bodyPerms, ...safe } = body;
+        const existing = store.getUserById(employeePatchMatch[1]);
+        // PLT-BR-002: nooit toegang enkel op basis van een record-ID. Het doelwit
+        // moet van deze tenant zijn en employee/manager (admins wijzig je niet
+        // via deze route · geen privilege-escalatie of cross-tenant-overname).
+        if (!existing || existing.tenantId !== tenantId) return sendJson(res, 404, { ok: false, error: "Medewerker niet gevonden" });
+        if (!["employee", "manager"].includes(existing.role)) return sendJson(res, 403, { ok: false, error: "Beheerdersaccounts kunnen niet via deze route worden gewijzigd", code: "TARGET_NOT_EMPLOYEE" });
         if (newPassword) {
           assertStrongPassword(newPassword);
           safe.passwordHash = hashPassword(newPassword);
           store.audit({ actor: user.email, tenantId, action: "admin_password_reset", area: "users", detail: employeePatchMatch[1] });
         }
-        const existing = store.getUserById(employeePatchMatch[1]);
         // Rol enkel binnen employee/manager wijzigbaar (geen escalatie naar admin).
         const effRole = ["manager", "employee"].includes(bodyRole) ? bodyRole : (existing && existing.role) || "employee";
         if (bodyRole !== undefined) safe.role = effRole;
@@ -4292,6 +4302,7 @@ http.createServer(async (req, res) => {
           mfaEnforced: false,
           function: body.function || null,
           phone: body.phone || null,
+          teamId: body.teamId || null,
           // Rijksregisternummer (INSZ) · nodig voor CIAW/Checkin@Work-aangiftes.
           nationalId: body.nationalId ? String(body.nationalId).replace(/[^0-9]/g, "").slice(0, 11) : null
         });
@@ -4345,7 +4356,7 @@ http.createServer(async (req, res) => {
         assertCan(user, "expenses");
         let expenses = withUserNames(store, store.list("expenses", tenantId))
           .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
-        if (ownScopeOnly(user, "expenses")) expenses = expenses.filter(e => e.userId === user.id);
+        expenses = applyScope(store, user, "expenses", expenses); // E02: own/team/tenant
         sendJson(res, 200, { ok: true, expenses });
         return;
       }
@@ -4414,7 +4425,7 @@ http.createServer(async (req, res) => {
         const dateFilter = url.searchParams.get("date");
         let clocks = withUserNames(store, store.list("clocks", tenantId).map(enrichClock))
           .sort((a, b) => `${b.date || ""}${b.clockIn || ""}`.localeCompare(`${a.date || ""}${a.clockIn || ""}`));
-        if (ownScopeOnly(user, "clockings")) clocks = clocks.filter(c => c.userId === user.id);
+        clocks = applyScope(store, user, "clockings", clocks); // E02: own/team/tenant
         if (dateFilter) clocks = clocks.filter(c => c.date === dateFilter);
         if (fromQ) clocks = clocks.filter(c => (c.date || "") >= fromQ);
         if (toQ)   clocks = clocks.filter(c => (c.date || "") <= toQ);
@@ -4589,7 +4600,7 @@ http.createServer(async (req, res) => {
         assertCan(user, "workorders");
         let workorders = withUserNames(store, store.list("workorders", tenantId))
           .sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
-        if (ownScopeOnly(user, "workorders")) workorders = workorders.filter(w => w.userId === user.id || w.assignedTo === user.id);
+        workorders = applyScope(store, user, "workorders", workorders, ["userId", "assignedTo"]); // E02
         sendJson(res, 200, { ok: true, workorders });
         return;
       }
