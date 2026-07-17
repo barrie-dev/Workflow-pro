@@ -215,6 +215,7 @@ const { ensureDefaultCompany, issueNumber } = require("./platform/companies");
 const { applyScope, redactSensitive } = require("./platform/policy");
 const { makeCustomerRepository } = require("./platform/crm");
 const { makeProjectRepository } = require("./platform/projects");
+const { freezeSentVersion, reviseQuote, computeDocumentHash } = require("./platform/quote-versions");
 const {
   createSetupIntent,
   billingQuote,
@@ -742,7 +743,20 @@ http.createServer(async (req, res) => {
           if (["aanvaard", "geweigerd"].includes(q.status)) return sendJson(res, 409, { ok: false, error: "Offerte is al verwerkt" });
           const decision = body.decision === "reject" ? "geweigerd" : "aanvaard";
           const patch = { status: decision, updatedAt: new Date().toISOString() };
-          if (decision === "aanvaard") patch.acceptedAt = new Date().toISOString(); else patch.rejectedAt = new Date().toISOString();
+          if (decision === "aanvaard") {
+            patch.acceptedAt = new Date().toISOString();
+            // Digitale goedkeuring (h19): bind aan versie + documenthash + metadata.
+            patch.acceptance = {
+              name: String(body.name || q.customerName || "klant").slice(0, 120),
+              at: patch.acceptedAt,
+              version: q.version || 1,
+              documentHash: q.documentHash || computeDocumentHash({ ...q, version: q.version || 1 }),
+              ip: (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.socket?.remoteAddress || null,
+              userAgent: String(req.headers["user-agent"] || "").slice(0, 200),
+            };
+          } else {
+            patch.rejectedAt = new Date().toISOString();
+          }
           store.update("quotes", q.id, patch);
           store.audit({ actor: q.customerName || "klant", tenantId: t.id, action: `quote_${decision}_public`, area: "offertes", detail: q.number });
           emitDomainEvent(store, { tenantId: t.id, eventType: decision === "aanvaard" ? "quote.accepted" : "quote.rejected", aggregateType: "quote", aggregateId: q.id, actor: "public-accept", correlationId: res.wfpRequestId });
@@ -3898,6 +3912,7 @@ http.createServer(async (req, res) => {
           lines, subtotal, vatAmount, total,
           notes: body.notes || "",
           publicToken: crypto.randomBytes(16).toString("hex"),
+          version: 1, versions: [], documentHash: null,   // E05: versiebeheer
           sentAt: null, acceptedAt: null, rejectedAt: null,
           invoiceId: null, workorderId: null,
           createdBy: user.email,
@@ -3914,7 +3929,10 @@ http.createServer(async (req, res) => {
         assertInvoicing(user);
         const q = store.get("quotes", quoteSendMatch[1]);
         if (!q || q.tenantId !== tenantId) return sendJson(res, 404, { ok: false, error: "Offerte niet gevonden" });
-        const updated = store.update("quotes", q.id, { status: q.status === "concept" ? "verzonden" : q.status, sentAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+        // E05: bevries de huidige versie als onveranderlijke snapshot met documenthash.
+        const sentAtTs = new Date().toISOString();
+        const frozen = freezeSentVersion({ ...q, version: q.version || 1 }, sentAtTs);
+        const updated = store.update("quotes", q.id, { status: q.status === "concept" ? "verzonden" : q.status, sentAt: sentAtTs, ...frozen.patch, updatedAt: sentAtTs });
         const acceptUrl = `${config.appUrl}/offerte/${q.publicToken}`;
         // Eerlijke delivery-state (backend-handoff): de offerte-status is de
         // in-app-waarheid; `delivery` beschrijft wat er met de e-mail gebeurde.
@@ -3947,6 +3965,23 @@ http.createServer(async (req, res) => {
         store.audit({ actor: user.email, tenantId, action: "quote_sent", area: "offertes", detail: `${q.number} · mail ${delivery.status}` });
         emitDomainEvent(store, { tenantId, eventType: "quote.version_sent", aggregateType: "quote", aggregateId: q.id, actor: user.email, correlationId: res.wfpRequestId, data: { deliveryStatus: delivery.status } });
         sendJson(res, 200, { ok: true, quote: updated, acceptUrl, delivery });
+        return;
+      }
+      // E05: nieuwe revisie van een reeds verzonden offerte (immutable vorige versie).
+      const quoteReviseMatch = action.match(/^offertes\/([^/]+)\/revise$/);
+      if (quoteReviseMatch && req.method === "POST") {
+        assertInvoicing(user);
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        const q = store.get("quotes", quoteReviseMatch[1]);
+        if (!q || q.tenantId !== tenantId) return sendJson(res, 404, { ok: false, error: "Offerte niet gevonden" });
+        let patch;
+        try { patch = reviseQuote({ ...q, version: q.version || 1 }, body.lines); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        const updated = store.update("quotes", q.id, patch);
+        store.audit({ actor: user.email, tenantId, action: "quote_revised", area: "offertes", detail: `${q.number} → v${patch.version}` });
+        emitDomainEvent(store, { tenantId, eventType: "quote.version_created", aggregateType: "quote", aggregateId: q.id, actor: user.email, correlationId: res.wfpRequestId, data: { version: patch.version } });
+        sendJson(res, 200, { ok: true, quote: updated });
         return;
       }
       const quoteConvertMatch = action.match(/^offertes\/([^/]+)\/convert$/);
