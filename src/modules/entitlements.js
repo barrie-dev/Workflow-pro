@@ -120,6 +120,7 @@ const OPERATIONAL_PERMISSIONS = [
   // Afspraken vallen onder het planning-recht (zelfde domein: wie plant, plant ook klantafspraken).
   { key: "planning", label: "Planning", modules: ["planning", "appointments"] },
   { key: "workorders", label: "Werkbonnen" },
+  { key: "projects", label: "Projecten" },
   { key: "expenses", label: "Onkosten" },
   { key: "leaves", label: "Verlof" },
   { key: "messages", label: "Berichten" },

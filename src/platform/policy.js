@@ -110,7 +110,7 @@ const SENSITIVE_FIELDS = {
   quotes: ["costPrice", "marginPct"],
   suppliers: ["iban", "bankAccount"],
   customers: ["creditLimit"],
-  projects: ["margin", "forecast", "budgetCost"],
+  projects: ["margin", "forecast", "budgetCost", "budgetAmount"],
 };
 
 function canSeeSensitive(user) {

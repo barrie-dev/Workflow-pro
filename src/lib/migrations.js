@@ -123,6 +123,19 @@ const migrations = [
       }
       return context;
     }
+  },
+  {
+    // Project-aggregate (master-spec E04/R1-a): bestaande tenant-admins krijgen
+    // het nieuwe "projects"-recht (zelfde union-aanpak als versie 3/7).
+    version: 9,
+    name: "tenant-admin-projects-permission",
+    apply(data, context) {
+      data.users = (data.users || []).map(user => {
+        if (user.role !== "tenant_admin") return user;
+        return { ...user, permissions: unique([...(user.permissions || []), ...context.businessAdminPermissions]) };
+      });
+      return context;
+    }
   }
 ];
 

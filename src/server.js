@@ -95,6 +95,7 @@ function sanitizeEmployeePermissions(store, tenant, role, requested) {
 const WRITE_GATE_MAP = {
   workorders: ["workorders"], shifts: ["planning"], planning: ["planning"], appointments: ["planning"],
   incidents: ["incidents"], inquiries: ["customers"], estimate: ["invoicing", "billing"],
+  projects: ["projects"],
   expenses: ["expenses"], leaves: ["leaves"], messages: ["messages"],
   customers: ["customers"], venues: ["venues"], stock: ["stock"], vehicles: ["vehicles"],
   facturen: ["invoicing", "billing"], offertes: ["invoicing", "billing"],
@@ -213,6 +214,7 @@ const { emitDomainEvent, listOutbox } = require("./platform/events");
 const { ensureDefaultCompany, issueNumber } = require("./platform/companies");
 const { applyScope, redactSensitive } = require("./platform/policy");
 const { makeCustomerRepository } = require("./platform/crm");
+const { makeProjectRepository } = require("./platform/projects");
 const {
   createSetupIntent,
   billingQuote,
@@ -304,6 +306,7 @@ const {
 
 const store = new Store();
 const customerRepo = makeCustomerRepository(store);
+const projectRepo = makeProjectRepository(store);
 
 function csvCell(value) {
   const text = value == null ? "" : Array.isArray(value) || typeof value === "object" ? JSON.stringify(value) : String(value);
@@ -3468,6 +3471,70 @@ http.createServer(async (req, res) => {
         return;
       }
       // ── Einde manager routes ──────────────────────────────────────────────────
+
+      // ── Projecten (centraal uitvoeringsdossier · E04) ─────────────────────────
+      if (action === "projects" && req.method === "GET") {
+        assertCan(user, "projects");
+        // Financiele velden (budget/forecast) enkel voor beheerders (h8.2/h22:
+        // operationele en financiele info scheidbaar).
+        sendJson(res, 200, { ok: true, projects: redactSensitive(user, "projects", projectRepo.list(tenantId)) });
+        return;
+      }
+      const projectItemMatch = action.match(/^projects\/([^/]+)$/);
+      if (projectItemMatch && req.method === "GET") {
+        assertCan(user, "projects");
+        const p = projectRepo.findById(tenantId, projectItemMatch[1]);
+        if (!p) return sendJson(res, 404, { ok: false, error: "Project niet gevonden" });
+        sendJson(res, 200, { ok: true, project: redactSensitive(user, "projects", p) });
+        return;
+      }
+      if (action === "projects" && req.method === "POST") {
+        assertCan(user, "projects");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        let row;
+        try { row = projectRepo.insert(tenantId, body, user.email); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "project_created", area: "projects", detail: `${row.number} · ${row.name}` });
+        emitDomainEvent(store, { tenantId, eventType: "project.created", aggregateType: "project", aggregateId: row.id, actor: user.email, correlationId: res.wfpRequestId });
+        sendJson(res, 201, { ok: true, project: row });
+        return;
+      }
+      if (projectItemMatch && req.method === "PATCH") {
+        assertCan(user, "projects");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        let row;
+        try { row = projectRepo.update(tenantId, projectItemMatch[1], body, user.email, body.expectedVersion); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code, currentVersion: e.currentVersion }); }
+        store.audit({ actor: user.email, tenantId, action: "project_updated", area: "projects", detail: projectItemMatch[1] });
+        emitDomainEvent(store, { tenantId, eventType: "project.updated", aggregateType: "project", aggregateId: row.id, actor: user.email, correlationId: res.wfpRequestId, data: { changedFields: Object.keys(body) } });
+        sendJson(res, 200, { ok: true, project: row });
+        return;
+      }
+      const projectTransitionMatch = action.match(/^projects\/([^/]+)\/transition$/);
+      if (projectTransitionMatch && req.method === "POST") {
+        assertCan(user, "projects");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        let row;
+        try { row = projectRepo.transition(tenantId, projectTransitionMatch[1], body.status, user.email, body.reason); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "project_transition", area: "projects", detail: `${projectTransitionMatch[1]} → ${body.status}` });
+        emitDomainEvent(store, { tenantId, eventType: "project.status_changed", aggregateType: "project", aggregateId: row.id, actor: user.email, correlationId: res.wfpRequestId, data: { status: row.status } });
+        sendJson(res, 200, { ok: true, project: row });
+        return;
+      }
+      if (projectItemMatch && req.method === "DELETE") {
+        assertCan(user, "projects");
+        assertInteractiveUser(user);
+        try { projectRepo.remove(tenantId, projectItemMatch[1]); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message }); }
+        store.audit({ actor: user.email, tenantId, action: "project_deleted", area: "projects", detail: projectItemMatch[1] });
+        emitDomainEvent(store, { tenantId, eventType: "project.deleted", aggregateType: "project", aggregateId: projectItemMatch[1], actor: user.email, correlationId: res.wfpRequestId });
+        sendJson(res, 200, { ok: true });
+        return;
+      }
 
       // ── Klanten (customers) ───────────────────────────────────────────────────
       if (action === "customers" && req.method === "GET") {

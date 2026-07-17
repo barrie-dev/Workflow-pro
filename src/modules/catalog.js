@@ -30,6 +30,10 @@ const MODULE_CATALOG = [
     submodules: [
       { key: "reminders", label: "Klant-reminders" },
     ] },
+  // Project = centraal uitvoeringsdossier (master-spec E04). Bindt klant, werf,
+  // offertes, jobs, werkbonnen en facturen; projectmarge en nacalculatie later.
+  { key: "projects", label: "Projecten", group: "Operaties", core: false,
+    view: "projects", actions: ["projects"], submodules: [] },
   { key: "workorders", label: "Werkbonnen", group: "Operaties", core: false,
     view: "workorders", actions: ["workorders"],
     submodules: [

@@ -22,7 +22,8 @@ const BUSINESS_ADMIN_PERMISSIONS = [
   "stock",
   "vehicles",
   "leaves",
-  "incidents"
+  "incidents",
+  "projects"
 ];
 
 // Manager: team planning + goedkeuringen, geen billing/settings
@@ -62,6 +63,7 @@ const REQUIRED_COLLECTIONS = [
   "outbox",
   "companies",
   "numberSequences",
+  "projects",
   "workorders",
   "clocks",
   "expenses",
