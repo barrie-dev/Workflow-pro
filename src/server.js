@@ -222,6 +222,7 @@ const { makeWorksiteRepository } = require("./platform/worksites");
 const { makeChangeOrderRepository } = require("./platform/change-orders");
 const { buildComplianceOverview } = require("./platform/compliance");
 const { makeAssetRepository, makeMaintenancePlanRepository } = require("./platform/assets");
+const { buildProjectFinance } = require("./platform/project-finance");
 const {
   createSetupIntent,
   billingQuote,
@@ -3560,6 +3561,19 @@ http.createServer(async (req, res) => {
         sendJson(res, 200, { ok: true, project: row });
         return;
       }
+      // Projectfinance (E14/h23): budget vs werkelijk vs gefactureerd vs marge.
+      // Financiele inzage is gescheiden van operationele (h22): enkel beheerders.
+      const projectFinanceMatch = action.match(/^projects\/([^/]+)\/finance$/);
+      if (projectFinanceMatch && req.method === "GET") {
+        assertCan(user, "projects");
+        if (!["tenant_admin", "super_admin"].includes(user.role)) {
+          return sendJson(res, 403, { ok: false, error: "Financiele projectinzage is voorbehouden aan beheerders", code: "FINANCIAL_SCOPE" });
+        }
+        const p = projectRepo.findById(tenantId, projectFinanceMatch[1]);
+        if (!p) return sendJson(res, 404, { ok: false, error: "Project niet gevonden" });
+        sendJson(res, 200, { ok: true, finance: buildProjectFinance(store, tenant, p) });
+        return;
+      }
       const projectTransitionMatch = action.match(/^projects\/([^/]+)\/transition$/);
       if (projectTransitionMatch && req.method === "POST") {
         assertCan(user, "projects");
@@ -4184,6 +4198,7 @@ http.createServer(async (req, res) => {
           tenantId,
           companyId: issuedQuoteNo.companyId,
           number,
+          projectId: body.projectId || null,   // E14: bronketen naar projectfinance
           customerId: body.customerId || null,
           customerName: body.customerName || "",
           customerAddress: body.customerAddress || "",
@@ -4292,6 +4307,7 @@ http.createServer(async (req, res) => {
             tenantId, number: woNum,
             title: `Uit offerte ${q.number}`,
             clientName: q.customerName, customerId: q.customerId || null,
+            projectId: q.projectId || null,
             status: "open", priority: "normaal",
             description: (q.lines || []).map(l => `${l.qty}× ${l.description}`).join("\n"),
             quoteId: q.id, createdBy: user.id, createdAt: new Date().toISOString()
@@ -4308,6 +4324,7 @@ http.createServer(async (req, res) => {
         const invoice = store.insert("invoices", {
           id: `inv_${Date.now()}_${Math.random().toString(16).slice(2)}`,
           tenantId, companyId: issuedInvNo.companyId, number: invNum,
+          projectId: q.projectId || null,
           customerId: q.customerId || null, customerName: q.customerName,
           customerAddress: q.customerAddress, customerVatNumber: q.customerVatNumber,
           status: "open",
@@ -4999,12 +5016,8 @@ http.createServer(async (req, res) => {
         assertApiKeyWriteAllowed(user, req);
         const body = await readBody(req);
         if (!String(body.title||"").trim()) return sendJson(res, 400, { ok: false, error: "Titel is verplicht" });
-        // Auto-generate sequential workorder number (WO-YYYY-NNN)
-        const existingWOs = store.list("workorders", tenantId);
-        const year = new Date().getFullYear();
-        const yearWOs = existingWOs.filter(w => (w.number||"").startsWith(`WO-${year}-`));
-        const seq = yearWOs.length + 1;
-        const woNumber = `WO-${year}-${String(seq).padStart(3, "0")}`;
+        // Nummering via de persistente reeks (E01) · geen hergebruik na delete.
+        const woNumber = issueNumber(store, { tenant, docType: "workorder" }).number;
         const row = store.insert("workorders", {
           id: `wo_${Date.now()}_${Math.random().toString(16).slice(2)}`,
           tenantId, ...body,

@@ -57,6 +57,7 @@ function createCustomerInvoice(store, tenant, user, payload) {
     tenantId: tenant.id,
     companyId: issued.companyId,
     number,
+    projectId: payload.projectId || null,     // E14: bronketen naar projectfinance
     customerId: payload.customerId || null,
     customerName: payload.customerName || "",
     customerAddress: payload.customerAddress || "",
