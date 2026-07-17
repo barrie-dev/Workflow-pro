@@ -204,7 +204,7 @@ function provisionPendingUser(fields) {
 }
 const { listModule, createModuleRow, updateModuleRow } = require("./modules/crud");
 const { lookupKboResolve } = require("./modules/kbo");
-const { createCustomerInvoice, workorderInvoicePayload } = require("./modules/customer-invoicing");
+const { createCustomerInvoice, createCreditNote, workorderInvoicePayload } = require("./modules/customer-invoicing");
 const { runPaymentReminders, reminderPolicy } = require("./modules/payment-reminders");
 const { normalizeAppointment, runAppointmentReminders } = require("./modules/appointments");
 const { normalizeIncident, incidentsToCsv } = require("./modules/incidents");
@@ -3826,6 +3826,21 @@ http.createServer(async (req, res) => {
         sendJson(res, 200, { ok: true, url: link.url, provider: link.provider });
         return;
       }
+      // Creditnota op een factuur (E08/h30): definitief document, corrigeert saldo.
+      const invoiceCreditMatch = action.match(/^facturen\/([^/]+)\/credit$/);
+      if (invoiceCreditMatch && req.method === "POST") {
+        assertInvoicing(user);
+        assertApiKeyWriteAllowed(user, req);
+        const inv = store.get("invoices", invoiceCreditMatch[1]);
+        if (!inv || inv.tenantId !== tenantId) return sendJson(res, 404, { ok: false, error: "Factuur niet gevonden" });
+        if (inv.docType === "credit_note") return sendJson(res, 400, { ok: false, error: "Een creditnota kun je niet crediteren", code: "IS_CREDIT_NOTE" });
+        const body = await readBody(req).catch(() => ({}));
+        let credit;
+        try { credit = createCreditNote(store, tenant, user, inv, { lineIndexes: body.lineIndexes, reason: body.reason }); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        sendJson(res, 201, { ok: true, creditNote: credit });
+        return;
+      }
       const invoiceItemMatch = action.match(/^facturen\/([^/]+)$/);
       if (invoiceItemMatch && req.method === "PATCH") {
         assertInvoicing(user);
@@ -4031,7 +4046,8 @@ http.createServer(async (req, res) => {
           status: "open",
           invoiceDate: new Date().toISOString().slice(0, 10),
           dueDate: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
-          lines: q.lines, subtotal: q.subtotal, vatAmount: q.vatAmount, total: q.total,
+          lines: (q.lines || []).map(l => ({ ...l, sourceType: "quote", sourceId: q.id })),
+          subtotal: q.subtotal, vatAmount: q.vatAmount, total: q.total,
           notes: `Op basis van offerte ${q.number}`, quoteId: q.id,
           paidAt: null, sentAt: null, createdBy: user.email,
           createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()

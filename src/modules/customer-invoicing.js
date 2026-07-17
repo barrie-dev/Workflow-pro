@@ -27,7 +27,14 @@ function computeLines(rawLines, reverseCharge) {
     const vatRate = reverseCharge ? 0 : Number(l.vatRate ?? 21);
     const lineSubtotal = round2(qty * unitPrice);
     const lineVat = round2(lineSubtotal * vatRate / 100);
-    return { description: l.description || "", qty, unitPrice, vatRate, lineSubtotal, lineVat, lineTotal: round2(lineSubtotal + lineVat) };
+    // Bronlijn-traceerbaarheid (E08/h30): elke lijn is herleidbaar tot bron of
+    // expliciet "manual". sourceType/sourceId komen van de conversieroutes.
+    return {
+      description: l.description || "", qty, unitPrice, vatRate,
+      lineSubtotal, lineVat, lineTotal: round2(lineSubtotal + lineVat),
+      sourceType: ["quote", "workorder", "contract", "credit", "manual"].includes(l.sourceType) ? l.sourceType : "manual",
+      sourceId: l.sourceId || null,
+    };
   });
   const subtotal = round2(lines.reduce((s, l) => s + l.lineSubtotal, 0));
   const vatAmount = round2(lines.reduce((s, l) => s + l.lineVat, 0));
@@ -70,6 +77,70 @@ function createCustomerInvoice(store, tenant, user, payload) {
   store.audit({ actor: user.email, tenantId: tenant.id, action: "invoice_created", area: "facturen", detail: `${number} · €${total.toFixed(2)}` });
   emitDomainEvent(store, { tenantId: tenant.id, eventType: "invoice.created", aggregateType: "invoice", aggregateId: invoice.id, actor: user.email, data: { source: payload.workorderId ? "workorder" : "manual" } });
   return invoice;
+}
+
+/**
+ * Creditnota op een bestaande factuur (E08/h30): verwijst naar het origineel,
+ * keert de gekozen (of alle) lijnen om en corrigeert btw + openstaand saldo.
+ * Idempotent: een reeds volledig gecrediteerde factuur wordt niet nog eens
+ * gecrediteerd. Definitieve facturen blijven onveranderlijk; correctie loopt
+ * uitsluitend via deze creditnota + eventueel een nieuwe factuur.
+ */
+function createCreditNote(store, tenant, user, invoice, opts = {}) {
+  if (!invoice) { const e = new Error("Factuur niet gevonden"); e.status = 404; throw e; }
+  if (invoice.creditNoteId) { const e = new Error("Deze factuur is al volledig gecrediteerd"); e.status = 409; e.code = "ALREADY_CREDITED"; throw e; }
+  // Welke lijnen crediteren? Standaard alle; anders de meegegeven index-set.
+  const idx = Array.isArray(opts.lineIndexes) && opts.lineIndexes.length ? new Set(opts.lineIndexes.map(Number)) : null;
+  const creditLines = (invoice.lines || [])
+    .filter((_, i) => !idx || idx.has(i))
+    .map(l => ({
+      description: `Credit: ${l.description || ""}`.slice(0, 200),
+      qty: -Math.abs(Number(l.qty || 0)),
+      unitPrice: Number(l.unitPrice || 0),
+      vatRate: Number(l.vatRate || 0),
+      sourceType: "credit",
+      sourceId: invoice.id,
+    }));
+  if (!creditLines.length) { const e = new Error("Geen factuurlijnen om te crediteren"); e.status = 400; throw e; }
+
+  const issued = issueNumber(store, { tenant, docType: "credit_note" });
+  const number = issued.number;
+  const { lines, subtotal, vatAmount, total } = computeLines(creditLines, invoice.vatRegime && invoice.vatRegime !== "binnen");
+  const now = new Date().toISOString();
+  const credit = store.insert("invoices", {
+    id: `cn_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+    tenantId: tenant.id,
+    companyId: issued.companyId || invoice.companyId || null,
+    number,
+    docType: "credit_note",
+    creditOf: invoice.id,
+    creditOfNumber: invoice.number,
+    customerId: invoice.customerId || null,
+    customerName: invoice.customerName || "",
+    customerAddress: invoice.customerAddress || "",
+    customerVatNumber: invoice.customerVatNumber || "",
+    status: "open",
+    invoiceDate: now.slice(0, 10),
+    dueDate: now.slice(0, 10),
+    lines, subtotal, vatAmount, total,
+    vatRegime: invoice.vatRegime || "binnen",
+    vatNote: invoice.vatNote || "",
+    structuredComm: structuredCommunication(number),
+    notes: `Creditnota bij factuur ${invoice.number}` + (opts.reason ? ` · ${opts.reason}` : ""),
+    reason: opts.reason || "",
+    paidAt: null, sentAt: null,
+    createdBy: user.email, createdAt: now, updatedAt: now,
+  });
+  // Origineel markeren: volledige credit → "gecrediteerd" en gelinkt.
+  const fullCredit = !idx;
+  store.update("invoices", invoice.id, {
+    ...(fullCredit ? { status: "gecrediteerd", creditNoteId: credit.id } : {}),
+    creditNotes: [...(invoice.creditNotes || []), credit.id],
+    updatedAt: now,
+  });
+  store.audit({ actor: user.email, tenantId: tenant.id, action: "credit_note_created", area: "facturen", detail: `${number} bij ${invoice.number} · €${total.toFixed(2)}` });
+  emitDomainEvent(store, { tenantId: tenant.id, eventType: "invoice.credited", aggregateType: "invoice", aggregateId: invoice.id, actor: user.email, data: { creditNoteId: credit.id, full: fullCredit } });
+  return credit;
 }
 
 // Bouwt de factuur-payload voor één werkbon: geklokte/factureerbare uren × tarief
@@ -127,9 +198,10 @@ function workorderInvoicePayload(store, tenant, workorder, extraLines = []) {
     vatRegime: workorder.vatRegime || "binnen",
     notes: `Op basis van werkbon ${workorder.number || workorder.id}`,
     workorderId: workorder.id,
-    lines,
+    // Bronlijn-traceerbaarheid (E08): alle werkbonlijnen dragen de werkbon-bron.
+    lines: lines.map(l => ({ ...l, sourceType: "workorder", sourceId: workorder.id })),
     expenseIds,   // door de endpoint te markeren als gefactureerd
   };
 }
 
-module.exports = { createCustomerInvoice, workorderInvoicePayload, computeLines, REGIME_NOTES };
+module.exports = { createCustomerInvoice, createCreditNote, workorderInvoicePayload, computeLines, REGIME_NOTES };
