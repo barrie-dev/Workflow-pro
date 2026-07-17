@@ -216,6 +216,7 @@ const { applyScope, redactSensitive } = require("./platform/policy");
 const { makeCustomerRepository } = require("./platform/crm");
 const { makeProjectRepository } = require("./platform/projects");
 const { freezeSentVersion, reviseQuote, computeDocumentHash } = require("./platform/quote-versions");
+const { listPlanningItems, planningOverlap } = require("./platform/planning");
 const {
   createSetupIntent,
   billingQuote,
@@ -3421,6 +3422,21 @@ http.createServer(async (req, res) => {
           String(start) < String(s.end || "24:00") && String(end) > String(s.start || "00:00")
         ) || null;
 
+      // Geünificeerde planning (E06): shifts + afspraken als één tijdlijn.
+      if (action === "planning/unified" && req.method === "GET") {
+        assertCan(user, "planning");
+        const items = listPlanningItems(store, tenantId, {
+          from: url.searchParams.get("from") || undefined,
+          to: url.searchParams.get("to") || undefined,
+          resourceId: url.searchParams.get("resourceId") || undefined,
+          jobId: url.searchParams.get("jobId") || undefined,
+        });
+        // Dossierscope (E02): een own/team-planner ziet enkel eigen/team-resources.
+        const scoped = applyScope(store, user, "planning", items, ["primaryResourceId"]);
+        sendJson(res, 200, { ok: true, items: scoped });
+        return;
+      }
+
       if (action === "planning" && req.method === "POST") {
         assertCan(user, "planning");
         assertApiKeyWriteAllowed(user, req);
@@ -3434,22 +3450,31 @@ http.createServer(async (req, res) => {
         const leaveClash = leaveConflictOn(store, tenantId, body.userId, body.date);
         if (leaveClash) return sendJson(res, 409, { ok: false, error: `Medewerker heeft goedgekeurd verlof op ${body.date} (${leaveClash.startDate} t/m ${leaveClash.endDate}) en kan niet ingepland worden.`, code: "LEAVE_CONFLICT", conflict: { leaveId: leaveClash.id, startDate: leaveClash.startDate, endDate: leaveClash.endDate } });
         // Dubbele boeking (backend-handoff): zelfde medewerker, overlappend tijdvenster → 409 met conflictdata.
-        const overlap = shiftOverlapOn(body.userId, body.date, body.start, body.end, null);
-        if (overlap) return sendJson(res, 409, { ok: false, error: `Overlapt met een bestaande shift van ${overlap.start} tot ${overlap.end}.`, code: "SHIFT_OVERLAP", conflict: { shiftId: overlap.id, date: overlap.date, start: overlap.start, end: overlap.end, venueId: overlap.venueId || null } });
+        // Multi-resource (E06/h24): naast de primaire userId mogen extra
+        // medewerkers worden toegewezen; de overlap-check geldt voor elk van hen.
+        const assigneeIds = Array.isArray(body.assigneeIds) ? body.assigneeIds.filter(id => id && id !== body.userId) : [];
+        // Overlap-check over de geünificeerde planning voor élke toegewezen resource.
+        for (const rid of [body.userId, ...assigneeIds]) {
+          const overlap = planningOverlap(store, tenantId, rid, body.date, body.start, body.end, null);
+          if (overlap) return sendJson(res, 409, { ok: false, error: `Overlapt met bestaande planning van ${overlap.start} tot ${overlap.end}.`, code: "SHIFT_OVERLAP", conflict: { shiftId: overlap.id, resourceId: rid, date: overlap.date, start: overlap.start, end: overlap.end, venueId: overlap.venueId || null } });
+        }
         const shift = store.insert("shifts", {
           id: `shift_${Date.now()}_${Math.random().toString(16).slice(2)}`,
           tenantId,
           userId: body.userId,
+          assigneeIds,
           date: body.date,
           start: body.start,
           end: body.end,
           venueId: body.venueId || null,
           workorderId: body.workorderId || null,   // koppel de shift aan een werkbon → uren stromen door
+          projectId: body.projectId || null,       // planning alloceert tijd voor een project/job
           note: body.note || "",
           createdBy: user.id,
           createdAt: new Date().toISOString()
         });
         store.audit({ actor: user.email, tenantId, action: "shift_created", area: "planning", detail: `${body.date} ${body.start}–${body.end}` });
+        emitDomainEvent(store, { tenantId, eventType: "planning.item_created", aggregateType: "planning_item", aggregateId: shift.id, actor: user.email, correlationId: res.wfpRequestId });
         sendJson(res, 201, { ok: true, shift });
         return;
       }
