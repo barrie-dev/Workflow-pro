@@ -34,9 +34,11 @@ const config = {
   appUrl: process.env.APP_URL || "http://localhost:4280",
   appVersion: process.env.APP_VERSION || pkg.version,
   releaseChannel: process.env.RELEASE_CHANNEL || "pilot",
-  // Render vult RENDER_GIT_COMMIT automatisch per deploy → bron van waarheid.
-  // COMMIT_SHA blijft als handmatige override; "local-dev" lokaal.
-  commitSha: (raw => /^[0-9a-f]{7,40}$/i.test(raw) ? raw.slice(0, 7) : raw)(process.env.RENDER_GIT_COMMIT || process.env.COMMIT_SHA || "local-dev"),
+  // Generieke release-metadata eerst (vendor-onafhankelijk, S1-05/ADR-001):
+  // APP_COMMIT_SHA is de canonieke variabele voor elk platform; COMMIT_SHA
+  // blijft als handmatige override en Render's RENDER_GIT_COMMIT als fallback
+  // zolang Render het dev-deploymenttarget is. "local-dev" lokaal.
+  commitSha: (raw => /^[0-9a-f]{7,40}$/i.test(raw) ? raw.slice(0, 7) : raw)(process.env.APP_COMMIT_SHA || process.env.COMMIT_SHA || process.env.RENDER_GIT_COMMIT || "local-dev"),
   jwtSecret: process.env.JWT_SECRET || "dev_only_replace_this_secret",
   encryptionKey: process.env.ENCRYPTION_KEY || "dev_only_replace_this_encryption_key_32",
   databaseUrl: process.env.DATABASE_URL || "",

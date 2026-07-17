@@ -227,7 +227,7 @@ function liveServiceReadiness(platformConfig = config) {
           "Commit SHA",
           platformConfig.commitSha !== "local-dev" && /^[0-9a-f]{7,40}$/i.test(platformConfig.commitSha),
           platformConfig.commitSha,
-          "Zet COMMIT_SHA of RENDER_GIT_COMMIT zodat elke live deploy traceerbaar is.",
+          "Zet APP_COMMIT_SHA (vendor-onafhankelijk, ADR-001) zodat elke live deploy traceerbaar is.",
           "P1"
         )
       ]
