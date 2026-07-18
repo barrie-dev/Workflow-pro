@@ -229,6 +229,7 @@ const { makeSupplierRepository, makePurchaseOrderRepository } = require("./platf
 const inventory = require("./platform/inventory");
 const { buildMonaSignals } = require("./platform/mona-signals");
 const robawsImport = require("./platform/robaws-import");
+const { buildWorkInbox } = require("./platform/work-inbox");
 const {
   createSetupIntent,
   billingQuote,
@@ -2146,6 +2147,13 @@ http.createServer(async (req, res) => {
       if ((action === "mona/signals" || action === "boden/signals") && req.method === "GET") {
         assertInteractiveUser(user);
         sendJson(res, 200, { ok: true, ...buildMonaSignals(store, tenant, user) });
+        return;
+      }
+
+      // ── Work Inbox (E09/GRID): geconsolideerde werklijst · rechten-gescoped ──
+      if (action === "work-inbox" && req.method === "GET") {
+        assertInteractiveUser(user);
+        sendJson(res, 200, { ok: true, ...buildWorkInbox(store, tenant, user) });
         return;
       }
 
