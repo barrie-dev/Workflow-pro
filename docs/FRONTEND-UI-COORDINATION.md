@@ -192,3 +192,17 @@ Feedback voor de backendontwikkelaar:
 - Automation Studio heeft nog geen stabiele route of workflowcontract en is daarom bewust niet als nepflow toegevoegd. Voor frontendimplementatie is minimaal nodig: `GET/POST/PATCH /workflows`, versie/publicatiestatus, triggers, condities, acties, validatieresultaat en tenant-scoped run logs.
 - Een workflowactie moet alleen server-side toegestane actietypes en doelmodules kunnen gebruiken. Publiceren en uitvoeren vereisen auditmetadata, idempotentie en expliciete permissies.
 - Voorzie voor connector- en workflowfouten canonieke codes met `requestId`; vrije providertekst mag alleen ondersteunende context zijn.
+
+
+## Instellingen, rechten en security — frontendintegratie 2026-07-18
+
+De tenantinstellingen zijn frontendmatig genormaliseerd naar één Control Center voor bedrijfsgegevens, abonnement, MFA, backupbeleid, wachtwoord, GDPR-supporttoegang, SSO en module-instellingen. De medewerkerdrawer toont de bestaande modulegebonden niveaus Geen, Lezen en Schrijven in een leesbare rechtenmatrix.
+
+Feedback voor de backendontwikkelaar:
+
+- Server-side rollen, entitlements en grantable permissions blijven de enige bron van waarheid. De frontend verstuurt keuzes, maar mag geen rechten escaleren of afleiden uit verborgen bediening.
+- Behoud `GET /api/me`, settings-, MFA-, backup-, support-access- en SSO-responses non-breaking en lever bij fouten het bestaande `requestId`, `code` en `fieldErrors`.
+- Lever bij rechten naast de grantable key een stabiel labelkey, toegestane niveaus en eventueel reden waarom een niveau niet beschikbaar is. Zo hoeft de frontend geen pakket- of rolmatrix te dupliceren.
+- Mailafhankelijke toggles en acties moeten `capabilities.mail` respecteren. Wanneer mail uitstaat, moet de backend geen success claimen en een veilige setupreden teruggeven.
+- Supporttoegang, MFA-enforcement, accountactivatie en SSO-configuratiewijzigingen vereisen auditmetadata en server-side herauthenticatie waar het risico dat vraagt.
+- Wachtwoordloze pending accounts gebruiken de bestaande activatielinkflow; bestaande wachtwoorden worden niet impliciet gereset vanuit registratie of activatie.
