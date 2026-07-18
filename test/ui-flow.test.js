@@ -112,3 +112,14 @@ test("rolomgevingen gebruiken dezelfde goedgekeurde compacte workspace", () => {
   ];
   for (const [file, marker] of markers) assert.match(read(file), new RegExp(marker));
 });
+
+
+test("admin: golden flow bewaart domeinkoppelingen tussen klant, werkbon, planning en factuur", () => {
+  const source = read("public/js/platforms/admin.js");
+  assert.match(source, /customerId: customer\.id,[\s\S]{0,180}prefillCustomerName: customer\.name/);
+  assert.match(source, /const savedWorkorder = saved\.workorder \|\| saved\.row \|\| workorder \|\| null/);
+  assert.match(source, /workorderId: savedWorkorder\?\.id \|\| ""/);
+  assert.match(source, /name="workorderId" value="\$\{esc\(shift\?\.workorderId \|\| prefill\.workorderId \|\| ""\)\}"/);
+  assert.match(source, /api\("POST", `\/workorders\/\$\{workorder\.id\}\/invoice`, \{\}\)/);
+  assert.match(source, /\(invoice\?\.customerId \|\| prefill\.customerId\)===c\.id/);
+});
