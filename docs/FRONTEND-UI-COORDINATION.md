@@ -263,3 +263,32 @@ Feedback voor de backendontwikkelaar:
 - Houd manageroverzichten compact in aantal requests. Een toekomstig tenant-scoped dagstartcontract kan uitzonderingen server-side prioriteren zonder dat de frontend bedrijfsregels dupliceert.
 - Lever klok-, verlof-, onkosten- en werkbonconflicten met canonieke `code`, `fieldErrors`, conflictcontext en `requestId`.
 - Mobiele mutaties moeten idempotent blijven en dezelfde offline-sync-id accepteren; de UI mag bij een netwerkherhaling geen dubbele registratie veroorzaken.
+
+
+## Frontendroadmap afgerond — status 2026-07-18
+
+De afgesproken SaaS-UI-roadmap is frontendmatig afgerond en door regressietests geborgd.
+
+| Roadmapgebied | Frontendstatus |
+| --- | --- |
+| Login, trial, registratie en reseller | Afgerond |
+| Dagstart, actiecentrum en planning | Afgerond |
+| Klanten, offertes, werkbonnen en facturen | Afgerond |
+| Tijd, onkosten en verlofgoedkeuring | Afgerond |
+| Stock en wagenpark | Afgerond |
+| Managementrapportage | Afgerond |
+| Integratiecentrum | Afgerond |
+| Instellingen, rechten en securitypresentatie | Afgerond |
+| Mona AI-assistent | Afgerond |
+| Manager-, medewerker- en mobiele flows | Afgerond |
+| Ruime create/editworkspaces en leesbaarheidsaudit | Afgerond |
+
+Backend-/providerafhankelijkheden die geen onafgewerkte frontend voorstellen:
+
+- Echte mailprovider en afzenderdomeinen.
+- Stabiel Automation Studio workflow- en runlogcontract.
+- Definitieve productie-auth, data-adapter, tenantmigratie en providercredentials.
+- Eventuele server-side rapportageaggregaties, asynchrone exports en AI-streaming.
+- Productievalidatie van Stripe, Peppol, SSO en externe connectors.
+
+Eindvalidatie frontend: de volledige Node-testsuite slaagt met **391/391 tests**. Nieuwe UI mag deze regressies niet omzeilen; gedeelde bestanden blijven eerst vergelijken met actuele `main` om parallel backendwerk te behouden.
