@@ -6,6 +6,24 @@ Doel: frontend-werk afstemmen op de sessie "Ontwikkel app roadmap", zodat design
 
 
 
+
+## Release-afstemming — documentontwerp (18 juli 2026)
+
+De sjablooneditor is een ruime tweedelige werkruimte: instellingen links en een live documentvoorbeeld rechts.
+
+Frontendcorrecties:
+
+- Nieuwe ontwerpen starten met de geldige hexkleur `#0071E3` (Monargo Blue).
+- Een ongeldig of historisch CSS-token valt in het kleurveld terug op `#0071E3`; een `<input type="color">` krijgt nooit meer `var(--wf-blue)`.
+- Formuliervelden gebruiken minimaal 14px tekst en 46px hoogte; de documentpreview is op desktop 720px hoog.
+- Lijst, editor en preview blijven dezelfde bestaande template-API gebruiken.
+
+Backendfeedback:
+
+1. `src/modules/templates.js` gebruikt nog `#1e6be6` als `defaultTemplate`- en normalisatiefallback. Stem dit af op het goedgekeurde Monargo Blue `#0071E3` om frontend en gegenereerde standaarddocumenten identiek te maken.
+2. De backend blijft eigenaar van toegestane mergevelden, kolommen, logogrootte, normalisatie en documentrendering.
+3. De frontend bewaart geen lokale sjabloonversie; versiebeheer of concept/publicatie vereist later een expliciet backendcontract.
+
 ## Release-afstemming — werfidentiteit in werkbon en planning (18 juli 2026)
 
 De frontend behandelt `venueId` voortaan als een echte werf-ID. Een werkbon bewaart daarnaast `location` als leesbaar uitvoeringsadres; een nieuwe planningsshift gebruikt alleen `venueId`, omdat de huidige POST-route `location` niet opslaat.
