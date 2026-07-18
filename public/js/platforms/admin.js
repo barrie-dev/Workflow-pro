@@ -5163,130 +5163,350 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
     });
   }
 
+
   // ── Voertuigen ─────────────────────────────────────────────
+  let _vehicleContext = { vehicles: [], employees: [] };
+
+  const vehicleStatusLabel = status => ({
+    actief: "Actief",
+    in_onderhoud: "In onderhoud",
+    buiten_dienst: "Buiten dienst",
+    verkocht: "Verkocht"
+  })[status] || "Onbekend";
+  const vehicleAlertLabel = status => ({
+    vervallen: "Vervallen",
+    dringend: "Dringend",
+    binnenkort: "Binnenkort",
+    ok: "In orde",
+    onbekend: "Niet ingesteld"
+  })[status] || "Niet ingesteld";
+  const vehicleDate = value => value ? new Date(`${String(value).slice(0, 10)}T12:00:00`).toLocaleDateString("nl-BE") : "Niet ingesteld";
+  const vehicleDriverName = id => {
+    const employee = (_vehicleContext.employees || []).find(row => row.id === id);
+    return employee ? (employee.name || employee.email || "Medewerker") : (id ? empNameById(id) || "Onbekende medewerker" : "Niet toegewezen");
+  };
+  const vehicleNeedsAttention = vehicle => ["vervallen", "dringend"].some(level =>
+    [vehicle.serviceStatus, vehicle.inspectionStatus, vehicle.insuranceStatus].includes(level)
+  );
+
   async function renderVehicles() {
     const content = document.getElementById("admContent");
     try {
-      const data = await api("GET", "/vehicles");
+      const [data, employeeData] = await Promise.all([
+        api("GET", "/vehicles"),
+        api("GET", "/employees").catch(() => ({ employees: [] }))
+      ]);
       const vehicles = data.vehicles || [];
-      const alerts = data.alerts || [];
+      const summary = data.summary || {};
+      const employees = employeeData.employees || [];
+      _vehicleContext = { vehicles, employees };
+      if (employees.length) _state.employees = employees;
+
+      const attention = vehicles.filter(vehicleNeedsAttention);
       content.innerHTML = `
-${alerts.length ? `<div style="background:var(--wf-yellow-l);border:1px solid var(--wf-yellow-l);border-radius:10px;padding:12px 16px;margin-bottom:14px;font-size:13px;color:var(--wf-yellow)">
-  <strong>${alerts.length} alert${alerts.length>1?"s":""}</strong>: ${alerts.map(a=>esc(a.message||a.type)).join(", ")}
-</div>` : ""}
-<div class="adm-card">
+<div class="adm-kpis vehicle-kpis" style="margin-bottom:18px">
+  <div class="adm-kpi adm-kpi-blue"><div class="adm-kpi-label">Voertuigen</div><div class="adm-kpi-value">${summary.total ?? vehicles.length}</div><div class="vehicle-kpi-note">volledig wagenpark</div></div>
+  <div class="adm-kpi adm-kpi-green"><div class="adm-kpi-label">Actief</div><div class="adm-kpi-value">${summary.actief || 0}</div><div class="vehicle-kpi-note">inzetbaar</div></div>
+  <div class="adm-kpi adm-kpi-purple"><div class="adm-kpi-label">In onderhoud</div><div class="adm-kpi-value">${summary.in_onderhoud || 0}</div><div class="vehicle-kpi-note">tijdelijk niet inzetbaar</div></div>
+  <div class="adm-kpi adm-kpi-${attention.length ? "red" : "green"}"><div class="adm-kpi-label">Aandacht nodig</div><div class="adm-kpi-value">${attention.length}</div><div class="vehicle-kpi-note">service, keuring of verzekering</div></div>
+</div>
+${attention.length ? `<div class="vehicle-alert-banner"><strong>${attention.length} voertuig${attention.length === 1 ? "" : "en"} vraagt aandacht</strong><span>${attention.slice(0, 5).map(vehicle => esc(`${vehicle.brand || ""} ${vehicle.model || ""} · ${vehicle.plate}`.trim())).join(", ")}</span></div>` : ""}
+<div class="adm-card vehicle-list-card">
   <div class="adm-card-header">
-    <h3 class="adm-card-title">${tA("nav.vehicles","Voertuigen")} <span style="background:var(--wf-purple-l);color:var(--wf-purple);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${vehicles.length}</span></h3>
+    <div><h3 class="adm-card-title">Wagenpark</h3><p class="vehicle-card-subtitle">Inzetbaarheid, kilometerstand en vervaldata in één overzicht.</p></div>
+    <div class="vehicle-list-tools">
+      <select id="vehStatusFilter" class="adm-input">
+        <option value="">Alle statussen</option>
+        <option value="actief">Actief</option>
+        <option value="in_onderhoud">In onderhoud</option>
+        <option value="buiten_dienst">Buiten dienst</option>
+        <option value="verkocht">Verkocht</option>
+        <option value="attention">Aandacht nodig</option>
+      </select>
+      <input id="vehSearch" class="adm-input" placeholder="Zoek voertuig, plaat of chauffeur…">
+    </div>
   </div>
   ${vehicles.length === 0
-    ? `<div class="adm-empty"><div class="adm-empty-text">${tA("adm.veh.empty","Nog geen voertuigen")}</div><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewVeh" style="margin-top:12px">+ ${tA("adm.veh.emptyBtn","Eerste voertuig aanmaken")}</button></div>`
-    : `<div class="adm-table-wrap"><table class="adm-table">
-        <thead><tr><th>${tA("adm.veh.thNamePlate","Naam / Kenteken")}</th><th>${tA("adm.veh.thBrandModel","Merk / Model")}</th><th>${tA("adm.veh.thDriver","Chauffeur")}</th><th>${tA("adm.veh.thMileage","KM-stand")}</th><th>${tA("adm.status","Status")}</th><th>${tA("adm.veh.thNextService","Volgende service")}</th><th>${tA("adm.actions","Acties")}</th></tr></thead>
-        <tbody>${vehicles.map(v => `<tr class="adm-row-link veh-row" data-id="${v.id}" title="${tA("adm.veh.open","Open voertuig")}">
-          <td><strong>${esc(v.name||v.plate||"-")}</strong><br><span style="font-size:11px;color:var(--gray-400);font-family:monospace">${esc(v.plate||"")}</span></td>
-          <td>${esc(v.brand||"")} ${esc(v.model||"")}</td>
-          <td>${esc(v.driverName||v.driverId||"-")}</td>
-          <td>${v.mileage ? Number(v.mileage).toLocaleString("nl-BE") + " km" : "-"}</td>
-          <td><span class="adm-status adm-status-${v.status||"active"}">${esc(tVehStatus(v.status))}</span></td>
-          <td>${v.nextService ? new Date(v.nextService).toLocaleDateString("nl-BE") : "-"}</td>
-          <td>
-            <button class="adm-btn adm-btn-secondary adm-btn-sm veh-edit" data-id="${v.id}">${tA("adm.edit","Bewerken")}</button>
-            <button class="adm-btn adm-btn-secondary adm-btn-sm veh-km" data-id="${v.id}">${tA("adm.veh.kmLog","KM log")}</button>
-          </td>
-        </tr>`).join("")}</tbody>
-      </table></div>`}
+    ? `<div class="adm-empty"><div class="adm-empty-icon">▱</div><div class="adm-empty-title">Nog geen voertuigen</div><div class="adm-empty-text">Voeg het eerste voertuig toe om kilometerstanden, service en documenten te bewaken.</div><button class="adm-btn adm-btn-primary" id="admEmptyNewVeh" style="margin-top:16px">Eerste voertuig aanmaken</button></div>`
+    : `<div class="adm-table-wrap"><table class="adm-table vehicle-table">
+      <thead><tr><th>Voertuig</th><th>Chauffeur</th><th>KM-stand</th><th>Status</th><th>Service</th><th>Keuring</th><th>Acties</th></tr></thead>
+      <tbody id="vehTbody">${buildVehicleRows(vehicles)}</tbody>
+    </table></div>`}
 </div>`;
-      document.querySelectorAll(".veh-row").forEach(row => row.addEventListener("click", e => {
-        if (e.target.closest("button")) return;
-        openVehicleDrawer(vehicles.find(x => x.id === row.dataset.id));
-      }));
-      document.querySelectorAll(".veh-edit").forEach(b => b.addEventListener("click", () => openVehicleDrawer(vehicles.find(x => x.id === b.dataset.id))));
-      document.querySelectorAll(".veh-km").forEach(b => b.addEventListener("click", () => openMileageDrawer(b.dataset.id)));
-    } catch(e) { content.innerHTML = `<div style="padding:20px;color:var(--wf-red)">${tA("adm.error","Fout")}: ${e.message}</div>`; }
+
+      const applyFilters = () => {
+        const query = (document.getElementById("vehSearch")?.value || "").toLowerCase().trim();
+        const filter = document.getElementById("vehStatusFilter")?.value || "";
+        const filtered = vehicles.filter(vehicle => {
+          const haystack = `${vehicle.brand || ""} ${vehicle.model || ""} ${vehicle.plate || ""} ${vehicleDriverName(vehicle.driverId)}`.toLowerCase();
+          if (query && !haystack.includes(query)) return false;
+          if (filter === "attention" && !vehicleNeedsAttention(vehicle)) return false;
+          if (filter && filter !== "attention" && vehicle.status !== filter) return false;
+          return true;
+        });
+        const tbody = document.getElementById("vehTbody");
+        if (tbody) tbody.innerHTML = filtered.length
+          ? buildVehicleRows(filtered)
+          : `<tr><td colspan="7"><div class="adm-empty" style="padding:32px">Geen voertuigen gevonden met deze filters.</div></td></tr>`;
+        wireVehicleButtons(vehicles);
+      };
+      document.getElementById("vehSearch")?.addEventListener("input", applyFilters);
+      document.getElementById("vehStatusFilter")?.addEventListener("change", applyFilters);
+      wireVehicleButtons(vehicles);
+    } catch (error) {
+      content.innerHTML = `<div style="padding:24px;color:var(--wf-red)">${tA("adm.error","Fout")}: ${esc(error.message)}</div>`;
+    }
   }
+
+  function buildVehicleRows(vehicles) {
+    return vehicles.map(vehicle => {
+      const attention = vehicleNeedsAttention(vehicle);
+      return `<tr class="adm-row-link veh-row" data-id="${vehicle.id}" data-attention="${attention ? "true" : "false"}" title="Open voertuig">
+        <td><div class="vehicle-name">${esc(`${vehicle.brand || ""} ${vehicle.model || ""}`.trim() || vehicle.model || "Voertuig")}</div><div class="vehicle-meta">${esc(vehicle.plate || "Geen nummerplaat")}${vehicle.fuel ? ` · ${esc(vehicle.fuel)}` : ""}</div></td>
+        <td>${esc(vehicleDriverName(vehicle.driverId))}</td>
+        <td><strong>${Number(vehicle.mileage || 0).toLocaleString("nl-BE")}</strong> <span class="vehicle-unit">km</span></td>
+        <td><span class="vehicle-status vehicle-status-${vehicle.status || "onbekend"}">${vehicleStatusLabel(vehicle.status)}</span></td>
+        <td><span class="vehicle-alert vehicle-alert-${vehicle.serviceStatus || "onbekend"}">${vehicleAlertLabel(vehicle.serviceStatus)}</span><small>${vehicle.nextService ? vehicleDate(vehicle.nextService) : ""}</small></td>
+        <td><span class="vehicle-alert vehicle-alert-${vehicle.inspectionStatus || "onbekend"}">${vehicleAlertLabel(vehicle.inspectionStatus)}</span><small>${vehicle.inspectionDate ? vehicleDate(vehicle.inspectionDate) : ""}</small></td>
+        <td class="vehicle-row-actions"><button class="adm-btn adm-btn-secondary adm-btn-sm veh-open" data-id="${vehicle.id}">Open</button><button class="adm-btn adm-btn-primary adm-btn-sm veh-km" data-id="${vehicle.id}">KM-stand</button></td>
+      </tr>`;
+    }).join("");
+  }
+
+  function wireVehicleButtons(vehicles) {
+    document.querySelectorAll(".veh-row").forEach(row => row.addEventListener("click", event => {
+      if (event.target.closest("button")) return;
+      openVehicleDetail(row.dataset.id);
+    }));
+    document.querySelectorAll(".veh-open").forEach(button => button.addEventListener("click", () => openVehicleDetail(button.dataset.id)));
+    document.querySelectorAll(".veh-km").forEach(button => button.addEventListener("click", () => {
+      openMileageDrawer(button.dataset.id, vehicles.find(vehicle => vehicle.id === button.dataset.id));
+    }));
+  }
+
+  function vehicleEmployeeOptions(selectedId) {
+    return `<option value="">Niet toegewezen</option>${(_vehicleContext.employees || []).filter(employee => employee.active !== false).map(employee =>
+      `<option value="${employee.id}" ${selectedId === employee.id ? "selected" : ""}>${esc(employee.name || employee.email || "Medewerker")}</option>`
+    ).join("")}`;
+  }
+
+  async function openVehicleDetail(vehicleId) {
+    const body = document.getElementById("admDrawerBody");
+    document.getElementById("admDrawerTitle").textContent = "Voertuig";
+    body.innerHTML = `<div class="adm-loading"><span class="adm-spinner"></span> Voertuig laden…</div>`;
+    openDrawer();
+    try {
+      const response = await api("GET", `/vehicles/${vehicleId}`);
+      const vehicle = response.vehicle || response;
+      const logs = vehicle.mileageLogs || [];
+      body.innerHTML = `
+<div id="vehDetail" class="vehicle-detail">
+  <div class="vehicle-detail-hero">
+    <div><div class="vehicle-eyebrow">${esc(vehicle.plate)}</div><h3>${esc(`${vehicle.brand || ""} ${vehicle.model || ""}`.trim())}</h3><p>${esc(vehicle.fuel || "Brandstof onbekend")}${vehicle.year ? ` · bouwjaar ${esc(vehicle.year)}` : ""} · ${esc(vehicleDriverName(vehicle.driverId))}</p></div>
+    <div class="vehicle-detail-actions"><button class="adm-btn adm-btn-secondary" id="vehDetailEdit">Gegevens bewerken</button><button class="adm-btn adm-btn-secondary" id="vehDetailService">Service plannen</button><button class="adm-btn adm-btn-primary" id="vehDetailMileage">KM-stand registreren</button></div>
+  </div>
+
+  <div class="vehicle-detail-metrics">
+    <div><span>Kilometerstand</span><strong>${Number(vehicle.mileage || 0).toLocaleString("nl-BE")} <small>km</small></strong></div>
+    <div><span>Status</span><strong><span class="vehicle-status vehicle-status-${vehicle.status}">${vehicleStatusLabel(vehicle.status)}</span></strong></div>
+    <div><span>Volgende service</span><strong class="vehicle-metric-date">${vehicleDate(vehicle.nextService)}</strong><small>${vehicleAlertLabel(vehicle.serviceStatus)}</small></div>
+    <div><span>Technische keuring</span><strong class="vehicle-metric-date">${vehicleDate(vehicle.inspectionDate)}</strong><small>${vehicleAlertLabel(vehicle.inspectionStatus)}</small></div>
+  </div>
+
+  <div class="vehicle-detail-grid">
+    <section class="vehicle-detail-card">
+      <h4>Voertuiggegevens</h4>
+      <dl class="vehicle-definition-list">
+        <div><dt>VIN</dt><dd>${esc(vehicle.vin || "Niet ingesteld")}</dd></div>
+        <div><dt>Chauffeur</dt><dd>${esc(vehicleDriverName(vehicle.driverId))}</dd></div>
+        <div><dt>Verzekeraar</dt><dd>${esc(vehicle.insuranceCompany || "Niet ingesteld")}</dd></div>
+        <div><dt>Verzekering vervalt</dt><dd>${vehicleDate(vehicle.insuranceExpiry)}</dd></div>
+      </dl>
+      ${vehicle.notes ? `<div class="vehicle-notes"><span>Notities</span><p>${esc(vehicle.notes)}</p></div>` : ""}
+    </section>
+
+    <section class="vehicle-detail-card">
+      <div class="vehicle-section-head"><div><h4>Kilometerhistoriek</h4><p>Laatste ${Math.min(20, logs.length)} registraties</p></div></div>
+      ${logs.length ? `<div class="vehicle-history">${logs.map(log => `<div class="vehicle-history-row">
+        <div class="vehicle-history-icon">↗</div>
+        <div><strong>${Number(log.mileage || 0).toLocaleString("nl-BE")} km</strong><p>${esc(log.note || "Kilometerstand geregistreerd")}</p><small>${log.loggedAt ? new Date(log.loggedAt).toLocaleString("nl-BE") : ""}${log.actor ? ` · ${esc(log.actor)}` : ""}</small></div>
+        <span>+${Number(log.delta || 0).toLocaleString("nl-BE")} km</span>
+      </div>`).join("")}</div>` : `<div class="adm-empty" style="padding:34px 18px">Nog geen kilometerstanden geregistreerd.</div>`}
+    </section>
+  </div>
+</div>`;
+
+      document.getElementById("vehDetailEdit")?.addEventListener("click", () => openVehicleDrawer(vehicle));
+      document.getElementById("vehDetailService")?.addEventListener("click", () => openServiceDrawer(vehicle));
+      document.getElementById("vehDetailMileage")?.addEventListener("click", () => openMileageDrawer(vehicle.id, vehicle));
+    } catch (error) {
+      body.innerHTML = `<div style="padding:24px;color:var(--wf-red)">${esc(error.message)}</div>`;
+    }
+  }
+
   function openVehicleDrawer(vehicle) {
-    document.getElementById("admDrawerTitle").textContent = vehicle ? tA("adm.veh.editTitle","Voertuig bewerken") : tA("adm.veh.newTitle","Nieuw voertuig");
+    document.getElementById("admDrawerTitle").textContent = vehicle ? "Voertuiggegevens bewerken" : "Nieuw voertuig";
     document.getElementById("admDrawerBody").innerHTML = `
-<form id="vehForm">
-  <div class="adm-form-row">
-    <div class="adm-form-group"><label>${tA("adm.veh.nameCode","Naam / Code")} *</label><input name="name" value="${esc(vehicle?.name||"")}" required placeholder="${tA("adm.veh.namePh","Bestelwagen 1")}"></div>
-    <div class="adm-form-group"><label>${tA("adm.veh.plate","Kenteken")}</label><input name="plate" value="${esc(vehicle?.plate||"")}" placeholder="1-ABC-234" style="text-transform:uppercase"></div>
+<form id="vehForm" class="vehicle-form">
+  <div class="vehicle-form-intro"><span>${vehicle ? "Wagenparkbeheer" : "Nieuw voertuig"}</span><h3>${vehicle ? esc(`${vehicle.brand || ""} ${vehicle.model || ""}`.trim()) : "Voeg een inzetbaar voertuig toe"}</h3><p>Bewaar chauffeur, onderhoud, keuring en verzekering samen. Kilometerwijzigingen blijven apart traceerbaar.</p></div>
+
+  <div class="adm-form-section">Identificatie</div>
+  <div class="vehicle-form-grid">
+    <div class="adm-form-group"><label>Model *</label><input name="model" value="${esc(vehicle?.model || "")}" required placeholder="Transit"></div>
+    <div class="adm-form-group"><label>Merk</label><input name="brand" value="${esc(vehicle?.brand || "")}" placeholder="Ford"></div>
+    <div class="adm-form-group"><label>Nummerplaat *</label><input name="plate" value="${esc(vehicle?.plate || "")}" ${vehicle ? "disabled" : "required"} placeholder="1-ABC-234" style="text-transform:uppercase"><div class="adm-form-hint">${vehicle ? "De nummerplaat kan in het huidige contract na aanmaak niet worden gewijzigd." : "Wordt automatisch in hoofdletters bewaard."}</div></div>
+    <div class="adm-form-group"><label>Bouwjaar</label><input name="year" type="number" min="1900" max="2100" value="${esc(vehicle?.year || "")}" placeholder="2024"></div>
+    <div class="adm-form-group"><label>Brandstof</label><select name="fuel">
+      ${["diesel","benzine","elektrisch","hybride","cng","lpg"].map(fuel => `<option value="${fuel}" ${vehicle?.fuel === fuel ? "selected" : ""}>${fuel.charAt(0).toUpperCase() + fuel.slice(1)}</option>`).join("")}
+    </select></div>
+    <div class="adm-form-group"><label>VIN / chassisnummer</label><input name="vin" value="${esc(vehicle?.vin || "")}" placeholder="Voertuigidentificatienummer"></div>
+    <div class="adm-form-group"><label>Vaste chauffeur</label><select name="driverId">${vehicleEmployeeOptions(vehicle?.driverId)}</select></div>
+    <div class="adm-form-group"><label>Status</label><select name="status">
+      <option value="actief" ${!vehicle || vehicle.status === "actief" ? "selected" : ""}>Actief</option>
+      <option value="in_onderhoud" ${vehicle?.status === "in_onderhoud" ? "selected" : ""}>In onderhoud</option>
+      <option value="buiten_dienst" ${vehicle?.status === "buiten_dienst" ? "selected" : ""}>Buiten dienst</option>
+      <option value="verkocht" ${vehicle?.status === "verkocht" ? "selected" : ""}>Verkocht</option>
+    </select></div>
+    ${vehicle ? "" : `<div class="adm-form-group"><label>Beginstand</label><input name="mileage" type="number" min="0" value="0"><div class="adm-form-hint">Latere standen registreert u via de kilometerhistoriek.</div></div>`}
   </div>
-  <div class="adm-form-row">
-    <div class="adm-form-group"><label>${tA("adm.veh.brand","Merk")}</label><input name="brand" value="${esc(vehicle?.brand||"")}" placeholder="Ford"></div>
-    <div class="adm-form-group"><label>${tA("adm.veh.model","Model")}</label><input name="model" value="${esc(vehicle?.model||"")}" placeholder="Transit"></div>
+
+  <div class="adm-form-section">Vervaldata en verzekering</div>
+  <div class="vehicle-form-grid">
+    <div class="adm-form-group"><label>Volgende service</label><input name="nextService" type="date" value="${esc(vehicle?.nextService || "")}"></div>
+    <div class="adm-form-group"><label>Technische keuring</label><input name="inspectionDate" type="date" value="${esc(vehicle?.inspectionDate || "")}"></div>
+    <div class="adm-form-group"><label>Verzekering vervalt</label><input name="insuranceExpiry" type="date" value="${esc(vehicle?.insuranceExpiry || "")}"></div>
+    <div class="adm-form-group"><label>Verzekeraar</label><input name="insuranceCompany" value="${esc(vehicle?.insuranceCompany || "")}" placeholder="Naam verzekeringsmaatschappij"></div>
   </div>
-  <div class="adm-form-row">
-    <div class="adm-form-group"><label>${tA("adm.veh.year","Bouwjaar")}</label><input name="year" type="number" value="${esc(vehicle?.year||"")}" placeholder="2022"></div>
-    <div class="adm-form-group"><label>${tA("adm.veh.curMileage","Huidige KM-stand")}</label><input name="mileage" type="number" value="${esc(vehicle?.mileage||"")}" placeholder="50000"></div>
-  </div>
-  <div class="adm-form-row">
-    <div class="adm-form-group"><label>${tA("adm.status","Status")}</label>
-      <select name="status">
-        <option value="active" ${vehicle?.status==="active"?"selected":""}>${tA("adm.veh.stActive","Actief")}</option>
-        <option value="maintenance" ${vehicle?.status==="maintenance"?"selected":""}>${tA("adm.veh.stMaint","In onderhoud")}</option>
-        <option value="inactive" ${vehicle?.status==="inactive"?"selected":""}>${tA("adm.veh.stInactive","Inactief")}</option>
-      </select>
-    </div>
-    <div class="adm-form-group"><label>${tA("adm.veh.nextServiceDate","Volgende service (datum)")}</label><input name="nextService" type="date" value="${esc(vehicle?.nextService||"")}"></div>
-  </div>
-  <div class="adm-form-actions" style="justify-content:space-between;">
-    ${vehicle ? `<button type="button" class="adm-btn adm-btn-danger adm-btn-sm" id="vehDelete">${tA("adm.delete","Verwijderen")}</button>` : `<span></span>`}
-    <div style="display:flex;gap:8px;">
-      <button type="button" class="adm-btn adm-btn-secondary" id="vehCancel">${tA("adm.cancel","Annuleren")}</button>
-      <button type="submit" class="adm-btn adm-btn-primary">${vehicle ? tA("adm.save","Opslaan") : tA("adm.createBtn","Aanmaken")}</button>
-    </div>
+
+  <div class="adm-form-section">Interne informatie</div>
+  <div class="adm-form-group"><label>Notities</label><textarea name="notes" rows="4" placeholder="Praktische afspraken, uitrusting of onderhoudsinformatie">${esc(vehicle?.notes || "")}</textarea></div>
+
+  <div class="adm-form-actions" style="justify-content:space-between">
+    ${vehicle ? `<button type="button" class="adm-btn adm-btn-danger adm-btn-sm" id="vehDelete">Voertuig verwijderen</button>` : `<span></span>`}
+    <div class="vehicle-action-group"><button type="button" class="adm-btn adm-btn-secondary" id="vehCancel">Annuleren</button><button type="submit" class="adm-btn adm-btn-primary">${vehicle ? "Wijzigingen opslaan" : "Voertuig aanmaken"}</button></div>
   </div>
 </form>`;
     openDrawer();
-    document.getElementById("vehCancel").addEventListener("click", closeDrawer);
+    document.getElementById("vehCancel")?.addEventListener("click", closeDrawer);
+
     if (vehicle) {
-      document.getElementById("vehDelete").addEventListener("click", async () => {
-        if (!confirm(tA("adm.veh.deleteConfirm",'Voertuig "{n}" permanent verwijderen?').replace("{n}", vehicle.name||vehicle.plate))) return;
-        try { await api("DELETE", `/vehicles/${vehicle.id}`); closeDrawer(); renderVehicles(); }
-        catch(err) { window.showToast(err.message, "error"); }
+      document.getElementById("vehDelete")?.addEventListener("click", async () => {
+        if (!confirm(`Voertuig "${vehicle.plate}" permanent verwijderen?`)) return;
+        try {
+          await api("DELETE", `/vehicles/${vehicle.id}`);
+          closeDrawer();
+          renderVehicles();
+        } catch (error) {
+          window.showToast(error.message, "error");
+        }
       });
     }
-    document.getElementById("vehForm").addEventListener("submit", async e => {
-      e.preventDefault();
-      const body = Object.fromEntries(new FormData(e.target).entries());
-      if (body.year) body.year = Number(body.year);
-      if (body.mileage) body.mileage = Number(body.mileage);
+
+    document.getElementById("vehForm")?.addEventListener("submit", async event => {
+      event.preventDefault();
+      const raw = Object.fromEntries(new FormData(event.target).entries());
+      const payload = {
+        model: raw.model,
+        brand: raw.brand,
+        year: raw.year === "" ? null : Number(raw.year),
+        fuel: raw.fuel,
+        vin: raw.vin,
+        driverId: raw.driverId || null,
+        status: raw.status,
+        nextService: raw.nextService || null,
+        inspectionDate: raw.inspectionDate || null,
+        insuranceExpiry: raw.insuranceExpiry || null,
+        insuranceCompany: raw.insuranceCompany,
+        notes: raw.notes
+      };
+      if (!vehicle) {
+        payload.plate = raw.plate;
+        payload.mileage = raw.mileage === "" ? 0 : Number(raw.mileage);
+      }
       try {
-        if (vehicle) await api("PATCH", `/vehicles/${vehicle.id}`, body);
-        else await api("POST", "/vehicles", body);
-        closeDrawer(); renderVehicles();
-      } catch(err) { window.showToast(err.message, "error"); }
+        const response = vehicle
+          ? await api("PATCH", `/vehicles/${vehicle.id}`, payload)
+          : await api("POST", "/vehicles", payload);
+        window.showToast(vehicle ? "Voertuiggegevens opgeslagen." : "Voertuig aangemaakt.", "success");
+        await renderVehicles();
+        openVehicleDetail((response.vehicle || response).id);
+      } catch (error) {
+        window.showToast(error.message, "error");
+      }
     });
   }
-  function openMileageDrawer(vehicleId) {
-    document.getElementById("admDrawerTitle").textContent = tA("adm.veh.kmTitle","KM-registratie");
+
+  async function openMileageDrawer(vehicleId, knownVehicle) {
+    document.getElementById("admDrawerTitle").textContent = "Kilometerstand registreren";
+    const body = document.getElementById("admDrawerBody");
+    body.innerHTML = `<div class="adm-loading"><span class="adm-spinner"></span> Voertuig laden…</div>`;
+    openDrawer();
+    try {
+      const response = knownVehicle?.mileageLogs ? { vehicle: knownVehicle } : await api("GET", `/vehicles/${vehicleId}`);
+      const vehicle = response.vehicle || response;
+      body.innerHTML = `
+<form id="kmForm" class="vehicle-mileage-form">
+  <div class="vehicle-mileage-summary"><span>${esc(vehicle.plate)}</span><h3>${esc(`${vehicle.brand || ""} ${vehicle.model || ""}`.trim())}</h3><p>Huidige stand <strong>${Number(vehicle.mileage || 0).toLocaleString("nl-BE")} km</strong></p></div>
+  <div class="adm-form-section">Nieuwe registratie</div>
+  <div class="adm-form-group"><label>Nieuwe kilometerstand *</label><input name="mileage" type="number" min="${Number(vehicle.mileage || 0)}" step="1" required placeholder="${Number(vehicle.mileage || 0) + 100}"><div class="adm-form-hint">De nieuwe stand kan niet lager zijn dan de huidige stand.</div></div>
+  <div class="adm-form-group"><label>Notitie</label><input name="note" placeholder="Bijvoorbeeld onderhoud, tankbeurt of maandelijkse controle"></div>
+  <div class="adm-form-actions"><button type="button" class="adm-btn adm-btn-secondary" id="kmCancel">Annuleren</button><button type="submit" class="adm-btn adm-btn-primary" id="kmSubmit">Stand registreren</button></div>
+</form>`;
+      document.getElementById("kmCancel")?.addEventListener("click", () => openVehicleDetail(vehicle.id));
+      document.getElementById("kmForm")?.addEventListener("submit", async event => {
+        event.preventDefault();
+        const raw = Object.fromEntries(new FormData(event.target).entries());
+        const submit = document.getElementById("kmSubmit");
+        submit.disabled = true;
+        try {
+          await api("POST", `/vehicles/${vehicle.id}/mileage`, { mileage: Number(raw.mileage), note: raw.note });
+          window.showToast("Kilometerstand geregistreerd.", "success");
+          await renderVehicles();
+          openVehicleDetail(vehicle.id);
+        } catch (error) {
+          submit.disabled = false;
+          window.showToast(error.message, "error");
+        }
+      });
+    } catch (error) {
+      body.innerHTML = `<div style="padding:24px;color:var(--wf-red)">${esc(error.message)}</div>`;
+    }
+  }
+
+  function openServiceDrawer(vehicle) {
+    document.getElementById("admDrawerTitle").textContent = "Service plannen";
     document.getElementById("admDrawerBody").innerHTML = `
-<form id="kmForm">
-  <div class="adm-form-group"><label>${tA("adm.date","Datum")} *</label><input name="date" type="date" value="${new Date().toISOString().slice(0,10)}" required></div>
-  <div class="adm-form-row">
-    <div class="adm-form-group"><label>${tA("adm.veh.kmStart","KM bij vertrek")}</label><input name="startKm" type="number" placeholder="50000" required></div>
-    <div class="adm-form-group"><label>${tA("adm.veh.kmEnd","KM bij aankomst")}</label><input name="endKm" type="number" placeholder="50250"></div>
-  </div>
-  <div class="adm-form-group"><label>${tA("adm.veh.kmNote","Doel / Notitie")}</label><input name="note" placeholder="${tA("adm.veh.kmNotePh","Werf Brussel · materiaal levering")}"></div>
-  <div class="adm-form-actions">
-    <button type="button" class="adm-btn adm-btn-secondary" id="kmCancel">${tA("adm.cancel","Annuleren")}</button>
-    <button type="submit" class="adm-btn adm-btn-primary">${tA("adm.save","Opslaan")}</button>
-  </div>
+<form id="vehServiceForm" class="vehicle-service-form">
+  <div class="vehicle-mileage-summary"><span>${esc(vehicle.plate)}</span><h3>${esc(`${vehicle.brand || ""} ${vehicle.model || ""}`.trim())}</h3><p>Huidige servicestatus <strong>${vehicleAlertLabel(vehicle.serviceStatus)}</strong></p></div>
+  <div class="adm-form-section">Onderhoudsafspraak</div>
+  <div class="adm-form-group"><label>Volgende servicedatum *</label><input name="nextService" type="date" value="${esc(vehicle.nextService || "")}" required></div>
+  <label class="vehicle-check"><input name="inService" type="checkbox"><span><strong>Markeer als in onderhoud</strong><small>Vink aan om de status te wijzigen; laat uit om de huidige status te behouden.</small></span></label>
+  <div class="adm-form-group"><label>Notitie</label><textarea name="notes" rows="4" placeholder="Garage, geplande werkzaamheden of referentie">${esc(vehicle.notes || "")}</textarea></div>
+  <div class="adm-form-actions"><button type="button" class="adm-btn adm-btn-secondary" id="vehServiceCancel">Annuleren</button><button type="submit" class="adm-btn adm-btn-primary" id="vehServiceSubmit">Service opslaan</button></div>
 </form>`;
     openDrawer();
-    document.getElementById("kmCancel").addEventListener("click", closeDrawer);
-    document.getElementById("kmForm").addEventListener("submit", async e => {
-      e.preventDefault();
-      const body = Object.fromEntries(new FormData(e.target).entries());
-      if (body.startKm) body.startKm = Number(body.startKm);
-      if (body.endKm) body.endKm = Number(body.endKm);
+    document.getElementById("vehServiceCancel")?.addEventListener("click", () => openVehicleDetail(vehicle.id));
+    document.getElementById("vehServiceForm")?.addEventListener("submit", async event => {
+      event.preventDefault();
+      const raw = Object.fromEntries(new FormData(event.target).entries());
+      const submit = document.getElementById("vehServiceSubmit");
+      submit.disabled = true;
       try {
-        await api("POST", `/vehicles/${vehicleId}/mileage`, body);
-        closeDrawer(); renderVehicles();
-      } catch(err) { window.showToast(err.message, "error"); }
+        await api("POST", `/vehicles/${vehicle.id}/service`, {
+          nextService: raw.nextService,
+          inService: raw.inService === "on",
+          notes: raw.notes
+        });
+        window.showToast("Serviceplanning opgeslagen.", "success");
+        await renderVehicles();
+        openVehicleDetail(vehicle.id);
+      } catch (error) {
+        submit.disabled = false;
+        window.showToast(error.message, "error");
+      }
     });
   }
+
 
 
   // ── Stock ──────────────────────────────────────────────────
