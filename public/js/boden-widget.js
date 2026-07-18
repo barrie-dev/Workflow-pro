@@ -26,48 +26,53 @@
     const s = document.createElement("style");
     s.id = "bodenStyles";
     s.textContent = `
-#bodenFab{position:fixed;right:20px;bottom:20px;z-index:9000;width:56px;height:56px;border-radius:50%;border:none;cursor:pointer;
-  background:var(--wf-blue);color:#fff;box-shadow:0 6px 20px rgba(30,107,230,.45);display:grid;place-items:center;font-size:24px;transition:transform .15s,background .15s}
+#bodenFab{position:fixed;right:22px;bottom:22px;z-index:9000;width:58px;height:58px;border-radius:18px;border:none;cursor:pointer;
+  background:var(--wf-blue);color:#fff;box-shadow:0 10px 28px rgba(0,113,227,.32);display:grid;place-items:center;font-size:24px;transition:transform .15s,background .15s,box-shadow .15s}
 #bodenFab:hover{transform:scale(1.06);background:var(--wf-blue-d)}
-#bodenPanel{position:fixed;right:20px;bottom:88px;z-index:9000;width:380px;max-width:calc(100vw - 32px);height:560px;max-height:calc(100vh - 120px);
-  background:#fff;border:1px solid var(--gray-200);border-radius:16px;box-shadow:0 18px 50px rgba(15,23,42,.25);display:none;flex-direction:column;overflow:hidden}
+#bodenFab:focus-visible{outline:none;box-shadow:0 0 0 4px rgba(0,113,227,.18),0 10px 28px rgba(0,113,227,.32)}
+#bodenPanel{position:fixed;right:22px;bottom:94px;z-index:9000;width:420px;max-width:calc(100vw - 32px);height:620px;max-height:calc(100vh - 126px);
+  background:#fff;border:1px solid #dde1e7;border-radius:20px;box-shadow:0 24px 70px rgba(15,23,42,.22);display:none;flex-direction:column;overflow:hidden}
 #bodenPanel.open{display:flex}
-.boden-head{background:var(--wf-navy);color:#fff;padding:14px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0}
-.boden-head .av{width:32px;height:32px;border-radius:50%;background:var(--wf-blue);display:grid;place-items:center;font-weight:700;font-size:14px}
-.boden-head .nm{font-weight:600;font-size:14px;line-height:1.1}
-.boden-head .sub{font-size:11px;color:var(--wf-sidebar-dim)}
-.boden-head .x{margin-left:auto;background:none;border:none;color:var(--wf-sidebar-dim);font-size:20px;cursor:pointer;line-height:1}
-.boden-body{flex:1;overflow-y:auto;padding:14px;background:var(--gray-50);display:flex;flex-direction:column;gap:10px}
-.boden-msg{max-width:85%;padding:9px 12px;border-radius:12px;font-size:13px;line-height:1.45;white-space:normal;word-wrap:break-word}
+.boden-head{background:#0b1320;color:#fff;padding:16px 18px;display:flex;align-items:center;gap:11px;flex-shrink:0}
+.boden-head .av{width:36px;height:36px;border-radius:11px;background:var(--wf-blue);display:grid;place-items:center;font-weight:750;font-size:15px}
+.boden-head .nm{font-weight:650;font-size:15px;line-height:1.15}
+.boden-head .sub{margin-top:2px;font-size:12px;color:rgba(255,255,255,.62)}
+.boden-head .x{width:34px;height:34px;margin-left:auto;background:rgba(255,255,255,.06);border:none;border-radius:9px;color:rgba(255,255,255,.68);font-size:20px;cursor:pointer;line-height:1}
+.boden-head .x:hover{background:rgba(255,255,255,.12);color:#fff}
+.boden-body{flex:1;overflow-y:auto;padding:16px;background:#f6f7f9;display:flex;flex-direction:column;gap:11px}
+.boden-msg{max-width:88%;padding:11px 13px;border-radius:14px;font-size:14px;line-height:1.5;white-space:normal;word-wrap:break-word}
 .boden-msg.user{align-self:flex-end;background:var(--wf-blue);color:#fff;border-bottom-right-radius:4px}
-.boden-msg.bot{align-self:flex-start;background:#fff;color:var(--gray-900);border:1px solid var(--gray-200);border-bottom-left-radius:4px}
-.boden-prop{align-self:flex-start;max-width:90%;background:#fff;border:1px solid var(--wf-blue-l);border-radius:12px;padding:10px 12px;font-size:12.5px}
-.boden-prop .pl{font-weight:600;color:var(--wf-navy);margin-bottom:6px}
-.boden-prop .pp{color:var(--gray-600);font-size:12px;margin-bottom:8px;white-space:pre-wrap}
-.boden-prop button{background:var(--wf-orange);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer}
+.boden-msg.bot{align-self:flex-start;background:#fff;color:var(--gray-900);border:1px solid #e0e3e8;border-bottom-left-radius:4px;box-shadow:0 2px 8px rgba(15,23,42,.035)}
+.boden-prop{align-self:flex-start;max-width:94%;background:#fff;border:1px solid #cfe0f3;border-radius:14px;padding:13px 14px;font-size:13px;box-shadow:0 4px 14px rgba(15,23,42,.04)}
+.boden-prop .pl{font-weight:650;color:#172033;margin-bottom:7px;font-size:14px}
+.boden-prop .pp{color:var(--gray-600);font-size:12.5px;line-height:1.45;margin-bottom:10px;white-space:pre-wrap}
+.boden-prop button{min-height:36px;background:var(--wf-blue);color:#fff;border:none;border-radius:9px;padding:0 13px;font-size:12.5px;font-weight:650;cursor:pointer}
 .boden-prop button.sec{background:#fff;color:var(--gray-600);border:1px solid var(--gray-200);margin-left:6px}
 .boden-prop .done{color:var(--wf-green);font-weight:600}
-.boden-typing{align-self:flex-start;color:var(--gray-400);font-size:12px;font-style:italic}
-.boden-foot{flex-shrink:0;border-top:1px solid var(--gray-200);padding:10px;display:flex;gap:8px;background:#fff}
-.boden-foot input{flex:1;border:1.5px solid var(--gray-200);border-radius:10px;padding:9px 12px;font-size:13px;font-family:inherit;outline:none}
+.boden-typing{align-self:flex-start;color:var(--gray-500);font-size:12.5px;font-style:italic}
+.boden-foot{flex-shrink:0;border-top:1px solid #e1e4e9;padding:12px;display:flex;gap:8px;background:#fff}
+.boden-foot input{flex:1;min-width:0;height:44px;border:1.5px solid var(--gray-200);border-radius:11px;padding:0 13px;font-size:14px;font-family:inherit;outline:none}
 .boden-foot input:focus{border-color:var(--wf-blue)}
-.boden-foot button{background:var(--wf-blue);color:#fff;border:none;border-radius:10px;width:40px;cursor:pointer;font-size:16px}
-.boden-foot button:disabled{opacity:.5;cursor:default}`;
+.boden-foot button{background:var(--wf-blue);color:#fff;border:none;border-radius:11px;width:44px;cursor:pointer;font-size:16px}
+.boden-foot button:disabled{opacity:.5;cursor:default}
+@media(max-width:560px){#bodenFab{right:14px;bottom:14px}#bodenPanel{inset:10px 10px 82px;width:auto;height:auto;max-width:none;max-height:none;border-radius:18px}.boden-body{padding:13px}.boden-msg{max-width:92%}}`;
     document.head.appendChild(s);
   }
 
   function buildShell() {
     if (document.getElementById("bodenFab")) return;
     const fab = document.createElement("button");
-    fab.id = "bodenFab"; fab.title = "Mona · slimme assistent"; fab.innerHTML = '<span style="font-size:18px;font-weight:750;letter-spacing:-.06em">M</span>';
+    fab.id = "bodenFab"; fab.title = "Mona · slimme assistent"; fab.setAttribute("aria-label", "Open Mona assistent"); fab.setAttribute("aria-controls", "bodenPanel"); fab.setAttribute("aria-expanded", "false"); fab.innerHTML = '<span style="font-size:18px;font-weight:750;letter-spacing:-.06em">M</span>';
     fab.addEventListener("click", toggle);
     document.body.appendChild(fab);
 
     const panel = document.createElement("div");
     panel.id = "bodenPanel";
+    panel.setAttribute("role", "dialog");
+    panel.setAttribute("aria-label", "Mona slimme assistent");
     panel.innerHTML = `
       <div class="boden-head">
-        <div class="av">B</div>
+        <div class="av">M</div>
         <div><div class="nm">Mona</div><div class="sub">Je slimme assistent</div></div>
         <button class="x" id="bodenClose" title="Sluiten">×</button>
       </div>
@@ -90,6 +95,7 @@
     _open = !_open;
     const p = document.getElementById("bodenPanel");
     if (p) p.classList.toggle("open", _open);
+    document.getElementById("bodenFab")?.setAttribute("aria-expanded", String(_open));
     if (_open) setTimeout(() => document.getElementById("bodenInput")?.focus(), 50);
   }
 

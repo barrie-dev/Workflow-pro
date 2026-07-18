@@ -206,3 +206,23 @@ Feedback voor de backendontwikkelaar:
 - Mailafhankelijke toggles en acties moeten `capabilities.mail` respecteren. Wanneer mail uitstaat, moet de backend geen success claimen en een veilige setupreden teruggeven.
 - Supporttoegang, MFA-enforcement, accountactivatie en SSO-configuratiewijzigingen vereisen auditmetadata en server-side herauthenticatie waar het risico dat vraagt.
 - Wachtwoordloze pending accounts gebruiken de bestaande activatielinkflow; bestaande wachtwoorden worden niet impliciet gereset vanuit registratie of activatie.
+
+
+## Mona AI-assistent — frontendintegratie 2026-07-18
+
+De gedeelde assistent presenteert zich in alle zichtbare UI consequent als **Mona**. De interne module- en endpointnaam `/boden` blijft voorlopig behouden om bestaande backendcontracten niet te breken. De interface is vergroot naar een leesbaar werkpaneel, gebruikt Monargo Blue uitsluitend voor primaire acties en wordt op kleine schermen vrijwel schermvullend.
+
+| Interactie | Bestaand contract | UI-gedrag |
+| --- | --- | --- |
+| Vraag stellen | `POST /api/tenants/:tenantId/boden` met `messages` | Toont het antwoord in de conversatie en bewaart alleen de beperkte recente context. |
+| Navigatievoorstel | `proposal.action = navigate` met toegestane `params.view` | Opent de bestaande productview; Mona voert geen domeinmutatie uit. |
+| Mutatievoorstel | Server-goedgekeurde `path`, `method` en `params` | Vereist een expliciete bevestiging en toont daarna resultaat of herstelbare fout. |
+
+Feedback voor de backendontwikkelaar:
+
+- Lever per voorstel een stabiele `id`, `label`, `action`, `risk`, `confirmation`, `path`, `method`, `params`, vereiste permissie en `expiresAt`.
+- Accepteer nooit willekeurige clientpaden. Gebruik een server-side allowlist, tenant-scoping en dezelfde autorisatie als de onderliggende domeinactie.
+- Maak mutaties idempotent, registreer actor, voorstel en resultaat in de audittrail en geef een `requestId` terug bij fouten.
+- Onderscheid in het responsecontract expliciet een informatief antwoord, navigatie en mutatie; alleen mutaties krijgen een bevestigingsactie.
+- Geef geen secrets of onnodige persoonsgegevens mee in promptcontext of foutmeldingen. De backend blijft bron van waarheid voor rechten en datascoping.
+- Streaming kan later als progressieve verbetering worden toegevoegd; het huidige JSON-contract moet bruikbaar blijven als fallback.
