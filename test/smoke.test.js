@@ -356,6 +356,76 @@ test("voorraadflow: artikel → aanvulling → reservatie → verbruik → vrijg
 });
 
 
+
+test("wagenparkflow: voertuig → kilometerstand → service gebruikt canonieke contracten", async () => {
+  const admin = await login("admin@demobouw.be", "Demo2026!");
+  assert.ok(admin.token, "admin-login moet slagen");
+  const H = { Authorization: `Bearer ${admin.token}`, "Content-Type": "application/json" };
+  const stamp = Date.now().toString(36).toUpperCase();
+  const plate = `T-${stamp.slice(-3)}-${stamp.slice(-3)}`;
+
+  const createResponse = await fetch(`${BASE}/api/tenants/t_demo/vehicles`, {
+    method: "POST",
+    headers: H,
+    body: JSON.stringify({
+      model: `Test Transit ${stamp}`,
+      plate,
+      brand: "Monargo Test",
+      year: 2026,
+      fuel: "elektrisch",
+      status: "actief",
+      mileage: 1000,
+      inspectionDate: "2028-05-10",
+      insuranceExpiry: "2028-06-10",
+      insuranceCompany: "Testverzekeraar"
+    })
+  });
+  assert.equal(createResponse.status, 201);
+  const vehicle = (await createResponse.json()).vehicle;
+  assert.ok(vehicle?.id, "voertuig-ID ontvangen");
+  assert.equal(vehicle.model, `Test Transit ${stamp}`);
+  assert.equal(vehicle.plate, plate);
+  assert.equal(vehicle.status, "actief");
+  assert.equal(vehicle.mileage, 1000);
+
+  const mileageResponse = await fetch(`${BASE}/api/tenants/t_demo/vehicles/${vehicle.id}/mileage`, {
+    method: "POST",
+    headers: H,
+    body: JSON.stringify({ mileage: 1250, note: "Contracttest kilometerregistratie" })
+  });
+  assert.equal(mileageResponse.status, 200);
+  const afterMileage = (await mileageResponse.json()).vehicle;
+  assert.equal(afterMileage.mileage, 1250);
+  assert.equal(afterMileage.mileageLogs[0]?.delta, 250);
+  assert.equal(afterMileage.mileageLogs[0]?.note, "Contracttest kilometerregistratie");
+
+  const serviceResponse = await fetch(`${BASE}/api/tenants/t_demo/vehicles/${vehicle.id}/service`, {
+    method: "POST",
+    headers: H,
+    body: JSON.stringify({
+      nextService: "2028-04-12",
+      inService: true,
+      notes: "Contracttest serviceplanning"
+    })
+  });
+  assert.equal(serviceResponse.status, 200);
+  const afterService = (await serviceResponse.json()).vehicle;
+  assert.equal(afterService.nextService, "2028-04-12");
+  assert.equal(afterService.status, "in_onderhoud");
+  assert.equal(afterService.notes, "Contracttest serviceplanning");
+
+  const updateResponse = await fetch(`${BASE}/api/tenants/t_demo/vehicles/${vehicle.id}`, {
+    method: "PATCH",
+    headers: H,
+    body: JSON.stringify({ status: "actief", driverId: "u_emp1" })
+  });
+  assert.equal(updateResponse.status, 200);
+  const updated = (await updateResponse.json()).vehicle;
+  assert.equal(updated.status, "actief");
+  assert.equal(updated.driverId, "u_emp1");
+});
+
+
 // ── Klantbril-QA: heldere, Nederlandse foutmeldingen ──
 test("login met fout wachtwoord → 401 met Nederlandse melding", async () => {
   const r = await fetch(`${BASE}/api/auth/login`, {
