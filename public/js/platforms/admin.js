@@ -8211,13 +8211,13 @@ ${enrolled.map(e => `
     const tpls = data.templates || [];
     const typeKeys = Object.keys(_tplMeta.types);
     c.innerHTML = `
-<div class="adm-card" style="padding:14px 16px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+<div class="adm-card template-intro-card">
   <div style="font-size:13px;color:var(--gray-600)">Maak je eigen sjablonen voor facturen, offertes en werkbon-rapporten · met je logo, kleuren en de velden die jij wil. Het systeem drukt elk document af volgens het gekozen sjabloon.</div>
   <select id="tplNew" class="adm-input" style="max-width:230px"><option value="">+ Nieuw sjabloon…</option>${typeKeys.map(t => `<option value="${t}">+ ${esc(_tplMeta.types[t].label)}</option>`).join("")}</select>
 </div>
 ${typeKeys.map(tk => {
   const list = tpls.filter(t => t.type === tk);
-  return `<div class="adm-card" style="margin-bottom:14px"><div class="adm-card-header"><h3 class="adm-card-title">${esc(_tplMeta.types[tk].label)}</h3></div>
+  return `<div class="adm-card template-type-card"><div class="adm-card-header"><h3 class="adm-card-title">${esc(_tplMeta.types[tk].label)}</h3><span>${list.length} ontwerp${list.length === 1 ? "" : "en"}</span></div>
     <div class="adm-card-body" style="padding:0">
     ${list.length ? `<table class="adm-table"><tbody>${list.map(t => `<tr>
       <td style="font-weight:600">${esc(t.name)} ${t.isDefault ? '<span class="adm-status adm-status-active" style="margin-left:6px">standaard</span>' : ""}</td>
@@ -8241,7 +8241,7 @@ ${typeKeys.map(tk => {
   }
 
   function defaultTplDraft(type) {
-    return { name: `Mijn ${(_tplMeta.types[type] || {}).label || type}`, accentColor: "var(--wf-blue)", logo: null, headerText: "", introText: "", footerText: "{{bedrijf.naam}} · {{bedrijf.btw}} · {{bedrijf.email}}", paymentTerms: type === "invoice" ? "Gelieve te betalen voor de vervaldatum op {{bedrijf.iban}}." : "", columns: (_tplMeta.types[type] || {}).defaultColumns || ["description", "qty", "unitPrice", "vatRate", "lineTotal"], showVat: true, language: "nl" };
+    return { name: `Mijn ${(_tplMeta.types[type] || {}).label || type}`, accentColor: "#0071E3", logo: null, headerText: "", introText: "", footerText: "{{bedrijf.naam}} · {{bedrijf.btw}} · {{bedrijf.email}}", paymentTerms: type === "invoice" ? "Gelieve te betalen voor de vervaldatum op {{bedrijf.iban}}." : "", columns: (_tplMeta.types[type] || {}).defaultColumns || ["description", "qty", "unitPrice", "vatRate", "lineTotal"], showVat: true, language: "nl" };
   }
 
   function renderTemplateEditor() {
@@ -8256,11 +8256,11 @@ ${typeKeys.map(tk => {
   <h3 class="adm-card-title">${d.id ? "Sjabloon bewerken" : "Nieuw sjabloon"} · ${esc((_tplMeta.types[d.type] || {}).label || d.type)}</h3>
   <button class="adm-btn adm-btn-secondary adm-btn-sm" id="tplBack">← Terug</button>
 </div></div>
-<div class="adm-grid-2" style="align-items:start">
-  <div class="adm-card"><div class="adm-card-body">
+<div class="adm-grid-2 template-editor-grid">
+  <div class="adm-card template-editor-form"><div class="adm-card-body">
     <div class="adm-form-group"><label>Naam</label><input class="adm-input" id="t_name" value="${esc(d.name || "")}"></div>
     <div class="adm-form-row">
-      <div class="adm-form-group"><label>Accentkleur</label><input type="color" class="adm-input" id="t_accent" value="${esc(d.accentColor || "var(--wf-blue)")}" style="height:40px;padding:4px"></div>
+      <div class="adm-form-group"><label>Accentkleur</label><div class="template-color-field"><input type="color" class="adm-input" id="t_accent" value="${esc(/^#[0-9a-fA-F]{6}$/.test(d.accentColor || "") ? d.accentColor : "#0071E3")}"><span>Monargo Blue · #0071E3</span></div></div>
       <div class="adm-form-group"><label>Taal</label><select class="adm-input" id="t_lang"><option value="nl" ${d.language === "nl" ? "selected" : ""}>Nederlands</option><option value="fr" ${d.language === "fr" ? "selected" : ""}>Frans</option></select></div>
     </div>
     <div class="adm-form-group"><label>Logo (optioneel)</label><input type="file" id="t_logo" accept="image/*" class="adm-input" style="padding:6px">${d.logo ? '<div style="font-size:12px;color:var(--wf-green);margin-top:4px">logo ingesteld <a href="#" id="t_logo_clear">verwijderen</a></div>' : ""}</div>
@@ -8273,8 +8273,8 @@ ${typeKeys.map(tk => {
     <label style="font-weight:400;font-size:12.5px;display:inline-flex;gap:6px;align-items:center;margin-bottom:12px"><input type="checkbox" id="t_default" ${d.isDefault ? "checked" : ""}> Als standaard gebruiken voor dit type</label>
     <div class="adm-form-actions"><span id="t_msg" style="font-size:12px;color:var(--wf-red);flex:1;text-align:left"></span><button class="adm-btn adm-btn-primary" id="t_save">Opslaan</button></div>
   </div></div>
-  <div class="adm-card" style="position:sticky;top:16px"><div class="adm-card-header"><h3 class="adm-card-title">Live voorbeeld</h3></div>
-    <iframe id="t_prev" style="width:100%;height:560px;border:none;border-radius:0 0 16px 16px;background:#fff"></iframe>
+  <div class="adm-card template-preview-card"><div class="adm-card-header"><div><h3 class="adm-card-title">Live voorbeeld</h3><p>Het document ververst automatisch terwijl u werkt.</p></div></div>
+    <iframe id="t_prev" class="template-preview-frame" title="Live documentvoorbeeld"></iframe>
   </div>
 </div>`;
     document.getElementById("tplBack").addEventListener("click", () => { _tplEditing = null; renderTemplates(); });
