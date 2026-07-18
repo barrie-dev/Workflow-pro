@@ -241,6 +241,10 @@ const {
   makeFormTemplateRepository, makeFormInstanceRepository, makeTaskRepository,
   makeFileRepository, makeCommunicationRepository,
 } = require("./platform/work-os");
+const {
+  buildPortfolio, buildCapacityForecast, captureBaseline, comparePhases,
+  appendForecast, currentForecast,
+} = require("./platform/portfolio");
 const { httpsRequest } = require("./lib/http-client");
 const inventory = require("./platform/inventory");
 const { buildMonaSignals } = require("./platform/mona-signals");
@@ -3803,6 +3807,21 @@ http.createServer(async (req, res) => {
         // Multi-resource (E06/h24): naast de primaire userId mogen extra
         // medewerkers worden toegewezen; de overlap-check geldt voor elk van hen.
         const assigneeIds = Array.isArray(body.assigneeIds) ? body.assigneeIds.filter(id => id && id !== body.userId) : [];
+        // Beschikbaarheid tegen de personeelsfiche (h16-acceptatie: planning
+        // valideert beschikbaarheid, werkrooster en dienstperiode). Uit dienst
+        // of buiten de dienstperiode BLOKKEERT; buiten het werkrooster is een
+        // waarschuwing, zodat een uitzondering bewust gepland kan worden.
+        const planningWarnings = [];
+        for (const rid of [body.userId, ...assigneeIds]) {
+          const emp = employeeRepo.findByUserId(tenantId, rid);
+          if (!emp) continue;
+          const avail = availabilityOn(emp, body.date, { leaves: store.list("leaves", tenantId) || [] });
+          if (avail.blocking) {
+            const reason = avail.reasons.find(r => ["OUT_OF_SERVICE", "NOT_PLANNABLE", "BEFORE_START", "AFTER_END"].includes(r.code)) || avail.reasons[0];
+            return sendJson(res, 409, { ok: false, error: `${emp.name}: ${reason.message}`, code: reason.code, conflict: { employeeId: emp.id, date: body.date, reasons: avail.reasons } });
+          }
+          if (!avail.available) planningWarnings.push({ employeeId: emp.id, name: emp.name, reasons: avail.reasons });
+        }
         // Overlap-check over de geünificeerde planning voor élke toegewezen resource.
         for (const rid of [body.userId, ...assigneeIds]) {
           const overlap = planningOverlap(store, tenantId, rid, body.date, body.start, body.end, null);
@@ -3825,7 +3844,7 @@ http.createServer(async (req, res) => {
         });
         store.audit({ actor: user.email, tenantId, action: "shift_created", area: "planning", detail: `${body.date} ${body.start}–${body.end}` });
         emitDomainEvent(store, { tenantId, eventType: "planning.item_created", aggregateType: "planning_item", aggregateId: shift.id, actor: user.email, correlationId: res.wfpRequestId });
-        sendJson(res, 201, { ok: true, shift });
+        sendJson(res, 201, { ok: true, shift, warnings: planningWarnings.length ? planningWarnings : undefined });
         return;
       }
 
@@ -5468,6 +5487,63 @@ http.createServer(async (req, res) => {
       }
 
       // ── Medewerkers ophalen ───────────────────────────────────────────────────
+      // ── Portfolio, baseline en capaciteitsforecast (h38/PPL) ─────────────────
+      if (action === "portfolio" && req.method === "GET") {
+        assertCan(user, "projects");
+        sendJson(res, 200, { ok: true, portfolio: buildPortfolio(store, tenant) });
+        return;
+      }
+      if (action === "portfolio/capacity" && req.method === "GET") {
+        assertCan(user, "planning");
+        sendJson(res, 200, { ok: true, capacity: buildCapacityForecast(store, tenant, {
+          from: url.searchParams.get("from") || undefined,
+          to: url.searchParams.get("to") || undefined,
+          bucket: url.searchParams.get("bucket") || "month",
+        }) });
+        return;
+      }
+      // Baseline vastleggen: momentopname van de fasering om later tegen af te zetten.
+      const projectBaselineMatch = action.match(/^projects\/([^/]+)\/baseline$/);
+      if (projectBaselineMatch && req.method === "POST") {
+        assertCan(user, "projects");
+        assertApiKeyWriteAllowed(user, req);
+        const project = projectRepo.findById(tenantId, projectBaselineMatch[1]);
+        if (!project) return sendJson(res, 404, { ok: false, error: "Project niet gevonden" });
+        const patch = captureBaseline(project, user.email);
+        const saved = store.update("projects", project.id, patch);
+        store.audit({ actor: user.email, tenantId, action: "project_baseline_captured", area: "projects", detail: project.number || project.id });
+        sendJson(res, 200, { ok: true, project: saved, comparison: comparePhases(saved) });
+        return;
+      }
+      if (projectBaselineMatch && req.method === "GET") {
+        assertCan(user, "projects");
+        const project = projectRepo.findById(tenantId, projectBaselineMatch[1]);
+        if (!project) return sendJson(res, 404, { ok: false, error: "Project niet gevonden" });
+        sendJson(res, 200, { ok: true, comparison: comparePhases(project) });
+        return;
+      }
+      // Forecastregel toevoegen · de historiek wordt nooit gewist (h38).
+      const projectForecastMatch = action.match(/^projects\/([^/]+)\/forecast$/);
+      if (projectForecastMatch && req.method === "POST") {
+        assertCan(user, "projects");
+        assertApiKeyWriteAllowed(user, req);
+        const project = projectRepo.findById(tenantId, projectForecastMatch[1]);
+        if (!project) return sendJson(res, 404, { ok: false, error: "Project niet gevonden" });
+        const body = await readBody(req);
+        const patch = appendForecast(project, { amount: body.amount, probability: body.probability, source: body.source, sourceId: body.sourceId, reason: body.reason, actor: user.email });
+        const saved = store.update("projects", project.id, patch);
+        emitDomainEvent(store, { tenantId, eventType: "project.forecast_updated", aggregateType: "project", aggregateId: project.id, actor: user.email, correlationId: res.wfpRequestId, data: { amount: patch.forecastAmount } });
+        sendJson(res, 201, { ok: true, project: saved, forecast: currentForecast(saved) });
+        return;
+      }
+      if (projectForecastMatch && req.method === "GET") {
+        assertCan(user, "projects");
+        const project = projectRepo.findById(tenantId, projectForecastMatch[1]);
+        if (!project) return sendJson(res, 404, { ok: false, error: "Project niet gevonden" });
+        sendJson(res, 200, { ok: true, history: project.forecastHistory || [], current: currentForecast(project) });
+        return;
+      }
+
       // ── Work OS-kern · formulieren, taken, bestanden, communicatie (h39/DOC) ──
       // Formulierdesigner
       if (action === "forms/templates" && req.method === "GET") {

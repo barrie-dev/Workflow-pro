@@ -74,11 +74,15 @@ function normalizeProject(payload, existing = null) {
     })
     .filter(Boolean);
 
-  // Fasen/mijlpalen (h22).
+  // Fasen/mijlpalen (h22). De baseline (h38) hoort bij de SERVERSTAAT, niet bij
+  // de payload: we halen hem altijd uit de bestaande fase, zodat een client die
+  // hem niet meestuurt de vergelijkbaarheid niet stilzwijgend wist.
+  const existingPhaseById = new Map(((existing && existing.phases) || []).map(p => [p.id, p]));
   const phases = (Array.isArray(merged.phases) ? merged.phases : [])
     .map((ph, i) => {
       const title = clean(ph && ph.title);
       if (!title) return null;
+      const prior = existingPhaseById.get(ph && ph.id) || null;
       return {
         id: (ph && ph.id) || `phase_${newUlid()}`,
         title,
@@ -86,6 +90,10 @@ function normalizeProject(payload, existing = null) {
         startDate: isoDate(ph && ph.startDate),
         endDate: isoDate(ph && ph.endDate),
         status: ["open", "active", "done"].includes(ph && ph.status) ? ph.status : "open",
+        milestone: (ph && ph.milestone) === true,
+        // Baseline uit de serverstaat; enkel bij een nieuwe fase mag de payload
+        // er een meegeven (bv. bij import).
+        baseline: (prior && prior.baseline) || ((ph && ph.baseline && typeof ph.baseline === "object") ? ph.baseline : null),
       };
     })
     .filter(Boolean)
