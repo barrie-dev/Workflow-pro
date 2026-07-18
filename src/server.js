@@ -233,6 +233,7 @@ const { buildWorkInbox } = require("./platform/work-inbox");
 const { makeConfigRepository } = require("./platform/config-platform");
 const { makeAutomationRepository, makeDispatcher, executeFlow } = require("./platform/automation");
 const { registerEventListener } = require("./platform/events");
+const { makeLocalTransactionManager } = require("./infrastructure/local/transaction-manager");
 const { buildInsights } = require("./platform/insights");
 const {
   createSetupIntent,
@@ -335,6 +336,9 @@ const supplierRepo = makeSupplierRepository(store);
 const purchaseOrderRepo = makePurchaseOrderRepository(store);
 const configRepo = makeConfigRepository(store);
 const automationRepo = makeAutomationRepository(store);
+// Unit-of-work port (E1 · ADR-003): atomaire multi-writes, adapter-onafhankelijk.
+// Lokaal nu (JSON/geheugen); productie zal de PostgreSQL-adapter injecteren.
+const txManager = makeLocalTransactionManager(store);
 // Automation-engine (E11) luistert op alle domain events (best-effort).
 registerEventListener(makeDispatcher(store));
 
@@ -640,6 +644,7 @@ http.createServer(async (req, res) => {
         releaseChannel: config.releaseChannel,
         commitSha: config.commitSha,
         storageAdapter: config.storageAdapter,
+        txAdapter: txManager.adapter,   // unit-of-work-adapter (E1 · ADR-003)
         storeReady: storeStatus?.ok !== false,
         modules: modules.length,
         uptime: Math.floor(process.uptime()),
@@ -648,11 +653,17 @@ http.createServer(async (req, res) => {
       return;
     }
 
-    // Kubernetes/Render/Railway liveness probe
+    // Readiness probe (E1): faalt bij storage-uitval ZONDER het proces te doden.
+    // Liveness (/api/health) blijft 200 zolang het proces draait; zo herstart de
+    // orchestrator niet onnodig bij een tijdelijke DB-hapering (K8s/Render/Azure).
     if (url.pathname === "/api/ready") {
       const storeStatus = store.storageStatus ? store.storageStatus() : { ok: true };
       const ready = storeStatus?.ok !== false;
-      sendJson(res, ready ? 200 : 503, { ok: ready, store: storeStatus });
+      sendJson(res, ready ? 200 : 503, {
+        ok: ready,
+        checks: { storage: storeStatus?.ok !== false, storageAdapter: config.storageAdapter, txAdapter: txManager.adapter },
+        store: storeStatus,
+      });
       return;
     }
 
@@ -4136,7 +4147,12 @@ http.createServer(async (req, res) => {
         const body = await readBody(req).catch(() => ({}));
         let result;
         try {
-          result = contractRepo.generateForPeriod(tenantId, contractGenerateMatch[1], user.email, { date: body.date, reason: body.reason }, (contract, ctx) => {
+          // Atomair (E1 · ADR-003): doc-creatie + generatiehistoriek + audit +
+          // event committen samen, of rollen samen terug. Zo kan een halverwege-
+          // fout nooit een factuur/werkbon zonder historiek achterlaten (wat tot
+          // dubbele generatie zou leiden).
+          result = await txManager.run(() => {
+          const r = contractRepo.generateForPeriod(tenantId, contractGenerateMatch[1], user.email, { date: body.date, reason: body.reason }, (contract, ctx) => {
             const periodLabel = `${ctx.periodStart} t/m ${ctx.periodEnd}`;
             if (contract.generateType === "job") {
               const woNum = issueNumber(store, { tenant, docType: "workorder" }).number;
@@ -4169,12 +4185,14 @@ http.createServer(async (req, res) => {
               }],
             });
           });
+          if (!r.alreadyGenerated) {
+            store.audit({ actor: user.email, tenantId, action: "contract_generated", area: "contracts", detail: `${contractGenerateMatch[1]} · ${r.periodKey}` });
+            emitDomainEvent(store, { tenantId, eventType: "contract.period_generated", aggregateType: "contract", aggregateId: contractGenerateMatch[1], actor: user.email, correlationId: res.wfpRequestId, data: { periodKey: r.periodKey, resultId: r.doc.id } });
+          }
+          return r;
+          });
         }
         catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
-        if (!result.alreadyGenerated) {
-          store.audit({ actor: user.email, tenantId, action: "contract_generated", area: "contracts", detail: `${contractGenerateMatch[1]} · ${result.periodKey}` });
-          emitDomainEvent(store, { tenantId, eventType: "contract.period_generated", aggregateType: "contract", aggregateId: contractGenerateMatch[1], actor: user.email, correlationId: res.wfpRequestId, data: { periodKey: result.periodKey, resultId: result.doc.id } });
-        }
         sendJson(res, result.alreadyGenerated ? 200 : 201, { ok: true, ...result });
         return;
       }
