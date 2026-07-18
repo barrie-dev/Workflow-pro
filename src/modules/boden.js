@@ -24,6 +24,7 @@ const { hasRealKey, createChat } = require("../lib/openai");
 const { loadPlatformConfig } = require("./platform-config");
 const { availableWidgets, renderWidgets } = require("./dashboards");
 const { terminologyFor } = require("./sectors");
+const { buildMonaSignals } = require("../platform/mona-signals");
 
 // ── Leesbare record-types → collectie, vereist recht, module-key, samenvatter ──
 const READABLE = {
@@ -65,6 +66,10 @@ const ACTIONS = {
   create_quote:    { label: "Offerte aanmaken",  perm: "billing",   full: true, path: "offertes",   method: "POST", fields: ["customerName", "lines", "notes"] },
   create_message:  { label: "Bericht plaatsen",  perm: "messages",  full: true, path: "messages",   method: "POST", fields: ["title", "body", "audience"] },
   create_venue:    { label: "Locatie aanmaken",  perm: "venues",    full: true, path: "venues",      method: "POST", fields: ["name", "address", "city"] },
+  // E21-uitbreiding: meer beheer-acties (afspraken/werkongevallen/projecten).
+  create_appointment: { label: "Afspraak inplannen", perm: "planning",   full: true, path: "appointments", method: "POST", fields: ["customerName", "customerEmail", "date", "start", "end", "reminderDays", "note"] },
+  create_incident:    { label: "Werkongeval registreren", perm: "incidents", full: true, path: "incidents", method: "POST", fields: ["employeeName", "date", "description", "severity"] },
+  create_project:     { label: "Project aanmaken", perm: "projects",   full: true, path: "projects",     method: "POST", fields: ["name", "customerId", "customerName", "type", "startDate"] },
 };
 
 const ACTIONS_ADDON = "ai_actions"; // betaalde add-on om écht te handelen
@@ -171,6 +176,13 @@ function runTool(store, tenant, user, name, input, proposals) {
     return { aantal: kpis.length, kpis };
   }
 
+  if (name === "get_signals") {
+    // Mona Signals (h48): proactieve detectie, exact binnen de rechten van de
+    // gebruiker (dezelfde poort als de UI-route).
+    const { signals, counts } = buildMonaSignals(store, tenant, user);
+    return { counts, signals: signals.slice(0, 25).map(s => ({ type: s.type, ernst: s.severity, titel: s.title, detail: s.detail, scherm: s.targetView })) };
+  }
+
   if (name === "propose_action") {
     const action = String(input.action || "");
     const a = ACTIONS[action];
@@ -226,7 +238,8 @@ function toolDefs() {
       status: { type: "string", description: "Optioneel statusfilter vóór de berekening" },
     }, required: ["type"] }),
     fn("get_kpis", "Geef de belangrijkste kerncijfers (KPI's) die deze gebruiker mag zien, kant-en-klaar berekend. Ideaal voor 'hoe staan we ervoor', 'geef me een overzicht' of vragen naar omzet, openstaande facturen, teamgrootte, open opdrachten enz.", { type: "object", properties: {} }),
-    fn("propose_action", "Stel een actie voor die de gebruiker bevestigt en die daarna ECHT wordt uitgevoerd (de gebruiker klikt bevestigen → het beveiligde endpoint draait). Jij voert zelf niets uit. 'navigate' brengt de gebruiker naar een scherm (params.view) · altijd beschikbaar. De overige acties (clock_in, clock_out, create_leave, create_expense, create_customer, create_workorder, create_quote, create_message, create_venue) vereisen de AI-acties-add-on én het juiste recht; geef params mee volgens de velden van de actie.", { type: "object", properties: {
+    fn("get_signals", "Geef de zaken die NU aandacht vragen: niet-gefactureerde afgewerkte werkbonnen en aanvaarde offertes (facturatie-lekkage), vervallen facturen, overlappende planning, projecten die hun budget (bijna) overschrijden, vervallende compliance en lage voorraad. Gebruik dit bij 'wat heeft mijn aandacht nodig', 'waar loopt geld verloren', 'wat moet ik vandaag doen'. Alles binnen de rechten van de gebruiker.", { type: "object", properties: {} }),
+    fn("propose_action", "Stel een actie voor die de gebruiker bevestigt en die daarna ECHT wordt uitgevoerd (de gebruiker klikt bevestigen → het beveiligde endpoint draait). Jij voert zelf niets uit. 'navigate' brengt de gebruiker naar een scherm (params.view) · altijd beschikbaar. De overige acties (clock_in, clock_out, create_leave, create_expense, create_customer, create_workorder, create_quote, create_message, create_venue, create_appointment, create_incident, create_project) vereisen de AI-acties-add-on én het juiste recht; geef params mee volgens de velden van de actie.", { type: "object", properties: {
       action: { type: "string", enum: Object.keys(ACTIONS) },
       params: { type: "object", description: "Veldwaarden voor de actie" },
     }, required: ["action"] }),
@@ -251,6 +264,7 @@ function systemPrompt(store, tenant, user) {
     "WERKWIJZE (wees slim en proactief):",
     "- Voor 'hoeveel', 'totaal', 'gemiddeld', 'per X' of cijfervragen: gebruik 'aggregate' (count/sum/avg, eventueel groupBy) · som nooit zelf records op uit het hoofd.",
     "- Voor 'hoe staan we ervoor', overzichten of vragen naar omzet/openstaande facturen/teamgrootte: gebruik 'get_kpis'.",
+    "- Voor 'wat heeft mijn aandacht nodig', 'waar loopt geld verloren', 'wat moet er nog gebeuren': gebruik 'get_signals' en vat de belangrijkste (kritieke eerst) samen met een concreet vervolg.",
     "- Voor specifieke records: 'query_records' of 'search'. Roep 'get_my_context' aan als je twijfelt over de rechten.",
     "- Combineer gerust meerdere tools en redeneer met de uitkomsten (bv. een cijfer + een korte duiding of suggestie).",
     "",

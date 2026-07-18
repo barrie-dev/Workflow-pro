@@ -227,6 +227,7 @@ const { buildProjectFinance } = require("./platform/project-finance");
 const { makeContractRepository } = require("./platform/contracts");
 const { makeSupplierRepository, makePurchaseOrderRepository } = require("./platform/procurement");
 const inventory = require("./platform/inventory");
+const { buildMonaSignals } = require("./platform/mona-signals");
 const {
   createSetupIntent,
   billingQuote,
@@ -2112,6 +2113,13 @@ http.createServer(async (req, res) => {
         } catch (e) {
           sendJson(res, e.status || 500, { ok: false, error: e.message });
         }
+        return;
+      }
+
+      // ── Mona Signals (h48/E21): proactieve detectie · rechten-gescoped ──
+      if ((action === "mona/signals" || action === "boden/signals") && req.method === "GET") {
+        assertInteractiveUser(user);
+        sendJson(res, 200, { ok: true, ...buildMonaSignals(store, tenant, user) });
         return;
       }
 
