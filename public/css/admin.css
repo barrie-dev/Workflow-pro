@@ -1224,3 +1224,130 @@ button.adm-board-row:hover { background:#fafafe; }
   .adm-main[data-view="expenses"] .adm-kpis { grid-template-columns:1fr; }
   .adm-main[data-view="expenses"] .adm-kpi { min-height:104px; }
 }
+
+/* ── Monargo operations workspace · stock en wagenpark ───────────────────
+   De middelenmodule blijft een rustige werklijst. KPI's geven context,
+   afwijkingen vragen aandacht en de bestaande mutatie-/onderhoudsflows
+   blijven de enige bron voor operationele wijzigingen. */
+.adm-main[data-view="stock"],
+.adm-main[data-view="vehicles"] { --ops-blue:#5b5ce2; --ops-line:#e4e5ec; }
+
+.adm-main[data-view="stock"] .adm-page-head,
+.adm-main[data-view="vehicles"] .adm-page-head { padding-top:24px; }
+.adm-main[data-view="stock"] .adm-page-title,
+.adm-main[data-view="vehicles"] .adm-page-title { font-size:26px; letter-spacing:-.55px; }
+.adm-main[data-view="stock"] .adm-content,
+.adm-main[data-view="vehicles"] .adm-content { max-width:1520px; padding-top:22px; }
+.adm-main[data-view="stock"] #admPrimaryAction,
+.adm-main[data-view="vehicles"] #admPrimaryAction { min-height:40px; padding:0 17px; box-shadow:0 7px 16px rgba(91,92,226,.16); }
+
+.adm-main[data-view="stock"] .adm-card,
+.adm-main[data-view="vehicles"] .adm-card {
+  overflow:hidden;
+  background:rgba(255,255,255,.97);
+  border-color:var(--ops-line);
+  border-radius:16px;
+  box-shadow:0 1px 2px rgba(28,31,54,.03),0 14px 38px rgba(28,31,54,.045);
+}
+.adm-main[data-view="stock"] .adm-card-header,
+.adm-main[data-view="vehicles"] .adm-card-header { min-height:72px; padding:16px 20px; gap:14px; }
+.adm-main[data-view="stock"] .adm-card-title,
+.adm-main[data-view="vehicles"] .adm-card-title { font-size:18px; letter-spacing:-.3px; }
+
+/* Voorraad: waarden zijn samenvatting; lage voorraad is de werkprioriteit. */
+.adm-main[data-view="stock"] .adm-kpis { grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin-bottom:18px !important; }
+.adm-main[data-view="stock"] .adm-kpi { min-height:122px; padding:20px; border-radius:14px; }
+.adm-main[data-view="stock"] .adm-kpi-label { margin-bottom:10px; font-size:13px; }
+.adm-main[data-view="stock"] .adm-kpi-value { font-size:30px; }
+.adm-main[data-view="stock"] .adm-kpi-value[style*="font-size:18px"] { font-size:25px !important; line-height:1.15; }
+.adm-main[data-view="stock"] .adm-kpi:nth-child(2) { border-color:#ead7d9; background:linear-gradient(145deg,#fff 55%,#fff3f4); }
+.adm-main[data-view="stock"] .adm-content>div[style*="background:var(--wf-red-l)"] {
+  display:flex;
+  align-items:center;
+  gap:11px;
+  min-height:54px;
+  padding:14px 17px !important;
+  color:#9f2f3e !important;
+  background:#fff4f5 !important;
+  border-color:#f2d8dc !important;
+  border-radius:12px !important;
+  font-size:14px !important;
+  line-height:1.45;
+}
+.adm-main[data-view="stock"] .adm-content>div[style*="background:var(--wf-red-l)"]::before {
+  content:"!";
+  width:27px;
+  height:27px;
+  display:grid;
+  place-items:center;
+  flex:none;
+  color:#fff;
+  background:#cf4f60;
+  border-radius:8px;
+  font-weight:750;
+}
+.adm-main[data-view="stock"] #stSearch { min-width:280px !important; min-height:42px; padding:0 13px; font-size:14px !important; border-radius:9px; }
+.adm-main[data-view="stock"] .adm-table { min-width:1040px; }
+.adm-main[data-view="stock"] .adm-table td { padding-top:16px; padding-bottom:16px; }
+.adm-main[data-view="stock"] .st-row[style*="background"] td { background:#fff7f8; }
+.adm-main[data-view="stock"] .st-row[style*="background"] td:first-child { box-shadow:inset 3px 0 #cf4f60; }
+.adm-main[data-view="stock"] .st-row[style*="background"]:hover td { background:#fff1f3; }
+.adm-main[data-view="stock"] .st-row span[style*="font-size:10px"] { padding:3px 7px !important; border-radius:999px !important; font-size:11.5px !important; font-weight:700; }
+.adm-main[data-view="stock"] .st-row td[style*="font-family:monospace"] { font-size:13px !important; letter-spacing:.02em; }
+.adm-main[data-view="stock"] .st-edit,
+.adm-main[data-view="stock"] .st-mut { min-width:82px; margin:2px 2px 2px 0; }
+
+/* Wagenpark: onderhoudssignalen bovenaan, voertuigen als scanbare assets. */
+.adm-main[data-view="vehicles"] .adm-content>div[style*="background:var(--wf-yellow-l)"] {
+  display:flex;
+  align-items:center;
+  gap:11px;
+  min-height:54px;
+  padding:14px 17px !important;
+  color:#8b5d05 !important;
+  background:#fff9e9 !important;
+  border-color:#ebddb9 !important;
+  border-radius:12px !important;
+  font-size:14px !important;
+  line-height:1.45;
+}
+.adm-main[data-view="vehicles"] .adm-content>div[style*="background:var(--wf-yellow-l)"]::before {
+  content:"!";
+  width:27px;
+  height:27px;
+  display:grid;
+  place-items:center;
+  flex:none;
+  color:#fff;
+  background:#d29a2e;
+  border-radius:8px;
+  font-weight:750;
+}
+.adm-main[data-view="vehicles"] .adm-table { min-width:980px; }
+.adm-main[data-view="vehicles"] .adm-table td { padding-top:16px; padding-bottom:16px; }
+.adm-main[data-view="vehicles"] .veh-row td:first-child strong { font-size:14.5px; }
+.adm-main[data-view="vehicles"] .veh-row td:first-child span[style*="font-size:11px"] { font-size:12.5px !important; letter-spacing:.035em; }
+.adm-main[data-view="vehicles"] .veh-row:has(.adm-status-maintenance) td { background:#fffdf5; }
+.adm-main[data-view="vehicles"] .veh-row:has(.adm-status-maintenance) td:first-child { box-shadow:inset 3px 0 #d29a2e; }
+.adm-main[data-view="vehicles"] .veh-edit,
+.adm-main[data-view="vehicles"] .veh-km { min-width:82px; margin:2px 2px 2px 0; }
+
+@media (max-width:900px) {
+  .adm-main[data-view="stock"] .adm-page-title,
+  .adm-main[data-view="vehicles"] .adm-page-title { font-size:23px; }
+  .adm-main[data-view="stock"] .adm-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .adm-main[data-view="stock"] .adm-kpi:last-child { grid-column:1/-1; }
+}
+
+@media (max-width:600px) {
+  .adm-main[data-view="stock"] .adm-page-head,
+  .adm-main[data-view="vehicles"] .adm-page-head { padding-top:18px; }
+  .adm-main[data-view="stock"] .adm-content,
+  .adm-main[data-view="vehicles"] .adm-content { padding-top:16px; }
+  .adm-main[data-view="stock"] .adm-card-header,
+  .adm-main[data-view="vehicles"] .adm-card-header { align-items:stretch; min-height:0; padding:14px; }
+  .adm-main[data-view="stock"] #stSearch { width:100%; min-width:0 !important; }
+  .adm-main[data-view="stock"] .adm-kpis { grid-template-columns:1fr; }
+  .adm-main[data-view="stock"] .adm-kpi,
+  .adm-main[data-view="stock"] .adm-kpi:last-child { grid-column:auto; min-height:104px; }
+}
