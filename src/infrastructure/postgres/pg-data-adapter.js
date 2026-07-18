@@ -1,0 +1,187 @@
+"use strict";
+/**
+ * PostgreSQL-opslagadapter (vendor-handover F-01/F-02 · ADR-002).
+ *
+ * Vervangt de legacy provider-adapter, die via een REST-bridge met een
+ * service-role-key en een synchroon subprocess werkte. Deze adapter praat met
+ * STANDAARD PostgreSQL over het pg-protocol en werkt dus op elke Postgres:
+ * lokaal in Docker, Azure Database for PostgreSQL, RDS, Cloud SQL of een eigen
+ * VPS. Er zit geen provider-specifieke SQL, extensie of endpoint in.
+ *
+ * ── Waarom een document-tabel (nog) ─────────────────────────────────────────
+ * De normalisatie naar domeintabellen (F-04) is een aparte strangler-fase.
+ * Deze adapter zet de bestaande dataset in één rij van `platform_state`, zodat
+ * de app VANDAAG los kan van de provider zonder big-bang herschrijving. Dat is
+ * exact het patroon dat ADR-002 voorschrijft: eerst portable maken, dan
+ * normaliseren. De rij draagt een `revision` voor optimistic locking, zodat
+ * twee replicas elkaars schrijfacties niet stil overschrijven.
+ *
+ * ── Sync-API met async opslag ───────────────────────────────────────────────
+ * De store roept save() synchroon aan. Een netwerk-database kan dat niet
+ * synchroon waarmaken. Daarom markeert save() enkel als "vuil" en persisteert
+ * flush() daadwerkelijk. De HTTP-laag wacht flush() af vóór ze antwoordt op een
+ * muterend verzoek, en de shutdown-handler flusht ook. Zo is er geen stil
+ * dataverlies: een 2xx betekent dat de data in Postgres staat.
+ */
+
+const { Pool } = require("pg");
+
+const STATE_TABLE = "platform_state";
+const STATE_ID = "singleton";
+
+const SCHEMA_SQL = `
+CREATE TABLE IF NOT EXISTS ${STATE_TABLE} (
+  id          text PRIMARY KEY,
+  data        jsonb NOT NULL,
+  revision    bigint NOT NULL DEFAULT 1,
+  updated_at  timestamptz NOT NULL DEFAULT now()
+);
+`;
+
+class PostgresDataAdapter {
+  /**
+   * @param {object} opts
+   * @param {string} opts.connectionString  standaard PostgreSQL-URL
+   * @param {boolean} [opts.ssl]            TLS afdwingen (managed providers)
+   * @param {object} [opts.pool]            injecteerbare pool (tests)
+   */
+  constructor({ connectionString, ssl = false, pool = null, maxConnections = 10, statementTimeoutMs = 15000 } = {}) {
+    this.name = "postgres";
+    this.connectionString = connectionString || "";
+    if (!this.connectionString && !pool) {
+      const e = new Error("DATABASE_URL is vereist voor de PostgreSQL-adapter");
+      e.status = 500; e.code = "DATABASE_URL_MISSING";
+      throw e;
+    }
+    this.pool = pool || new Pool({
+      connectionString: this.connectionString,
+      max: maxConnections,
+      // Managed Postgres (Azure, RDS, Cloud SQL) vereist doorgaans TLS. We
+      // laten certificaatvalidatie over aan de omgeving/CA-bundle.
+      ssl: ssl ? { rejectUnauthorized: false } : undefined,
+      statement_timeout: statementTimeoutMs,
+      idle_in_transaction_session_timeout: statementTimeoutMs,
+    });
+    this.revision = 0;
+    this.pending = null;        // laatst bekende staat die nog niet bewaard is
+    this.flushing = null;       // lopende flush-promise (coalescing)
+    this.lastError = null;
+    this.lastFlushAt = null;
+    this.ready = false;
+  }
+
+  /** Legt het schema aan. Idempotent, dus veilig bij elke start. */
+  async migrate() {
+    await this.pool.query(SCHEMA_SQL);
+  }
+
+  /**
+   * Laad de dataset. Async: de server roept dit één keer aan vóór hij luistert.
+   * Zonder rij wordt de seed weggeschreven, zodat een verse database meteen
+   * bruikbaar is.
+   */
+  async loadAsync(seed) {
+    await this.migrate();
+    const { rows } = await this.pool.query(
+      `SELECT data, revision FROM ${STATE_TABLE} WHERE id = $1`, [STATE_ID]);
+    if (rows.length) {
+      this.revision = Number(rows[0].revision);
+      this.ready = true;
+      return rows[0].data;
+    }
+    const initial = seed();
+    const inserted = await this.pool.query(
+      `INSERT INTO ${STATE_TABLE} (id, data, revision) VALUES ($1, $2, 1)
+       ON CONFLICT (id) DO NOTHING
+       RETURNING revision`, [STATE_ID, initial]);
+    this.revision = inserted.rows.length ? Number(inserted.rows[0].revision) : 1;
+    this.ready = true;
+    return initial;
+  }
+
+  /** Synchrone store-API: markeert vuil, schrijft niet zelf. */
+  save(data) {
+    this.pending = data;
+  }
+
+  /** True zolang er niet-bewaarde wijzigingen zijn. */
+  isDirty() {
+    return this.pending !== null;
+  }
+
+  /**
+   * Persisteer de openstaande staat. Coalesceert gelijktijdige aanroepen tot
+   * één schrijfactie. Optimistic locking op `revision`: als een andere replica
+   * intussen schreef, faalt de update en geven we een expliciete fout in
+   * plaats van stil te overschrijven.
+   */
+  async flush() {
+    // Eerst aansluiten bij een LOPENDE schrijfactie, pas daarna de vuil-check.
+    // Andersom zou een aanroeper tijdens een lopende write {written:false}
+    // krijgen en denken dat alles bewaard is, terwijl de schrijfactie nog liep.
+    // De shutdown-handler zou dan te vroeg kunnen afsluiten.
+    if (this.flushing) return this.flushing;
+    if (!this.isDirty()) return { written: false };
+    const data = this.pending;
+    this.pending = null;
+    this.flushing = (async () => {
+      try {
+        const { rows } = await this.pool.query(
+          `UPDATE ${STATE_TABLE}
+              SET data = $2, revision = revision + 1, updated_at = now()
+            WHERE id = $1 AND revision = $3
+        RETURNING revision`,
+          [STATE_ID, data, this.revision]);
+        if (!rows.length) {
+          // Een andere instantie schreef tussentijds. De aanroeper moet
+          // herladen; stil doorschrijven zou werk van iemand anders wissen.
+          const e = new Error("De opslag is door een andere instantie gewijzigd (revisieconflict)");
+          e.code = "STATE_REVISION_CONFLICT";
+          this.pending = data;      // niet weggooien: bewaar voor een retry
+          throw e;
+        }
+        this.revision = Number(rows[0].revision);
+        this.lastFlushAt = new Date().toISOString();
+        this.lastError = null;
+        return { written: true, revision: this.revision };
+      } catch (err) {
+        this.lastError = String((err && err.message) || err).slice(0, 300);
+        if (this.pending === null) this.pending = data;   // schrijffout → opnieuw proberen
+        throw err;
+      } finally {
+        this.flushing = null;
+      }
+    })();
+    return this.flushing;
+  }
+
+  /** Herlaad na een revisieconflict, zodat de aanroeper kan hersynchroniseren. */
+  async reload() {
+    const { rows } = await this.pool.query(
+      `SELECT data, revision FROM ${STATE_TABLE} WHERE id = $1`, [STATE_ID]);
+    if (!rows.length) return null;
+    this.revision = Number(rows[0].revision);
+    return rows[0].data;
+  }
+
+  status() {
+    return {
+      adapter: this.name,
+      mode: "postgres",
+      // Bewust GEEN providernaam: dit werkt op elke standaard PostgreSQL.
+      online: this.ready && !this.lastError,
+      revision: this.revision,
+      pendingWrites: this.isDirty(),
+      lastFlushAt: this.lastFlushAt,
+      lastError: this.lastError,
+      pool: { total: this.pool.totalCount, idle: this.pool.idleCount, waiting: this.pool.waitingCount },
+    };
+  }
+
+  async close() {
+    try { await this.flush(); } catch (_) { /* afsluiten mag niet blokkeren op een schrijffout */ }
+    await this.pool.end();
+  }
+}
+
+module.exports = { PostgresDataAdapter, STATE_TABLE, SCHEMA_SQL };

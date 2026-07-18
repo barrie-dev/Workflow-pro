@@ -1,39 +1,101 @@
-# WorkFlow Pro — lokale/zelf-host stack die identiek draait op elke Docker-host.
-# Doel: portabiliteit. Eén commando, geen externe diensten nodig.
+# Monargo One - volledig platform-onafhankelijke stack.
 #
-#   docker compose up --build         → app op http://localhost:4280
-#   docker compose down               → stoppen (data blijft in het volume)
+# Dit draait identiek op elke Docker-host: je laptop, een VPS, een CI-runner,
+# Azure Container Apps, Cloud Run, Fly.io of Kubernetes. Geen enkele
+# clouddienst, geen account, geen provider-specifieke sleutel.
 #
-# Voor productie elders (Fly.io, Cloud Run, AWS, VPS, Kubernetes): bouw dezelfde
-# image en geef de env-vars uit .env.example mee. Zie PORTABILITY.md.
+#   docker compose up --build          → app op http://localhost:4280 + Postgres
+#   docker compose --profile json up   → app zonder database (JSON-bestand)
+#   docker compose down                → stoppen (data blijft in de volumes)
+#   docker compose down -v             → stoppen én data wissen
+#
+# Tests tegen een echte database:
+#   docker compose up -d db
+#   DATABASE_URL=postgresql://monargo:monargo@localhost:5432/monargo npm test
 
 services:
+  # Standaard PostgreSQL. Geen extensies, geen provider-specifieke instellingen,
+  # zodat exact dit schema ook op Azure Database for PostgreSQL, RDS, Cloud SQL
+  # of een zelfgehoste Postgres draait.
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: "${POSTGRES_USER:-monargo}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-monargo}"
+      POSTGRES_DB: "${POSTGRES_DB:-monargo}"
+    ports:
+      # Naar buiten open zodat je lokaal tests tegen deze database kunt draaien.
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - monargo-db:/var/lib/postgresql/data
+    healthcheck:
+      # De app start pas als de database echt queries aanneemt.
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-monargo} -d ${POSTGRES_DB:-monargo}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
   app:
     build: .
-    image: workflowpro:latest
+    image: monargo-one:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${PORT:-4280}:4280"
+    environment:
+      NODE_ENV: production
+      APP_ENV: "${APP_ENV:-development}"
+      PORT: "4280"
+      # Standaard PostgreSQL-adapter. Werkt op elke Postgres; enkel de URL wijzigt.
+      STORAGE_ADAPTER: "postgres"
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-monargo}:${POSTGRES_PASSWORD:-monargo}@db:5432/${POSTGRES_DB:-monargo}"
+      DATABASE_SSL: "${DATABASE_SSL:-false}"
+      DATABASE_MAX_CONNECTIONS: "${DATABASE_MAX_CONNECTIONS:-10}"
+      APP_URL: "${APP_URL:-http://localhost:4280}"
+      # Lokale objectopslag: bestanden in een volume, geen S3/Blob nodig.
+      OBJECT_STORAGE_ADAPTER: "${OBJECT_STORAGE_ADAPTER:-local}"
+      OBJECT_STORAGE_PATH: /app/data/files
+      REQUIRE_ADMIN_MFA: "${REQUIRE_ADMIN_MFA:-false}"
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - monargo-files:/app/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:4280/api/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  # Variant zonder database: één container, JSON-bestand in een volume.
+  # Handig voor een demo of een kleine zelf-host zonder Postgres.
+  app-json:
+    profiles: ["json"]
+    build: .
+    image: monargo-one:latest
     restart: unless-stopped
     ports:
       - "${PORT:-4280}:4280"
     environment:
       NODE_ENV: production
       PORT: "4280"
-      # Zelf-host zonder externe DB: JSON-adapter met een persistent volume.
-      # Voor een managed Postgres → STORAGE_ADAPTER=postgres + SUPABASE_*/DATABASE_URL.
-      STORAGE_ADAPTER: "${STORAGE_ADAPTER:-json}"
-      WORKFLOWPRO_DATA_FILE: /app/data/workflowpro.json
+      STORAGE_ADAPTER: "json"
+      WORKFLOWPRO_DATA_FILE: /app/data/monargo.json
+      OBJECT_STORAGE_ADAPTER: "local"
+      OBJECT_STORAGE_PATH: /app/data/files
       APP_URL: "${APP_URL:-http://localhost:4280}"
-      # Secrets: gezet via .env (env_file hieronder). Genereer sterke waarden!
       REQUIRE_ADMIN_MFA: "${REQUIRE_ADMIN_MFA:-false}"
     env_file:
-      - .env
+      - path: .env
+        required: false
     volumes:
-      - wfp-data:/app/data
-    healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:4280/api/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
+      - monargo-files:/app/data
 
 volumes:
-  wfp-data:
+  monargo-db:
+  monargo-files:

@@ -6,6 +6,7 @@ const { config } = require("./lib/config");
 const { sendJson, readBody, readRawBody, securityHeaders, corsHeaders } = require("./lib/http");
 const { checkRateLimit } = require("./lib/rate-limit");
 const { Store, BUSINESS_ADMIN_PERMISSIONS, MANAGER_PERMISSIONS, EMPLOYEE_PERMISSIONS } = require("./lib/store");
+const { createDataAdapter } = require("./lib/data-adapters");
 const { hashPassword, assertStrongPassword, verifyPassword } = require("./lib/security");
 const {
   authenticate,
@@ -344,7 +345,12 @@ const {
   listVehicles, getVehicle, createVehicle, updateVehicle, logMileage, scheduleService
 } = require("./modules/vehicles");
 
-const store = new Store();
+// Netwerk-adapters (PostgreSQL) kunnen niet synchroon in een constructor laden.
+// De store-instantie bestaat wel meteen (repositories verwijzen ernaar); de data
+// komt via initAsync() vóór de server gaat luisteren.
+const storeAdapter = createDataAdapter();
+const storeNeedsAsyncLoad = typeof storeAdapter.loadAsync === "function";
+const store = new Store(storeAdapter, { defer: storeNeedsAsyncLoad });
 const customerRepo = makeCustomerRepository(store);
 const projectRepo = makeProjectRepository(store);
 const worksiteRepo = makeWorksiteRepository(store);
@@ -680,7 +686,7 @@ function serveStatic(req, res) {
   });
 }
 
-http.createServer(async (req, res) => {
+const httpServer = http.createServer(async (req, res) => {
   const url = new URL(req.url, config.appUrl);
   let errorTenantId = url.pathname.match(/^\/api\/tenants\/([^/]+)\//)?.[1] || null;
   // Correlatie-id (backend-handoff): elk antwoord draagt een requestId zodat een
@@ -738,7 +744,14 @@ http.createServer(async (req, res) => {
       const ready = storeStatus?.ok !== false;
       sendJson(res, ready ? 200 : 503, {
         ok: ready,
-        checks: { storage: storeStatus?.ok !== false, storageAdapter: config.storageAdapter, txAdapter: txManager.adapter },
+        checks: {
+          storage: storeStatus?.ok !== false,
+          storageAdapter: config.storageAdapter,
+          txAdapter: txManager.adapter,
+          // Openstaande schrijfacties: een orchestrator kan hierop wachten
+          // vóór hij een replica uit rotatie haalt.
+          pendingWrites: store.isDirty(),
+        },
         store: storeStatus,
       });
       return;
@@ -6585,8 +6598,38 @@ http.createServer(async (req, res) => {
     serveStatic(req, res);
   } catch (error) {
     handleError(req, res, error, errorTenantId);
+  } finally {
+    // Netwerk-adapters bufferen schrijfacties (zie pg-data-adapter). Persisteer
+    // ze zodra de afhandeling klaar is. Synchrone adapters (JSON) hebben al
+    // geschreven en doen hier niets.
+    //
+    // Bekende beperking: tussen het versturen van het antwoord en het
+    // afronden van deze flush zit één event-loop-tik. Crasht het proces exact
+    // daarin, dan is de laatste mutatie niet bewaard. /api/ready meldt daarom
+    // pendingWrites, en de shutdown-handler flusht altijd. De sluitende
+    // oplossing is F-03/F-04 (echte transactionele repositories per use case).
+    if (store.isDirty()) {
+      try { await store.flush(); }
+      catch (err) { console.error(`[store] wegschrijven mislukt: ${err.message}`); }
+    }
   }
-}).listen(config.port, () => {
+});
+
+// Eerst de data laden (netwerk-adapter), dan pas luisteren. Zo valt er nooit
+// een verzoek op een half-geïnitialiseerde store.
+(async () => {
+  if (storeNeedsAsyncLoad) {
+    await store.initAsync();
+    console.log(`  Database  : verbonden (${config.storageAdapter})`);
+  }
+  startServer();
+})().catch(err => {
+  console.error(`[start] kon de opslag niet initialiseren: ${err.message}`);
+  process.exit(1);
+});
+
+function startServer() {
+  httpServer.listen(config.port, () => {
   console.log(`Monargo One Fullstack draait op http://localhost:${config.port}`);
   console.log(`  Omgeving  : ${config.isProduction ? "production" : "development"}`);
   console.log(`  Opslag    : ${config.storageAdapter}`);
@@ -6651,13 +6694,22 @@ http.createServer(async (req, res) => {
   };
   setTimeout(runWebhookDelivery, 30 * 1000).unref();
   setInterval(runWebhookDelivery, 60 * 1000).unref();
-});
+  });
+}
 
 // ── Graceful shutdown ─────────────────────────────────────────
-// PaaS-platforms (Render, Railway, Heroku) sturen SIGTERM vóór een deploy/restart.
-// We geven lopende requests maximaal 10 s om af te ronden vóór we stoppen.
+// Elk container-platform (Kubernetes, Azure Container Apps, Cloud Run, Fly,
+// Render, een eigen VPS) stuurt SIGTERM vóór een deploy/restart. We ronden
+// lopende requests af én schrijven openstaande wijzigingen weg, zodat een
+// herstart nooit stil data verliest.
 function gracefulShutdown(signal) {
   console.log(`[shutdown] ${signal} ontvangen · server sluit af…`);
+  const done = () => process.exit(0);
+  Promise.resolve()
+    .then(() => (store.isDirty() ? store.flush() : null))
+    .then(() => (typeof storeAdapter.close === "function" ? storeAdapter.close() : null))
+    .then(done)
+    .catch(err => { console.error(`[shutdown] wegschrijven mislukt: ${err.message}`); process.exit(1); });
   // Geef lopende requests 10 s
   setTimeout(() => {
     console.log("[shutdown] Timeout bereikt · forceer stop");

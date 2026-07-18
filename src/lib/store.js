@@ -291,12 +291,59 @@ function seed() {
 }
 
 class Store {
-  constructor(adapter = createDataAdapter()) {
+  /**
+   * @param {object} adapter
+   * @param {{defer?:boolean}} opts `defer` stelt het laden uit tot initAsync().
+   *   Nodig voor netwerk-adapters (PostgreSQL): die kunnen niet synchroon in
+   *   een constructor laden. De store-INSTANTIE bestaat wel meteen, zodat
+   *   repositories er al naar kunnen verwijzen; alleen de data komt later.
+   */
+  constructor(adapter = createDataAdapter(), { defer = false } = {}) {
     this.adapter = adapter;
+    this.initialized = false;
+    if (defer) {
+      this.data = seed();          // tijdelijke lege staat tot initAsync()
+      return;
+    }
     this.data = this.load();
+    this.finishInit();
+  }
+
+  /** Migratie, bootstrap-admin en platform-god · na het laden van de data. */
+  finishInit() {
     this.migrate();
     this.bootstrapInitialAdmin();
     this.ensurePlatformGod();
+    this.initialized = true;
+  }
+
+  /**
+   * Laad asynchroon (netwerk-adapter) en rond de init af. De server roept dit
+   * aan vóór hij gaat luisteren, zodat er nooit een verzoek op lege data valt.
+   */
+  async initAsync() {
+    if (this.initialized) return this;
+    this.data = typeof this.adapter.loadAsync === "function"
+      ? this.enrichDemoData(await this.adapter.loadAsync(seed))
+      : this.load();
+    this.finishInit();
+    return this;
+  }
+
+  /**
+   * Persisteer openstaande wijzigingen. Synchrone adapters (JSON) schrijven al
+   * in save(); netwerk-adapters bufferen en schrijven hier. De HTTP-laag wacht
+   * dit af vóór ze op een muterend verzoek antwoordt, zodat een 2xx betekent
+   * dat de data echt bewaard is.
+   */
+  async flush() {
+    if (typeof this.adapter.flush !== "function") return { written: false };
+    return this.adapter.flush();
+  }
+
+  /** True zolang er niet-weggeschreven wijzigingen zijn. */
+  isDirty() {
+    return typeof this.adapter.isDirty === "function" ? this.adapter.isDirty() : false;
   }
 
   // Garandeer dat er altijd één beschermde super_admin is (de "god" van de SaaS):
@@ -311,8 +358,11 @@ class Store {
   }
 
   load() {
-    const data = this.adapter.load(seed);
-    // Als het JSON-bestand bestond maar nog geen demo-tenant heeft, voeg hem alsnog toe
+    return this.enrichDemoData(this.adapter.load(seed));
+  }
+
+  /** Vult een verse dataset aan met demo-data (nooit in productie). */
+  enrichDemoData(data) {
     if (!config.isProduction && Array.isArray(data.tenants) && data.tenants.length === 0) {
       const ds = demoSeed();
       data.tenants = ds.tenants;

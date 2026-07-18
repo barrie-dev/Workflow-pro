@@ -90,8 +90,32 @@ class SupabasePostgresAdapter {
   }
 }
 
+/**
+ * Kies de opslagadapter (vendor-handover F-01/F-02).
+ *
+ *   STORAGE_ADAPTER=postgres  → standaard PostgreSQL (draait overal)
+ *   STORAGE_ADAPTER=json      → lokaal bestand (dev/zelf-host zonder database)
+ *   STORAGE_ADAPTER=supabase  → LEGACY, alleen om bestaande data te migreren
+ *
+ * "postgres" wijst bewust naar de standaard-adapter, niet meer naar Supabase:
+ * de app mag in geen enkele omgeving nog van een provider-specifieke REST-bridge
+ * afhangen. De Supabase-adapter blijft enkel bereikbaar via de expliciete
+ * legacy-waarde, zodat een eenmalige migratie mogelijk blijft.
+ */
 function createDataAdapter() {
-  if (config.storageAdapter === "postgres") return new SupabasePostgresAdapter();
+  const kind = String(config.storageAdapter || "json").toLowerCase();
+  if (kind === "postgres") {
+    // Lazy require: de pg-driver wordt alleen geladen als hij echt gebruikt
+    // wordt, zodat een JSON-only omgeving geen database-dependency nodig heeft.
+    const { PostgresDataAdapter } = require("../infrastructure/postgres/pg-data-adapter");
+    return new PostgresDataAdapter({
+      connectionString: config.database.url,
+      ssl: config.database.ssl,
+      maxConnections: config.database.maxConnections,
+      statementTimeoutMs: config.database.statementTimeoutMs,
+    });
+  }
+  if (kind === "supabase") return new SupabasePostgresAdapter();
   return new JsonDataAdapter();
 }
 

@@ -45,6 +45,17 @@ const config = {
   encryptionKey: process.env.ENCRYPTION_KEY || "dev_only_replace_this_encryption_key_32",
   databaseUrl: process.env.DATABASE_URL || "",
   storageAdapter: process.env.STORAGE_ADAPTER || "json",
+  // Generieke databaseconfiguratie (F-05): geldt voor ELKE standaard PostgreSQL
+  // (lokale Docker, Azure Database for PostgreSQL, RDS, Cloud SQL, eigen VPS).
+  // Geen providernaam, geen provider-specifieke sleutels.
+  database: {
+    url: process.env.DATABASE_URL || "",
+    ssl: String(process.env.DATABASE_SSL || "").toLowerCase() === "true",
+    maxConnections: Number(process.env.DATABASE_MAX_CONNECTIONS) || 10,
+    statementTimeoutMs: Number(process.env.DATABASE_STATEMENT_TIMEOUT_MS) || 15000
+  },
+  // LEGACY · uitsluitend voor een eenmalige migratie van bestaande data.
+  // De normale runtime gebruikt deze waarden niet meer (F-01/F-02).
   supabase: {
     url: process.env.SUPABASE_URL || "",
     serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || ""
@@ -99,9 +110,10 @@ function assertProductionConfig() {
   const missing = [];
   const warnings = [];
   if (!/^https:\/\//.test(config.appUrl)) missing.push("APP_URL=https://...");
+  // Productie draait op een echte database, maar NIET op een specifieke
+  // provider: enkel een standaard PostgreSQL-URL is vereist (F-05).
   if (config.storageAdapter !== "postgres") missing.push("STORAGE_ADAPTER=postgres");
-  if (!config.supabase.url) missing.push("SUPABASE_URL");
-  if (isPlaceholder(config.supabase.serviceRoleKey)) missing.push("SUPABASE_SERVICE_ROLE_KEY");
+  if (!/^postgres(ql)?:\/\//.test(config.database.url)) missing.push("DATABASE_URL=postgresql://...");
   if (isPlaceholder(config.jwtSecret) || String(config.jwtSecret).length < 32) missing.push("JWT_SECRET");
   if (isPlaceholder(config.encryptionKey) || String(config.encryptionKey).length < 32) missing.push("ENCRYPTION_KEY");
   // Stripe en Peppol zijn optioneel tijdens pilot · waarschuwing, geen harde fout
