@@ -149,3 +149,25 @@ Feedback voor de backendontwikkelaar:
 - Bewaar stockmutaties als append-only audittrail met actor, tijdstip, delta, reden en resulterende hoeveelheid. De UI mag een actuele hoeveelheid tonen, maar niet zelf de boekhouding reconstrueren.
 - Voor grotere tenants zijn server-side `query`, filters, sortering en paging wenselijk op stock en voertuigen. De huidige lokale zoekfilter is alleen geschikt voor beperkte datasets.
 - Blijf onderhouds- en lage-voorraaddrempels server-side berekenen. De frontend presenteert de waarschuwing en dupliceert de bedrijfsregel niet.
+
+
+## Managementrapportage — frontendintegratie 2026-07-18
+
+De tenant-adminrapportage is frontendmatig genormaliseerd naar een rustige Monargo Intelligence-workspace. De bestaande periodefilter, KPI's, uren, onkosten, verlof, werkbonstatus, loonlijst, klantwinstgevendheid, CSV-export en het printbare beslissersrapport blijven behouden. De frontend presenteert bestaande gegevens en introduceert geen tweede financiële bron van waarheid.
+
+| UI-flow | Bestaand contract | UI-gedrag |
+| --- | --- | --- |
+| Periodeoverzicht | bestaande `GET /clocks`, `/expenses`, `/leaves`, `/workorders`, `/employees` en `/facturen` | Laadt de gekozen periode en bouwt de bestaande KPI- en detailkaarten. |
+| CSV-export | huidige client-side export | Exporteert alleen de reeds geladen tenantdata voor uren, onkosten, verlof, werkbonnen, loonlijst en klantwinstgevendheid. |
+| Beslissersrapport | huidige printflow + `POST /reports/log` | Genereert een printbaar rapport en registreert het bestaande pilot-event. |
+| Klantwinstgevendheid | bestaande facturen, werkbonnen, klokken en goedgekeurde onkosten | Toont omzet excl. btw, openstaand, uren en onkosten; loonkost wordt expliciet niet als marge voorgesteld. |
+
+Feedback voor de backendontwikkelaar:
+
+- Voor deze UI-release is geen nieuw endpoint nodig; behoud de bestaande responses non-breaking.
+- De huidige aggregatie over meerdere endpoints is geschikt voor QA en beperkte datasets. Voor productie en grotere tenants is een tenant-scoped rapportagecontract wenselijk met server-side periodefiltering en canonieke totalen.
+- Een later `GET /api/tenants/:tenantId/reports/management?from=&to=` kan stabiele `totals`, `timeByEmployee`, `expenseSummary`, `leaveSummary`, `workorderStatus`, `payrollRows` en `customerProfitability` leveren.
+- Bereken omzet, btw, betaalstatus en financiële totalen uitsluitend server-side. Als echte marge wordt toegevoegd, lever dan expliciet welke kostencomponenten zijn inbegrepen; de frontend mag loonkost of marge niet schatten.
+- Gebruik voor zware rapporten materialized views of vooraf berekende aggregaties met een zichtbare `generatedAt` en tijdzone. De UI moet kunnen tonen hoe recent de cijfers zijn.
+- Voor PDF/CSV op grote datasets is een asynchrone exportqueue wenselijk met `jobId`, `status`, `format`, `requestedAt`, `completedAt`, veilige download-URL en vervaltijd.
+- Autoriseer rapportsecties en exports server-side volgens tenant, rol en financieel recht; een verborgen kaart of knop is nooit een permissiecontrole.
