@@ -4,6 +4,27 @@ Doel: frontend-werk afstemmen op de sessie "Ontwikkel app roadmap", zodat design
 
 
 
+
+## Release-afstemming — communicatie workspace (18 juli 2026)
+
+De berichtenmodule gebruikt hetzelfde vlakke backendcontract, maar presenteert dit als een moderne gesprekworkspace.
+
+| Onderdeel | Frontendgedrag | Backendcontract |
+| --- | --- | --- |
+| Inbox | Toont algemene en werfgebonden berichten als scanbare stroom | `GET /messages` |
+| Werfgesprekken | Groepeert lokaal op `venueId`; geen parallel threadmodel | Bestaand berichtveld `venueId` |
+| Ontvangers | Iedereen, rol (`employee`/`manager`) of één `recipientId` | `POST /messages` |
+| Lezen | Berichtdetails klappen in de stroom open | Bestaande berichtpayload |
+| Verwijderen | Expliciete bevestiging en daarna herladen | `DELETE /messages/:id` |
+| Composer | Ruime werkruimte met ontvanger, werfcontext, onderwerp en body | Geen lokale opslag of alternatieve verzendlogica |
+
+Backendfeedback:
+
+1. Voor echte inboxsemantiek ontbreekt voor admin/manager nog een expliciet read/unread-contract; de frontend simuleert dit bewust niet.
+2. Voor reacties als echte thread is later een stabiel `threadId` of `replyToId` nodig. Nu groepeert de UI uitsluitend op werfcontext.
+3. Bewaar `senderName`, `recipientId`, `toRole`, `venueId`, `subject`, `body` en `createdAt` stabiel; deze velden vormen de volledige gesprekweergave.
+4. Providerlevering (e-mail/push) blijft backendverantwoordelijkheid; de frontend meldt alleen dat het interne bericht is opgeslagen.
+
 ## Release-afstemming — wagenparkworkspace (18 juli 2026)
 
 De wagenpark-UI is afgestemd op `src/modules/vehicles.js`; er is geen backenddomeinlogica verplaatst.
