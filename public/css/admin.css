@@ -1111,3 +1111,116 @@ button.adm-board-row:hover { background:#fafafe; }
   .adm-table td { font-size:13.5px; }
   .adm-action-copy h4 { white-space:normal; }
 }
+
+/* ── Monargo approval workspace ──────────────────────────────────────────
+   Onkosten en verlof delen dezelfde beslislogica: open werk springt eruit,
+   afgeronde administratie blijft rustig scanbaar. De selectors zijn bewust
+   view-specifiek zodat een parallelle backend- of featurewijziging niet wordt
+   overschreven. */
+.adm-main[data-view="leaves"],
+.adm-main[data-view="expenses"] { --approval-blue:#5b5ce2; --approval-line:#e4e5ec; }
+
+.adm-main[data-view="leaves"] .adm-page-head,
+.adm-main[data-view="expenses"] .adm-page-head { padding-top:24px; }
+.adm-main[data-view="leaves"] .adm-page-title,
+.adm-main[data-view="expenses"] .adm-page-title { font-size:26px; letter-spacing:-.55px; }
+.adm-main[data-view="leaves"] .adm-content,
+.adm-main[data-view="expenses"] .adm-content { max-width:1520px; padding-top:22px; }
+
+.adm-main[data-view="leaves"] .adm-card,
+.adm-main[data-view="expenses"] .adm-card {
+  overflow:hidden;
+  background:rgba(255,255,255,.97);
+  border-color:var(--approval-line);
+  border-radius:16px;
+  box-shadow:0 1px 2px rgba(28,31,54,.03),0 14px 38px rgba(28,31,54,.045);
+}
+.adm-main[data-view="leaves"] .adm-card-header,
+.adm-main[data-view="expenses"] .adm-card-header { min-height:72px; padding:16px 20px; gap:14px; }
+.adm-main[data-view="leaves"] .adm-card-title,
+.adm-main[data-view="expenses"] .adm-card-title { font-size:18px; letter-spacing:-.3px; }
+.adm-main[data-view="leaves"] select,
+.adm-main[data-view="expenses"] select { min-height:42px; padding:0 36px 0 12px; font-size:14px; border-radius:9px; }
+
+/* Verlof: duidelijke tabs, ruime kalender en leesbare saldi. */
+.adm-main[data-view="leaves"] .adm-card-header>div {
+  padding:4px;
+  gap:3px !important;
+  background:#f2f3f7;
+  border:1px solid #e7e8ee;
+  border-radius:11px;
+}
+.adm-main[data-view="leaves"] .adm-card-header>div .adm-btn { min-height:36px; padding:0 14px; border-color:transparent; }
+.adm-main[data-view="leaves"] .adm-card-header>div .adm-btn-secondary { background:transparent; box-shadow:none; }
+.adm-main[data-view="leaves"] .adm-card-header>div .adm-btn-primary:not(#admLeaveNew) { color:#303247; background:#fff; box-shadow:0 1px 3px rgba(28,31,54,.10); }
+.adm-main[data-view="leaves"] #admLeaveNew {
+  min-height:38px;
+  margin-left:8px !important;
+  padding:0 17px;
+  color:#fff;
+  background:var(--approval-blue);
+  box-shadow:0 7px 16px rgba(91,92,226,.18);
+}
+.adm-main[data-view="leaves"] #admLeaveBody>div:first-child[style*="border-bottom"] { min-height:66px; padding:12px 20px !important; background:#fafafd; }
+.adm-main[data-view="leaves"] #admLeaveFilter { min-width:190px; background-color:#fff; }
+.adm-main[data-view="leaves"] #admLeaveTable .adm-table { min-width:1050px; }
+.adm-main[data-view="leaves"] #admLeaveTable .adm-table td { padding-top:16px; padding-bottom:16px; }
+.adm-main[data-view="leaves"] #admLeaveTable .adm-leave-action { min-width:72px; margin:2px 2px 2px 0; }
+.adm-main[data-view="leaves"] #admLeaveBody>div[style*="padding:16px"] { padding:20px !important; }
+.adm-main[data-view="leaves"] #admLeaveBody div[style*="min-height:52px"] { min-height:82px !important; padding:7px 8px !important; }
+.adm-main[data-view="leaves"] #admLeaveBody div[style*="font-size:10px"] { font-size:12px !important; line-height:1.35; }
+.adm-main[data-view="leaves"] #admLeaveBody div[style*="font-size:11px"] { font-size:12.5px !important; line-height:1.4; }
+.adm-main[data-view="leaves"] #admLeaveBody div[style*="font-size:12px"] { font-size:13px !important; line-height:1.4; }
+.adm-main[data-view="leaves"] #admLeaveBody div[style*="font-size:13px"] { font-size:14px !important; line-height:1.5; }
+
+/* Onkosten: KPI's zijn context; de beslisrijen vormen het echte werk. */
+.adm-main[data-view="expenses"] .adm-kpis { gap:14px; margin-bottom:18px !important; }
+.adm-main[data-view="expenses"] .adm-kpi { min-height:124px; padding:20px; border-radius:14px; }
+.adm-main[data-view="expenses"] .adm-kpi-label { margin-bottom:10px; font-size:13px; }
+.adm-main[data-view="expenses"] .adm-kpi-value { font-size:30px; }
+.adm-main[data-view="expenses"] .adm-kpi-sub { margin-top:7px; font-size:13px; }
+.adm-main[data-view="expenses"] .adm-kpi:first-child { border-color:#e8d9b4; background:linear-gradient(145deg,#fff 55%,#fff9e9); }
+.adm-main[data-view="expenses"] .adm-kpi:first-child .adm-kpi-value { color:#8b5d05; }
+.adm-main[data-view="expenses"] .adm-card-header select { min-width:190px; background-color:#fff; }
+.adm-main[data-view="expenses"] #admExpTable { padding:0; }
+.adm-main[data-view="expenses"] #admExpTable .adm-table { min-width:1080px; }
+.adm-main[data-view="expenses"] #admExpTable .adm-table td { padding-top:16px; padding-bottom:16px; }
+.adm-main[data-view="expenses"] #admExpTable td[style*="font-size:12px"] { font-size:13px !important; }
+.adm-main[data-view="expenses"] #admExpTable td>div[style*="font-size:11px"] { margin-top:4px !important; font-size:12.5px !important; line-height:1.4; }
+.adm-main[data-view="expenses"] #admExpTable .adm-exp-review,
+.adm-main[data-view="expenses"] #admExpTable .adm-exp-link { min-width:72px; margin-top:2px; margin-bottom:2px; }
+
+@supports selector(tr:has(*)) {
+  .adm-main[data-view="leaves"] #admLeaveTable tbody tr:has(.adm-leave-action) td,
+  .adm-main[data-view="expenses"] #admExpTable tbody tr:has(.adm-exp-review) td { background:#fffdf5; }
+  .adm-main[data-view="leaves"] #admLeaveTable tbody tr:has(.adm-leave-action) td:first-child,
+  .adm-main[data-view="expenses"] #admExpTable tbody tr:has(.adm-exp-review) td:first-child { box-shadow:inset 3px 0 #e6aa35; }
+  .adm-main[data-view="leaves"] #admLeaveTable tbody tr:has(.adm-leave-action):hover td,
+  .adm-main[data-view="expenses"] #admExpTable tbody tr:has(.adm-exp-review):hover td { background:#fff9e9; }
+}
+
+@media (max-width:900px) {
+  .adm-main[data-view="leaves"] .adm-page-title,
+  .adm-main[data-view="expenses"] .adm-page-title { font-size:23px; }
+  .adm-main[data-view="leaves"] .adm-card-header { align-items:flex-start; flex-direction:column; }
+  .adm-main[data-view="leaves"] .adm-card-header>div { width:100%; }
+  .adm-main[data-view="leaves"] #admLeaveNew { margin-left:auto !important; }
+  .adm-main[data-view="expenses"] .adm-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+
+@media (max-width:600px) {
+  .adm-main[data-view="leaves"] .adm-page-head,
+  .adm-main[data-view="expenses"] .adm-page-head { padding-top:18px; }
+  .adm-main[data-view="leaves"] .adm-content,
+  .adm-main[data-view="expenses"] .adm-content { padding-top:16px; }
+  .adm-main[data-view="leaves"] .adm-card-header,
+  .adm-main[data-view="expenses"] .adm-card-header { min-height:0; padding:14px; }
+  .adm-main[data-view="leaves"] .adm-card-header>div { display:grid !important; grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .adm-main[data-view="leaves"] .adm-card-header>div .adm-btn { padding:0 8px; }
+  .adm-main[data-view="leaves"] #admLeaveNew { grid-column:1/-1; width:100%; margin:5px 0 0 !important; }
+  .adm-main[data-view="leaves"] #admLeaveBody>div:first-child[style*="border-bottom"] { padding:10px 14px !important; }
+  .adm-main[data-view="leaves"] #admLeaveFilter,
+  .adm-main[data-view="expenses"] .adm-card-header select { width:100%; min-width:0; }
+  .adm-main[data-view="expenses"] .adm-kpis { grid-template-columns:1fr; }
+  .adm-main[data-view="expenses"] .adm-kpi { min-height:104px; }
+}
