@@ -82,6 +82,7 @@ const REQUIRED_COLLECTIONS = [
   "stockReservations",
   "articles",
   "priceRules",
+  "webhookEndpoints",
   "customFields",
   "automationFlows",
   "automationRuns",

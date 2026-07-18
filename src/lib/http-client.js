@@ -17,13 +17,17 @@ const DEFAULT_TIMEOUT_MS = 15000;
  * Voer een HTTPS-request uit met timeout. Resolved met {statusCode, text, json}.
  * Rejected bij netwerkfout of timeout (error.code === "ETIMEDOUT").
  */
-function httpsRequest({ hostname, path, method = "POST", headers = {}, body = "", timeoutMs = DEFAULT_TIMEOUT_MS, transport = https }) {
+function httpsRequest({ hostname, port, path, method = "POST", headers = {}, body = "", timeoutMs = DEFAULT_TIMEOUT_MS, transport = https }) {
   return new Promise((resolve, reject) => {
     const data = typeof body === "string" ? body : JSON.stringify(body || {});
     const finalHeaders = { ...headers };
     if (data && finalHeaders["Content-Length"] === undefined) finalHeaders["Content-Length"] = Buffer.byteLength(data);
 
-    const req = transport.request({ hostname, path, method, headers: finalHeaders }, res => {
+    // Poort is optioneel (default 443). Klant-webhooks draaien soms op een
+    // afwijkende poort · zonder dit ging elk verzoek stilzwijgend naar 443.
+    const options = { hostname, path, method, headers: finalHeaders };
+    if (port) options.port = Number(port);
+    const req = transport.request(options, res => {
       let raw = "";
       res.on("data", c => (raw += c));
       res.on("end", () => {

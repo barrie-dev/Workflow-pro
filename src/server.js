@@ -228,6 +228,8 @@ const { makeContractRepository } = require("./platform/contracts");
 const { makeSupplierRepository, makePurchaseOrderRepository } = require("./platform/procurement");
 const { makeCatalogRepository, resolvePrice, snapshotForLine, explodeComposition } = require("./platform/catalog");
 const { makeWorkOrderRepository, computeTotals: computeWoTotals, buildInvoiceLines: buildWoInvoiceLines } = require("./platform/work-orders");
+const { makeWebhookRepository, deliverPending, buildDeliveryHealth, requeueEvent } = require("./platform/webhooks");
+const { httpsRequest } = require("./lib/http-client");
 const inventory = require("./platform/inventory");
 const { buildMonaSignals } = require("./platform/mona-signals");
 const robawsImport = require("./platform/robaws-import");
@@ -338,6 +340,25 @@ const supplierRepo = makeSupplierRepository(store);
 const purchaseOrderRepo = makePurchaseOrderRepository(store);
 const catalogRepo = makeCatalogRepository(store);
 const workOrderRepo = makeWorkOrderRepository(store);
+const webhookRepo = makeWebhookRepository(store);
+/**
+ * HTTPS-transport voor de webhook-runtime (E19). De platform-laag blijft
+ * cloudblind (ADR-001): zij kent geen https · deze adapter injecteert hem.
+ * Gebruikt de geharde gedeelde client (timeout, nette foutafhandeling).
+ */
+async function webhookTransport({ url, body, headers }) {
+  const parsed = new URL(url);
+  const res = await httpsRequest({
+    hostname: parsed.hostname,
+    port: parsed.port || undefined,        // klant-endpoints mogen een eigen poort gebruiken
+    path: `${parsed.pathname}${parsed.search}`,
+    method: "POST",
+    headers,
+    body,
+    timeoutMs: 10000,
+  });
+  return { statusCode: res.statusCode, text: res.text };
+}
 const configRepo = makeConfigRepository(store);
 const automationRepo = makeAutomationRepository(store);
 // Unit-of-work port (E1 · ADR-003): atomaire multi-writes, adapter-onafhankelijk.
@@ -2604,6 +2625,75 @@ http.createServer(async (req, res) => {
           return;
         }
       }
+      // ── Webhooks & delivery-runtime (E19/h41) ────────────────────────────────
+      if (action === "webhooks" && req.method === "GET") {
+        assertCan(user, "integrations");
+        sendJson(res, 200, { ok: true, endpoints: webhookRepo.list(tenantId), health: buildDeliveryHealth(store, tenantId) });
+        return;
+      }
+      if (action === "webhooks" && req.method === "POST") {
+        assertCan(user, "integrations");
+        assertInteractiveUser(user);
+        let row;
+        try { row = webhookRepo.insert(tenantId, await readBody(req), user.email); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "webhook_endpoint_created", area: "integrations", detail: row.url });
+        // Het signing secret wordt EENMALIG getoond · daarna alleen nog een hint.
+        sendJson(res, 201, { ok: true, endpoint: row, secret: row.secret, secretNotice: "Bewaar dit signing secret nu · het wordt niet opnieuw getoond." });
+        return;
+      }
+      const webhookItemMatch = action.match(/^webhooks\/([^/]+)$/);
+      if (webhookItemMatch && req.method === "PATCH") {
+        assertCan(user, "integrations");
+        assertInteractiveUser(user);
+        let row;
+        try { row = webhookRepo.update(tenantId, webhookItemMatch[1], await readBody(req), user.email); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "webhook_endpoint_updated", area: "integrations", detail: row.url });
+        sendJson(res, 200, { ok: true, endpoint: { ...row, secret: undefined } });
+        return;
+      }
+      if (webhookItemMatch && req.method === "DELETE") {
+        assertCan(user, "integrations");
+        assertInteractiveUser(user);
+        try { webhookRepo.remove(tenantId, webhookItemMatch[1]); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "webhook_endpoint_deleted", area: "integrations", detail: webhookItemMatch[1] });
+        sendJson(res, 200, { ok: true });
+        return;
+      }
+      const webhookRotateMatch = action.match(/^webhooks\/([^/]+)\/rotate-secret$/);
+      if (webhookRotateMatch && req.method === "POST") {
+        assertCan(user, "integrations");
+        assertInteractiveUser(user);
+        let row;
+        try { row = webhookRepo.rotateSecret(tenantId, webhookRotateMatch[1], user.email); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "webhook_secret_rotated", area: "integrations", detail: row.url });
+        sendJson(res, 200, { ok: true, secret: row.secret, secretNotice: "Nieuw signing secret · werk je ontvanger bij." });
+        return;
+      }
+      // Bezorgronde handmatig aanstoten (naast de achtergrondlus).
+      if (action === "webhooks/deliver" && req.method === "POST") {
+        assertCan(user, "integrations");
+        assertInteractiveUser(user);
+        const report = await deliverPending(store, { transport: webhookTransport, tenantId, limit: 50 });
+        sendJson(res, 200, { ok: true, ...report });
+        return;
+      }
+      // Mislukt of dead-letter event opnieuw in de wachtrij (h41).
+      const webhookRequeueMatch = action.match(/^webhooks\/events\/([^/]+)\/requeue$/);
+      if (webhookRequeueMatch && req.method === "POST") {
+        assertCan(user, "integrations");
+        assertInteractiveUser(user);
+        let ev;
+        try { ev = requeueEvent(store, tenantId, webhookRequeueMatch[1]); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "webhook_event_requeued", area: "integrations", detail: ev.id });
+        sendJson(res, 200, { ok: true, event: { id: ev.id, eventType: ev.eventType, delivery: ev.delivery } });
+        return;
+      }
+
       if (action === "api-keys" && req.method === "GET") {
         assertCan(user, "integrations");
         assertInteractiveUser(user);
@@ -5941,6 +6031,18 @@ http.createServer(async (req, res) => {
   };
   setTimeout(runReminderCycle, 60 * 1000).unref();
   setInterval(runReminderCycle, 6 * 60 * 60 * 1000).unref();
+
+  // Webhook-bezorging (E19/h41): elke minuut een ronde over de outbox.
+  // At-least-once met exponentiële backoff; de backoff in de outbox bepaalt
+  // zelf wanneer een mislukt event opnieuw aan de beurt is, dus een vaste
+  // korte tik is veilig. Fouten mogen de lus nooit stoppen.
+  const runWebhookDelivery = () => {
+    deliverPending(store, { transport: webhookTransport, limit: 50 })
+      .then(r => { if (r.attempted > 0) console.log(`  Webhooks: ${r.delivered} bezorgd, ${r.failed} mislukt`); })
+      .catch(e => console.error("[webhooks] bezorgronde mislukt:", e.message));
+  };
+  setTimeout(runWebhookDelivery, 30 * 1000).unref();
+  setInterval(runWebhookDelivery, 60 * 1000).unref();
 });
 
 // ── Graceful shutdown ─────────────────────────────────────────
