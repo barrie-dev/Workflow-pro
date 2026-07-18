@@ -85,6 +85,7 @@ const REQUIRED_COLLECTIONS = [
   "priceRules",
   "webhookEndpoints",
   "progressClaims",
+  "employees",
   "customFields",
   "automationFlows",
   "automationRuns",

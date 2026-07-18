@@ -230,6 +230,7 @@ const { makeCatalogRepository, resolvePrice, snapshotForLine, explodeComposition
 const { makeWorkOrderRepository, computeTotals: computeWoTotals, buildInvoiceLines: buildWoInvoiceLines } = require("./platform/work-orders");
 const { makeWebhookRepository, deliverPending, buildDeliveryHealth, requeueEvent } = require("./platform/webhooks");
 const { makeProgressClaimRepository, computeClaimTotals } = require("./platform/progress-claims");
+const { makeEmployeeRepository, rateOn, availabilityOn, expiringCertificates } = require("./platform/employees");
 const { httpsRequest } = require("./lib/http-client");
 const inventory = require("./platform/inventory");
 const { buildMonaSignals } = require("./platform/mona-signals");
@@ -343,6 +344,34 @@ const catalogRepo = makeCatalogRepository(store);
 const workOrderRepo = makeWorkOrderRepository(store);
 const webhookRepo = makeWebhookRepository(store);
 const progressClaimRepo = makeProgressClaimRepository(store);
+const employeeRepo = makeEmployeeRepository(store);
+/** Kosttarieven zijn gevoelige velden (h8.2): enkel beheerders zien/beheren ze. */
+function canSeeEmployeeCost(user) {
+  return !!user && ["tenant_admin", "super_admin"].includes(user.role);
+}
+/**
+ * Vul ontbrekende uurtarieven op werkbonregels aan uit het personeelsregister,
+ * met het tarief dat gold op de UITVOERINGSDATUM (h16-business rule + h25).
+ * Zo is er één bron voor kost en blijft historische nacalculatie correct als
+ * een tarief later wijzigt. Expliciet meegegeven tarieven blijven leidend.
+ */
+function enrichWorkerRates(tenantId, workers, executionDate) {
+  if (!Array.isArray(workers)) return workers;
+  return workers.map(w => {
+    if (w.costRate != null && w.salesRate != null) return w;
+    const emp = (w.employeeId && employeeRepo.findById(tenantId, w.employeeId))
+      || (w.userId && employeeRepo.findByUserId(tenantId, w.userId));
+    if (!emp) return w;
+    const r = rateOn(emp, executionDate);
+    if (!r.found) return w;
+    return {
+      ...w,
+      costRate: w.costRate != null ? w.costRate : r.costRate,
+      salesRate: w.salesRate != null ? w.salesRate : r.salesRate,
+      hourCode: w.hourCode || r.hourCode,
+    };
+  });
+}
 /**
  * HTTPS-transport voor de webhook-runtime (E19). De platform-laag blijft
  * cloudblind (ADR-001): zij kent geen https · deze adapter injecteert hem.
@@ -5422,6 +5451,102 @@ http.createServer(async (req, res) => {
       }
 
       // ── Medewerkers ophalen ───────────────────────────────────────────────────
+      // ── Personeelsfiches (h16/EMP) ────────────────────────────────────────────
+      // Bewust een eigen route naast "employees": daar beheer je GEBRUIKERS
+      // (loginaccounts), hier de personeelsfiche. De spec houdt die twee
+      // uitdrukkelijk apart, met een optionele één-op-éénkoppeling via userId.
+      if (action === "employee_records" && req.method === "GET") {
+        assertCan(user, "employees");
+        const rows = employeeRepo.list(tenantId, {
+          status: url.searchParams.get("status") || undefined,
+          teamId: url.searchParams.get("teamId") || undefined,
+          skill: url.searchParams.get("skill") || undefined,
+          includeArchived: url.searchParams.get("includeArchived") === "1",
+        });
+        // Kosttarieven zijn gevoelig (h8.2): enkel beheerders zien ze.
+        const scoped = canSeeEmployeeCost(user) ? rows : rows.map(r => ({ ...r, costRates: undefined }));
+        sendJson(res, 200, { ok: true, employees: scoped });
+        return;
+      }
+      if (action === "employee_records" && req.method === "POST") {
+        assertCan(user, "employees");
+        assertApiKeyWriteAllowed(user, req);
+        let row;
+        try { row = employeeRepo.insert(tenantId, await readBody(req), user.email); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "employee_record_created", area: "employees", detail: row.name });
+        emitDomainEvent(store, { tenantId, eventType: "employee.created", aggregateType: "employee", aggregateId: row.id, actor: user.email, correlationId: res.wfpRequestId });
+        sendJson(res, 201, { ok: true, employee: row });
+        return;
+      }
+      // Let op de volgorde: deze literale route moet vóór de generieke
+      // item-regex staan, anders wordt "expiring-certificates" als een id gelezen.
+      if (action === "employee_records/expiring-certificates" && req.method === "GET") {
+        assertCan(user, "employees");
+        const horizonDays = Number(url.searchParams.get("horizonDays")) || 60;
+        sendJson(res, 200, { ok: true, horizonDays, employees: employeeRepo.expiringCertificates(tenantId, { horizonDays }) });
+        return;
+      }
+      const empItemMatch = action.match(/^employee_records\/([^/]+)$/);
+      if (empItemMatch && req.method === "GET") {
+        assertCan(user, "employees");
+        const row = employeeRepo.findById(tenantId, empItemMatch[1]);
+        if (!row) return sendJson(res, 404, { ok: false, error: "Werknemer niet gevonden" });
+        sendJson(res, 200, {
+          ok: true,
+          employee: canSeeEmployeeCost(user) ? row : { ...row, costRates: undefined },
+          expiringCertificates: expiringCertificates(row),
+        });
+        return;
+      }
+      if (empItemMatch && req.method === "PATCH") {
+        assertCan(user, "employees");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        let row;
+        try { row = employeeRepo.update(tenantId, empItemMatch[1], body, user.email, body.expectedVersion); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code, currentVersion: e.currentVersion }); }
+        store.audit({ actor: user.email, tenantId, action: "employee_record_updated", area: "employees", detail: row.name });
+        sendJson(res, 200, { ok: true, employee: row });
+        return;
+      }
+      // Nieuwe tariefversie · historische versies blijven ongewijzigd (h16).
+      const empRateMatch = action.match(/^employee_records\/([^/]+)\/rates$/);
+      if (empRateMatch && req.method === "POST") {
+        assertCan(user, "employees");
+        assertInteractiveUser(user);
+        if (!canSeeEmployeeCost(user)) return sendJson(res, 403, { ok: false, error: "Enkel beheerders beheren tarieven", code: "FINANCIAL_SCOPE" });
+        let row;
+        try { row = employeeRepo.addRate(tenantId, empRateMatch[1], await readBody(req), user.email); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "employee_rate_added", area: "employees", detail: `${row.name} · vanaf ${row.costRates[0].validFrom}` });
+        emitDomainEvent(store, { tenantId, eventType: "employee.rate_changed", aggregateType: "employee", aggregateId: row.id, actor: user.email, correlationId: res.wfpRequestId, data: { validFrom: row.costRates[0].validFrom } });
+        sendJson(res, 201, { ok: true, employee: row });
+        return;
+      }
+      const empTransitionMatch = action.match(/^employee_records\/([^/]+)\/transition$/);
+      if (empTransitionMatch && req.method === "POST") {
+        assertCan(user, "employees");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        let row;
+        try { row = employeeRepo.transition(tenantId, empTransitionMatch[1], body.status, user.email); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "employee_status_changed", area: "employees", detail: `${row.name} → ${row.status}` });
+        emitDomainEvent(store, { tenantId, eventType: "employee.status_changed", aggregateType: "employee", aggregateId: row.id, actor: user.email, correlationId: res.wfpRequestId, data: { status: row.status } });
+        sendJson(res, 200, { ok: true, employee: row });
+        return;
+      }
+      // Beschikbaarheid op een datum: rooster, dienstperiode en verlof (h16).
+      const empAvailMatch = action.match(/^employee_records\/([^/]+)\/availability$/);
+      if (empAvailMatch && req.method === "GET") {
+        assertCan(user, "employees");
+        const row = employeeRepo.findById(tenantId, empAvailMatch[1]);
+        if (!row) return sendJson(res, 404, { ok: false, error: "Werknemer niet gevonden" });
+        const date = url.searchParams.get("date") || new Date().toISOString().slice(0, 10);
+        sendJson(res, 200, { ok: true, date, availability: availabilityOn(row, date, { leaves: store.list("leaves", tenantId) || [] }) });
+        return;
+      }
       if (action === "employees" && req.method === "GET") {
         assertCan(user, "employees");
         const includeInactive = url.searchParams.get("includeInactive") === "true";
@@ -5866,7 +5991,14 @@ http.createServer(async (req, res) => {
         assertApiKeyWriteAllowed(user, req);
         const body = await readBody(req);
         let wo;
-        try { wo = workOrderRepo.update(tenantId, woFieldsMatch[1], body, user, body.expectedVersion); }
+        try {
+          if (body.workers) {
+            const current = workOrderRepo.findById(tenantId, woFieldsMatch[1]);
+            const executionDate = body.date || (current && current.date) || null;
+            body.workers = enrichWorkerRates(tenantId, body.workers, executionDate);
+          }
+          wo = workOrderRepo.update(tenantId, woFieldsMatch[1], body, user, body.expectedVersion);
+        }
         catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code, currentVersion: e.currentVersion, serverState: e.serverState }); }
         sendJson(res, 200, { ok: true, workorder: wo, totals: computeWoTotals(wo) });
         return;
