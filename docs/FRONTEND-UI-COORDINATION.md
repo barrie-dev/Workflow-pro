@@ -8,27 +8,28 @@ Doel: frontend-werk afstemmen op de sessie "Ontwikkel app roadmap", zodat design
 
 ## Release-afstemming — werfidentiteit in werkbon en planning (18 juli 2026)
 
-De frontend behandelt `venueId` voortaan als een echte ID en `location` als leesbare uitvoeringslocatie. Dit voorkomt dat namen, adressen en interne IDs door elkaar worden opgeslagen.
+De frontend behandelt `venueId` voortaan als een echte werf-ID. Een werkbon bewaart daarnaast `location` als leesbaar uitvoeringsadres; een nieuwe planningsshift gebruikt alleen `venueId`, omdat de huidige POST-route `location` niet opslaat.
 
 | Stap | Frontendgedrag | Backendvelden |
 | --- | --- | --- |
 | Werkbon | Kiest een bestaande werf en vult optioneel het uitvoeringsadres | `venueId`, `location` |
-| Meteen inplannen | Neemt werkbon-ID, werf-ID en locatie mee | `workorderId`, `venueId`, `location` |
-| Shift maken/bewerken | Toont werfselectie en vrij locatieveld afzonderlijk | Bestaand generiek planningcontract |
+| Meteen inplannen | Neemt werkbon-ID en werf-ID mee; het werkbonadres blijft op de werkbon | `workorderId`, `venueId` |
+| Shift maken/bewerken | Toont alleen bestaande werven die als echte ID kunnen worden opgeslagen | Bestaand planningcontract |
 | Planning tonen | Resolveert `venueId` via `/venues`; interne IDs verschijnen niet als label | Alleen frontend-enrichment |
-| Week kopiëren | Behoudt werkbon-, werf- en locatiekoppeling | Zelfde velden op nieuwe shift |
+| Week kopiëren | Behoudt werkbon- en werfkoppeling | `workorderId`, `venueId` op de nieuwe shift |
 
 Compatibiliteit:
 
 - Bestaande shifts waarin vroeger een locatienaam in `venueId` werd opgeslagen blijven leesbaar via een legacy-fallback.
 - Nieuwe wijzigingen slaan alleen een echte venue-ID in `venueId` op.
+- De frontend vraagt geen vrij planningsadres dat de huidige POST-route daarna stil zou verliezen.
 - De backend blijft eigenaar van permissies, tenantisolatie, planningconflicten en datavalidatie.
 
 Backendfeedback:
 
 1. Valideer op termijn server-side dat `venueId`, indien aanwezig, naar een venue binnen dezelfde tenant verwijst.
 2. Overweeg een gecontroleerde migratie voor historische shifts waarin vrije tekst in `venueId` staat.
-3. Maak `venueId` en `location` expliciet in OpenAPI voor werkbonnen en planning; de huidige generieke payload accepteert beide maar documenteert de semantiek onvoldoende.
+3. Maak `venueId` en `location` expliciet in OpenAPI. `POST /planning` bewaart momenteel geen `location`, terwijl `PATCH /planning/:id` het via de generieke patch wel accepteert; trek dit contract gelijk.
 4. Behoud `workorderId` bij planningkopieën en bulkacties; de frontend doet dit nu, maar server-side bulkondersteuning zou dit centraler kunnen afdwingen.
 
 ## Release-afstemming — communicatie workspace (18 juli 2026)
