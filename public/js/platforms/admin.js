@@ -2059,7 +2059,6 @@ ${emp ? `
             start: s.start,
             end: s.end,
             venueId: s.venueId || null,
-            location: s.location || "",
             note: s.note || "",
             workorderId: s.workorderId || null
           });
@@ -2168,7 +2167,6 @@ ${emp ? `
       const selectedVenueId = shift?.venueId || prefill.venueId || "";
       const selectedVenue = venues.find(venue => venue.id === selectedVenueId);
       const legacyLocation = selectedVenue ? "" : (shift?.venueId || "");
-      const initialLocation = shift?.location || prefill.location || selectedVenue?.address || selectedVenue?.name || legacyLocation;
       const isEdit = !!shift;
       document.getElementById("admDrawerTitle").textContent = isEdit ? "Shift bewerken" : "Shift toevoegen";
       document.getElementById("admDrawerBody").innerHTML = `
@@ -2193,17 +2191,13 @@ ${emp ? `
       <input name="end" type="time" value="${shift?.end || "17:00"}" required>
     </div>
   </div>
-  <div class="adm-form-row">
-    <div class="adm-form-group"><label>Werf / locatie</label>
-      <select name="venueId" id="shiftVenue">
-        <option value="">Geen vaste werf</option>
-        ${venues.map(venue => `<option value="${venue.id}" ${selectedVenueId === venue.id ? "selected" : ""}>${esc(venue.name || venue.address || "Locatie")}</option>`).join("")}
-      </select>
-      <div class="adm-form-hint">Bewaar de echte werfkoppeling voor werkbon, planning en rapportage.</div>
-    </div>
-    <div class="adm-form-group"><label>Weergavelocatie</label>
-      <input name="location" id="shiftLocation" placeholder="Adres of verzamelpunt" value="${esc(initialLocation || "")}">
-    </div>
+  <div class="adm-form-group"><label>Werf / locatie</label>
+    <select name="venueId" id="shiftVenue">
+      <option value="">Geen vaste werf</option>
+      ${venues.map(venue => `<option value="${venue.id}" ${selectedVenueId === venue.id ? "selected" : ""}>${esc(venue.name || venue.address || "Locatie")}</option>`).join("")}
+    </select>
+    <div class="adm-form-hint">Bewaar de echte werfkoppeling voor werkbon, planning en rapportage.</div>
+    ${legacyLocation ? `<div class="planning-legacy-location">Oude vrije locatie: <strong>${esc(legacyLocation)}</strong>. Kies een bestaande werf om dit record te normaliseren.</div>` : ""}
   </div>
   <div class="adm-form-group"><label>Notitie</label>
     <input name="note" placeholder="Optionele notitie" value="${esc(shift?.note||prefill.note||"")}">
@@ -2240,13 +2234,6 @@ ${emp ? `
 </form>`;
       openDrawer();
       document.getElementById("admShiftCancel").addEventListener("click", closeDrawer);
-      document.getElementById("shiftVenue")?.addEventListener("change", event => {
-        const venue = venues.find(row => row.id === event.target.value);
-        const location = document.getElementById("shiftLocation");
-        if (venue && location && (!location.value.trim() || location.value === initialLocation)) {
-          location.value = venue.address || venue.name || "";
-        }
-      });
 
       // Recurring toggle
       document.getElementById("shiftRecurring")?.addEventListener("change", e => {
@@ -2272,7 +2259,6 @@ ${emp ? `
         e.preventDefault();
         const body = Object.fromEntries(new FormData(e.target).entries());
         body.venueId = body.venueId || null;
-        body.location = String(body.location || "").trim();
         const errEl = document.getElementById("admShiftErr");
         const submitBtn = e.target.querySelector("[type=submit]");
         errEl.style.display = "none";
