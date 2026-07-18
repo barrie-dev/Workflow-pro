@@ -2140,6 +2140,7 @@ ${emp ? `
       document.getElementById("admDrawerTitle").textContent = isEdit ? "Shift bewerken" : "Shift toevoegen";
       document.getElementById("admDrawerBody").innerHTML = `
 <form id="admShiftForm">
+  <input type="hidden" name="workorderId" value="${esc(shift?.workorderId || prefill.workorderId || "")}">
   <div class="adm-form-row">
     <div class="adm-form-group"><label>Medewerker *</label>
       <select name="userId" required>
@@ -3919,20 +3920,25 @@ ${((window._wfpEnt && window._wfpEnt.modules) || []).includes("ai_estimate") ? `
       renderMats();
 
       document.getElementById("woCancel").addEventListener("click", closeDrawer);
-      document.getElementById("woMakeInvoice")?.addEventListener("click", () => {
-        closeDrawer();
-        // Factuurregel afleiden uit de werkbon: vaste prijs, of geklokte/ingevoerde uren × tarief.
-        const hrs = Number(workorder.billableHours || workorder.clockedHours || 0);
-        const rate = Number(workorder.hourlyRate || 0);
-        const line = workorder.fixedPrice != null
-          ? { description: workorder.title, qty: 1, unitPrice: Number(workorder.fixedPrice), vatRate: 21 }
-          : { description: `${workorder.title}${hrs ? ` (${hrs} u)` : ""}`, qty: hrs || 1, unitPrice: rate, vatRate: 21 };
-        openFactuurDrawer(null, {
-          prefillCustomerName: workorder.clientName || "",
-          prefillLines: [line],
-          prefillNotes: `Werkbon #${workorder.number || workorder.id.slice(-4)}`,
-          workorderId: workorder.id
-        });
+      document.getElementById("woMakeInvoice")?.addEventListener("click", async event => {
+        const button = event.currentTarget;
+        if (!confirm("Factuur maken van deze werkbon?\n\nUren, materiaal en factureerbare onkosten worden overgenomen en de koppeling blijft behouden.")) return;
+        const originalLabel = button.textContent;
+        button.disabled = true;
+        button.textContent = "Factuur maken…";
+        try {
+          const created = await api("POST", `/workorders/${workorder.id}/invoice`, {});
+          closeDrawer();
+          switchView("facturen");
+          window.showToast && window.showToast(`Factuur ${created.invoice?.number || ""} aangemaakt en gekoppeld`, "success");
+          if (created.invoice) setTimeout(() => openFactuurDrawer(created.invoice), 180);
+        } catch (err) {
+          button.disabled = false;
+          button.textContent = originalLabel;
+          const errEl = document.getElementById("woFormErr");
+          if (errEl) { errEl.textContent = err.message; errEl.style.display = "block"; }
+          else window.showToast(err.message, "error");
+        }
       });
       document.getElementById("woReport")?.addEventListener("click", async () => {
         try { const r = await api("GET", `/documents/workorder/${workorder.id}/render`); const w = window.open("", "_blank"); w.document.write(r.html); w.document.close(); }
@@ -3963,8 +3969,10 @@ ${((window._wfpEnt && window._wfpEnt.modules) || []).includes("ai_estimate") ? `
           .filter(m => String(m.description || "").trim() && Number(m.qty) > 0 && Number(m.unitPrice) > 0)
           .map(m => ({ description: String(m.description).trim(), qty: Number(m.qty), unitPrice: Number(m.unitPrice) }));
         try {
-          if (workorder) await api("PATCH", `/workorders/${workorder.id}`, body);
-          else await api("POST", "/workorders", body);
+          const saved = workorder
+            ? await api("PATCH", `/workorders/${workorder.id}`, body)
+            : await api("POST", "/workorders", body);
+          const savedWorkorder = saved.workorder || saved.row || workorder || null;
           const planAfterSave = !workorder && document.getElementById("woPlanAfterSave")?.checked;
           closeDrawer();
           if (planAfterSave) {
@@ -3973,7 +3981,13 @@ ${((window._wfpEnt && window._wfpEnt.modules) || []).includes("ai_estimate") ? `
             const openPlannedShift = () => {
               const d = window.wfpAdmin?.drawers;
               if (!d?.shift && tries++ < 25) return setTimeout(openPlannedShift, 120);
-              d?.shift?.({ userId:body.userId, date:body.scheduledDate, note:body.title, location:body.clientName });
+              d?.shift?.({
+                userId: body.userId,
+                date: body.scheduledDate,
+                note: body.title,
+                location: body.clientName,
+                workorderId: savedWorkorder?.id || ""
+              });
             };
             openPlannedShift();
           } else renderWorkorders();
@@ -4955,6 +4969,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
       });
       content.querySelector("#custNewInv")?.addEventListener("click", () => {
         openFactuurDrawer(null, {
+          customerId: customer.id,
           prefillCustomerName: customer.name,
           prefillCustomerVat: customer.vatNumber || "",
           prefillCustomerAddress: customer.address || ""
@@ -5921,7 +5936,7 @@ ${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(-
     <label>${tA("adm.thCustomer","Klant")} *</label>
     <select name="customerId" id="invCustSel" style="width:100%">
       <option value="">${tA("adm.quote.manualFill","- Handmatig invullen -")}</option>
-      ${customers.map(c => `<option value="${c.id}" ${invoice?.customerId===c.id?"selected":""}>${esc(c.name)}</option>`).join("")}
+      ${customers.map(c => `<option value="${c.id}" ${(invoice?.customerId || prefill.customerId)===c.id?"selected":""}>${esc(c.name)}</option>`).join("")}
     </select>
   </div>
   <div class="adm-form-group" id="invCustNameWrap">
