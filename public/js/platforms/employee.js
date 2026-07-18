@@ -1684,7 +1684,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
   </div>` : `
   <div style="padding:0 20px 8px;">
     <div style="background:var(--wf-green-l);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--wf-green);font-weight:600;">${t9("emp.wo.completedMsg","Werkbon voltooid")}${wo.completedAt?" · "+new Date(wo.completedAt).toLocaleDateString("nl-BE"):""}</div>
-    ${wo.completionNote?`<div style="margin-top:8px;font-size:12px;color:var(--gray-500);background:var(--gray-50);border-radius:6px;padding:8px;">${esc(wo.completionNote)}</div>`:""}
+    ${(wo.completionNote||wo.mobileNote)?`<div style="margin-top:8px;font-size:12px;color:var(--gray-500);background:var(--gray-50);border-radius:6px;padding:8px;white-space:pre-wrap;">${esc(wo.completionNote||wo.mobileNote)}</div>`:""}
   </div>`}
   <!-- Foto's sectie -->
   <div style="padding:0 20px;margin-top:12px;">
@@ -1759,17 +1759,20 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
         if (!note) { error.textContent = "Beschrijf kort welke werkzaamheden werden uitgevoerd."; error.style.display = "block"; return; }
         if (signedBy && !confirmed) { error.textContent = "Vink de bevestiging van de klant aan."; error.style.display = "block"; return; }
         try {
+          const completionText = [note, materials ? `Gebruikt materiaal:\n${materials}` : ""].filter(Boolean).join("\n\n");
+          if (signedBy && confirmed) {
+            await api("POST", `/mobile/workorders/${wo.id}/signature`, { signerName: signedBy });
+          }
           await api("PATCH", `/me/workorders/${wo.id}`, {
             status: "Voltooid",
-            completionNote: note,
-            completionMaterials: materials || undefined,
-            signedBy: signedBy || undefined,
-            customerConfirmed: !!(signedBy && confirmed),
-            signatureAt: signedBy && confirmed ? new Date().toISOString() : undefined
+            completionNote: completionText
           });
           window.showToast && window.showToast(t9("emp.wo.completedMsg","Werkbon voltooid"), "success");
           close(); renderWorkorders();
-        } catch(e) { window.showToast(e.message, "error"); }
+        } catch(e) {
+          if (error) { error.textContent = e.message; error.style.display = "block"; }
+          else window.showToast(e.message, "error");
+        }
       });
     });
   }
