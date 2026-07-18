@@ -92,7 +92,9 @@ test("employee: werkbon afronden vraagt uitvoering en ondersteunt klantbevestigi
   assert.match(source, /woCompletionNote/);
   assert.match(source, /woCompletionMaterials/);
   assert.match(source, /woCustomerConfirmed/);
-  assert.match(source, /signatureAt/);
+  assert.match(source, /\/mobile\/workorders\/\$\{wo\.id\}\/signature/);
+  assert.match(source, /completionNote: completionText/);
+  assert.match(source, /wo\.completionNote\|\|wo\.mobileNote/);
   assert.match(source, /Beschrijf kort welke werkzaamheden werden uitgevoerd/);
 });
 
