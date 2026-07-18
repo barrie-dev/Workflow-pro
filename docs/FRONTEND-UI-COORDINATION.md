@@ -171,3 +171,24 @@ Feedback voor de backendontwikkelaar:
 - Gebruik voor zware rapporten materialized views of vooraf berekende aggregaties met een zichtbare `generatedAt` en tijdzone. De UI moet kunnen tonen hoe recent de cijfers zijn.
 - Voor PDF/CSV op grote datasets is een asynchrone exportqueue wenselijk met `jobId`, `status`, `format`, `requestedAt`, `completedAt`, veilige download-URL en vervaltijd.
 - Autoriseer rapportsecties en exports server-side volgens tenant, rol en financieel recht; een verborgen kaart of knop is nooit een permissiecontrole.
+
+
+## Integraties en Automation Studio — frontendintegratie 2026-07-18
+
+Het bestaande Integratiecentrum is frontendmatig genormaliseerd rond providerstatus, verbinden, synchroniseren, Robaws-document-sync en sleutelbeheer. De UI gebruikt de bestaande integratieregistry en bouwt geen alternatieve credentialopslag of providersimulatie.
+
+| UI-flow | Bestaand contract | UI-gedrag |
+| --- | --- | --- |
+| Providercatalogus | `GET /integrations` | Groepeert providers per categorie en toont verbindings- en syncstatus. |
+| Verbinden/herverbinden | `POST /integrations/connect` | Verstuurt bestaande providerconfig; secrets worden nooit opnieuw zichtbaar gemaakt. |
+| Synchroniseren | `POST /integrations/:id/sync` | Toont voortgang en resultaat uit de bestaande syncrespons. |
+| Robaws-documenten | `POST /integrations/:id/sync-documents` | Toont bestaande project- en documenttotalen na synchronisatie. |
+
+Feedback voor de backendontwikkelaar:
+
+- Voor het bestaande Integratiecentrum is geen nieuw endpoint nodig; houd providerkeys, velden en statuswaarden stabiel en non-breaking.
+- Laat de backend secrets versleutelen, maskeren en roteren. De frontend mag nooit opgeslagen credentials teruglezen of als verbindingsbewijs behandelen.
+- Lever per sync een stabiele `runId`, `status`, `startedAt`, `completedAt`, `processed`, `failed`, foutcode en veilige samenvatting, zodat voortgang en retry betrouwbaar kunnen worden getoond.
+- Automation Studio heeft nog geen stabiele route of workflowcontract en is daarom bewust niet als nepflow toegevoegd. Voor frontendimplementatie is minimaal nodig: `GET/POST/PATCH /workflows`, versie/publicatiestatus, triggers, condities, acties, validatieresultaat en tenant-scoped run logs.
+- Een workflowactie moet alleen server-side toegestane actietypes en doelmodules kunnen gebruiken. Publiceren en uitvoeren vereisen auditmetadata, idempotentie en expliciete permissies.
+- Voorzie voor connector- en workflowfouten canonieke codes met `requestId`; vrije providertekst mag alleen ondersteunende context zijn.
