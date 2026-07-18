@@ -245,3 +245,21 @@ Feedback voor de backendontwikkelaar:
 - Blijf veldfouten leveren via `fieldErrors` met `code` en `requestId`, zodat langere formulieren de fout bij de juiste sectie kunnen tonen.
 - Voor conceptdocumenten is later server-side draftopslag/autosave wenselijk; de frontend simuleert dit nu bewust niet.
 - Documenttotalen, btw-regimes, nummering en eindstatus blijven uitsluitend server-side bron van waarheid.
+
+
+## Manager, medewerker en mobiel — frontendintegratie 2026-07-18
+
+De rolomgevingen zijn opnieuw op een leesbare productschaal gebracht. De managercockpit gebruikt minimaal 12–14 px voor dagelijkse context, KPI-labels, tabellen en acties; de eerdere microtekst van 7,5–10 px is verwijderd uit de kerncomponenten. Managerformulieren gebruiken tot 760 px. Medewerkerkaarten, werkbonstappen, formulieren en statusinformatie zijn vergroot; desktop-sheets gebruiken tot 720 px en mobiele sheets benutten de volledige schermbreedte.
+
+Dagelijkse flows die expliciet zijn geborgd:
+
+- Manager: dagstart, uitzonderingen, team, planning, prikcorrecties, verlof, onkosten en werkbonopvolging.
+- Medewerker: vandaag, inklokken/pauzeren/uitklokken, planning, werkbon starten en afronden, klantbevestiging, verlof en onkosten.
+- Mobiel: éénkolomsformulieren, volledige breedte voor sheets, grotere touchdoelen en een horizontaal scrollbare maar leesbare werkbonstatus.
+
+Feedback voor de backendontwikkelaar:
+
+- Deze release verandert geen endpoints of autorisatie; server-side rol- en tenant-scoping blijven leidend.
+- Houd manageroverzichten compact in aantal requests. Een toekomstig tenant-scoped dagstartcontract kan uitzonderingen server-side prioriteren zonder dat de frontend bedrijfsregels dupliceert.
+- Lever klok-, verlof-, onkosten- en werkbonconflicten met canonieke `code`, `fieldErrors`, conflictcontext en `requestId`.
+- Mobiele mutaties moeten idempotent blijven en dezelfde offline-sync-id accepteren; de UI mag bij een netwerkherhaling geen dubbele registratie veroorzaken.
