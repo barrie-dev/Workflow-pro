@@ -3997,189 +3997,305 @@ ${((window._wfpEnt && window._wfpEnt.modules) || []).includes("ai_estimate") ? `
     }).catch(err => window.showToast(err.message, "error"));
   }
 
+
   // ── Messages ───────────────────────────────────────────────
   let _msgVenueFilter = "";
+  let _msgSearch = "";
+
+  const messageRecipientLabel = (message, employees) => {
+    if (message.recipientId) {
+      const employee = employees.find(row => row.id === message.recipientId);
+      return employee ? (employee.name || employee.email || "Persoonlijk") : "Persoonlijk";
+    }
+    if (message.toRole === "employee") return "Alle medewerkers";
+    if (message.toRole === "manager") return "Alle managers";
+    if (message.toRole === "tenant_admin") return "Beheerders";
+    return "Iedereen";
+  };
+  const messageInitials = value => String(value || "?").split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join("").toUpperCase();
+  const messageTime = value => value ? new Date(value).toLocaleString("nl-BE", { dateStyle: "medium", timeStyle: "short" }) : "";
+  const messagePreview = value => {
+    const text = String(value || "").replace(/\s+/g, " ").trim();
+    return text.length > 150 ? `${text.slice(0, 147)}…` : text;
+  };
+
   async function renderMessages() {
-    const [data, vdata] = await Promise.all([
-      api("GET", _msgVenueFilter ? `/messages?venueId=${encodeURIComponent(_msgVenueFilter)}` : "/messages"),
-      api("GET", "/venues").catch(() => ({ venues: [] }))
-    ]);
-    const messages = data.messages || data || [];
-    const venues = vdata.venues || vdata.rows || [];
-    const venueName = id => (venues.find(v => v.id === id) || {}).name || (id ? "Werf" : "-");
-
-    const toLabel = m => {
-      if (m.recipientId) return `Persoonlijk`;
-      if (m.toRole === "all") return "Alle medewerkers";
-      if (m.toRole === "employee") return "Medewerkers";
-      if (m.toRole === "manager") return "Managers";
-      return "Iedereen";
-    };
-
     const content = document.getElementById("admContent");
-    content.innerHTML = `
-<div class="adm-card">
-  <div class="adm-card-header" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-    <h3 class="adm-card-title">Berichten <span style="background:var(--wf-blue-l);color:var(--wf-blue);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${messages.length}</span></h3>
-    <label style="font-size:12px;color:var(--gray-600);display:flex;align-items:center;gap:6px">Werf-chat:
-      <select id="admMsgVenueFilter" class="adm-input" style="max-width:200px">
-        <option value="">Alle berichten</option>
-        ${venues.map(v => `<option value="${esc(v.id)}" ${_msgVenueFilter === v.id ? "selected" : ""}>${esc(v.name || v.id)}</option>`).join("")}
-      </select>
-    </label>
-  </div>
-  <div class="adm-card-body adm-table-wrap">
-    <table class="adm-table">
-      <thead><tr><th>Van</th><th>Aan</th><th>Werf</th><th>Onderwerp</th><th>Bericht</th><th>Datum</th><th>Acties</th></tr></thead>
-      <tbody>
-        ${messages.length ? messages.map(m => `
-        <tr>
-          <td>${esc(m.senderName||m.senderId||"Systeem")}</td>
-          <td><span style="font-size:11px;background:var(--gray-100);border-radius:4px;padding:2px 6px;">${toLabel(m)}</span></td>
-          <td>${m.venueId ? `<span style="font-size:11px;background:var(--wf-yellow-l);color:var(--wf-yellow);border-radius:4px;padding:2px 6px;">${esc(venueName(m.venueId))}</span>` : '<span style="color:var(--gray-300)">-</span>'}</td>
-          <td style="font-weight:500;">${esc(m.subject||"-")}</td>
-          <td style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--gray-500);font-size:12px;" title="${esc(m.body||m.message||"")}">${esc(m.body||m.message||"-")}</td>
-          <td style="white-space:nowrap;font-size:12px;color:var(--gray-400);">${m.createdAt?.slice(0,16)||""}</td>
-          <td>
-            <button class="adm-btn adm-btn-secondary adm-btn-sm adm-msg-view" data-id="${esc(m.id)}" title="Bekijk bericht">Bekijk</button>
-            <button class="adm-btn adm-btn-danger adm-btn-sm adm-msg-del" data-id="${esc(m.id)}" title="Verwijder" style="margin-left:4px;"><svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>
-          </td>
-        </tr>`).join("") : `<tr><td colspan="7" class="adm-empty">${_msgVenueFilter ? "Nog geen berichten in deze werf-chat" : "Geen berichten"}</td></tr>`}
-      </tbody>
-    </table>
-  </div>
-</div>`;
+    try {
+      const [data, venueData, employeeData] = await Promise.all([
+        api("GET", "/messages"),
+        api("GET", "/venues").catch(() => ({ venues: [] })),
+        api("GET", "/employees").catch(() => ({ employees: [] }))
+      ]);
+      const messages = data.messages || [];
+      const venues = venueData.venues || venueData.rows || [];
+      const employees = employeeData.employees || [];
+      if (employees.length) _state.employees = employees;
 
-    document.getElementById("admMsgVenueFilter")?.addEventListener("change", e => { _msgVenueFilter = e.target.value; renderMessages(); });
+      const venueName = id => (venues.find(venue => venue.id === id) || {}).name || "Onbekende werf";
+      const generalCount = messages.filter(message => !message.venueId).length;
+      const venueThreads = venues.map(venue => {
+        const threadMessages = messages.filter(message => message.venueId === venue.id);
+        return {
+          ...venue,
+          count: threadMessages.length,
+          lastAt: threadMessages[0]?.createdAt || ""
+        };
+      }).filter(thread => thread.count > 0 || thread.active !== false)
+        .sort((a, b) => (b.lastAt || "").localeCompare(a.lastAt || "") || String(a.name || "").localeCompare(String(b.name || "")));
 
-    content.querySelectorAll(".adm-msg-view").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const msg = messages.find(m => m.id === btn.dataset.id);
-        if (!msg) return;
-        const overlay = document.createElement("div");
-        overlay.style.cssText = "position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:1200;display:flex;align-items:center;justify-content:center;padding:16px;";
-        overlay.innerHTML = `
-<div style="background:#fff;border-radius:16px;width:100%;max-width:480px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.2);">
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
-    <div>
-      <div style="font-size:16px;font-weight:600;color:var(--gray-900);">${esc(msg.subject||"Bericht")}</div>
-      <div style="font-size:12px;color:var(--gray-500);margin-top:4px;">Van: <strong>${esc(msg.senderName||msg.senderId||"?")}</strong> · ${toLabel(msg)} · ${msg.createdAt?.slice(0,16)||""}</div>
+      const selectedMessages = messages.filter(message => {
+        if (_msgVenueFilter === "general") return !message.venueId;
+        if (_msgVenueFilter) return message.venueId === _msgVenueFilter;
+        return true;
+      }).filter(message => {
+        if (!_msgSearch) return true;
+        const haystack = `${message.subject || ""} ${message.body || ""} ${message.senderName || ""} ${messageRecipientLabel(message, employees)}`.toLowerCase();
+        return haystack.includes(_msgSearch.toLowerCase());
+      });
+      const selectedTitle = _msgVenueFilter === "general"
+        ? "Algemene berichten"
+        : _msgVenueFilter
+          ? venueName(_msgVenueFilter)
+          : "Alle berichten";
+      const selectedSubtitle = _msgVenueFilter
+        ? "Gesprekken en afspraken binnen deze werfcontext."
+        : "Alle interne communicatie, van algemeen tot werfgebonden.";
+
+      content.innerHTML = `
+<div class="message-workspace">
+  <aside class="message-threads">
+    <div class="message-threads-head">
+      <div><span>Communicatie</span><h3>Gesprekken</h3></div>
+      <button class="adm-btn adm-btn-primary adm-btn-sm" id="msgQuickCompose">Nieuw</button>
     </div>
-    <button id="msgViewClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--gray-400);padding:0;line-height:1;">×</button>
-  </div>
-  <div style="background:var(--gray-50);border-radius:10px;padding:14px;font-size:14px;line-height:1.6;color:var(--gray-700);white-space:pre-wrap;">${esc(msg.body||msg.message||"")}</div>
-  <div style="margin-top:16px;display:flex;justify-content:flex-end;">
-    <button id="msgViewOk" class="adm-btn adm-btn-primary adm-btn-sm">Sluiten</button>
-  </div>
-</div>`;
-        document.body.appendChild(overlay);
-        const close = () => overlay.remove();
-        document.getElementById("msgViewClose").addEventListener("click", close);
-        document.getElementById("msgViewOk").addEventListener("click", close);
-        overlay.addEventListener("click", e => { if (e.target === overlay) close(); });
-      });
-    });
+    <button class="message-thread ${!_msgVenueFilter ? "active" : ""}" data-thread="">
+      <span class="message-thread-icon">✦</span>
+      <span><strong>Alle berichten</strong><small>Volledig overzicht</small></span>
+      <b>${messages.length}</b>
+    </button>
+    <button class="message-thread ${_msgVenueFilter === "general" ? "active" : ""}" data-thread="general">
+      <span class="message-thread-icon">M</span>
+      <span><strong>Algemeen</strong><small>Zonder werfkoppeling</small></span>
+      <b>${generalCount}</b>
+    </button>
+    <div class="message-thread-label">Werven</div>
+    <div class="message-thread-list">
+      ${venueThreads.length ? venueThreads.map(thread => `<button class="message-thread ${_msgVenueFilter === thread.id ? "active" : ""}" data-thread="${thread.id}">
+        <span class="message-thread-icon">${messageInitials(thread.name)}</span>
+        <span><strong>${esc(thread.name || "Werf")}</strong><small>${thread.lastAt ? `Laatste · ${messageTime(thread.lastAt)}` : "Nog geen berichten"}</small></span>
+        <b>${thread.count}</b>
+      </button>`).join("") : `<div class="message-thread-empty">Nog geen werven beschikbaar.</div>`}
+    </div>
+  </aside>
 
-    content.querySelectorAll(".adm-msg-del").forEach(btn => {
-      btn.addEventListener("click", async () => {
-        if (!confirm("Bericht verwijderen?")) return;
-        btn.disabled = true; btn.textContent = "…";
-        try {
-          await api("DELETE", `/messages/${btn.dataset.id}`);
-          renderMessages();
-        } catch(e) { window.showToast(e.message, "error"); btn.disabled = false; btn.textContent = ""; }
+  <section class="message-stream-panel">
+    <div class="message-stream-head">
+      <div><span>${_msgVenueFilter ? "Gesprek" : "Inbox"}</span><h3>${esc(selectedTitle)}</h3><p>${selectedSubtitle}</p></div>
+      <div class="message-stream-tools">
+        <input id="msgSearch" class="adm-input" value="${esc(_msgSearch)}" placeholder="Zoek in berichten…">
+        <button class="adm-btn adm-btn-primary" id="msgCompose">Nieuw bericht</button>
+      </div>
+    </div>
+
+    <div class="message-stream" id="messageStream">
+      ${selectedMessages.length ? selectedMessages.map(message => {
+        const bodyText = message.body || message.message || "";
+        const venue = message.venueId ? venueName(message.venueId) : "";
+        return `<article class="message-card" data-id="${message.id}">
+          <button class="message-card-main msg-toggle" data-id="${message.id}" aria-expanded="false">
+            <span class="message-avatar">${messageInitials(message.senderName || message.senderId)}</span>
+            <span class="message-card-copy">
+              <span class="message-card-meta"><strong>${esc(message.senderName || message.senderId || "Systeem")}</strong><small>${messageTime(message.createdAt)}</small></span>
+              <span class="message-card-title">${esc(message.subject || "Bericht")}</span>
+              <span class="message-card-preview">${esc(messagePreview(bodyText) || "Geen inhoud")}</span>
+              <span class="message-card-tags"><em>${esc(messageRecipientLabel(message, employees))}</em>${venue ? `<em class="message-venue-tag">${esc(venue)}</em>` : ""}</span>
+            </span>
+            <span class="message-chevron">⌄</span>
+          </button>
+          <div class="message-card-detail" hidden>
+            <div class="message-card-body">${esc(bodyText || "Geen inhoud")}</div>
+            <div class="message-card-actions">
+              <span>Verzonden door ${esc(message.senderName || message.senderId || "Systeem")}</span>
+              <button class="adm-btn adm-btn-danger adm-btn-sm adm-msg-del" data-id="${message.id}">Verwijderen</button>
+            </div>
+          </div>
+        </article>`;
+      }).join("") : `<div class="message-empty"><div class="message-empty-icon">✦</div><h4>${_msgSearch ? "Geen zoekresultaten" : "Nog geen berichten"}</h4><p>${_msgSearch ? "Pas uw zoekterm aan of kies een ander gesprek." : "Start de communicatie met een duidelijk bericht aan uw team."}</p><button class="adm-btn adm-btn-primary" id="msgEmptyCompose">Nieuw bericht</button></div>`}
+    </div>
+  </section>
+</div>`;
+
+      content.querySelectorAll(".message-thread").forEach(button => button.addEventListener("click", () => {
+        _msgVenueFilter = button.dataset.thread || "";
+        _msgSearch = "";
+        renderMessages();
+      }));
+      document.getElementById("msgSearch")?.addEventListener("input", event => {
+        _msgSearch = event.target.value;
+        clearTimeout(window._msgSearchTimer);
+        window._msgSearchTimer = setTimeout(renderMessages, 180);
       });
-    });
+      const compose = () => openMessageDrawer({ venueId: _msgVenueFilter && _msgVenueFilter !== "general" ? _msgVenueFilter : "" });
+      document.getElementById("msgQuickCompose")?.addEventListener("click", compose);
+      document.getElementById("msgCompose")?.addEventListener("click", compose);
+      document.getElementById("msgEmptyCompose")?.addEventListener("click", compose);
+
+      content.querySelectorAll(".msg-toggle").forEach(button => button.addEventListener("click", () => {
+        const card = button.closest(".message-card");
+        const detail = card?.querySelector(".message-card-detail");
+        const expanded = button.getAttribute("aria-expanded") === "true";
+        button.setAttribute("aria-expanded", String(!expanded));
+        if (detail) detail.hidden = expanded;
+        card?.classList.toggle("expanded", !expanded);
+      }));
+
+      content.querySelectorAll(".adm-msg-del").forEach(button => button.addEventListener("click", async () => {
+        if (!confirm("Bericht permanent verwijderen?")) return;
+        button.disabled = true;
+        try {
+          await api("DELETE", `/messages/${button.dataset.id}`);
+          window.showToast("Bericht verwijderd.", "success");
+          renderMessages();
+        } catch (error) {
+          button.disabled = false;
+          window.showToast(error.message, "error");
+        }
+      }));
+    } catch (error) {
+      content.innerHTML = `<div style="padding:24px;color:var(--wf-red)">${esc(error.message)}</div>`;
+    }
   }
 
-  function openMessageDrawer() {
+  function openMessageDrawer(prefill = {}) {
     const employeesReady = _state.employees && _state.employees.length > 0
       ? Promise.resolve({ employees: _state.employees })
-      : api("GET", "/employees");
+      : api("GET", "/employees").catch(() => ({ employees: [] }));
 
-    Promise.all([employeesReady, api("GET", "/venues").catch(() => ({ venues: [] }))]).then(([data, vdata]) => {
-      const employees = data.employees || [];
+    Promise.all([employeesReady, api("GET", "/venues").catch(() => ({ venues: [] }))]).then(([employeeData, venueData]) => {
+      const employees = employeeData.employees || [];
+      const venues = venueData.venues || venueData.rows || [];
       _state.employees = employees;
-      const venues = vdata.venues || vdata.rows || [];
-      const title = document.getElementById("admDrawerTitle");
-      const body = document.getElementById("admDrawerBody");
-      title.textContent = "Nieuw bericht";
-      body.innerHTML = `
-<form id="admMsgForm">
-  <div class="adm-form-group"><label>Sturen naar</label>
-    <select name="toMode" id="admMsgToMode" style="margin-bottom:8px;">
-      <option value="all">Alle medewerkers</option>
-      <option value="role_employee">Alleen medewerkers (rol: employee)</option>
-      <option value="role_manager">Alleen managers</option>
-      <option value="person">Specifieke persoon</option>
-    </select>
-    <select name="recipientId" id="admMsgRecipient" style="display:none;">
-      <option value="">- Kies persoon -</option>
-      ${employees.map(u => `<option value="${esc(u.id)}">${esc(u.name || u.email)} (${esc(u.role||"")})</option>`).join("")}
-    </select>
+      document.getElementById("admDrawerTitle").textContent = "Nieuw bericht";
+      document.getElementById("admDrawerBody").innerHTML = `
+<form id="admMsgForm" class="message-compose-form">
+  <div class="message-compose-intro">
+    <span>Teamcommunicatie</span>
+    <h3>Schrijf een helder bericht</h3>
+    <p>Kies wie het bericht ontvangt en voeg indien nodig de werfcontext toe. Het bericht verschijnt meteen in de juiste gespreksstroom.</p>
   </div>
-  <div class="adm-form-group"><label>Werf (optioneel · voor werf-chat)</label>
-    <select name="venueId" id="admMsgVenue">
-      <option value="">- Algemeen (geen werf) -</option>
-      ${venues.map(v => `<option value="${esc(v.id)}">${esc(v.name || v.id)}</option>`).join("")}
-    </select>
+
+  <div class="adm-form-section">Ontvangers en context</div>
+  <div class="message-compose-grid">
+    <div class="adm-form-group">
+      <label>Sturen naar *</label>
+      <select name="toMode" id="admMsgToMode">
+        <option value="all">Iedereen</option>
+        <option value="role_employee">Alle medewerkers</option>
+        <option value="role_manager">Alle managers</option>
+        <option value="person">Specifieke persoon</option>
+      </select>
+    </div>
+    <div class="adm-form-group" id="admMsgRecipientGroup" hidden>
+      <label>Persoon *</label>
+      <select name="recipientId" id="admMsgRecipient">
+        <option value="">Kies een persoon</option>
+        ${employees.filter(employee => employee.active !== false).map(employee => `<option value="${employee.id}">${esc(employee.name || employee.email)} · ${esc(employee.role || "")}</option>`).join("")}
+      </select>
+    </div>
+    <div class="adm-form-group">
+      <label>Werfcontext</label>
+      <select name="venueId" id="admMsgVenue">
+        <option value="">Algemeen · geen werf</option>
+        ${venues.map(venue => `<option value="${venue.id}" ${prefill.venueId === venue.id ? "selected" : ""}>${esc(venue.name || "Werf")}</option>`).join("")}
+      </select>
+      <div class="adm-form-hint">Maakt het bericht zichtbaar in het gesprek van deze werf.</div>
+    </div>
   </div>
-  <div class="adm-form-group"><label>Onderwerp</label><input name="subject" required placeholder="Onderwerp van het bericht"></div>
-  <div class="adm-form-group"><label>Bericht *</label><textarea name="body" rows="5" required placeholder="Schrijf hier je bericht…" style="width:100%;resize:vertical;box-sizing:border-box"></textarea></div>
-  <div id="admMsgErr" style="display:none;color:var(--wf-red);font-size:12px;padding-bottom:4px;"></div>
+
+  <div class="adm-form-section">Bericht</div>
+  <div class="adm-form-group"><label>Onderwerp *</label><input name="subject" required maxlength="160" placeholder="Een korte, herkenbare titel"></div>
+  <div class="adm-form-group"><label>Bericht *</label><textarea name="body" rows="9" required placeholder="Schrijf de afspraak, vraag of update zo concreet mogelijk…"></textarea><div class="message-compose-counter"><span id="msgCharCount">0</span> tekens</div></div>
+  <div id="admMsgErr" class="message-compose-error" hidden></div>
+
+  <div class="message-compose-preview" id="msgComposePreview">
+    <span>Voorbeeld</span>
+    <strong>Nog geen onderwerp</strong>
+    <p>Uw bericht verschijnt hier terwijl u schrijft.</p>
+  </div>
+
   <div class="adm-form-actions">
     <button type="button" class="adm-btn adm-btn-secondary" id="admMsgCancel">Annuleren</button>
-    <button type="submit" class="adm-btn adm-btn-primary">Verzenden</button>
+    <button type="submit" class="adm-btn adm-btn-primary" id="admMsgSubmit">Bericht verzenden</button>
   </div>
 </form>`;
       openDrawer();
-      document.getElementById("admMsgCancel").addEventListener("click", closeDrawer);
 
-      // Show/hide person picker based on toMode
-      document.getElementById("admMsgToMode").addEventListener("change", e => {
-        document.getElementById("admMsgRecipient").style.display = e.target.value === "person" ? "" : "none";
-      });
+      const form = document.getElementById("admMsgForm");
+      const mode = document.getElementById("admMsgToMode");
+      const recipientGroup = document.getElementById("admMsgRecipientGroup");
+      const recipient = document.getElementById("admMsgRecipient");
+      const subject = form.querySelector('[name="subject"]');
+      const messageBody = form.querySelector('[name="body"]');
+      const preview = document.getElementById("msgComposePreview");
 
-      document.getElementById("admMsgForm").addEventListener("submit", async e => {
-        e.preventDefault();
-        const fd = new FormData(e.target);
+      const updateRecipient = () => {
+        const personal = mode.value === "person";
+        recipientGroup.hidden = !personal;
+        recipient.required = personal;
+      };
+      const updatePreview = () => {
+        document.getElementById("msgCharCount").textContent = String(messageBody.value.length);
+        preview.querySelector("strong").textContent = subject.value.trim() || "Nog geen onderwerp";
+        preview.querySelector("p").textContent = messagePreview(messageBody.value) || "Uw bericht verschijnt hier terwijl u schrijft.";
+      };
+      mode.addEventListener("change", updateRecipient);
+      subject.addEventListener("input", updatePreview);
+      messageBody.addEventListener("input", updatePreview);
+      updateRecipient();
+      updatePreview();
+
+      document.getElementById("admMsgCancel")?.addEventListener("click", closeDrawer);
+      form.addEventListener("submit", async event => {
+        event.preventDefault();
+        const fd = new FormData(form);
         const toMode = fd.get("toMode");
-        const errEl = document.getElementById("admMsgErr");
-        errEl.style.display = "none";
-
-        const body = {
-          subject: fd.get("subject"),
-          body: fd.get("body"),
+        const error = document.getElementById("admMsgErr");
+        const payload = {
+          subject: String(fd.get("subject") || "").trim(),
+          body: String(fd.get("body") || "").trim(),
           venueId: fd.get("venueId") || null
         };
+        if (toMode === "person") payload.recipientId = fd.get("recipientId");
+        if (toMode === "role_employee") payload.toRole = "employee";
+        if (toMode === "role_manager") payload.toRole = "manager";
 
-        if (toMode === "person") {
-          const rid = fd.get("recipientId");
-          if (!rid) { errEl.textContent = "Kies een ontvanger."; errEl.style.display = ""; return; }
-          body.recipientId = rid;
-        } else if (toMode === "role_employee") {
-          body.toRole = "employee";
-          body.toName = "Alle medewerkers";
-        } else if (toMode === "role_manager") {
-          body.toRole = "manager";
-          body.toName = "Alle managers";
+        if (toMode === "person" && !payload.recipientId) {
+          error.hidden = false;
+          error.textContent = "Kies een ontvanger.";
+          return;
         }
-        // toMode === "all" → no recipientId/toRole → server broadcasts
-
-        const submitBtn = e.target.querySelector("[type=submit]");
-        submitBtn.disabled = true; submitBtn.textContent = "Verzenden…";
+        const submit = document.getElementById("admMsgSubmit");
+        submit.disabled = true;
+        submit.textContent = "Verzenden…";
         try {
-          await api("POST", "/messages", body);
+          await api("POST", "/messages", payload);
           closeDrawer();
-          window.showToast && window.showToast("Bericht verzonden", "success");
+          _msgVenueFilter = payload.venueId || "";
+          _msgSearch = "";
+          window.showToast("Bericht verzonden.", "success");
           renderMessages();
-        } catch (err) {
-          errEl.textContent = err.message; errEl.style.display = "";
-          submitBtn.disabled = false; submitBtn.textContent = "Verzenden";
+        } catch (sendError) {
+          error.hidden = false;
+          error.textContent = sendError.message;
+          submit.disabled = false;
+          submit.textContent = "Bericht verzenden";
         }
       });
-    }).catch(err => window.showToast(err.message, "error"));
+    }).catch(error => window.showToast(error.message, "error"));
   }
+
+
 
   // ── Reports ────────────────────────────────────────────────
   async function renderReports() {
