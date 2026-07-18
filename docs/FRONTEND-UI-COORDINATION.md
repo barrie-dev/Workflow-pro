@@ -265,11 +265,11 @@ Feedback voor de backendontwikkelaar:
 - Mobiele mutaties moeten idempotent blijven en dezelfde offline-sync-id accepteren; de UI mag bij een netwerkherhaling geen dubbele registratie veroorzaken.
 
 
-## Frontendroadmap afgerond — status 2026-07-18
+## Frontendroadmap visueel afgerond — functionele audit actief · status 2026-07-18
 
-De afgesproken SaaS-UI-roadmap is frontendmatig afgerond en door regressietests geborgd.
+De afgesproken SaaS-UI-roadmap is visueel en structureel afgerond. Dit betekent nog niet dat elke domeinflow als volledige browser-E2E is bewezen. De functionele audit controleert daarom expliciet of schermacties dezelfde klant-, offerte-, werkbon-, planning- en factuur-ID's blijven doorgeven.
 
-| Roadmapgebied | Frontendstatus |
+| Roadmapgebied | Visuele/structurele status |
 | --- | --- |
 | Login, trial, registratie en reseller | Afgerond |
 | Dagstart, actiecentrum en planning | Afgerond |
@@ -291,4 +291,27 @@ Backend-/providerafhankelijkheden die geen onafgewerkte frontend voorstellen:
 - Eventuele server-side rapportageaggregaties, asynchrone exports en AI-streaming.
 - Productievalidatie van Stripe, Peppol, SSO en externe connectors.
 
-Eindvalidatie frontend: de volledige Node-testsuite slaagt met **391/391 tests**. Nieuwe UI mag deze regressies niet omzeilen; gedeelde bestanden blijven eerst vergelijken met actuele `main` om parallel backendwerk te behouden.
+Eindvalidatie van de vorige visuele release: de volledige Node-testsuite sloeg met **391/391 tests**. Dit zijn regressie- en contracttests, geen volledige geauthenticeerde browser-E2E. Nieuwe UI mag deze regressies niet omzeilen; gedeelde bestanden blijven eerst vergelijken met actuele `main` om parallel backendwerk te behouden.
+
+## Functionele golden-flowkoppelingen — frontendintegratie 2026-07-18
+
+De eerste functionele audit heeft drie losgekoppelde schermovergangen hersteld:
+
+- Een factuur die vanuit een klantdossier wordt gestart, bewaart nu ook de `customerId`; de klantnaam alleen is niet langer de enige koppeling.
+- Een nieuwe werkbon die met “meteen inplannen” wordt opgeslagen, gebruikt de door de server teruggegeven werkbon-ID en geeft die als `workorderId` mee aan de shift.
+- Factureren vanuit een afgeronde werkbon gebruikt het canonieke `POST /workorders/{id}/invoice`-contract. Daardoor worden factuur, werkbon, materiaal en factureerbare onkosten server-side in één domeinactie gekoppeld.
+
+Frontendcontract:
+
+- UI-prefill is nooit de bron van waarheid voor IDs; de serverresponse van de create-actie bepaalt de vervolgkoppeling.
+- De planningeditor bewaart een bestaande `workorderId` ook bij bewerken.
+- De factuurklantselector ondersteunt zowel bestaande facturen als een prefill vanuit het klantdossier.
+- Bij een mislukte vervolgactie blijft de fout zichtbaar in de actieve editor en wordt de actieknop opnieuw bruikbaar.
+
+Feedback voor de backendontwikkelaar:
+
+- Behoud in `POST /workorders` de responsevorm `{ workorder: { id } }`; de frontend accepteert tijdelijk ook `row` als compatibiliteitsfallback.
+- Behoud `workorderId` op planning create/update en laat klokregistraties deze koppeling erven.
+- `POST /workorders/{id}/invoice` blijft de enige canonieke werkbonfacturatieactie, inclusief idempotentie/conflict bij reeds gefactureerde werkbonnen.
+- Lever bij 409/422 een stabiele `code`, `fieldErrors` en `requestId`, zodat de editor de oorzaak kan tonen zonder tekstinterpretatie.
+
