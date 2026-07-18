@@ -161,6 +161,106 @@ test("rechten: zonder token overal 401", async () => {
   assert.equal(r.status, 401);
 });
 
+test("golden flow: klant → offerte → werkbon → planning → factuur bewaart alle koppelingen", async () => {
+  const admin = await login("admin@demobouw.be", "Demo2026!");
+  assert.ok(admin.token, "admin-login moet slagen");
+  const H = { Authorization: `Bearer ${admin.token}`, "Content-Type": "application/json" };
+  const stamp = Date.now().toString(36);
+
+  const customerResponse = await fetch(`${BASE}/api/tenants/t_demo/customers`, {
+    method: "POST",
+    headers: H,
+    body: JSON.stringify({
+      name: `Golden klant ${stamp}`,
+      email: `golden-${stamp}@example.be`,
+      vatNumber: "BE0417497106",
+      address: "Testlaan 1, 1000 Brussel"
+    })
+  });
+  assert.equal(customerResponse.status, 201);
+  const customer = (await customerResponse.json()).customer;
+  assert.ok(customer?.id, "klant-ID ontvangen");
+
+  const quoteResponse = await fetch(`${BASE}/api/tenants/t_demo/offertes`, {
+    method: "POST",
+    headers: H,
+    body: JSON.stringify({
+      customerId: customer.id,
+      customerName: customer.name,
+      customerVatNumber: customer.vatNumber,
+      customerAddress: customer.address,
+      lines: [{ description: "Golden flow uitvoering", qty: 2, unitPrice: 75, vatRate: 21 }]
+    })
+  });
+  assert.equal(quoteResponse.status, 201);
+  const quote = (await quoteResponse.json()).quote;
+  assert.equal(quote.customerId, customer.id, "offerte blijft aan de klant gekoppeld");
+
+  const acceptResponse = await fetch(`${BASE}/api/tenants/t_demo/offertes/${quote.id}`, {
+    method: "PATCH",
+    headers: H,
+    body: JSON.stringify({ status: "aanvaard" })
+  });
+  assert.equal(acceptResponse.status, 200);
+
+  const convertResponse = await fetch(`${BASE}/api/tenants/t_demo/offertes/${quote.id}/convert`, {
+    method: "POST",
+    headers: H,
+    body: JSON.stringify({ target: "workorder" })
+  });
+  assert.equal(convertResponse.status, 201);
+  const workorder = (await convertResponse.json()).workorder;
+  assert.equal(workorder.customerId, customer.id, "werkbon blijft aan de klant gekoppeld");
+  assert.equal(workorder.quoteId, quote.id, "werkbon blijft aan de offerte gekoppeld");
+
+  const date = "2028-09-18";
+  const workorderUpdate = await fetch(`${BASE}/api/tenants/t_demo/workorders/${workorder.id}`, {
+    method: "PATCH",
+    headers: H,
+    body: JSON.stringify({
+      userId: "u_emp1",
+      scheduledDate: date,
+      status: "Voltooid",
+      billable: true,
+      billableHours: 2,
+      hourlyRate: 75
+    })
+  });
+  assert.equal(workorderUpdate.status, 200);
+
+  const planningResponse = await fetch(`${BASE}/api/tenants/t_demo/planning`, {
+    method: "POST",
+    headers: H,
+    body: JSON.stringify({
+      userId: "u_emp1",
+      workorderId: workorder.id,
+      date,
+      start: "08:00",
+      end: "10:00",
+      note: workorder.title
+    })
+  });
+  assert.equal(planningResponse.status, 201);
+  const shift = (await planningResponse.json()).shift;
+  assert.equal(shift.workorderId, workorder.id, "planning blijft aan de werkbon gekoppeld");
+
+  const invoiceResponse = await fetch(`${BASE}/api/tenants/t_demo/workorders/${workorder.id}/invoice`, {
+    method: "POST",
+    headers: H,
+    body: "{}"
+  });
+  assert.equal(invoiceResponse.status, 201);
+  const invoiced = await invoiceResponse.json();
+  assert.equal(invoiced.invoice.customerId, customer.id, "factuur blijft aan de klant gekoppeld");
+  assert.equal(invoiced.invoice.workorderId, workorder.id, "factuur blijft aan de werkbon gekoppeld");
+  assert.equal(invoiced.workorder.invoiceId, invoiced.invoice.id, "werkbon verwijst terug naar de factuur");
+
+  const invoices = await (await fetch(`${BASE}/api/tenants/t_demo/facturen`, { headers: H })).json();
+  const storedInvoice = invoices.invoices.find(row => row.id === invoiced.invoice.id);
+  assert.equal(storedInvoice?.customerId, customer.id);
+  assert.equal(storedInvoice?.workorderId, workorder.id);
+});
+
 // ── Klantbril-QA: heldere, Nederlandse foutmeldingen ──
 test("login met fout wachtwoord → 401 met Nederlandse melding", async () => {
   const r = await fetch(`${BASE}/api/auth/login`, {

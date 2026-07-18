@@ -307,6 +307,7 @@ Frontendcontract:
 - De planningeditor bewaart een bestaande `workorderId` ook bij bewerken.
 - De factuurklantselector ondersteunt zowel bestaande facturen als een prefill vanuit het klantdossier.
 - Bij een mislukte vervolgactie blijft de fout zichtbaar in de actieve editor en wordt de actieknop opnieuw bruikbaar.
+- De volledige domeinketen wordt als HTTP-smoketest uitgevoerd met echte create-, convert-, planning- en invoice-endpoints; de test controleert beide richtingen van de werkbon/factuurkoppeling.
 
 Feedback voor de backendontwikkelaar:
 
