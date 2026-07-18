@@ -449,7 +449,7 @@
 .emp-clock-stats { display: flex; gap: 10px; margin-top: 22px; }
 .emp-clock-stat { flex: 1; background: var(--gray-50); border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
 .emp-clock-stat-val { font-size: 20px; font-weight: 600; color: var(--ink); letter-spacing: -.5px; font-variant-numeric: tabular-nums; }
-.emp-clock-stat-lbl { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.emp-clock-stat-lbl { font-size: 13px; color: var(--muted); margin-top: 3px; }
 
 /* ── Shift item ─────────────────────────────── */
 .emp-shift-item {
@@ -471,15 +471,15 @@
   text-align: center;
 }
 .emp-shift-info { flex: 1; }
-.emp-shift-title { font-size: 13px; font-weight: 500; color: var(--gray-900); }
-.emp-shift-sub { font-size: 11px; color: var(--gray-400); }
+.emp-shift-title { font-size: 15px; font-weight: 600; color: var(--gray-900); }
+.emp-shift-sub { margin-top:2px; font-size: 13px; color: var(--gray-500); }
 
 /* ── Status pill ────────────────────────────── */
 .emp-pill {
   display: inline-block;
   padding: 3px 8px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 12.5px;
   font-weight: 500;
 }
 .emp-pill-green { background: var(--wf-green-l); color: var(--wf-green); }
@@ -515,16 +515,16 @@
 /* Werkbonflow: de medewerker ziet altijd wat al afgerond is en wat volgt. */
 .emp-wo-flow { display:flex; align-items:flex-start; margin-top:14px; overflow-x:auto; scrollbar-width:none; }
 .emp-wo-flow::-webkit-scrollbar { display:none; }
-.emp-wo-flow span { display:flex; flex-direction:column; align-items:center; gap:4px; color:var(--gray-400); font-size:9px; font-weight:600; white-space:nowrap; }
-.emp-wo-flow span i { width:23px; height:23px; border-radius:50%; border:1px solid var(--gray-300); background:#fff; color:var(--gray-500); display:grid; place-items:center; font-style:normal; font-size:10px; }
+.emp-wo-flow span { display:flex; flex-direction:column; align-items:center; gap:5px; color:var(--gray-500); font-size:12px; font-weight:600; white-space:nowrap; }
+.emp-wo-flow span i { width:28px; height:28px; border-radius:50%; border:1px solid var(--gray-300); background:#fff; color:var(--gray-500); display:grid; place-items:center; font-style:normal; font-size:12px; }
 .emp-wo-flow span.done { color:var(--wf-green); }
 .emp-wo-flow span.done i { color:#fff; border-color:var(--wf-green); background:var(--wf-green); }
 .emp-wo-flow span.active { color:var(--wf-blue); }
 .emp-wo-flow span.active i { color:#fff; border-color:var(--wf-blue); background:var(--wf-blue); box-shadow:0 0 0 4px rgba(0,113,227,.10); }
-.emp-wo-flow b { flex:1 0 24px; height:1px; margin:11px 5px 0; background:var(--gray-200); }
+.emp-wo-flow b { flex:1 0 24px; height:1px; margin:14px 5px 0; background:var(--gray-200); }
 .emp-wo-flow b.done { background:var(--wf-green); }
-.emp-finish-label { display:block; margin:10px 0 5px; color:var(--gray-700); font-size:11.5px; font-weight:600; }
-.emp-confirm-check { display:flex; align-items:flex-start; gap:8px; margin-top:10px; color:var(--gray-700); font-size:11.5px; cursor:pointer; }
+.emp-finish-label { display:block; margin:12px 0 6px; color:var(--gray-700); font-size:14px; font-weight:600; }
+.emp-confirm-check { display:flex; align-items:flex-start; gap:9px; margin-top:12px; color:var(--gray-700); font-size:14px; line-height:1.45; cursor:pointer; }
 .emp-confirm-check input { margin-top:1px; flex:0 0 auto; }
 
 /* ── List item ──────────────────────────────── */
@@ -545,8 +545,8 @@
 }
 .emp-list-icon svg { width: 18px; height: 18px; fill: var(--wf-blue-d); }
 .emp-list-info { flex: 1; min-width: 0; }
-.emp-list-title { font-size: 13px; font-weight: 500; color: var(--gray-900); }
-.emp-list-sub { font-size: 11px; color: var(--gray-400); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.emp-list-title { font-size: 15px; font-weight: 600; color: var(--gray-900); }
+.emp-list-sub { margin-top:2px; font-size: 13px; color: var(--gray-500); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ── Buttons ────────────────────────────────── */
 .emp-btn {
@@ -572,7 +572,7 @@
 
 /* ── Form ───────────────────────────────────── */
 .emp-form-group { margin-bottom: 14px; }
-.emp-form-group label { display: block; font-size: 12px; font-weight: 500; color: var(--gray-700); margin-bottom: 5px; }
+.emp-form-group label { display: block; font-size: 14px; font-weight: 600; color: var(--gray-700); margin-bottom: 6px; }
 .emp-form-group input, .emp-form-group select, .emp-form-group textarea {
   width: 100%;
   padding: 10px 12px;
@@ -749,7 +749,8 @@
   .emp-sheet {
     bottom: auto; top: 50%;
     transform: translate(-50%, -50%);
-    width: 480px;
+    width: min(720px, calc(100vw - 64px));
+    max-width: 720px;
     border-radius: 16px;
     box-shadow: 0 24px 80px rgba(11,19,32,.18);
   }
@@ -763,11 +764,11 @@
 .emp-layout { background:#f6f6f9; }
 .emp-header { background:#fff; border-color:#e7e7ed; backdrop-filter:none; }
 .emp-logo-mark,.emp-side-brand-mark { background:#5b5ce2; box-shadow:none; }
-.emp-header-greeting { color:#8b8d9e; font-size:9px; }.emp-header-name { color:#303247; font-size:15px; }
+.emp-header-greeting { color:#7b7e90; font-size:12px; }.emp-header-name { color:#303247; font-size:16px; }
 .emp-icon-btn { background:#f5f5f8; border-radius:8px; }
 .emp-main { background:#f6f6f9; }
 .emp-card { border:1px solid #e1e2e8; border-radius:12px; box-shadow:none; }
-.emp-card-title { color:#393b50; font-size:12px; }
+.emp-card-title { color:#393b50; font-size:15px; }
 .emp-action-btn { border-radius:9px; box-shadow:none; }
 .emp-sheet { border-radius:14px 14px 0 0; }
 @media (min-width:1024px) {
@@ -776,8 +777,8 @@
   .emp-header { height:58px; padding:0 24px; }
   .emp-main { max-width:1400px; padding:22px 28px 40px; }
   .emp-side-brand { min-height:54px; padding:5px 5px 13px; border-color:rgba(255,255,255,.08); }
-  .emp-side-brand-name { font-size:14px; }.emp-side-brand-name small { margin-left:3px; color:rgba(255,255,255,.42); font-size:9px; }
-  .emp-tab { min-height:36px; padding:7px 9px; border-radius:7px; color:rgba(255,255,255,.65); font-size:12px; }
+  .emp-side-brand-name { font-size:14px; }.emp-side-brand-name small { margin-left:3px; color:rgba(255,255,255,.55); font-size:12px; }
+  .emp-tab { min-height:42px; padding:9px 11px; border-radius:8px; color:rgba(255,255,255,.72); font-size:14px; }
   .emp-tab svg { width:16px; height:16px; }
   .emp-tab.active { background:#5b5ce2; box-shadow:none; }
   .emp-cards-2col { gap:10px; }
@@ -788,7 +789,9 @@
   .emp-main { padding:15px 13px 90px; }
   .emp-tabbar { background:rgba(255,255,255,.96); border-color:#e4e4ea; }
   .emp-tab.active { color:#5658ce; }
+  .emp-sheet { width:100%; max-width:100%; max-height:94dvh; }
 }
+#empComposeModal>div { max-width:720px !important; }
 </style>`;
 
     // tab nav
