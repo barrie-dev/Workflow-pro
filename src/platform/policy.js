@@ -105,7 +105,9 @@ function applyScope(store, user, permissionKey, rows, ownerFields = ["userId"]) 
 // Alleen beheerders (tenant_admin/super_admin) zien deze velden. Het register
 // dekt ook toekomstige modules zodat handhaving vóór de data bestaat.
 const SENSITIVE_FIELDS = {
-  employees: ["costRate", "hourlyRate", "salary"],
+  // costRates (meervoud) is de tariefhistoriek op de personeelsfiche (h16):
+  // zonder deze regel zou die via het universele grid alsnog zichtbaar zijn.
+  employees: ["costRate", "costRates", "hourlyRate", "salary"],
   articles: ["costPrice", "cost"],
   quotes: ["costPrice", "marginPct"],
   suppliers: ["iban", "bankAccount"],

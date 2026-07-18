@@ -86,6 +86,8 @@ const REQUIRED_COLLECTIONS = [
   "webhookEndpoints",
   "progressClaims",
   "employees",
+  "gridViews",
+  "exportJobs",
   "customFields",
   "automationFlows",
   "automationRuns",

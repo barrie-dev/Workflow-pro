@@ -231,6 +231,12 @@ const { makeWorkOrderRepository, computeTotals: computeWoTotals, buildInvoiceLin
 const { makeWebhookRepository, deliverPending, buildDeliveryHealth, requeueEvent } = require("./platform/webhooks");
 const { makeProgressClaimRepository, computeClaimTotals } = require("./platform/progress-claims");
 const { makeEmployeeRepository, rateOn, availabilityOn, expiringCertificates } = require("./platform/employees");
+const {
+  RESOURCES: GRID_RESOURCES, OPERATORS: GRID_OPERATORS, BULK_ACTIONS: GRID_BULK_ACTIONS,
+  runQuery: runGridQuery, previewBulk: previewGridBulk, runBulk: runGridBulk, hasResourceAccess: hasGridAccess,
+  buildExport: buildGridExport, createExportJob: createGridExportJob, getExportJob: getGridExportJob,
+  makeViewRepository: makeGridViewRepository,
+} = require("./platform/grid");
 const { httpsRequest } = require("./lib/http-client");
 const inventory = require("./platform/inventory");
 const { buildMonaSignals } = require("./platform/mona-signals");
@@ -345,6 +351,7 @@ const workOrderRepo = makeWorkOrderRepository(store);
 const webhookRepo = makeWebhookRepository(store);
 const progressClaimRepo = makeProgressClaimRepository(store);
 const employeeRepo = makeEmployeeRepository(store);
+const gridViewRepo = makeGridViewRepository(store);
 /** Kosttarieven zijn gevoelige velden (h8.2): enkel beheerders zien/beheren ze. */
 function canSeeEmployeeCost(user) {
   return !!user && ["tenant_admin", "super_admin"].includes(user.role);
@@ -5451,6 +5458,107 @@ http.createServer(async (req, res) => {
       }
 
       // ── Medewerkers ophalen ───────────────────────────────────────────────────
+      // ── Universele overzichten, bulkacties en export (h11/GRD) ────────────────
+      // Eén gedeeld pad voor elke resource, zodat UI en API dezelfde filters,
+      // rechten en zichtbare kolommen hanteren.
+      if (action === "grid/resources" && req.method === "GET") {
+        const available = Object.entries(GRID_RESOURCES)
+          .filter(([, def]) => hasGridAccess(user, def))
+          .map(([key, def]) => ({ key, permission: def.permission, searchable: def.search || [], financial: def.financial === true, archivable: def.archivable !== false }));
+        sendJson(res, 200, { ok: true, resources: available, operators: GRID_OPERATORS, bulkActions: GRID_BULK_ACTIONS });
+        return;
+      }
+      const gridQueryMatch = action.match(/^grid\/([^/]+)\/query$/);
+      if (gridQueryMatch && req.method === "POST") {
+        const body = await readBody(req).catch(() => ({}));
+        let result;
+        try { result = runGridQuery(store, tenant, user, gridQueryMatch[1], { filters: body.filters, search: body.search, sort: body.sort, cursor: body.cursor, limit: body.limit }); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        sendJson(res, 200, { ok: true, ...result });
+        return;
+      }
+      // Vooruitblik: hoeveel records worden geraakt en wat wordt overgeslagen.
+      const gridPreviewMatch = action.match(/^grid\/([^/]+)\/bulk\/preview$/);
+      if (gridPreviewMatch && req.method === "POST") {
+        const body = await readBody(req);
+        let preview;
+        try { preview = previewGridBulk(store, tenant, user, gridPreviewMatch[1], body.action, body.ids, body.payload || {}); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        sendJson(res, 200, { ok: true, preview });
+        return;
+      }
+      const gridBulkMatch = action.match(/^grid\/([^/]+)\/bulk$/);
+      if (gridBulkMatch && req.method === "POST") {
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        let job;
+        try { job = runGridBulk(store, tenant, user, gridBulkMatch[1], body.action, body.ids, body.payload || {}, user.email); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "grid_bulk_action", area: "grid", detail: `${gridBulkMatch[1]} · ${body.action} · ${job.succeeded}/${job.requested}` });
+        emitDomainEvent(store, { tenantId, eventType: "grid.bulk_completed", aggregateType: "bulk_job", aggregateId: job.id, actor: user.email, correlationId: res.wfpRequestId, data: { resource: job.resource, action: job.action, succeeded: job.succeeded, failed: job.failed } });
+        sendJson(res, job.status === "failed" ? 422 : 200, { ok: job.status !== "failed", job });
+        return;
+      }
+      const gridExportMatch = action.match(/^grid\/([^/]+)\/export$/);
+      if (gridExportMatch && req.method === "POST") {
+        const body = await readBody(req).catch(() => ({}));
+        let exported;
+        try {
+          exported = buildGridExport(store, tenant, user, gridExportMatch[1],
+            { filters: body.filters, search: body.search, sort: body.sort },
+            { columns: body.columns, company: ensureDefaultCompany(store, tenant) });
+        }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "grid_export", area: "grid", detail: `${gridExportMatch[1]} · ${exported.rowCount} records` });
+        // Boven de limiet: job met downloadlink en vervaldatum (h11).
+        if (exported.mode === "job") {
+          const job = createGridExportJob(store, tenant, user, exported);
+          return sendJson(res, 202, { ok: true, mode: "job", job, rowCount: exported.rowCount, hiddenColumns: exported.hiddenColumns });
+        }
+        res.writeHead(200, { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="${gridExportMatch[1]}-${exported.generatedAt.slice(0, 10)}.csv"` });
+        res.end(exported.csv);
+        return;
+      }
+      const gridExportJobMatch = action.match(/^grid\/exports\/([^/]+)$/);
+      if (gridExportJobMatch && req.method === "GET") {
+        let job;
+        try { job = getGridExportJob(store, tenant, gridExportJobMatch[1], url.searchParams.get("token")); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        if (!job) return sendJson(res, 404, { ok: false, error: "Export niet gevonden" });
+        res.writeHead(200, { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="${job.resource}-${job.createdAt.slice(0, 10)}.csv"` });
+        res.end(job.csv);
+        return;
+      }
+      // Opgeslagen views · gebruikersdata, geen systeeminstellingen (h11).
+      if (action === "grid/views" && req.method === "GET") {
+        sendJson(res, 200, { ok: true, views: gridViewRepo.list(tenantId, user, url.searchParams.get("resource") || null) });
+        return;
+      }
+      if (action === "grid/views" && req.method === "POST") {
+        assertInteractiveUser(user);
+        let view;
+        try { view = gridViewRepo.insert(tenantId, await readBody(req), user); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        sendJson(res, 201, { ok: true, view });
+        return;
+      }
+      const gridViewItemMatch = action.match(/^grid\/views\/([^/]+)$/);
+      if (gridViewItemMatch && req.method === "PATCH") {
+        assertInteractiveUser(user);
+        let view;
+        try { view = gridViewRepo.update(tenantId, gridViewItemMatch[1], await readBody(req), user); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        sendJson(res, 200, { ok: true, view });
+        return;
+      }
+      if (gridViewItemMatch && req.method === "DELETE") {
+        assertInteractiveUser(user);
+        try { gridViewRepo.remove(tenantId, gridViewItemMatch[1], user); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        sendJson(res, 200, { ok: true });
+        return;
+      }
+
       // ── Personeelsfiches (h16/EMP) ────────────────────────────────────────────
       // Bewust een eigen route naast "employees": daar beheer je GEBRUIKERS
       // (loginaccounts), hier de personeelsfiche. De spec houdt die twee
