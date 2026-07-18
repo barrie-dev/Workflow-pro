@@ -3,6 +3,32 @@
 Doel: frontend-werk afstemmen op de sessie "Ontwikkel app roadmap", zodat design, app-roadmap en technische foundation elkaar versterken zonder dubbel werk.
 
 
+
+## Release-afstemming — wagenparkworkspace (18 juli 2026)
+
+De wagenpark-UI is afgestemd op `src/modules/vehicles.js`; er is geen backenddomeinlogica verplaatst.
+
+| Onderdeel | Frontendgedrag | Backendcontract |
+| --- | --- | --- |
+| Voertuig | Vereist `model` en `plate`; ondersteunt merk, brandstof, VIN, chauffeur en vervaldata | `POST /vehicles`, `PATCH /vehicles/:id` |
+| Status | Alleen `actief`, `in_onderhoud`, `buiten_dienst`, `verkocht` | `VEHICLE_STATUSES` |
+| Kilometerstand | Registreert één nieuwe absolute `mileage` plus optionele `note` | `POST /vehicles/:id/mileage` |
+| Service | Plant `nextService`, optioneel met `inService` en notities | `POST /vehicles/:id/service` |
+| Alerts | Toont `serviceStatus`, `inspectionStatus`, `insuranceStatus` en lijstsamenvatting | Backend-enrichment van lijst/detail |
+| Historiek | Detailworkspace toont `mileageLogs` met delta, actor en tijdstip | `GET /vehicles/:id` |
+
+Bewuste afbakening:
+
+- De UI wijzigt `plate` na aanmaak niet, omdat `updateVehicle` dit veld momenteel niet accepteert.
+- Een bestaande kilometerstand wordt niet via het algemene voertuigformulier aangepast; elke wijziging loopt via de traceerbare kilometerroute.
+- De backend blijft eigenaar van dubbele nummerplaatcontrole, dalende kilometerstanden, statusvalidatie, tenantisolatie, audit en permissies.
+
+Backendfeedback:
+
+1. Bevestig of nummerplaatwijzigingen bewust verboden zijn. Als dit een legitieme flow is, voeg dan expliciete validatie en audit toe aan `PATCH /vehicles/:id`.
+2. Overweeg later onderhoudsrecords met garage, kost en uitgevoerde werkzaamheden. De huidige `service`-route plant alleen de volgende datum en status.
+3. Hou `mileageLogs`, `serviceStatus`, `inspectionStatus` en `insuranceStatus` stabiel; de detailworkspace gebruikt deze velden rechtstreeks.
+
 ## Release-afstemming — voorraadworkspace (18 juli 2026)
 
 Frontend is nu afgestemd op het bestaande voorraadcontract en voegt geen backendlogica toe.
