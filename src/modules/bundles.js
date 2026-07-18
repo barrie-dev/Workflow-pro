@@ -23,7 +23,7 @@ const DEFAULT_BUNDLES = [
     key: "business", label: "Business", order: 2, active: true, custom: false, popular: true,
     description: "Het volledige operationele pakket inclusief werkbonnen en facturatie.",
     modules: ["planning", "appointments", "clockings", "messages", "customers", "venues", "incidents",
-      "inbox", "projects", "workorders", "leaves", "expenses", "offertes", "invoices", "stock", "vehicles", "reports"],
+      "inbox", "projects", "contracts", "workorders", "leaves", "expenses", "offertes", "invoices", "stock", "vehicles", "reports"],
   },
   {
     key: "enterprise", label: "Enterprise", order: 3, active: true, custom: true,
@@ -47,6 +47,8 @@ const BUNDLE_BACKFILL = {
   construction: ["enterprise"],
   // Service & Assets-pack: enkel in Enterprise (à-la-carte voor service/HVAC).
   service_assets: ["enterprise"],
+  // Contracten & abonnementen: brede commerciële capability vanaf Business.
+  contracts: ["business", "enterprise"],
 };
 
 function ensureArray(store) {

@@ -75,6 +75,10 @@ const MODULE_CATALOG = [
       { key: "pdf", label: "PDF-export" },
       { key: "online-accept", label: "Online accepteren" },
     ] },
+  // Klantcontracten + terugkerende omzet (master-spec E15/h35): prijsversies,
+  // indexatie, pro rata en idempotente periodegeneratie (factuur of job).
+  { key: "contracts", label: "Contracten & abonnementen", group: "Klanten & Financiën", core: false,
+    view: "contracts", actions: ["contracts"], submodules: [] },
   { key: "invoices", label: "Facturen", group: "Klanten & Financiën", core: false,
     view: "facturen", actions: ["facturen"],
     submodules: [

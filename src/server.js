@@ -96,7 +96,7 @@ const WRITE_GATE_MAP = {
   workorders: ["workorders"], shifts: ["planning"], planning: ["planning"], appointments: ["planning"],
   incidents: ["incidents"], inquiries: ["customers"], estimate: ["invoicing", "billing"],
   projects: ["projects"], worksites: ["construction"], changeorders: ["construction"],
-  assets: ["service_assets"], maintenance: ["service_assets"],
+  assets: ["service_assets"], maintenance: ["service_assets"], contracts: ["contracts"],
   expenses: ["expenses"], leaves: ["leaves"], messages: ["messages"],
   customers: ["customers"], venues: ["venues"], stock: ["stock"], vehicles: ["vehicles"],
   facturen: ["invoicing", "billing"], offertes: ["invoicing", "billing"],
@@ -223,6 +223,7 @@ const { makeChangeOrderRepository } = require("./platform/change-orders");
 const { buildComplianceOverview } = require("./platform/compliance");
 const { makeAssetRepository, makeMaintenancePlanRepository } = require("./platform/assets");
 const { buildProjectFinance } = require("./platform/project-finance");
+const { makeContractRepository } = require("./platform/contracts");
 const {
   createSetupIntent,
   billingQuote,
@@ -319,6 +320,7 @@ const worksiteRepo = makeWorksiteRepository(store);
 const changeOrderRepo = makeChangeOrderRepository(store);
 const assetRepo = makeAssetRepository(store);
 const maintenancePlanRepo = makeMaintenancePlanRepository(store);
+const contractRepo = makeContractRepository(store);
 
 function csvCell(value) {
   const text = value == null ? "" : Array.isArray(value) || typeof value === "object" ? JSON.stringify(value) : String(value);
@@ -3703,6 +3705,121 @@ http.createServer(async (req, res) => {
         try { changeOrderRepo.remove(tenantId, changeOrderItemMatch[1]); }
         catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
         store.audit({ actor: user.email, tenantId, action: "change_order_deleted", area: "construction", detail: changeOrderItemMatch[1] });
+        sendJson(res, 200, { ok: true });
+        return;
+      }
+
+      // ── Contracten & abonnementen (E15/h35) ───────────────────────────────────
+      if (action === "contracts" && req.method === "GET") {
+        assertCan(user, "contracts");
+        sendJson(res, 200, { ok: true, contracts: contractRepo.list(tenantId, { customerId: url.searchParams.get("customerId") || undefined, status: url.searchParams.get("status") || undefined }) });
+        return;
+      }
+      if (action === "contracts" && req.method === "POST") {
+        assertCan(user, "contracts");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        let row;
+        try { row = contractRepo.insert(tenantId, body, user.email); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "contract_created", area: "contracts", detail: `${row.number} · ${row.title}` });
+        emitDomainEvent(store, { tenantId, eventType: "contract.created", aggregateType: "contract", aggregateId: row.id, actor: user.email, correlationId: res.wfpRequestId });
+        sendJson(res, 201, { ok: true, contract: row });
+        return;
+      }
+      const contractItemMatch = action.match(/^contracts\/([^/]+)$/);
+      if (contractItemMatch && req.method === "PATCH") {
+        assertCan(user, "contracts");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        let row;
+        try { row = contractRepo.update(tenantId, contractItemMatch[1], body, user.email, body.expectedVersion); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code, currentVersion: e.currentVersion }); }
+        store.audit({ actor: user.email, tenantId, action: "contract_updated", area: "contracts", detail: contractItemMatch[1] });
+        sendJson(res, 200, { ok: true, contract: row });
+        return;
+      }
+      const contractTransitionMatch = action.match(/^contracts\/([^/]+)\/transition$/);
+      if (contractTransitionMatch && req.method === "POST") {
+        assertCan(user, "contracts");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        let row;
+        try { row = contractRepo.transition(tenantId, contractTransitionMatch[1], body.status, user.email); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "contract_transition", area: "contracts", detail: `${contractTransitionMatch[1]} → ${body.status}` });
+        emitDomainEvent(store, { tenantId, eventType: "contract.status_changed", aggregateType: "contract", aggregateId: row.id, actor: user.email, correlationId: res.wfpRequestId, data: { status: row.status } });
+        sendJson(res, 200, { ok: true, contract: row });
+        return;
+      }
+      const contractIndexMatch = action.match(/^contracts\/([^/]+)\/index$/);
+      if (contractIndexMatch && req.method === "POST") {
+        assertCan(user, "contracts");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        let row;
+        try { row = contractRepo.applyIndexation(tenantId, contractIndexMatch[1], { pct: body.pct, sourceIndex: body.sourceIndex, effectiveFrom: body.effectiveFrom }, user.email); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "contract_indexed", area: "contracts", detail: `${contractIndexMatch[1]} · ${body.pct}%` });
+        emitDomainEvent(store, { tenantId, eventType: "contract.indexed", aggregateType: "contract", aggregateId: row.id, actor: user.email, correlationId: res.wfpRequestId, data: { pct: Number(body.pct) } });
+        sendJson(res, 200, { ok: true, contract: row });
+        return;
+      }
+      const contractGenerateMatch = action.match(/^contracts\/([^/]+)\/generate$/);
+      if (contractGenerateMatch && req.method === "POST") {
+        assertCan(user, "contracts");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req).catch(() => ({}));
+        let result;
+        try {
+          result = contractRepo.generateForPeriod(tenantId, contractGenerateMatch[1], user.email, { date: body.date, reason: body.reason }, (contract, ctx) => {
+            const periodLabel = `${ctx.periodStart} t/m ${ctx.periodEnd}`;
+            if (contract.generateType === "job") {
+              const woNum = issueNumber(store, { tenant, docType: "workorder" }).number;
+              return store.insert("workorders", {
+                id: `wo_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+                tenantId, number: woNum,
+                title: `${contract.title} · ${ctx.periodKey}`,
+                clientName: (customerRepo.findById(tenantId, contract.customerId) || {}).name || "",
+                customerId: contract.customerId, projectId: contract.projectId || null,
+                contractId: contract.id, assetIds: contract.assetIds || [],
+                date: ctx.periodStart,
+                status: "open", priority: "normaal",
+                description: `Contractuele beurt (${contract.frequency}) · periode ${periodLabel}`,
+                createdBy: user.id, createdAt: new Date().toISOString(),
+              });
+            }
+            // Factuur: pro rata-berekening reproduceerbaar in de omschrijving.
+            const cust = customerRepo.findById(tenantId, contract.customerId) || {};
+            return createCustomerInvoice(store, tenant, user, {
+              customerId: contract.customerId,
+              customerName: cust.name || "",
+              customerAddress: cust.address || "",
+              customerVatNumber: cust.vatNumber || "",
+              projectId: contract.projectId || null,
+              notes: `Contract ${contract.number} · periode ${periodLabel}${ctx.prorata.factor !== 1 ? ` · pro rata ${ctx.prorata.daysCovered}/${ctx.prorata.daysTotal} dagen` : ""}`,
+              lines: [{
+                description: `${contract.title} · ${ctx.periodKey}${ctx.prorata.factor !== 1 ? ` (pro rata ${ctx.prorata.daysCovered}/${ctx.prorata.daysTotal}d)` : ""}`,
+                qty: 1, unitPrice: ctx.amount, vatRate: contract.vatRate,
+                sourceType: "contract", sourceId: contract.id,
+              }],
+            });
+          });
+        }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        if (!result.alreadyGenerated) {
+          store.audit({ actor: user.email, tenantId, action: "contract_generated", area: "contracts", detail: `${contractGenerateMatch[1]} · ${result.periodKey}` });
+          emitDomainEvent(store, { tenantId, eventType: "contract.period_generated", aggregateType: "contract", aggregateId: contractGenerateMatch[1], actor: user.email, correlationId: res.wfpRequestId, data: { periodKey: result.periodKey, resultId: result.doc.id } });
+        }
+        sendJson(res, result.alreadyGenerated ? 200 : 201, { ok: true, ...result });
+        return;
+      }
+      if (contractItemMatch && req.method === "DELETE") {
+        assertCan(user, "contracts");
+        assertInteractiveUser(user);
+        try { contractRepo.remove(tenantId, contractItemMatch[1]); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message }); }
+        store.audit({ actor: user.email, tenantId, action: "contract_deleted", area: "contracts", detail: contractItemMatch[1] });
         sendJson(res, 200, { ok: true });
         return;
       }
