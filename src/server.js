@@ -230,6 +230,7 @@ const inventory = require("./platform/inventory");
 const { buildMonaSignals } = require("./platform/mona-signals");
 const robawsImport = require("./platform/robaws-import");
 const { buildWorkInbox } = require("./platform/work-inbox");
+const { makeConfigRepository } = require("./platform/config-platform");
 const {
   createSetupIntent,
   billingQuote,
@@ -329,6 +330,7 @@ const maintenancePlanRepo = makeMaintenancePlanRepository(store);
 const contractRepo = makeContractRepository(store);
 const supplierRepo = makeSupplierRepository(store);
 const purchaseOrderRepo = makePurchaseOrderRepository(store);
+const configRepo = makeConfigRepository(store);
 
 function csvCell(value) {
   const text = value == null ? "" : Array.isArray(value) || typeof value === "object" ? JSON.stringify(value) : String(value);
@@ -2154,6 +2156,62 @@ http.createServer(async (req, res) => {
       if (action === "work-inbox" && req.method === "GET") {
         assertInteractiveUser(user);
         sendJson(res, 200, { ok: true, ...buildWorkInbox(store, tenant, user) });
+        return;
+      }
+
+      // ── Configuratieplatform (E10/h12): custom fields ─────────────────────────
+      if (action === "config/fields" && req.method === "GET") {
+        assertCan(user, "settings");
+        sendJson(res, 200, { ok: true, fields: configRepo.list(tenantId, { entity: url.searchParams.get("entity") || undefined, status: url.searchParams.get("status") || undefined }) });
+        return;
+      }
+      if (action === "config/fields" && req.method === "POST") {
+        assertCan(user, "settings");
+        assertApiKeyWriteAllowed(user, req);
+        let row;
+        try { row = configRepo.insert(tenantId, await readBody(req), user.email); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "custom_field_created", area: "config", detail: `${row.entity}.${row.key}` });
+        sendJson(res, 201, { ok: true, field: row });
+        return;
+      }
+      if (action === "config/fields/validate" && req.method === "POST") {
+        assertCan(user, "settings");
+        const body = await readBody(req);
+        sendJson(res, 200, { ok: true, result: configRepo.validateValues(tenantId, body.entity, body.values) });
+        return;
+      }
+      const cfgFieldMatch = action.match(/^config\/fields\/([^/]+)$/);
+      if (cfgFieldMatch && cfgFieldMatch[1] !== "validate" && req.method === "PATCH") {
+        assertCan(user, "settings");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        let row;
+        try { row = configRepo.update(tenantId, cfgFieldMatch[1], body, user.email, body.expectedVersion); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code, currentVersion: e.currentVersion }); }
+        store.audit({ actor: user.email, tenantId, action: "custom_field_updated", area: "config", detail: cfgFieldMatch[1] });
+        sendJson(res, 200, { ok: true, field: row });
+        return;
+      }
+      const cfgTransitionMatch = action.match(/^config\/fields\/([^/]+)\/transition$/);
+      if (cfgTransitionMatch && req.method === "POST") {
+        assertCan(user, "settings");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        let row;
+        try { row = configRepo.transition(tenantId, cfgTransitionMatch[1], body.status, user.email); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "custom_field_transition", area: "config", detail: `${cfgTransitionMatch[1]} → ${body.status}` });
+        sendJson(res, 200, { ok: true, field: row });
+        return;
+      }
+      if (cfgFieldMatch && cfgFieldMatch[1] !== "validate" && req.method === "DELETE") {
+        assertCan(user, "settings");
+        assertInteractiveUser(user);
+        try { configRepo.remove(tenantId, cfgFieldMatch[1]); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "custom_field_deleted", area: "config", detail: cfgFieldMatch[1] });
+        sendJson(res, 200, { ok: true });
         return;
       }
 
@@ -4186,8 +4244,11 @@ http.createServer(async (req, res) => {
         assertCan(user, "customers");
         assertApiKeyWriteAllowed(user, req);
         const body = await readBody(req);
+        // Custom fields (E10): valideer tegen gepubliceerde definities voor 'customer'.
+        const cfCheck = configRepo.validateValues(tenantId, "customer", body.customFields);
+        if (!cfCheck.ok) return sendJson(res, 400, { ok: false, error: "Ongeldige extra velden", code: "CUSTOM_FIELDS_INVALID", fieldErrors: cfCheck.errors });
         let row;
-        try { row = customerRepo.insert(tenantId, body, user.email); }
+        try { row = customerRepo.insert(tenantId, { ...body, customFields: cfCheck.values }, user.email); }
         catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
         store.audit({ actor: user.email, tenantId, action: "customer_created", area: "customers", detail: row.name });
         emitDomainEvent(store, { tenantId, eventType: "customer.created", aggregateType: "customer", aggregateId: row.id, actor: user.email, correlationId: res.wfpRequestId });

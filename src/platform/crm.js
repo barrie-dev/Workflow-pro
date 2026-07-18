@@ -110,6 +110,8 @@ function normalizeCustomer(payload, existing = null) {
     address: billing ? billing.line : clean(merged.address),
     zip: billing ? billing.zip : clean(merged.zip),
     city: billing ? billing.city : clean(merged.city),
+    // Custom fields (E10): al gevalideerd door de config-service in de route.
+    ...(merged.customFields && typeof merged.customFields === "object" ? { customFields: merged.customFields } : {}),
     schemaVersion: CUSTOMER_SCHEMA_VERSION,
   };
 }
