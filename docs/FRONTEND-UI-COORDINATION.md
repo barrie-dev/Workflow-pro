@@ -110,99 +110,21 @@ Feedback voor de backendontwikkelaar:
 - Lever canonieke status- en prioriteitswaarden wanneer het datamodel wordt gestabiliseerd; de frontend normaliseert voorlopig bestaande Nederlandse en Engelse varianten voor backwards compatibility.
 - Houd mutaties domeinspecifiek. Goedkeuren, weigeren, factuurstatus aanpassen en werkbon afronden blijven in hun bestaande flows met de bestaande validatie en audittrail.
 
-## Backend-terugkoppeling op de handoff — 2026-07-16 (avond)
+## Mona AI-assistent — frontendintegratie 2026-07-18
 
-Alle P0-punten uit `Monargo-One-backend-handoff.docx` zijn geland. Non-breaking: bestaande velden en flows blijven werken; onderstaande velden zijn toegevoegd.
+De gedeelde assistent presenteert zich in alle zichtbare UI consequent als **Mona**. De interne module- en endpointnaam `/boden` blijft voorlopig behouden om bestaande backendcontracten niet te breken. De interface is vergroot naar een leesbaar werkpaneel, gebruikt Monargo Blue uitsluitend voor primaire acties en wordt op kleine schermen vrijwel schermvullend.
 
-| Contract | Wijziging | Detail |
+| Interactie | Bestaand contract | UI-gedrag |
 | --- | --- | --- |
-| Error envelope | uitgebreid | Elke JSON-fout draagt naast `error` nu ook `message` (alias), `requestId` (`req_…`, ook als `x-request-id` header op elke respons) en waar van toepassing `code` en `fieldErrors`. 500-fouten loggen het `requestId` mee in de error-log. |
-| `GET /api/me` | veld toegevoegd | `capabilities: { mail: boolean }` — `false` betekent: geen actieve mailprovider; verzendknoppen tonen setup-uitleg. |
-| `POST /offertes/:id/send` | delivery-contract | Respons bevat `delivery: { status: disabled/sent/failed, reason?, provider?, to?, retryable? }` + `acceptUrl`. Offerte-status (`verzonden`) is de in-app-waarheid; `delivery` beschrijft uitsluitend de e-mail en liegt nooit bij ontbrekende provider (`disabled` · `mail_not_configured`) of ontbrekende klant-e-mail (`failed` · `no_recipient`). |
-| `POST /offertes/:id/convert` | idempotent | Tweede conversie geeft het bestaande document terug met `alreadyConverted: true` en `code: QUOTE_ALREADY_CONVERTED` (200). Afgewezen offertes: 409 `QUOTE_REJECTED`. |
-| `POST/PATCH /planning` | conflicten | Overlappende shift van dezelfde medewerker: 409 `SHIFT_OVERLAP` met `conflict: { shiftId, date, start, end, venueId }`. Verlofconflict: 409 `LEAVE_CONFLICT` met `conflict`. PATCH valideert nu ook tijdvolgorde, verplichte velden en tenant-eigendom. |
-| `PATCH /facturen/:id` | statusguard | Status-whitelist `open/paid/overdue/cancelled` (400 `INVALID_STATUS`); `paid` is eindtoestand (409 `INVOICE_PAID_FINAL`). DELETE van een verzonden factuur: 409 `INVOICE_ALREADY_SENT`. |
-| `POST /api/admin/users/:id/activation-link` | nieuw | Superadmin-actie (platformscope `tenants`, geauditeerd): geeft een verse activatielink voor een wachtwoordloos pending account, zonder mail-afhankelijkheid. Actieve accounts of accounts met wachtwoord: 409 `NOT_PENDING` — nooit een reset. Hiermee is o.a. `barrie@abmsconsultancy.be` op de QA-omgeving activeerbaar. |
-
-Al gedekt, geen actie nodig: `GET /api/plans` (trialDays + catalogus), pending registratie/reseller, onboarding-persistentie, servertotalen/btw/nummering, werkbon→factuur-idempotentie (409), tenant-isolatie met server-side rollen, betaallink met expliciete `provider: stripe/mock`.
-
-Procesafspraak na het merge-incident van vandaag: frontend-branches vóór merge rebasen op actuele `main`. De frontend-PR's (#4-#18) vertrokken van een oudere snapshot en overschreven daarbij de op 15/07 gereleasede modules Afspraken, Werkongevallen, Klantvragen-inbox en AI-estimatie (hersteld in commit 4f669bd, SW wfp-v75). Gedeelde bestanden: `public/js/platforms/*.js`, `public/js/i18n.js`, `public/sw.js`.
-
-
-## Stock en wagenpark — frontendintegratie 2026-07-18
-
-De bestaande stock- en wagenparkflows zijn frontendmatig genormaliseerd naar dezelfde rustige Monargo operations-workspace. Deze release verandert geen domeinlogica: zoeken, stockmutaties, voertuigbeheer, kilometerregistratie en onderhoud blijven de bestaande API-contracten en server-side autorisatie gebruiken.
-
-| UI-flow | Bestaand contract | UI-gedrag |
-| --- | --- | --- |
-| Stockoverzicht | `GET /api/tenants/:tenantId/stock` | Toont artikel-KPI's, totale stockwaarde, lage-voorraadwaarschuwingen en een lokale zoekfilter. |
-| Stockartikel beheren | `POST/PATCH/DELETE /api/tenants/:tenantId/stock/:id?` | Bestaande drawerflow; servervalidatie en tenant-eigendom blijven leidend. |
-| Stockmutatie | `POST /api/tenants/:tenantId/stock/:id/mutations` | Positieve en negatieve mutaties blijven expliciete domeinacties met reden en datum. |
-| Wagenparkoverzicht | `GET /api/tenants/:tenantId/vehicles` | Toont voertuigen, status, chauffeur, kilometerstand, volgende service en bestaande alerts. |
-| Voertuig en kilometerstand | bestaande `/vehicles` CRUD en `POST /vehicles/:id/mileage` | Bestaande drawers blijven de enige mutatieroute; de UI voegt geen lokale statuslogica toe. |
+| Vraag stellen | `POST /api/tenants/:tenantId/boden` met `messages` | Toont het antwoord in de conversatie en bewaart alleen de beperkte recente context. |
+| Navigatievoorstel | `proposal.action = navigate` met toegestane `params.view` | Opent de bestaande productview; Mona voert geen domeinmutatie uit. |
+| Mutatievoorstel | Server-goedgekeurde `path`, `method` en `params` | Vereist een expliciete bevestiging en toont daarna resultaat of herstelbare fout. |
 
 Feedback voor de backendontwikkelaar:
 
-- Voor deze UI-release is geen nieuw endpoint nodig; behoud de bestaande non-breaking responses.
-- Geef alerts op termijn stabiele `id`, `type`, `severity`, `message`, `entityId` en optioneel `dueAt`, zodat de UI niet op vrije tekst hoeft te sturen.
-- Lever canonieke voertuigstatussen en stockeenheden wanneer het datamodel stabiliseert; de frontend vertaalt labels, maar beslist geen statusovergangen.
-- Bewaar stockmutaties als append-only audittrail met actor, tijdstip, delta, reden en resulterende hoeveelheid. De UI mag een actuele hoeveelheid tonen, maar niet zelf de boekhouding reconstrueren.
-- Voor grotere tenants zijn server-side `query`, filters, sortering en paging wenselijk op stock en voertuigen. De huidige lokale zoekfilter is alleen geschikt voor beperkte datasets.
-- Blijf onderhouds- en lage-voorraaddrempels server-side berekenen. De frontend presenteert de waarschuwing en dupliceert de bedrijfsregel niet.
-
-
-## Managementrapportage — frontendintegratie 2026-07-18
-
-De tenant-adminrapportage is frontendmatig genormaliseerd naar een rustige Monargo Intelligence-workspace. De bestaande periodefilter, KPI's, uren, onkosten, verlof, werkbonstatus, loonlijst, klantwinstgevendheid, CSV-export en het printbare beslissersrapport blijven behouden. De frontend presenteert bestaande gegevens en introduceert geen tweede financiële bron van waarheid.
-
-| UI-flow | Bestaand contract | UI-gedrag |
-| --- | --- | --- |
-| Periodeoverzicht | bestaande `GET /clocks`, `/expenses`, `/leaves`, `/workorders`, `/employees` en `/facturen` | Laadt de gekozen periode en bouwt de bestaande KPI- en detailkaarten. |
-| CSV-export | huidige client-side export | Exporteert alleen de reeds geladen tenantdata voor uren, onkosten, verlof, werkbonnen, loonlijst en klantwinstgevendheid. |
-| Beslissersrapport | huidige printflow + `POST /reports/log` | Genereert een printbaar rapport en registreert het bestaande pilot-event. |
-| Klantwinstgevendheid | bestaande facturen, werkbonnen, klokken en goedgekeurde onkosten | Toont omzet excl. btw, openstaand, uren en onkosten; loonkost wordt expliciet niet als marge voorgesteld. |
-
-Feedback voor de backendontwikkelaar:
-
-- Voor deze UI-release is geen nieuw endpoint nodig; behoud de bestaande responses non-breaking.
-- De huidige aggregatie over meerdere endpoints is geschikt voor QA en beperkte datasets. Voor productie en grotere tenants is een tenant-scoped rapportagecontract wenselijk met server-side periodefiltering en canonieke totalen.
-- Een later `GET /api/tenants/:tenantId/reports/management?from=&to=` kan stabiele `totals`, `timeByEmployee`, `expenseSummary`, `leaveSummary`, `workorderStatus`, `payrollRows` en `customerProfitability` leveren.
-- Bereken omzet, btw, betaalstatus en financiële totalen uitsluitend server-side. Als echte marge wordt toegevoegd, lever dan expliciet welke kostencomponenten zijn inbegrepen; de frontend mag loonkost of marge niet schatten.
-- Gebruik voor zware rapporten materialized views of vooraf berekende aggregaties met een zichtbare `generatedAt` en tijdzone. De UI moet kunnen tonen hoe recent de cijfers zijn.
-- Voor PDF/CSV op grote datasets is een asynchrone exportqueue wenselijk met `jobId`, `status`, `format`, `requestedAt`, `completedAt`, veilige download-URL en vervaltijd.
-- Autoriseer rapportsecties en exports server-side volgens tenant, rol en financieel recht; een verborgen kaart of knop is nooit een permissiecontrole.
-
-
-## Integraties en Automation Studio — frontendintegratie 2026-07-18
-
-Het bestaande Integratiecentrum is frontendmatig genormaliseerd rond providerstatus, verbinden, synchroniseren, Robaws-document-sync en sleutelbeheer. De UI gebruikt de bestaande integratieregistry en bouwt geen alternatieve credentialopslag of providersimulatie.
-
-| UI-flow | Bestaand contract | UI-gedrag |
-| --- | --- | --- |
-| Providercatalogus | `GET /integrations` | Groepeert providers per categorie en toont verbindings- en syncstatus. |
-| Verbinden/herverbinden | `POST /integrations/connect` | Verstuurt bestaande providerconfig; secrets worden nooit opnieuw zichtbaar gemaakt. |
-| Synchroniseren | `POST /integrations/:id/sync` | Toont voortgang en resultaat uit de bestaande syncrespons. |
-| Robaws-documenten | `POST /integrations/:id/sync-documents` | Toont bestaande project- en documenttotalen na synchronisatie. |
-
-Feedback voor de backendontwikkelaar:
-
-- Voor het bestaande Integratiecentrum is geen nieuw endpoint nodig; houd providerkeys, velden en statuswaarden stabiel en non-breaking.
-- Laat de backend secrets versleutelen, maskeren en roteren. De frontend mag nooit opgeslagen credentials teruglezen of als verbindingsbewijs behandelen.
-- Lever per sync een stabiele `runId`, `status`, `startedAt`, `completedAt`, `processed`, `failed`, foutcode en veilige samenvatting, zodat voortgang en retry betrouwbaar kunnen worden getoond.
-- Automation Studio heeft nog geen stabiele route of workflowcontract en is daarom bewust niet als nepflow toegevoegd. Voor frontendimplementatie is minimaal nodig: `GET/POST/PATCH /workflows`, versie/publicatiestatus, triggers, condities, acties, validatieresultaat en tenant-scoped run logs.
-- Een workflowactie moet alleen server-side toegestane actietypes en doelmodules kunnen gebruiken. Publiceren en uitvoeren vereisen auditmetadata, idempotentie en expliciete permissies.
-- Voorzie voor connector- en workflowfouten canonieke codes met `requestId`; vrije providertekst mag alleen ondersteunende context zijn.
-
-
-## Instellingen, rechten en security — frontendintegratie 2026-07-18
-
-De tenantinstellingen zijn frontendmatig genormaliseerd naar één Control Center voor bedrijfsgegevens, abonnement, MFA, backupbeleid, wachtwoord, GDPR-supporttoegang, SSO en module-instellingen. De medewerkerdrawer toont de bestaande modulegebonden niveaus Geen, Lezen en Schrijven in een leesbare rechtenmatrix.
-
-Feedback voor de backendontwikkelaar:
-
-- Server-side rollen, entitlements en grantable permissions blijven de enige bron van waarheid. De frontend verstuurt keuzes, maar mag geen rechten escaleren of afleiden uit verborgen bediening.
-- Behoud `GET /api/me`, settings-, MFA-, backup-, support-access- en SSO-responses non-breaking en lever bij fouten het bestaande `requestId`, `code` en `fieldErrors`.
-- Lever bij rechten naast de grantable key een stabiel labelkey, toegestane niveaus en eventueel reden waarom een niveau niet beschikbaar is. Zo hoeft de frontend geen pakket- of rolmatrix te dupliceren.
-- Mailafhankelijke toggles en acties moeten `capabilities.mail` respecteren. Wanneer mail uitstaat, moet de backend geen success claimen en een veilige setupreden teruggeven.
-- Supporttoegang, MFA-enforcement, accountactivatie en SSO-configuratiewijzigingen vereisen auditmetadata en server-side herauthenticatie waar het risico dat vraagt.
-- Wachtwoordloze pending accounts gebruiken de bestaande activatielinkflow; bestaande wachtwoorden worden niet impliciet gereset vanuit registratie of activatie.
+- Lever per voorstel een stabiele `id`, `label`, `action`, `risk`, `confirmation`, `path`, `method`, `params`, vereiste permissie en `expiresAt`.
+- Accepteer nooit willekeurige clientpaden. Gebruik een server-side allowlist, tenant-scoping en dezelfde autorisatie als de onderliggende domeinactie.
+- Maak mutaties idempotent, registreer actor, voorstel en resultaat in de audittrail en geef een `requestId` terug bij fouten.
+- Onderscheid in het responsecontract expliciet een informatief antwoord, navigatie en mutatie; alleen mutaties krijgen een bevestigingsactie.
+- Geef geen secrets of onnodige persoonsgegevens mee in promptcontext of foutmeldingen. De backend blijft bron van waarheid voor rechten en datascoping.
+- Streaming kan later als progressieve verbetering worden toegevoegd; het huidige JSON-contract moet bruikbaar blijven als fallback.
