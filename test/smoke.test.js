@@ -261,6 +261,101 @@ test("golden flow: klant → offerte → werkbon → planning → factuur bewaar
   assert.equal(storedInvoice?.workorderId, workorder.id);
 });
 
+
+test("voorraadflow: artikel → aanvulling → reservatie → verbruik → vrijgave bewaart koppelingen", async () => {
+  const admin = await login("admin@demobouw.be", "Demo2026!");
+  assert.ok(admin.token, "admin-login moet slagen");
+  const H = { Authorization: `Bearer ${admin.token}`, "Content-Type": "application/json" };
+  const stamp = Date.now().toString(36);
+
+  const workordersResponse = await fetch(`${BASE}/api/tenants/t_demo/workorders`, { headers: H });
+  assert.equal(workordersResponse.status, 200);
+  const workordersData = await workordersResponse.json();
+  const workorder = (workordersData.workorders || [])[0];
+  assert.ok(workorder?.id, "een werkbon is beschikbaar voor de voorraadkoppeling");
+
+  const createResponse = await fetch(`${BASE}/api/tenants/t_demo/stock`, {
+    method: "POST",
+    headers: H,
+    body: JSON.stringify({
+      name: `Testkabel ${stamp}`,
+      sku: `ST-${stamp}`,
+      unit: "meter",
+      category: "Kabels",
+      qty: 10,
+      minQty: 2,
+      maxQty: 50,
+      location: "Testmagazijn"
+    })
+  });
+  assert.equal(createResponse.status, 201);
+  const created = (await createResponse.json()).item;
+  assert.ok(created?.id, "stockartikel-ID ontvangen");
+  assert.equal(created.qty, 10);
+  assert.equal(created.minQty, 2);
+
+  const additionResponse = await fetch(`${BASE}/api/tenants/t_demo/stock/${created.id}/mutations`, {
+    method: "POST",
+    headers: H,
+    body: JSON.stringify({ type: "aanvulling", delta: 5, reason: "Testlevering" })
+  });
+  assert.equal(additionResponse.status, 201);
+  const afterAddition = (await additionResponse.json()).item;
+  assert.equal(afterAddition.qty, 15);
+  assert.equal(afterAddition.available, 15);
+
+  const reservationResponse = await fetch(`${BASE}/api/tenants/t_demo/stock/${created.id}/mutations`, {
+    method: "POST",
+    headers: H,
+    body: JSON.stringify({
+      type: "reservatie",
+      delta: -4,
+      reason: "Voor testwerkbon",
+      workorderId: workorder.id
+    })
+  });
+  assert.equal(reservationResponse.status, 201);
+  const afterReservation = (await reservationResponse.json()).item;
+  assert.equal(afterReservation.qty, 15, "reservatie wijzigt fysieke voorraad niet");
+  assert.equal(afterReservation.reserved, 4);
+  assert.equal(afterReservation.available, 11);
+
+  const usageResponse = await fetch(`${BASE}/api/tenants/t_demo/stock/${created.id}/mutations`, {
+    method: "POST",
+    headers: H,
+    body: JSON.stringify({
+      type: "gebruik",
+      delta: -3,
+      reason: "Verwerkt op testwerkbon",
+      workorderId: workorder.id
+    })
+  });
+  assert.equal(usageResponse.status, 201);
+  const afterUsage = (await usageResponse.json()).item;
+  assert.equal(afterUsage.qty, 12);
+  assert.equal(afterUsage.reserved, 4);
+  assert.equal(afterUsage.available, 8);
+
+  const detailResponse = await fetch(`${BASE}/api/tenants/t_demo/stock/${created.id}`, { headers: H });
+  assert.equal(detailResponse.status, 200);
+  const detail = (await detailResponse.json()).item;
+  const reservation = detail.mutations.find(row => row.type === "reservatie" && row.status === "actief");
+  const usage = detail.mutations.find(row => row.type === "gebruik");
+  assert.equal(reservation?.workorderId, workorder.id, "reservatie bewaart de werkbonkoppeling");
+  assert.equal(usage?.workorderId, workorder.id, "verbruik bewaart de werkbonkoppeling");
+
+  const releaseResponse = await fetch(`${BASE}/api/tenants/t_demo/stock/mutations/${reservation.id}/release`, {
+    method: "POST",
+    headers: H,
+    body: "{}"
+  });
+  assert.equal(releaseResponse.status, 200);
+  const afterRelease = (await releaseResponse.json()).item;
+  assert.equal(afterRelease.reserved, 0);
+  assert.equal(afterRelease.available, 12);
+});
+
+
 // ── Klantbril-QA: heldere, Nederlandse foutmeldingen ──
 test("login met fout wachtwoord → 401 met Nederlandse melding", async () => {
   const r = await fetch(`${BASE}/api/auth/login`, {

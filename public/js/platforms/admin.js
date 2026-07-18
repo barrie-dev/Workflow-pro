@@ -5288,142 +5288,527 @@ ${alerts.length ? `<div style="background:var(--wf-yellow-l);border:1px solid va
     });
   }
 
+
   // ── Stock ──────────────────────────────────────────────────
+  let _stockContext = { items: [], workorders: [], venues: [] };
+
+  const stockQty = value => Number.isFinite(Number(value)) ? Number(value) : 0;
+  const stockNum = value => new Intl.NumberFormat("nl-BE", { maximumFractionDigits: 2 }).format(stockQty(value));
+  const stockAlertLabel = level => ({
+    leeg: "Leeg",
+    kritiek: "Kritiek",
+    laag: "Laag",
+    ok: "Op peil",
+    unknown: "Niet ingesteld"
+  })[level] || "Niet ingesteld";
+  const stockMutationLabel = type => ({
+    aanvulling: "Aanvulling",
+    gebruik: "Verbruik",
+    correctie: "Correctie",
+    reservatie: "Reservatie",
+    transfer: "Transfer",
+    vrijgave: "Vrijgave"
+  })[type] || type || "Mutatie";
+  const stockVenueName = id => {
+    const venue = (_stockContext.venues || []).find(row => row.id === id);
+    return venue ? (venue.name || venue.address || "Locatie") : "";
+  };
+  const stockWorkorderName = id => {
+    const workorder = (_stockContext.workorders || []).find(row => row.id === id);
+    return workorder ? (workorder.number || workorder.reference || workorder.title || "Werkbon") : "";
+  };
+
   async function renderStock() {
     const content = document.getElementById("admContent");
     try {
-      const data = await api("GET", "/stock");
-      const items = data.items || data.stock || [];
-      const alerts = data.alerts || [];
-      const totalValue = items.reduce((s, i) => s + (Number(i.quantity||0) * Number(i.unitPrice||0)), 0);
+      const [data, workorderData, venueData] = await Promise.all([
+        api("GET", "/stock"),
+        api("GET", "/workorders").catch(() => ({ workorders: [] })),
+        api("GET", "/venues").catch(() => ({ venues: [] }))
+      ]);
+      const items = data.items || [];
+      const summary = data.summary || {};
+      const workorders = workorderData.workorders || workorderData.rows || [];
+      const venues = venueData.venues || venueData.rows || [];
+      _stockContext = { items, workorders, venues };
+
+      const attentionCount = stockQty(summary.leeg) + stockQty(summary.kritiek) + stockQty(summary.laag);
+      const reservedItems = items.filter(item => stockQty(item.reserved) > 0).length;
+      const locationCount = new Set(items.map(item => item.venueId || item.location).filter(Boolean)).size;
+      const attentionItems = items.filter(item => ["leeg", "kritiek", "laag"].includes(item.alert));
+
       content.innerHTML = `
-<div class="adm-kpis" style="margin-bottom:16px">
-  <div class="adm-kpi adm-kpi-blue"><div class="adm-kpi-label">${tA("adm.stock.items","Artikelen")}</div><div class="adm-kpi-value">${items.length}</div></div>
-  <div class="adm-kpi adm-kpi-${alerts.length>0?"red":"green"}"><div class="adm-kpi-label">${tA("adm.stock.lowAlerts","Lage voorraad alerts")}</div><div class="adm-kpi-value">${alerts.length}</div></div>
-  <div class="adm-kpi adm-kpi-purple"><div class="adm-kpi-label">${tA("adm.stock.totalValue","Totale stockwaarde")}</div><div class="adm-kpi-value" style="font-size:18px">${new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR"}).format(totalValue)}</div></div>
+<div class="adm-kpis stock-kpis" style="margin-bottom:18px">
+  <div class="adm-kpi adm-kpi-blue">
+    <div class="adm-kpi-label">Artikelen</div>
+    <div class="adm-kpi-value">${stockNum(summary.total ?? items.length)}</div>
+    <div class="stock-kpi-note">${stockNum(summary.ok || 0)} op peil</div>
+  </div>
+  <div class="adm-kpi adm-kpi-purple">
+    <div class="adm-kpi-label">Artikelen gereserveerd</div>
+    <div class="adm-kpi-value">${stockNum(reservedItems)}</div>
+    <div class="stock-kpi-note">artikelen met gereserveerde voorraad</div>
+  </div>
+  <div class="adm-kpi adm-kpi-blue">
+    <div class="adm-kpi-label">Voorraadlocaties</div>
+    <div class="adm-kpi-value">${stockNum(locationCount)}</div>
+    <div class="stock-kpi-note">werven en magazijnlocaties</div>
+  </div>
+  <div class="adm-kpi adm-kpi-${attentionCount ? "red" : "green"}">
+    <div class="adm-kpi-label">Aandacht nodig</div>
+    <div class="adm-kpi-value">${stockNum(attentionCount)}</div>
+    <div class="stock-kpi-note">leeg, kritiek of laag</div>
+  </div>
 </div>
-${alerts.length ? `<div style="background:var(--wf-red-l);border:1px solid var(--wf-red-l);border-radius:10px;padding:12px 16px;margin-bottom:14px;font-size:13px;color:var(--wf-red)">
-  ${tA("adm.stock.lowStock","Lage voorraad")}: ${alerts.map(a=>esc(a.name||a.itemId)).join(", ")}
+${attentionItems.length ? `<div class="stock-alert-banner">
+  <strong>Voorraad vraagt aandacht</strong>
+  <span>${attentionItems.slice(0, 5).map(item => esc(item.name)).join(", ")}${attentionItems.length > 5 ? ` en ${attentionItems.length - 5} meer` : ""}</span>
 </div>` : ""}
-<div class="adm-card">
+<div class="adm-card stock-list-card">
   <div class="adm-card-header">
-    <h3 class="adm-card-title">${tA("nav.stock","Stockbeheer")}</h3>
-    <input id="stSearch" placeholder="${tA("adm.stock.searchPh","Zoek artikel…")}" style="font-size:12px;min-width:160px">
+    <div>
+      <h3 class="adm-card-title">${tA("nav.stock","Stockbeheer")}</h3>
+      <p class="stock-card-subtitle">Fysieke voorraad, reservaties en beschikbaarheid in één overzicht.</p>
+    </div>
+    <div class="stock-list-tools">
+      <select id="stAlertFilter" class="adm-input" aria-label="Filter op voorraadstatus">
+        <option value="">Alle statussen</option>
+        <option value="attention">Aandacht nodig</option>
+        <option value="reserved">Met reservatie</option>
+        <option value="ok">Op peil</option>
+      </select>
+      <input id="stSearch" class="adm-input" placeholder="${tA("adm.stock.searchPh","Zoek artikel…")}">
+    </div>
   </div>
   ${items.length === 0
-    ? `<div class="adm-empty"><div class="adm-empty-text">${tA("adm.stock.empty","Nog geen stockartikelen")}</div><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewStock" style="margin-top:12px">+ ${tA("adm.stock.emptyBtn","Eerste artikel aanmaken")}</button></div>`
-    : `<div class="adm-table-wrap"><table class="adm-table">
-        <thead><tr><th>${tA("adm.stock.thItem","Artikel")}</th><th>${tA("adm.stock.thSku","SKU")}</th><th>${tA("adm.stock.thCategory","Categorie")}</th><th>${tA("adm.stock.thQty","Hoeveelheid")}</th><th>${tA("adm.stock.thUnit","Eenheid")}</th><th>${tA("adm.stock.thMin","Min. stock")}</th><th>${tA("adm.stock.thPrice","Prijs/stuk")}</th><th>${tA("adm.actions","Acties")}</th></tr></thead>
+    ? `<div class="adm-empty">
+        <div class="adm-empty-icon">▦</div>
+        <div class="adm-empty-title">Nog geen voorraadartikelen</div>
+        <div class="adm-empty-text">Voeg uw eerste artikel toe. Beginvoorraad wordt automatisch als eerste mutatie bewaard.</div>
+        <button class="adm-btn adm-btn-primary" id="admEmptyNewStock" style="margin-top:16px">Eerste artikel aanmaken</button>
+      </div>`
+    : `<div class="adm-table-wrap"><table class="adm-table stock-table">
+        <thead><tr>
+          <th>Artikel</th><th>Locatie</th><th>Fysiek</th><th>Gereserveerd</th><th>Beschikbaar</th><th>Minimum</th><th>Status</th><th>Acties</th>
+        </tr></thead>
         <tbody id="stTbody">${buildStockRows(items)}</tbody>
       </table></div>`}
 </div>`;
-      document.getElementById("stSearch")?.addEventListener("input", e => {
-        const q = e.target.value.toLowerCase();
-        const tb = document.getElementById("stTbody");
-        if (tb) tb.innerHTML = buildStockRows(items.filter(i => `${i.name} ${i.sku||""} ${i.category||""}`.toLowerCase().includes(q)));
+
+      const applyStockFilters = () => {
+        const query = (document.getElementById("stSearch")?.value || "").toLowerCase().trim();
+        const filter = document.getElementById("stAlertFilter")?.value || "";
+        const filtered = items.filter(item => {
+          const haystack = `${item.name || ""} ${item.sku || ""} ${item.category || ""} ${item.location || ""} ${stockVenueName(item.venueId)}`.toLowerCase();
+          if (query && !haystack.includes(query)) return false;
+          if (filter === "attention" && !["leeg", "kritiek", "laag"].includes(item.alert)) return false;
+          if (filter === "reserved" && stockQty(item.reserved) <= 0) return false;
+          if (filter === "ok" && item.alert !== "ok") return false;
+          return true;
+        });
+        const tbody = document.getElementById("stTbody");
+        if (tbody) tbody.innerHTML = filtered.length
+          ? buildStockRows(filtered)
+          : `<tr><td colspan="8"><div class="adm-empty" style="padding:32px">Geen artikelen gevonden met deze filters.</div></td></tr>`;
         wireStockBtns(items);
-      });
+      };
+      document.getElementById("stSearch")?.addEventListener("input", applyStockFilters);
+      document.getElementById("stAlertFilter")?.addEventListener("change", applyStockFilters);
       wireStockBtns(items);
-    } catch(e) { content.innerHTML = `<div style="padding:20px;color:var(--wf-red)">${tA("adm.error","Fout")}: ${e.message}</div>`; }
+    } catch (error) {
+      content.innerHTML = `<div style="padding:24px;color:var(--wf-red)">${tA("adm.error","Fout")}: ${esc(error.message)}</div>`;
+    }
   }
+
   function buildStockRows(rows) {
-    return rows.map(i => {
-      const low = i.minQuantity && Number(i.quantity||0) <= Number(i.minQuantity||0);
-      return `<tr class="adm-row-link st-row" data-id="${i.id}" title="${tA("adm.stock.open","Open artikel")}" style="${low?"background:var(--wf-red-l)":""}">
-        <td><strong>${esc(i.name)}</strong>${low?` <span style="background:var(--wf-red-l);color:var(--wf-red);border-radius:4px;padding:1px 5px;font-size:10px">${tA("adm.stock.low","LAAG")}</span>`:""}</td>
-        <td style="font-family:monospace;font-size:12px">${esc(i.sku||"-")}</td>
-        <td>${esc(i.category||"-")}</td>
-        <td style="font-weight:600;color:${low?"var(--wf-red)":"var(--gray-900)"}">${esc(i.quantity??0)}</td>
-        <td>${esc(i.unit||"st")}</td>
-        <td>${esc(i.minQuantity||"-")}</td>
-        <td>${i.unitPrice ? new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR"}).format(i.unitPrice) : "-"}</td>
+    return rows.map(item => {
+      const alert = item.alert || "unknown";
+      const needsAttention = ["leeg", "kritiek", "laag"].includes(alert);
+      const unit = esc(item.unit || "stuks");
+      const location = stockVenueName(item.venueId) || item.location || "Niet toegewezen";
+      return `<tr class="adm-row-link st-row" data-id="${item.id}" data-alert="${alert}" title="Open artikel" style="${needsAttention ? "background:var(--wf-red-l)" : ""}">
         <td>
-          <button class="adm-btn adm-btn-secondary adm-btn-sm st-edit" data-id="${i.id}">${tA("adm.edit","Bewerken")}</button>
-          <button class="adm-btn adm-btn-secondary adm-btn-sm st-mut" data-id="${i.id}">± ${tA("adm.stock.mutation","Mutatie")}</button>
+          <div class="stock-item-name">${esc(item.name)}</div>
+          <div class="stock-item-meta">${esc(item.sku || "Geen SKU")}${item.category ? ` · ${esc(item.category)}` : ""}</div>
+        </td>
+        <td><span class="stock-location">${esc(location)}</span></td>
+        <td><strong>${stockNum(item.qty)}</strong> <span class="stock-unit">${unit}</span></td>
+        <td>${stockQty(item.reserved) ? `<strong>${stockNum(item.reserved)}</strong> <span class="stock-unit">${unit}</span>` : `<span class="stock-muted">—</span>`}</td>
+        <td><strong class="${stockQty(item.available) <= 0 ? "stock-negative" : ""}">${stockNum(item.available)}</strong> <span class="stock-unit">${unit}</span></td>
+        <td>${item.minQty == null ? `<span class="stock-muted">—</span>` : `${stockNum(item.minQty)} <span class="stock-unit">${unit}</span>`}</td>
+        <td><span class="stock-status stock-status-${alert}">${stockAlertLabel(alert)}</span></td>
+        <td class="stock-row-actions">
+          <button class="adm-btn adm-btn-secondary adm-btn-sm st-open" data-id="${item.id}">Open</button>
+          <button class="adm-btn adm-btn-primary adm-btn-sm st-mut" data-id="${item.id}">Mutatie</button>
         </td>
       </tr>`;
     }).join("");
   }
+
   function wireStockBtns(items) {
-    document.querySelectorAll(".st-row").forEach(row => row.addEventListener("click", e => {
-      if (e.target.closest("button")) return;
-      openStockDrawer(items.find(x => x.id === row.dataset.id));
+    document.querySelectorAll(".st-row").forEach(row => row.addEventListener("click", event => {
+      if (event.target.closest("button")) return;
+      openStockDetail(row.dataset.id);
     }));
-    document.querySelectorAll(".st-edit").forEach(b => b.addEventListener("click", () => openStockDrawer(items.find(x => x.id === b.dataset.id))));
-    document.querySelectorAll(".st-mut").forEach(b => b.addEventListener("click", () => openMutationDrawer(b.dataset.id)));
+    document.querySelectorAll(".st-open").forEach(button => button.addEventListener("click", () => openStockDetail(button.dataset.id)));
+    document.querySelectorAll(".st-mut").forEach(button => button.addEventListener("click", () => {
+      const item = items.find(row => row.id === button.dataset.id);
+      openMutationDrawer(button.dataset.id, item);
+    }));
   }
+
+  function stockVenueOptions(selectedId) {
+    return `<option value="">Geen werf gekoppeld</option>${(_stockContext.venues || []).map(venue =>
+      `<option value="${venue.id}" ${selectedId === venue.id ? "selected" : ""}>${esc(venue.name || venue.address || "Locatie")}</option>`
+    ).join("")}`;
+  }
+
+  function stockWorkorderOptions(selectedId) {
+    const open = (_stockContext.workorders || []).filter(workorder =>
+      !["Voltooid", "Gefactureerd", "Geannuleerd", "Cancelled"].includes(workorder.status)
+    );
+    return `<option value="">Geen werkbon gekoppeld</option>${open.map(workorder =>
+      `<option value="${workorder.id}" ${selectedId === workorder.id ? "selected" : ""}>${esc(workorder.number || workorder.reference || workorder.title || "Werkbon")}${workorder.customerName ? ` · ${esc(workorder.customerName)}` : ""}</option>`
+    ).join("")}`;
+  }
+
+  async function openStockDetail(itemId) {
+    const body = document.getElementById("admDrawerBody");
+    document.getElementById("admDrawerTitle").textContent = "Voorraadartikel";
+    body.innerHTML = `<div class="adm-loading"><span class="adm-spinner"></span> Artikel laden…</div>`;
+    openDrawer();
+    try {
+      const data = await api("GET", `/stock/${itemId}`);
+      const item = data.item || data;
+      const mutations = item.mutations || [];
+      const unit = esc(item.unit || "stuks");
+      const venue = stockVenueName(item.venueId) || item.location || "Niet toegewezen";
+
+      body.innerHTML = `
+<div id="stDetail" class="stock-detail">
+  <div class="stock-detail-hero">
+    <div>
+      <div class="stock-eyebrow">${esc(item.sku || "Voorraadartikel")}</div>
+      <h3>${esc(item.name)}</h3>
+      <p>${esc(item.category || "Algemeen")} · ${esc(venue)}</p>
+    </div>
+    <div class="stock-detail-actions">
+      <button class="adm-btn adm-btn-secondary" id="stDetailEdit">Gegevens bewerken</button>
+      <button class="adm-btn adm-btn-primary" id="stDetailMutation">Voorraadmutatie</button>
+    </div>
+  </div>
+
+  <div class="stock-detail-metrics">
+    <div><span>Fysieke voorraad</span><strong>${stockNum(item.qty)} <small>${unit}</small></strong></div>
+    <div><span>Gereserveerd</span><strong>${stockNum(item.reserved)} <small>${unit}</small></strong></div>
+    <div><span>Beschikbaar</span><strong>${stockNum(item.available)} <small>${unit}</small></strong></div>
+    <div><span>Status</span><strong><span class="stock-status stock-status-${item.alert || "unknown"}">${stockAlertLabel(item.alert)}</span></strong></div>
+  </div>
+
+  <div class="stock-detail-grid">
+    <section class="stock-detail-card">
+      <h4>Artikelgegevens</h4>
+      <dl class="stock-definition-list">
+        <div><dt>Minimum</dt><dd>${item.minQty == null ? "Niet ingesteld" : `${stockNum(item.minQty)} ${unit}`}</dd></div>
+        <div><dt>Maximum</dt><dd>${item.maxQty == null ? "Niet ingesteld" : `${stockNum(item.maxQty)} ${unit}`}</dd></div>
+        <div><dt>Leverancier</dt><dd>${esc(item.supplier || "Niet ingesteld")}</dd></div>
+        <div><dt>Opslagplaats</dt><dd>${esc(item.location || venue)}</dd></div>
+      </dl>
+      ${item.notes ? `<div class="stock-notes"><span>Notities</span><p>${esc(item.notes)}</p></div>` : ""}
+    </section>
+
+    <section class="stock-detail-card stock-history-card">
+      <div class="stock-section-head">
+        <div><h4>Mutatiehistoriek</h4><p>De laatste ${Math.min(50, mutations.length)} wijzigingen</p></div>
+      </div>
+      ${mutations.length ? `<div class="stock-history">${mutations.map(mutation => {
+        const linkedWorkorder = stockWorkorderName(mutation.workorderId);
+        const activeReservation = mutation.type === "reservatie" && mutation.status === "actief";
+        return `<div class="stock-history-row">
+          <div class="stock-history-icon stock-history-${mutation.type || "mutatie"}">${mutation.delta > 0 ? "+" : "−"}</div>
+          <div class="stock-history-main">
+            <div><strong>${stockMutationLabel(mutation.type)}</strong><span>${mutation.delta > 0 ? "+" : ""}${stockNum(mutation.delta)} ${unit}</span></div>
+            <p>${esc(mutation.reason || "Geen reden opgegeven")}${linkedWorkorder ? ` · ${esc(linkedWorkorder)}` : ""}</p>
+            <small>${mutation.createdAt ? new Date(mutation.createdAt).toLocaleString("nl-BE") : ""}${mutation.actor ? ` · ${esc(mutation.actor)}` : ""}</small>
+          </div>
+          <div class="stock-history-after">
+            <span>Na mutatie</span>
+            <strong>${stockNum(mutation.qtyAfter)} ${unit}</strong>
+            ${activeReservation ? `<button class="adm-btn adm-btn-secondary adm-btn-sm st-release" data-id="${mutation.id}">Vrijgeven</button>` : ""}
+          </div>
+        </div>`;
+      }).join("")}</div>` : `<div class="adm-empty" style="padding:34px 18px">Nog geen mutaties voor dit artikel.</div>`}
+    </section>
+  </div>
+</div>`;
+
+      document.getElementById("stDetailEdit")?.addEventListener("click", () => openStockDrawer(item));
+      document.getElementById("stDetailMutation")?.addEventListener("click", () => openMutationDrawer(item.id, item));
+      document.querySelectorAll(".st-release").forEach(button => button.addEventListener("click", async () => {
+        button.disabled = true;
+        try {
+          await api("POST", `/stock/mutations/${button.dataset.id}/release`, {});
+          window.showToast("Reservatie is vrijgegeven.", "success");
+          openStockDetail(item.id);
+        } catch (error) {
+          button.disabled = false;
+          window.showToast(error.message, "error");
+        }
+      }));
+    } catch (error) {
+      body.innerHTML = `<div style="padding:24px;color:var(--wf-red)">${esc(error.message)}</div>`;
+    }
+  }
+
   function openStockDrawer(item) {
-    document.getElementById("admDrawerTitle").textContent = item ? tA("adm.stock.editTitle","Artikel bewerken") : tA("adm.stock.newTitle","Nieuw artikel");
+    document.getElementById("admDrawerTitle").textContent = item ? "Artikelgegevens bewerken" : "Nieuw voorraadartikel";
     document.getElementById("admDrawerBody").innerHTML = `
-<form id="stForm">
-  <div class="adm-form-group"><label>${tA("adm.cust.thName","Naam")} *</label><input name="name" value="${esc(item?.name||"")}" required placeholder="Kabel 3x2.5mm²"></div>
-  <div class="adm-form-row">
-    <div class="adm-form-group"><label>${tA("adm.stock.skuCode","SKU / Code")}</label><input name="sku" value="${esc(item?.sku||"")}" placeholder="KAB-325"></div>
-    <div class="adm-form-group"><label>${tA("adm.stock.thCategory","Categorie")}</label><input name="category" value="${esc(item?.category||"")}" placeholder="Kabels"></div>
+<form id="stForm" class="stock-form">
+  <div class="stock-form-intro">
+    <div>
+      <span>${item ? "Artikelbeheer" : "Nieuw artikel"}</span>
+      <h3>${item ? esc(item.name) : "Maak een artikel klaar voor dagelijks gebruik"}</h3>
+      <p>${item ? "Pas stamgegevens en voorraadgrenzen aan. De hoeveelheid wijzigt u via een traceerbare mutatie." : "Leg artikel, locatie en voorraadgrenzen vast. De beginvoorraad wordt automatisch in de historiek bewaard."}</p>
+    </div>
   </div>
-  <div class="adm-form-row">
-    <div class="adm-form-group"><label>${tA("adm.stock.thQty","Hoeveelheid")}</label><input name="quantity" type="number" step="0.01" value="${esc(item?.quantity??0)}"></div>
-    <div class="adm-form-group"><label>${tA("adm.stock.thUnit","Eenheid")}</label><input name="unit" value="${esc(item?.unit||"st")}" placeholder="st / m / kg"></div>
+
+  <div class="adm-form-section">Artikel</div>
+  <div class="stock-form-grid">
+    <div class="adm-form-group stock-field-wide"><label>Naam *</label><input name="name" value="${esc(item?.name || "")}" required placeholder="Kabel 3x2,5 mm²"></div>
+    <div class="adm-form-group"><label>SKU / code</label><input name="sku" value="${esc(item?.sku || "")}" placeholder="KAB-325"></div>
+    <div class="adm-form-group"><label>Categorie</label><input name="category" value="${esc(item?.category || "")}" placeholder="Kabels"></div>
+    <div class="adm-form-group"><label>Eenheid</label><input name="unit" value="${esc(item?.unit || "stuks")}" placeholder="stuks, meter, kg"></div>
   </div>
-  <div class="adm-form-row">
-    <div class="adm-form-group"><label>${tA("adm.stock.minStock","Minimale voorraad")}</label><input name="minQuantity" type="number" value="${esc(item?.minQuantity||"")}"></div>
-    <div class="adm-form-group"><label>${tA("adm.stock.unitPrice","Prijs per eenheid (€)")}</label><input name="unitPrice" type="number" step="0.01" value="${esc(item?.unitPrice||"")}"></div>
+
+  <div class="adm-form-section">Voorraad en locatie</div>
+  <div class="stock-form-grid">
+    ${item ? `<div class="stock-current-qty">
+      <span>Huidige fysieke voorraad</span>
+      <strong>${stockNum(item.qty)} ${esc(item.unit || "stuks")}</strong>
+      <button type="button" class="adm-btn adm-btn-secondary adm-btn-sm" id="stFormMutation">Voorraad aanpassen</button>
+    </div>` : `<div class="adm-form-group"><label>Beginvoorraad</label><input name="qty" type="number" step="0.01" value="0"><div class="adm-form-hint">Wordt als eerste aanvulling bewaard.</div></div>`}
+    <div class="adm-form-group"><label>Minimumvoorraad</label><input name="minQty" type="number" step="0.01" min="0" value="${esc(item?.minQty ?? "")}" placeholder="Waarschuwing vanaf"></div>
+    <div class="adm-form-group"><label>Maximumvoorraad</label><input name="maxQty" type="number" step="0.01" min="0" value="${esc(item?.maxQty ?? "")}" placeholder="Optioneel"></div>
+    <div class="adm-form-group"><label>Werf / locatie</label><select name="venueId">${stockVenueOptions(item?.venueId)}</select></div>
+    <div class="adm-form-group"><label>Opslagplaats</label><input name="location" value="${esc(item?.location || "")}" placeholder="Magazijn A · rek 4"></div>
+    <div class="adm-form-group"><label>Leverancier</label><input name="supplier" value="${esc(item?.supplier || "")}" placeholder="Naam leverancier"></div>
   </div>
-  <div class="adm-form-actions" style="justify-content:space-between;">
-    ${item ? `<button type="button" class="adm-btn adm-btn-danger adm-btn-sm" id="stDelete">${tA("adm.delete","Verwijderen")}</button>` : `<span></span>`}
-    <div style="display:flex;gap:8px;">
-      <button type="button" class="adm-btn adm-btn-secondary" id="stCancel">${tA("adm.cancel","Annuleren")}</button>
-      <button type="submit" class="adm-btn adm-btn-primary">${item ? tA("adm.save","Opslaan") : tA("adm.createBtn","Aanmaken")}</button>
+
+  <div class="adm-form-section">Interne informatie</div>
+  <div class="adm-form-group"><label>Notities</label><textarea name="notes" rows="4" placeholder="Bestelreferentie, praktische afspraken of productinformatie">${esc(item?.notes || "")}</textarea></div>
+
+  <div class="adm-form-actions" style="justify-content:space-between">
+    ${item ? `<button type="button" class="adm-btn adm-btn-danger adm-btn-sm" id="stDelete">Artikel verwijderen</button>` : `<span></span>`}
+    <div class="stock-action-group">
+      <button type="button" class="adm-btn adm-btn-secondary" id="stCancel">Annuleren</button>
+      <button type="submit" class="adm-btn adm-btn-primary">${item ? "Wijzigingen opslaan" : "Artikel aanmaken"}</button>
     </div>
   </div>
 </form>`;
     openDrawer();
-    document.getElementById("stCancel").addEventListener("click", closeDrawer);
+
+    document.getElementById("stCancel")?.addEventListener("click", closeDrawer);
+    document.getElementById("stFormMutation")?.addEventListener("click", () => openMutationDrawer(item.id, item));
+
     if (item) {
-      document.getElementById("stDelete").addEventListener("click", async () => {
-        if (!confirm(tA("adm.stock.deleteConfirm",'Artikel "{n}" permanent verwijderen? Alle stockhistorie gaat verloren.').replace("{n}", item.name))) return;
-        try { await api("DELETE", `/stock/${item.id}`); closeDrawer(); renderStock(); }
-        catch(err) { window.showToast(err.message, "error"); }
+      document.getElementById("stDelete")?.addEventListener("click", async () => {
+        if (!confirm(`Artikel "${item.name}" permanent verwijderen? Ook de mutatiehistoriek is daarna niet meer zichtbaar.`)) return;
+        try {
+          await api("DELETE", `/stock/${item.id}`);
+          closeDrawer();
+          renderStock();
+        } catch (error) {
+          window.showToast(error.message, "error");
+        }
       });
     }
-    document.getElementById("stForm").addEventListener("submit", async e => {
-      e.preventDefault();
-      const body = Object.fromEntries(new FormData(e.target).entries());
-      if (body.quantity !== undefined) body.quantity = Number(body.quantity);
-      if (body.minQuantity) body.minQuantity = Number(body.minQuantity);
-      if (body.unitPrice) body.unitPrice = Number(body.unitPrice);
+
+    document.getElementById("stForm")?.addEventListener("submit", async event => {
+      event.preventDefault();
+      const raw = Object.fromEntries(new FormData(event.target).entries());
+      const body = {
+        name: raw.name,
+        sku: raw.sku,
+        category: raw.category,
+        unit: raw.unit,
+        venueId: raw.venueId || null,
+        location: raw.location,
+        supplier: raw.supplier,
+        notes: raw.notes,
+        minQty: raw.minQty === "" ? null : Number(raw.minQty),
+        maxQty: raw.maxQty === "" ? null : Number(raw.maxQty)
+      };
+      if (!item) body.qty = raw.qty === "" ? 0 : Number(raw.qty);
+
       try {
-        if (item) await api("PATCH", `/stock/${item.id}`, body);
-        else await api("POST", "/stock", body);
-        closeDrawer(); renderStock();
-      } catch(err) { window.showToast(err.message, "error"); }
+        const response = item
+          ? await api("PATCH", `/stock/${item.id}`, body)
+          : await api("POST", "/stock", body);
+        window.showToast(item ? "Artikelgegevens opgeslagen." : "Voorraadartikel aangemaakt.", "success");
+        await renderStock();
+        openStockDetail((response.item || response).id);
+      } catch (error) {
+        window.showToast(error.message, "error");
+      }
     });
   }
-  function openMutationDrawer(itemId) {
-    document.getElementById("admDrawerTitle").textContent = tA("adm.stock.mutTitle","Stockmutatie");
-    document.getElementById("admDrawerBody").innerHTML = `
-<form id="mutForm">
-  <p style="font-size:13px;color:var(--gray-500);margin-bottom:12px">${tA("adm.stock.mutHint","Pas de voorraad aan met een positieve (aanvulling) of negatieve (gebruik) waarde.")}</p>
-  <div class="adm-form-group"><label>${tA("adm.stock.mutQty","Hoeveelheid (+ aanvulling / − gebruik)")} *</label><input name="delta" type="number" step="0.01" required placeholder="${tA("adm.stock.mutQtyPh","bv. -5 of +20")}"></div>
-  <div class="adm-form-group"><label>${tA("adm.stock.reason","Reden")}</label><input name="reason" placeholder="${tA("adm.stock.reasonPh","Gebruikt op werf Brussel")}"></div>
-  <div class="adm-form-group"><label>${tA("adm.date","Datum")}</label><input name="date" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
+
+  async function openMutationDrawer(itemId, knownItem) {
+    document.getElementById("admDrawerTitle").textContent = "Voorraadmutatie";
+    const body = document.getElementById("admDrawerBody");
+    body.innerHTML = `<div class="adm-loading"><span class="adm-spinner"></span> Voorraad laden…</div>`;
+    openDrawer();
+
+    try {
+      const response = knownItem?.mutations ? { item: knownItem } : await api("GET", `/stock/${itemId}`);
+      const item = response.item || response;
+      const unit = esc(item.unit || "stuks");
+
+      body.innerHTML = `
+<form id="mutForm" class="stock-mutation-form">
+  <div class="stock-mutation-summary">
+    <div>
+      <span>Artikel</span>
+      <strong>${esc(item.name)}</strong>
+      <small>${esc(item.sku || item.category || "Voorraadartikel")}</small>
+    </div>
+    <div><span>Fysiek</span><strong>${stockNum(item.qty)} ${unit}</strong></div>
+    <div><span>Gereserveerd</span><strong>${stockNum(item.reserved)} ${unit}</strong></div>
+    <div><span>Beschikbaar</span><strong>${stockNum(item.available)} ${unit}</strong></div>
+  </div>
+
+  <div class="adm-form-section">Wat wilt u registreren?</div>
+  <div class="stock-mutation-grid">
+    <div class="adm-form-group">
+      <label>Type mutatie *</label>
+      <select name="type" id="mutType" required>
+        <option value="aanvulling">Aanvulling ontvangen</option>
+        <option value="gebruik">Verbruik registreren</option>
+        <option value="reservatie">Reserveren voor werkbon</option>
+        <option value="correctie">Voorraad corrigeren</option>
+      </select>
+      <div class="adm-form-hint" id="mutTypeHint">De ontvangen hoeveelheid wordt bij de fysieke voorraad geteld.</div>
+    </div>
+    <div class="adm-form-group">
+      <label id="mutQtyLabel">Ontvangen hoeveelheid *</label>
+      <div class="stock-quantity-input">
+        <input name="delta" id="mutDelta" type="number" min="0.01" step="0.01" required placeholder="0">
+        <span>${unit}</span>
+      </div>
+      <div class="adm-form-hint" id="mutQtyHint">Vul een positieve hoeveelheid in.</div>
+    </div>
+    <div class="adm-form-group">
+      <label>Werkbon</label>
+      <select name="workorderId" id="mutWorkorder">${stockWorkorderOptions("")}</select>
+      <div class="adm-form-hint" id="mutWorkorderHint">Optioneel bij een aanvulling of correctie.</div>
+    </div>
+    <div class="adm-form-group">
+      <label>Werf / locatie</label>
+      <select name="venueId">${stockVenueOptions(item.venueId)}</select>
+    </div>
+    <div class="adm-form-group stock-field-wide">
+      <label>Reden of referentie</label>
+      <input name="reason" placeholder="Bijvoorbeeld levering 2026-184 of gebruikt tijdens plaatsing">
+    </div>
+  </div>
+
+  <div class="stock-mutation-impact" id="mutImpact">
+    <span>Verwachte fysieke voorraad</span>
+    <strong>${stockNum(item.qty)} ${unit}</strong>
+  </div>
+
   <div class="adm-form-actions">
-    <button type="button" class="adm-btn adm-btn-secondary" id="mutCancel">${tA("adm.cancel","Annuleren")}</button>
-    <button type="submit" class="adm-btn adm-btn-primary">${tA("adm.stock.process","Verwerken")}</button>
+    <button type="button" class="adm-btn adm-btn-secondary" id="mutCancel">Annuleren</button>
+    <button type="submit" class="adm-btn adm-btn-primary" id="mutSubmit">Mutatie verwerken</button>
   </div>
 </form>`;
-    openDrawer();
-    document.getElementById("mutCancel").addEventListener("click", closeDrawer);
-    document.getElementById("mutForm").addEventListener("submit", async e => {
-      e.preventDefault();
-      const body = Object.fromEntries(new FormData(e.target).entries());
-      body.delta = Number(body.delta);
-      try {
-        await api("POST", `/stock/${itemId}/mutations`, body);
-        closeDrawer(); renderStock();
-      } catch(err) { window.showToast(err.message, "error"); }
-    });
+
+      const typeInput = document.getElementById("mutType");
+      const deltaInput = document.getElementById("mutDelta");
+      const workorderInput = document.getElementById("mutWorkorder");
+      const typeHint = document.getElementById("mutTypeHint");
+      const qtyLabel = document.getElementById("mutQtyLabel");
+      const qtyHint = document.getElementById("mutQtyHint");
+      const workorderHint = document.getElementById("mutWorkorderHint");
+      const impact = document.getElementById("mutImpact");
+
+      const updateMutationForm = () => {
+        const type = typeInput.value;
+        const entered = Number(deltaInput.value || 0);
+        const isCorrection = type === "correctie";
+        const isOutbound = type === "gebruik";
+        const isReservation = type === "reservatie";
+
+        deltaInput.min = isCorrection ? "" : "0.01";
+        qtyLabel.textContent = isCorrection ? "Correctie (+ of −) *" : isReservation ? "Te reserveren hoeveelheid *" : isOutbound ? "Verbruikte hoeveelheid *" : "Ontvangen hoeveelheid *";
+        qtyHint.textContent = isCorrection ? "Gebruik een minteken om de fysieke voorraad te verlagen." : "Vul een positieve hoeveelheid in; Monargo verwerkt de richting automatisch.";
+        typeHint.textContent = isReservation
+          ? "De fysieke voorraad blijft gelijk; de beschikbare voorraad daalt."
+          : isOutbound
+            ? "De gebruikte hoeveelheid gaat van de fysieke voorraad af."
+            : isCorrection
+              ? "Gebruik dit alleen wanneer de getelde voorraad afwijkt."
+              : "De ontvangen hoeveelheid wordt bij de fysieke voorraad geteld.";
+        workorderInput.required = isReservation;
+        workorderHint.textContent = isReservation ? "Een reservatie moet aan een werkbon gekoppeld zijn." : isOutbound ? "Koppel verbruik aan een werkbon voor volledige traceerbaarheid." : "Optioneel bij een aanvulling of correctie.";
+
+        let physicalAfter = stockQty(item.qty);
+        let availableAfter = stockQty(item.available);
+        if (type === "aanvulling") {
+          physicalAfter += Math.abs(entered);
+          availableAfter += Math.abs(entered);
+        } else if (isOutbound) {
+          physicalAfter -= Math.abs(entered);
+          availableAfter -= Math.abs(entered);
+        } else if (isCorrection) {
+          physicalAfter += entered;
+          availableAfter += entered;
+        } else if (isReservation) {
+          availableAfter -= Math.abs(entered);
+        }
+        impact.innerHTML = `<span>${isReservation ? "Verwacht beschikbaar" : "Verwachte fysieke voorraad"}</span><strong class="${(isReservation ? availableAfter : physicalAfter) < 0 ? "stock-negative" : ""}">${stockNum(isReservation ? availableAfter : physicalAfter)} ${unit}</strong>`;
+      };
+
+      typeInput.addEventListener("change", updateMutationForm);
+      deltaInput.addEventListener("input", updateMutationForm);
+      updateMutationForm();
+
+      document.getElementById("mutCancel")?.addEventListener("click", () => openStockDetail(item.id));
+      document.getElementById("mutForm")?.addEventListener("submit", async event => {
+        event.preventDefault();
+        const raw = Object.fromEntries(new FormData(event.target).entries());
+        const entered = Number(raw.delta);
+        const delta = raw.type === "correctie"
+          ? entered
+          : raw.type === "aanvulling"
+            ? Math.abs(entered)
+            : -Math.abs(entered);
+        const payload = {
+          type: raw.type,
+          delta,
+          reason: raw.reason,
+          workorderId: raw.workorderId || null,
+          venueId: raw.venueId || null
+        };
+
+        const submit = document.getElementById("mutSubmit");
+        submit.disabled = true;
+        try {
+          await api("POST", `/stock/${item.id}/mutations`, payload);
+          window.showToast("Voorraadmutatie verwerkt.", "success");
+          await renderStock();
+          openStockDetail(item.id);
+        } catch (error) {
+          submit.disabled = false;
+          window.showToast(error.message, "error");
+        }
+      });
+    } catch (error) {
+      body.innerHTML = `<div style="padding:24px;color:var(--wf-red)">${esc(error.message)}</div>`;
+    }
   }
+
+  
 
   // ── Factuur PDF afdrukken ──────────────────────────────────
   function printInvoicePDF(inv, tenant = {}) {

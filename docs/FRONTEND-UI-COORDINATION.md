@@ -2,6 +2,33 @@
 
 Doel: frontend-werk afstemmen op de sessie "Ontwikkel app roadmap", zodat design, app-roadmap en technische foundation elkaar versterken zonder dubbel werk.
 
+
+## Release-afstemming — voorraadworkspace (18 juli 2026)
+
+Frontend is nu afgestemd op het bestaande voorraadcontract en voegt geen backendlogica toe.
+
+| Onderdeel | Frontendgedrag | Backendcontract |
+| --- | --- | --- |
+| Artikelvelden | `qty`, `minQty`, `maxQty`, `unit`, `venueId`, `location`, `supplier`, `notes` | Bestaande `/stock` create/update-contracten |
+| Beschikbaarheid | Toont fysieke voorraad, `reserved` en `available` afzonderlijk | Waarden komen uit `listStock`/`getStockItem` |
+| Mutaties | Verplicht expliciet type: `aanvulling`, `gebruik`, `reservatie` of `correctie` | `POST /stock/:id/mutations` |
+| Werkbonkoppeling | Reservatie vereist een werkbon; verbruik kan er één bewaren | Bestaand veld `workorderId` |
+| Vrijgave | Actieve reservatie kan in de historiek worden vrijgegeven | `POST /stock/mutations/:id/release` |
+| Historiek | Detailworkspace toont de laatste 50 backendmutaties | Bestaande `getStockItem(...).mutations` |
+
+Bewuste productkeuzes:
+
+- Geen fictieve totale stockwaarde: het huidige backendcontract bevat geen `unitPrice`, en gemengde eenheden (stuks, meter, kg) mogen niet betekenisloos worden opgeteld.
+- `transfer` blijft uit de gebruikersflow tot een volwaardige bron-/doelartikelkeuze en servervalidatie samen zijn afgestemd.
+- Hoeveelheid op een bestaand artikel wordt uitsluitend via een mutatie gewijzigd; de frontend stuurt bij `PATCH /stock/:id` geen `qty`.
+- De backend blijft eigenaar van negatieve-voorraadcontrole, reservatiestatus, tenantisolatie, audit en permissies.
+
+Backendfeedback voor een volgende iteratie:
+
+1. Bevestig of een stocktransfer zonder `targetStockItemId` voortaan server-side geweigerd moet worden. De frontend zal de transfer pas tonen met een expliciet doelartikel.
+2. Overweeg op termijn een afzonderlijk kostprijscontract als voorraadwaardering gewenst is; voeg dit niet impliciet toe aan het huidige artikelmodel.
+3. Behoud `duration`/auditvelden en mutatie-ID's stabiel, omdat de detailworkspace daarop traceerbaarheid en vrijgave baseert.
+
 ## Rolafbakening
 
 ### Roadmap / fullstack sessie
