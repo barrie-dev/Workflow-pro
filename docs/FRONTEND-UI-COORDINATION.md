@@ -316,3 +316,22 @@ Feedback voor de backendontwikkelaar:
 - `POST /workorders/{id}/invoice` blijft de enige canonieke werkbonfacturatieactie, inclusief idempotentie/conflict bij reeds gefactureerde werkbonnen.
 - Lever bij 409/422 een stabiele `code`, `fieldErrors` en `requestId`, zodat de editor de oorzaak kan tonen zonder tekstinterpretatie.
 
+
+
+## Medewerkerafronding en bewijs — frontendintegratie 2026-07-18
+
+De functionele audit toonde dat de medewerkereditor velden voor materiaal en klantbevestiging naar `PATCH /me/workorders/{id}` stuurde, terwijl dat contract alleen status, `completionNote` en foto's bewaart. De UI gebruikt nu het bestaande handtekeningcontract `POST /mobile/workorders/{id}/signature` voor de klantnaam en bewaart gebruikt materiaal samen met de uitvoeringsnotitie. De afgeronde werkbon toont zowel de bestaande `completionNote` als de mobiele `mobileNote`-fallback.
+
+Frontendcontract:
+
+- Een ingevulde klantnaam kan alleen met expliciete bevestiging worden doorgestuurd.
+- De handtekening wordt eerst bewaard; pas daarna wordt de werkbon afgerond.
+- Een fout in een van beide stappen blijft zichtbaar in de afrondingseditor.
+- Materiaaltekst gaat niet meer stil verloren en blijft voorlopig leesbaar in de uitvoeringsnotitie.
+
+Feedback voor de backendontwikkelaar:
+
+- Voeg voor definitieve materiaalrapportage een tenant-scoped gestructureerd contract toe, bijvoorbeeld `completionMaterials[]` met omschrijving, hoeveelheid en eenheid.
+- Overweeg één canonieke transactie voor bewijs + afronding, zodat handtekening en status niet gedeeltelijk kunnen slagen. Tot dan voert de frontend de handtekening bewust eerst uit.
+- Retourneer bij dubbele afronding of ontbrekende rechten een stabiele `code`, `requestId` en bruikbare foutmelding.
+- Laat documentrendering zowel `completionNote/mobileNote` als de bestaande `signature.signerName` tonen; de backend blijft bron van waarheid voor het auditspoor.
