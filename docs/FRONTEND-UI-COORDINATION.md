@@ -127,3 +127,25 @@ Alle P0-punten uit `Monargo-One-backend-handoff.docx` zijn geland. Non-breaking:
 Al gedekt, geen actie nodig: `GET /api/plans` (trialDays + catalogus), pending registratie/reseller, onboarding-persistentie, servertotalen/btw/nummering, werkbon→factuur-idempotentie (409), tenant-isolatie met server-side rollen, betaallink met expliciete `provider: stripe/mock`.
 
 Procesafspraak na het merge-incident van vandaag: frontend-branches vóór merge rebasen op actuele `main`. De frontend-PR's (#4-#18) vertrokken van een oudere snapshot en overschreven daarbij de op 15/07 gereleasede modules Afspraken, Werkongevallen, Klantvragen-inbox en AI-estimatie (hersteld in commit 4f669bd, SW wfp-v75). Gedeelde bestanden: `public/js/platforms/*.js`, `public/js/i18n.js`, `public/sw.js`.
+
+
+## Stock en wagenpark — frontendintegratie 2026-07-18
+
+De bestaande stock- en wagenparkflows zijn frontendmatig genormaliseerd naar dezelfde rustige Monargo operations-workspace. Deze release verandert geen domeinlogica: zoeken, stockmutaties, voertuigbeheer, kilometerregistratie en onderhoud blijven de bestaande API-contracten en server-side autorisatie gebruiken.
+
+| UI-flow | Bestaand contract | UI-gedrag |
+| --- | --- | --- |
+| Stockoverzicht | `GET /api/tenants/:tenantId/stock` | Toont artikel-KPI's, totale stockwaarde, lage-voorraadwaarschuwingen en een lokale zoekfilter. |
+| Stockartikel beheren | `POST/PATCH/DELETE /api/tenants/:tenantId/stock/:id?` | Bestaande drawerflow; servervalidatie en tenant-eigendom blijven leidend. |
+| Stockmutatie | `POST /api/tenants/:tenantId/stock/:id/mutations` | Positieve en negatieve mutaties blijven expliciete domeinacties met reden en datum. |
+| Wagenparkoverzicht | `GET /api/tenants/:tenantId/vehicles` | Toont voertuigen, status, chauffeur, kilometerstand, volgende service en bestaande alerts. |
+| Voertuig en kilometerstand | bestaande `/vehicles` CRUD en `POST /vehicles/:id/mileage` | Bestaande drawers blijven de enige mutatieroute; de UI voegt geen lokale statuslogica toe. |
+
+Feedback voor de backendontwikkelaar:
+
+- Voor deze UI-release is geen nieuw endpoint nodig; behoud de bestaande non-breaking responses.
+- Geef alerts op termijn stabiele `id`, `type`, `severity`, `message`, `entityId` en optioneel `dueAt`, zodat de UI niet op vrije tekst hoeft te sturen.
+- Lever canonieke voertuigstatussen en stockeenheden wanneer het datamodel stabiliseert; de frontend vertaalt labels, maar beslist geen statusovergangen.
+- Bewaar stockmutaties als append-only audittrail met actor, tijdstip, delta, reden en resulterende hoeveelheid. De UI mag een actuele hoeveelheid tonen, maar niet zelf de boekhouding reconstrueren.
+- Voor grotere tenants zijn server-side `query`, filters, sortering en paging wenselijk op stock en voertuigen. De huidige lokale zoekfilter is alleen geschikt voor beperkte datasets.
+- Blijf onderhouds- en lage-voorraaddrempels server-side berekenen. De frontend presenteert de waarschuwing en dupliceert de bedrijfsregel niet.
