@@ -237,6 +237,10 @@ const {
   buildExport: buildGridExport, createExportJob: createGridExportJob, getExportJob: getGridExportJob,
   makeViewRepository: makeGridViewRepository,
 } = require("./platform/grid");
+const {
+  makeFormTemplateRepository, makeFormInstanceRepository, makeTaskRepository,
+  makeFileRepository, makeCommunicationRepository,
+} = require("./platform/work-os");
 const { httpsRequest } = require("./lib/http-client");
 const inventory = require("./platform/inventory");
 const { buildMonaSignals } = require("./platform/mona-signals");
@@ -352,6 +356,12 @@ const webhookRepo = makeWebhookRepository(store);
 const progressClaimRepo = makeProgressClaimRepository(store);
 const employeeRepo = makeEmployeeRepository(store);
 const gridViewRepo = makeGridViewRepository(store);
+// Work OS-kern (h39): gedeelde platformdiensten voor élke module.
+const formTemplateRepo = makeFormTemplateRepository(store);
+const formInstanceRepo = makeFormInstanceRepository(store, formTemplateRepo);
+const taskRepo = makeTaskRepository(store);
+const fileRepo = makeFileRepository(store);
+const communicationRepo = makeCommunicationRepository(store);
 /** Kosttarieven zijn gevoelige velden (h8.2): enkel beheerders zien/beheren ze. */
 function canSeeEmployeeCost(user) {
   return !!user && ["tenant_admin", "super_admin"].includes(user.role);
@@ -5458,6 +5468,195 @@ http.createServer(async (req, res) => {
       }
 
       // ── Medewerkers ophalen ───────────────────────────────────────────────────
+      // ── Work OS-kern · formulieren, taken, bestanden, communicatie (h39/DOC) ──
+      // Formulierdesigner
+      if (action === "forms/templates" && req.method === "GET") {
+        sendJson(res, 200, { ok: true, templates: formTemplateRepo.list(tenantId, { status: url.searchParams.get("status") || undefined, appliesTo: url.searchParams.get("appliesTo") || undefined }) });
+        return;
+      }
+      if (action === "forms/templates" && req.method === "POST") {
+        assertCan(user, "settings");
+        assertInteractiveUser(user);
+        let row;
+        try { row = formTemplateRepo.insert(tenantId, await readBody(req), user.email); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "form_template_created", area: "forms", detail: row.name });
+        sendJson(res, 201, { ok: true, template: row });
+        return;
+      }
+      const formTplMatch = action.match(/^forms\/templates\/([^/]+)$/);
+      if (formTplMatch && req.method === "PATCH") {
+        assertCan(user, "settings");
+        assertInteractiveUser(user);
+        let row;
+        try { row = formTemplateRepo.update(tenantId, formTplMatch[1], await readBody(req), user.email); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        sendJson(res, 200, { ok: true, template: row });
+        return;
+      }
+      const formTplTransitionMatch = action.match(/^forms\/templates\/([^/]+)\/transition$/);
+      if (formTplTransitionMatch && req.method === "POST") {
+        assertCan(user, "settings");
+        assertInteractiveUser(user);
+        const body = await readBody(req);
+        let row;
+        try { row = formTemplateRepo.transition(tenantId, formTplTransitionMatch[1], body.status, user.email); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        sendJson(res, 200, { ok: true, template: row });
+        return;
+      }
+      // Formulierinvulling · gestructureerde antwoorden, filterbaar via de API
+      if (action === "forms/instances" && req.method === "GET") {
+        sendJson(res, 200, { ok: true, instances: formInstanceRepo.list(tenantId, {
+          templateId: url.searchParams.get("templateId") || undefined,
+          entityType: url.searchParams.get("entityType") || undefined,
+          entityId: url.searchParams.get("entityId") || undefined,
+          status: url.searchParams.get("status") || undefined,
+        }) });
+        return;
+      }
+      if (action === "forms/instances" && req.method === "POST") {
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        let row;
+        try { row = formInstanceRepo.start(tenantId, body, user.email); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        sendJson(res, 201, { ok: true, instance: row });
+        return;
+      }
+      const formInstMatch = action.match(/^forms\/instances\/([^/]+)$/);
+      if (formInstMatch && req.method === "PATCH") {
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        let row;
+        try { row = formInstanceRepo.saveAnswers(tenantId, formInstMatch[1], body.answers, user.email); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        sendJson(res, 200, { ok: true, instance: row });
+        return;
+      }
+      const formSubmitMatch = action.match(/^forms\/instances\/([^/]+)\/(submit|lock|photo)$/);
+      if (formSubmitMatch && req.method === "POST") {
+        assertApiKeyWriteAllowed(user, req);
+        const op = formSubmitMatch[2];
+        let row;
+        try {
+          if (op === "submit") row = formInstanceRepo.submit(tenantId, formSubmitMatch[1], user.email);
+          else if (op === "lock") row = formInstanceRepo.lock(tenantId, formSubmitMatch[1], user.email);
+          else row = formInstanceRepo.attachPhoto(tenantId, formSubmitMatch[1], await readBody(req), user.email);
+        }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code, missing: e.missing, invalid: e.invalid }); }
+        if (op === "submit") emitDomainEvent(store, { tenantId, eventType: "form.submitted", aggregateType: "form_instance", aggregateId: row.id, actor: user.email, correlationId: res.wfpRequestId, data: { templateKey: row.templateKey, context: row.context } });
+        sendJson(res, 200, { ok: true, instance: row });
+        return;
+      }
+
+      // Taken
+      if (action === "tasks" && req.method === "GET") {
+        const mine = url.searchParams.get("mine") === "1";
+        sendJson(res, 200, { ok: true, tasks: taskRepo.list(tenantId, {
+          assigneeId: mine ? user.id : (url.searchParams.get("assigneeId") || undefined),
+          teamId: url.searchParams.get("teamId") || undefined,
+          status: url.searchParams.get("status") || undefined,
+          entityType: url.searchParams.get("entityType") || undefined,
+          entityId: url.searchParams.get("entityId") || undefined,
+          overdueOn: url.searchParams.get("overdue") === "1" ? new Date().toISOString().slice(0, 10) : undefined,
+        }) });
+        return;
+      }
+      if (action === "tasks" && req.method === "POST") {
+        assertApiKeyWriteAllowed(user, req);
+        let row;
+        try { row = taskRepo.insert(tenantId, await readBody(req), user.email); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        emitDomainEvent(store, { tenantId, eventType: "task.created", aggregateType: "task", aggregateId: row.id, actor: user.email, correlationId: res.wfpRequestId, data: { context: row.context, assigneeId: row.assigneeId } });
+        sendJson(res, 201, { ok: true, task: row });
+        return;
+      }
+      const taskItemMatch = action.match(/^tasks\/([^/]+)$/);
+      if (taskItemMatch && req.method === "PATCH") {
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        let row;
+        try { row = taskRepo.update(tenantId, taskItemMatch[1], body, user.email, body.expectedVersion); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code, currentVersion: e.currentVersion }); }
+        sendJson(res, 200, { ok: true, task: row });
+        return;
+      }
+      if (taskItemMatch && req.method === "DELETE") {
+        assertInteractiveUser(user);
+        try { taskRepo.remove(tenantId, taskItemMatch[1]); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        sendJson(res, 200, { ok: true });
+        return;
+      }
+      const taskTransitionMatch = action.match(/^tasks\/([^/]+)\/transition$/);
+      if (taskTransitionMatch && req.method === "POST") {
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        let row;
+        try { row = taskRepo.transition(tenantId, taskTransitionMatch[1], body.status, user.email); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        sendJson(res, 200, { ok: true, task: row });
+        return;
+      }
+
+      // Bestanden · versies en geauditeerde downloads
+      if (action === "docfiles" && req.method === "GET") {
+        sendJson(res, 200, { ok: true, files: fileRepo.list(tenantId, { entityType: url.searchParams.get("entityType") || undefined, entityId: url.searchParams.get("entityId") || undefined }) });
+        return;
+      }
+      if (action === "docfiles" && req.method === "POST") {
+        assertApiKeyWriteAllowed(user, req);
+        let row;
+        try { row = fileRepo.insert(tenantId, await readBody(req), user.email); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "file_uploaded", area: "files", detail: `${row.name} v${row.currentVersion}` });
+        sendJson(res, 201, { ok: true, file: row });
+        return;
+      }
+      const fileVersionMatch = action.match(/^docfiles\/([^/]+)\/versions$/);
+      if (fileVersionMatch && req.method === "POST") {
+        assertApiKeyWriteAllowed(user, req);
+        let row;
+        try { row = fileRepo.addVersion(tenantId, fileVersionMatch[1], await readBody(req), user.email); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "file_version_added", area: "files", detail: `${row.name} v${row.currentVersion}` });
+        sendJson(res, 201, { ok: true, file: row });
+        return;
+      }
+      const fileDownloadMatch = action.match(/^docfiles\/([^/]+)\/download$/);
+      if (fileDownloadMatch && req.method === "POST") {
+        let entry, file;
+        try {
+          entry = fileRepo.recordDownload(tenantId, fileDownloadMatch[1], { version: url.searchParams.get("version"), actor: user.email, ip: req.socket && req.socket.remoteAddress });
+          file = fileRepo.findById(tenantId, fileDownloadMatch[1]);
+        }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        // Downloads worden geaudit (acceptatie h39).
+        store.audit({ actor: user.email, tenantId, action: "file_downloaded", area: "files", detail: `${file.name} v${entry.version}` });
+        sendJson(res, 200, { ok: true, download: entry, storageRef: (file.versions.find(v => v.version === entry.version) || {}).storageRef });
+        return;
+      }
+
+      // Communicatietijdlijn
+      if (action === "communications" && req.method === "GET") {
+        sendJson(res, 200, { ok: true, communications: communicationRepo.list(tenantId, {
+          entityType: url.searchParams.get("entityType") || undefined,
+          entityId: url.searchParams.get("entityId") || undefined,
+          channel: url.searchParams.get("channel") || undefined,
+        }) });
+        return;
+      }
+      if (action === "communications" && req.method === "POST") {
+        assertApiKeyWriteAllowed(user, req);
+        let row;
+        try { row = communicationRepo.record(tenantId, await readBody(req), user.email); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "communication_recorded", area: "communications", detail: `${row.channel} · ${row.subject}` });
+        sendJson(res, 201, { ok: true, communication: row });
+        return;
+      }
+
       // ── Universele overzichten, bulkacties en export (h11/GRD) ────────────────
       // Eén gedeeld pad voor elke resource, zodat UI en API dezelfde filters,
       // rechten en zichtbare kolommen hanteren.
