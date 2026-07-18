@@ -14,11 +14,12 @@ test("planning resolveert venueId naar een leesbare locatie", () => {
   assert.match(admin, /shift\.locationLabel === _planningLocation/);
 });
 
-test("shiftformulier bewaart venueId en location als afzonderlijke velden", () => {
+test("shiftformulier bewaart een echte venueId en exposeert geen niet-opgeslagen locatie", () => {
   assert.match(admin, /name="venueId" id="shiftVenue"/);
-  assert.match(admin, /name="location" id="shiftLocation"/);
   assert.match(admin, /body\.venueId = body\.venueId \|\| null/);
-  assert.match(admin, /body\.location = String\(body\.location \|\| ""\)\.trim\(\)/);
+  assert.match(admin, /planning-legacy-location/);
+  const shiftSection = admin.slice(admin.indexOf("function openShiftDrawer"), admin.indexOf("// ── Clocking"));
+  assert.doesNotMatch(shiftSection, /name="location"/);
 });
 
 test("werkbon neemt de werfkoppeling mee naar de planning", () => {
@@ -31,7 +32,6 @@ test("werkbon neemt de werfkoppeling mee naar de planning", () => {
 test("week kopiëren bewaart werkbon- en werfidentiteit", () => {
   assert.match(admin, /venueId: s\.venueId \|\| null/);
   assert.match(admin, /workorderId: s\.workorderId \|\| null/);
-  assert.match(admin, /location: s\.location \|\| ""/);
 });
 
 test("planning- en locatieformulieren zijn geen smalle sidepanels", () => {
