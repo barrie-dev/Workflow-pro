@@ -2056,3 +2056,43 @@ button.adm-board-row:hover { background:#fafafe; }
   .message-card-actions { align-items:flex-start; flex-direction:column; }
 }
 
+
+
+/* ── Monargo werfidentiteit door werkbon en planning ── */
+
+.adm-drawer:has(#admShiftForm),
+.adm-drawer:has(#venForm) { width:min(980px,calc(100vw - 72px)); }
+.adm-drawer:has(#admShiftForm) .adm-drawer-body,
+.adm-drawer:has(#venForm) .adm-drawer-body { padding:30px 36px 34px; }
+.adm-drawer:has(#admShiftForm) .adm-form-group label,
+.adm-drawer:has(#venForm) .adm-form-group label { font-size:13px; font-weight:620; }
+.adm-drawer:has(#admShiftForm) .adm-form-group input,
+.adm-drawer:has(#admShiftForm) .adm-form-group select,
+.adm-drawer:has(#venForm) .adm-form-group input,
+.adm-drawer:has(#venForm) .adm-form-group select,
+.adm-drawer:has(#venForm) .adm-form-group textarea { min-height:46px; font-size:14px; }
+.adm-drawer:has(#venForm) .adm-form-group textarea { min-height:112px; }
+
+.wo-location-row {
+  margin:4px 0 18px; padding:17px 17px 2px;
+  background:linear-gradient(135deg,#f5f9ff,#f8f8ff);
+  border:1px solid #dfe8f4; border-radius:13px;
+}
+.wo-location-row .adm-form-group label { color:#24496c; font-size:13px; font-weight:650; }
+.wo-location-row .adm-form-hint { color:#61768b; font-size:12px; }
+.wo-location-row input,.wo-location-row select { min-height:46px; font-size:14px; }
+
+.adm-main[data-view="planning"] #admPlanningLocation option { color:var(--ink); }
+.adm-main[data-view="planning"] .adm-shift-pill small { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+@media (max-width:760px) {
+  .adm-drawer:has(#admShiftForm),.adm-drawer:has(#venForm) { width:100vw; }
+  .adm-drawer:has(#admShiftForm) .adm-drawer-body,.adm-drawer:has(#venForm) .adm-drawer-body { padding:22px 18px 28px; }
+  .wo-location-row { grid-template-columns:1fr; padding:14px 14px 0; }
+}
+
+
+.planning-legacy-location {
+  margin-top:9px; padding:10px 12px; color:#7a5b0d; background:#fff7df;
+  border:1px solid #ecdfb8; border-radius:9px; font-size:12px; line-height:1.45;
+}

@@ -1917,13 +1917,25 @@ ${emp ? `
     const from = baseWeek.toISOString().slice(0, 10);
     const to = weekEnd.toISOString().slice(0, 10);
 
-    const [planData, leaveData, employeeData, workorderData] = await Promise.all([
+    const [planData, leaveData, employeeData, workorderData, venueData] = await Promise.all([
       api("GET", `/manager/planning?from=${from}&to=${to}`),
       api("GET", `/leaves?from=${from}&to=${to}&status=goedgekeurd`).catch(() => ({ leaves: [] })),
       api("GET", "/employees").catch(() => ({ employees: [] })),
-      viewEnabled("workorders") ? api("GET", "/workorders").catch(() => ({ workorders: [] })) : { workorders: [] }
+      viewEnabled("workorders") ? api("GET", "/workorders").catch(() => ({ workorders: [] })) : { workorders: [] },
+      viewEnabled("venues") ? api("GET", "/venues").catch(() => ({ venues: [] })) : { venues: [] }
     ]);
-    const allShifts = Array.isArray(planData) ? planData : (planData.shifts || []);
+    const rawShifts = Array.isArray(planData) ? planData : (planData.shifts || []);
+    const venues = venueData.venues || venueData.rows || [];
+    const venueById = Object.fromEntries(venues.map(venue => [venue.id, venue]));
+    const allShifts = rawShifts.map(shift => {
+      const venue = venueById[shift.venueId];
+      const legacyLocation = shift.venueId && !venue ? shift.venueId : "";
+      return {
+        ...shift,
+        venueName: venue?.name || shift.venueName || null,
+        locationLabel: shift.location || venue?.name || shift.venueName || legacyLocation || ""
+      };
+    });
     const employees = (employeeData.employees || employeeData || [])
       .filter(user => !["tenant_admin", "super_admin"].includes(user.role) && user.active !== false);
     const workorders = workorderData.workorders || workorderData || [];
@@ -1944,8 +1956,11 @@ ${emp ? `
     }
     const days = _planningMode === "day" ? [today >= from && today <= to ? today : from] : weekDays;
 
-    const locations = [...new Set(allShifts.map(s => s.location || s.venueName || s.venueId).filter(Boolean))].sort((a,b) => String(a).localeCompare(String(b)));
-    const shifts = allShifts.filter(s => (!_planningEmployee || s.userId === _planningEmployee) && (!_planningLocation || [s.location, s.venueName, s.venueId].includes(_planningLocation)));
+    const locations = [...new Set(allShifts.map(shift => shift.locationLabel).filter(Boolean))].sort((a,b) => String(a).localeCompare(String(b)));
+    const shifts = allShifts.filter(shift =>
+      (!_planningEmployee || shift.userId === _planningEmployee) &&
+      (!_planningLocation || shift.locationLabel === _planningLocation)
+    );
     const visibleEmployees = employees.filter(user => !_planningEmployee || user.id === _planningEmployee);
 
     const toMinutes = value => {
@@ -2038,7 +2053,15 @@ ${emp ? `
         for (const s of shifts) {
           const oldDate = new Date(s.date);
           const newDate = new Date(oldDate); newDate.setDate(oldDate.getDate() + 7);
-          await api("POST", "/planning", { userId: s.userId, date: newDate.toISOString().slice(0,10), start: s.start, end: s.end, location: s.location||"", note: s.note||"" });
+          await api("POST", "/planning", {
+            userId: s.userId,
+            date: newDate.toISOString().slice(0,10),
+            start: s.start,
+            end: s.end,
+            venueId: s.venueId || null,
+            note: s.note || "",
+            workorderId: s.workorderId || null
+          });
           copied++;
         }
         window.showToast && window.showToast(tA("adm.plan.copied","{n} shifts gekopieerd naar volgende week").replace("{n}", copied), "success");
@@ -2124,7 +2147,7 @@ ${emp ? `
           return `<div class="adm-planner-cell ${isToday ? "today" : ""} ${onLeave ? "on-leave" : ""}">
             ${onLeave && !dayShifts.length ? `<span class="adm-leave-slot"><i></i>${esc(onLeave)}</span>` : ""}
             ${dayShifts.map(s =>
-              `<button type="button" class="adm-shift-pill" data-id="${esc(s.id)}" title="${esc(s.note||s.location||"")} · klik om te bewerken" style="--shift-bg:${bg};--shift-color:${fg}"><span><b>${esc(s.note || s.project || s.location || "Geplande opdracht")}</b><em>${esc(s.status || "Shift")}</em></span><small>${esc(s.location || s.venueName || "Locatie nog te bepalen")}</small><time>${esc(s.start||"")}${s.end?` – ${esc(s.end)}`:""}</time></button>`
+              `<button type="button" class="adm-shift-pill" data-id="${esc(s.id)}" title="${esc(s.note||s.locationLabel||"")} · klik om te bewerken" style="--shift-bg:${bg};--shift-color:${fg}"><span><b>${esc(s.note || s.project || s.locationLabel || "Geplande opdracht")}</b><em>${esc(s.status || "Shift")}</em></span><small>${esc(s.locationLabel || "Locatie nog te bepalen")}</small><time>${esc(s.start||"")}${s.end?` – ${esc(s.end)}`:""}</time></button>`
             ).join("")||(!onLeave?`<button type="button" class="adm-empty-slot" data-user="${esc(userId)}" data-date="${esc(d)}">+ Inplannen</button>`:"")}
           </div>`;
         }).join("")}
@@ -2135,8 +2158,15 @@ ${emp ? `
   // ── Shift drawer (admin) ───────────────────────────────────
   function openShiftDrawer(weekFrom, weekTo, shift = null, allShifts = [], prefill = {}) {
     const today = new Date().toISOString().slice(0, 10);
-    api("GET", "/employees").then(data => {
+    Promise.all([
+      api("GET", "/employees"),
+      api("GET", "/venues").catch(() => ({ venues: [] }))
+    ]).then(([data, venueData]) => {
       const employees = data.employees || [];
+      const venues = venueData.venues || venueData.rows || [];
+      const selectedVenueId = shift?.venueId || prefill.venueId || "";
+      const selectedVenue = venues.find(venue => venue.id === selectedVenueId);
+      const legacyLocation = selectedVenue ? "" : (shift?.venueId || "");
       const isEdit = !!shift;
       document.getElementById("admDrawerTitle").textContent = isEdit ? "Shift bewerken" : "Shift toevoegen";
       document.getElementById("admDrawerBody").innerHTML = `
@@ -2161,8 +2191,13 @@ ${emp ? `
       <input name="end" type="time" value="${shift?.end || "17:00"}" required>
     </div>
   </div>
-  <div class="adm-form-group"><label>Locatie / Werf</label>
-    <input name="venueId" placeholder="Locatienaam (optioneel)" value="${esc(shift?.venueId||shift?.location||prefill.location||"")}">
+  <div class="adm-form-group"><label>Werf / locatie</label>
+    <select name="venueId" id="shiftVenue">
+      <option value="">Geen vaste werf</option>
+      ${venues.map(venue => `<option value="${venue.id}" ${selectedVenueId === venue.id ? "selected" : ""}>${esc(venue.name || venue.address || "Locatie")}</option>`).join("")}
+    </select>
+    <div class="adm-form-hint">Bewaar de echte werfkoppeling voor werkbon, planning en rapportage.</div>
+    ${legacyLocation ? `<div class="planning-legacy-location">Oude vrije locatie: <strong>${esc(legacyLocation)}</strong>. Kies een bestaande werf om dit record te normaliseren.</div>` : ""}
   </div>
   <div class="adm-form-group"><label>Notitie</label>
     <input name="note" placeholder="Optionele notitie" value="${esc(shift?.note||prefill.note||"")}">
@@ -2223,6 +2258,7 @@ ${emp ? `
       document.getElementById("admShiftForm").addEventListener("submit", async e => {
         e.preventDefault();
         const body = Object.fromEntries(new FormData(e.target).entries());
+        body.venueId = body.venueId || null;
         const errEl = document.getElementById("admShiftErr");
         const submitBtn = e.target.querySelector("[type=submit]");
         errEl.style.display = "none";
@@ -3788,10 +3824,15 @@ ${((window._wfpEnt && window._wfpEnt.modules) || []).includes("ai_estimate") ? `
   function openWorkorderDrawer(workorder, _preloadedWOs, prefill = {}) {
     Promise.all([
       api("GET", "/employees"),
-      api("GET", "/customers").catch(() => ({ customers: [] }))
-    ]).then(([empData, custData]) => {
+      api("GET", "/customers").catch(() => ({ customers: [] })),
+      api("GET", "/venues").catch(() => ({ venues: [] }))
+    ]).then(([empData, custData, venueData]) => {
       const employees = empData.employees || [];
       const customers = custData.customers || [];
+      const venues = venueData.venues || venueData.rows || [];
+      const selectedVenueId = workorder?.venueId || prefill.venueId || "";
+      const selectedVenue = venues.find(venue => venue.id === selectedVenueId);
+      const initialLocation = workorder?.location || prefill.location || selectedVenue?.address || selectedVenue?.name || "";
       document.getElementById("admDrawerTitle").textContent = workorder ? "Werkbon bewerken" : "Nieuwe werkbon";
       document.getElementById("admDrawerBody").innerHTML = `
 <form id="woForm">
@@ -3815,6 +3856,18 @@ ${((window._wfpEnt && window._wfpEnt.modules) || []).includes("ai_estimate") ? `
   <div class="adm-form-group" id="woClientNameWrap">
     <label>Klantnaam</label>
     <input name="clientName" id="woClientName" value="${esc(workorder?.clientName || prefill.clientName || "")}" placeholder="Of typ een klantnaam vrij">
+  </div>
+  <div class="adm-form-row wo-location-row">
+    <div class="adm-form-group"><label>Werf / locatie</label>
+      <select name="venueId" id="woVenueSel">
+        <option value="">Geen vaste werf</option>
+        ${venues.map(venue => `<option value="${venue.id}" ${selectedVenueId === venue.id ? "selected" : ""}>${esc(venue.name || venue.address || "Locatie")}</option>`).join("")}
+      </select>
+      <div class="adm-form-hint">Koppelt deze werkbon logisch aan planning, voorraad en werfcommunicatie.</div>
+    </div>
+    <div class="adm-form-group"><label>Uitvoeringsadres / verzamelpunt</label>
+      <input name="location" id="woLocation" value="${esc(initialLocation)}" placeholder="Adres of praktische locatie">
+    </div>
   </div>
   <div class="adm-form-row">
     <div class="adm-form-group"><label>Gepland op</label>
@@ -3889,6 +3942,13 @@ ${((window._wfpEnt && window._wfpEnt.modules) || []).includes("ai_estimate") ? `
         const cust = customers.find(c => c.id === e.target.value);
         const nameInp = document.getElementById("woClientName");
         if (cust && nameInp) nameInp.value = cust.name;
+      });
+      document.getElementById("woVenueSel")?.addEventListener("change", event => {
+        const venue = venues.find(row => row.id === event.target.value);
+        const location = document.getElementById("woLocation");
+        if (venue && location && (!location.value.trim() || location.value === initialLocation)) {
+          location.value = venue.address || venue.name || "";
+        }
       });
 
       // Materiaal-editor: herbruikbare lijnen op de werkbon (stromen mee in de factuur).
@@ -3983,7 +4043,8 @@ ${((window._wfpEnt && window._wfpEnt.modules) || []).includes("ai_estimate") ? `
                 userId: body.userId,
                 date: body.scheduledDate,
                 note: body.title,
-                location: body.clientName,
+                venueId: body.venueId || "",
+                location: body.location || body.clientName,
                 workorderId: savedWorkorder?.id || ""
               });
             };

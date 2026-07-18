@@ -426,6 +426,71 @@ test("wagenparkflow: voertuig → kilometerstand → service gebruikt canonieke 
 });
 
 
+
+test("werfidentiteit: locatie → werkbon → planning bewaart venueId en leesbare locatie", async () => {
+  const admin = await login("admin@demobouw.be", "Demo2026!");
+  assert.ok(admin.token, "admin-login moet slagen");
+  const H = { Authorization: `Bearer ${admin.token}`, "Content-Type": "application/json" };
+  const stamp = Date.now().toString(36);
+  const address = `Werfstraat ${stamp}, 1000 Brussel`;
+
+  const venueResponse = await fetch(`${BASE}/api/tenants/t_demo/venues`, {
+    method: "POST",
+    headers: H,
+    body: JSON.stringify({
+      name: `Contractwerf ${stamp}`,
+      address,
+      contactName: "Werfleider Test",
+      active: true
+    })
+  });
+  assert.equal(venueResponse.status, 201);
+  const venue = (await venueResponse.json()).venue;
+  assert.ok(venue?.id, "venue-ID ontvangen");
+
+  const workorderResponse = await fetch(`${BASE}/api/tenants/t_demo/workorders`, {
+    method: "POST",
+    headers: H,
+    body: JSON.stringify({
+      title: `Werfidentiteit ${stamp}`,
+      userId: "u_emp1",
+      scheduledDate: "2028-10-12",
+      venueId: venue.id,
+      location: address,
+      status: "open"
+    })
+  });
+  assert.equal(workorderResponse.status, 201);
+  const workorder = (await workorderResponse.json()).workorder;
+  assert.equal(workorder.venueId, venue.id);
+  assert.equal(workorder.location, address);
+
+  const planningResponse = await fetch(`${BASE}/api/tenants/t_demo/planning`, {
+    method: "POST",
+    headers: H,
+    body: JSON.stringify({
+      userId: "u_emp1",
+      workorderId: workorder.id,
+      venueId: venue.id,
+      location: address,
+      date: "2028-10-12",
+      start: "08:00",
+      end: "12:00",
+      note: workorder.title
+    })
+  });
+  assert.equal(planningResponse.status, 201);
+  const shift = (await planningResponse.json()).shift;
+  assert.equal(shift.workorderId, workorder.id);
+  assert.equal(shift.venueId, venue.id);
+
+  const week = await (await fetch(`${BASE}/api/tenants/t_demo/manager/planning?from=2028-10-09&to=2028-10-15`, { headers: H })).json();
+  const stored = (week.shifts || week).find(row => row.id === shift.id);
+  assert.equal(stored?.workorderId, workorder.id);
+  assert.equal(stored?.venueId, venue.id);
+});
+
+
 // ── Klantbril-QA: heldere, Nederlandse foutmeldingen ──
 test("login met fout wachtwoord → 401 met Nederlandse melding", async () => {
   const r = await fetch(`${BASE}/api/auth/login`, {
