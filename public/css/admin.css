@@ -2096,3 +2096,52 @@ button.adm-board-row:hover { background:#fafafe; }
   margin-top:9px; padding:10px 12px; color:#7a5b0d; background:#fff7df;
   border:1px solid #ecdfb8; border-radius:9px; font-size:12px; line-height:1.45;
 }
+
+
+/* ── Monargo document design workspace ── */
+
+.adm-main[data-view="templates"] .adm-content { max-width:1520px; padding-top:22px; }
+.template-intro-card {
+  display:flex; align-items:center; justify-content:space-between; gap:22px;
+  min-height:92px; margin-bottom:18px; padding:18px 21px;
+  background:linear-gradient(135deg,#fff,#f6f9ff); border-color:#dfe7f3;
+}
+.template-intro-card>div { max-width:840px; color:var(--text) !important; font-size:14px !important; line-height:1.55; }
+.template-intro-card #tplNew { width:250px; max-width:none !important; min-height:44px; flex:none; font-size:14px; }
+.template-type-card { margin-bottom:16px; overflow:hidden; border-radius:16px; }
+.template-type-card .adm-card-header { min-height:66px; padding:15px 19px; }
+.template-type-card .adm-card-header>span { color:var(--muted); font-size:12.5px; }
+.template-type-card .adm-table td { padding-top:16px; padding-bottom:16px; font-size:14px; }
+.template-type-card .adm-table td:first-child { padding-left:20px; }
+.template-type-card .adm-table td:last-child { padding-right:20px; }
+.template-type-card .adm-btn { min-height:36px; }
+
+.template-editor-grid { grid-template-columns:minmax(420px,.88fr) minmax(520px,1.12fr); gap:20px; align-items:start; }
+.template-editor-form,.template-preview-card { overflow:hidden; border-radius:16px; }
+.template-editor-form .adm-card-body { padding:24px; }
+.template-editor-form .adm-form-group { margin-bottom:18px; }
+.template-editor-form .adm-form-group label { font-size:13px; font-weight:620; }
+.template-editor-form .adm-input { min-height:46px; font-size:14px; }
+.template-editor-form textarea.adm-input { min-height:92px; line-height:1.5; }
+.template-editor-form .tpl-insert { min-height:38px; margin-top:7px !important; font-size:12.5px; }
+.template-color-field { display:grid; grid-template-columns:82px minmax(0,1fr); gap:10px; align-items:center; }
+.template-color-field #t_accent { width:82px; min-height:46px; padding:5px; cursor:pointer; }
+.template-color-field span { color:var(--muted); font-size:12.5px; }
+.template-preview-card { position:sticky; top:16px; }
+.template-preview-card .adm-card-header { min-height:70px; padding:15px 19px; }
+.template-preview-card .adm-card-header p { margin:5px 0 0; color:var(--muted); font-size:12.5px; }
+.template-preview-frame { display:block; width:100%; height:720px; background:#fff; border:0; border-radius:0 0 16px 16px; }
+
+@media (max-width:1100px) {
+  .template-editor-grid { grid-template-columns:1fr; }
+  .template-preview-card { position:static; }
+  .template-preview-frame { height:640px; }
+}
+@media (max-width:700px) {
+  .template-intro-card { align-items:stretch; flex-direction:column; }
+  .template-intro-card #tplNew { width:100%; }
+  .template-type-card .adm-table td { min-width:170px; }
+  .template-editor-form .adm-card-body { padding:18px; }
+  .template-preview-frame { height:520px; }
+}
+
