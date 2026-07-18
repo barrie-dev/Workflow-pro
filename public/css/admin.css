@@ -393,14 +393,24 @@ table.adm-table { width:100%; border-collapse:collapse; font-size:13px; }
 
 /* ── Drawer ── */
 .adm-overlay { position:fixed; inset:0; background:rgba(11,19,32,.42); z-index:200; backdrop-filter:blur(3px); }
-.adm-drawer { position:fixed; top:0; right:0; height:100vh; width:420px; max-width:92vw; background:var(--surface); z-index:201; box-shadow:-8px 0 40px rgba(11,19,32,.18); display:flex; flex-direction:column; transition:transform .28s cubic-bezier(.4,0,.2,1); }
+.adm-drawer { position:fixed; top:0; right:0; height:100vh; width:min(820px,calc(100vw - 72px)); max-width:none; background:var(--surface); z-index:201; box-shadow:-14px 0 52px rgba(11,19,32,.16); display:flex; flex-direction:column; transition:transform .28s cubic-bezier(.4,0,.2,1); }
 .adm-drawer.hidden { transform:translateX(100%); }
 .adm-overlay.hidden { display:none; }
-.adm-drawer-header { display:flex; align-items:center; justify-content:space-between; padding:18px 22px; border-bottom:1px solid var(--line); }
-.adm-drawer-header h2 { font-size:16px; font-weight:700; margin:0; color:var(--ink); letter-spacing:-.2px; }
+.adm-drawer-header { display:flex; align-items:center; justify-content:space-between; min-height:72px; padding:18px 30px; border-bottom:1px solid var(--line); }
+.adm-drawer-header h2 { font-size:20px; font-weight:700; margin:0; color:var(--ink); letter-spacing:-.35px; }
 .adm-drawer-close { background:none; border:none; font-size:20px; cursor:pointer; color:var(--gray-400); line-height:1; width:30px; height:30px; border-radius:8px; display:grid; place-items:center; transition:.12s; }
 .adm-drawer-close:hover { background:var(--gray-100); color:var(--ink); }
-.adm-drawer-body { flex:1; overflow-y:auto; padding:22px; }
+.adm-drawer-body { flex:1; overflow-y:auto; padding:28px 30px 32px; }
+
+/* Complexe create/edit-flows zijn volwaardige workspaces, geen smalle side sheets. */
+.adm-drawer:has(#invForm),
+.adm-drawer:has(#qForm),
+.adm-drawer:has(#woForm),
+.adm-drawer:has(#admEmpForm) { width:min(1080px,calc(100vw - 72px)); }
+.adm-drawer:has(#invForm) .adm-drawer-body,
+.adm-drawer:has(#qForm) .adm-drawer-body,
+.adm-drawer:has(#woForm) .adm-drawer-body,
+.adm-drawer:has(#admEmpForm) .adm-drawer-body { padding-inline:36px; }
 
 /* ── Form ── */
 .adm-form-group { margin-bottom:15px; }
@@ -465,8 +475,10 @@ table.adm-table { width:100%; border-collapse:collapse; font-size:13px; }
   .adm-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
   .adm-kpi { padding:14px; }
   .adm-kpi-value { font-size:24px; }
-  .adm-drawer { width:100vw; max-width:100vw; }
-  .adm-drawer-body { padding:18px; }
+  .adm-drawer,.adm-drawer:has(#invForm),.adm-drawer:has(#qForm),.adm-drawer:has(#woForm),.adm-drawer:has(#admEmpForm) { inset:0; width:100vw; max-width:100vw; height:100dvh; border-radius:0; }
+  .adm-drawer-header { min-height:64px; padding:14px 18px; }
+  .adm-drawer-header h2 { font-size:18px; }
+  .adm-drawer-body,.adm-drawer:has(#invForm) .adm-drawer-body,.adm-drawer:has(#qForm) .adm-drawer-body,.adm-drawer:has(#woForm) .adm-drawer-body,.adm-drawer:has(#admEmpForm) .adm-drawer-body { padding:20px 18px 24px; }
   .adm-form-actions { bottom:-18px; margin-bottom:-18px; }
   .adm-form-row { grid-template-columns:1fr; gap:0; }
   .adm-notif-panel { position:fixed; left:12px; right:12px; top:64px; width:auto; }
