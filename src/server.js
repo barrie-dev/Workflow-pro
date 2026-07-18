@@ -228,6 +228,7 @@ const { makeContractRepository } = require("./platform/contracts");
 const { makeSupplierRepository, makePurchaseOrderRepository } = require("./platform/procurement");
 const inventory = require("./platform/inventory");
 const { buildMonaSignals } = require("./platform/mona-signals");
+const robawsImport = require("./platform/robaws-import");
 const {
   createSetupIntent,
   billingQuote,
@@ -2113,6 +2114,31 @@ http.createServer(async (req, res) => {
         } catch (e) {
           sendJson(res, e.status || 500, { ok: false, error: e.message });
         }
+        return;
+      }
+
+      // ── Robaws-import (E20/h47.1): switcher-migratie · integraties-recht ──
+      if (action === "import/robaws/validate" && req.method === "POST") {
+        assertCan(user, "integrations");
+        assertInteractiveUser(user);
+        const body = await readBody(req);
+        sendJson(res, 200, { ok: true, validation: robawsImport.validateImport(store, tenant, body.data || body) });
+        return;
+      }
+      if (action === "import/robaws/run" && req.method === "POST") {
+        assertCan(user, "integrations");
+        assertInteractiveUser(user);
+        const body = await readBody(req);
+        const data = body.data || body;
+        // Verplichte validatie vooraf: geen import als er blokkerende fouten zijn.
+        const validation = robawsImport.validateImport(store, tenant, data);
+        if (!validation.ok && !body.force) {
+          return sendJson(res, 422, { ok: false, error: "Import bevat blokkerende fouten · corrigeer of gebruik force", code: "IMPORT_INVALID", validation });
+        }
+        const result = robawsImport.runImport(store, tenant, data, user.email);
+        store.audit({ actor: user.email, tenantId, action: "robaws_import", area: "integrations", detail: `created ${result.report.totals.created} · skipped ${result.report.totals.skipped} · errors ${result.report.totals.errors}` });
+        emitDomainEvent(store, { tenantId, eventType: "import.completed", aggregateType: "import", aggregateId: `imp_${Date.now()}`, actor: user.email, correlationId: res.wfpRequestId, data: { source: "robaws", ...result.report.totals } });
+        sendJson(res, 201, { ok: true, ...result });
         return;
       }
 
