@@ -231,6 +231,8 @@ const { buildMonaSignals } = require("./platform/mona-signals");
 const robawsImport = require("./platform/robaws-import");
 const { buildWorkInbox } = require("./platform/work-inbox");
 const { makeConfigRepository } = require("./platform/config-platform");
+const { makeAutomationRepository, makeDispatcher, executeFlow } = require("./platform/automation");
+const { registerEventListener } = require("./platform/events");
 const {
   createSetupIntent,
   billingQuote,
@@ -331,6 +333,9 @@ const contractRepo = makeContractRepository(store);
 const supplierRepo = makeSupplierRepository(store);
 const purchaseOrderRepo = makePurchaseOrderRepository(store);
 const configRepo = makeConfigRepository(store);
+const automationRepo = makeAutomationRepository(store);
+// Automation-engine (E11) luistert op alle domain events (best-effort).
+registerEventListener(makeDispatcher(store));
 
 function csvCell(value) {
   const text = value == null ? "" : Array.isArray(value) || typeof value === "object" ? JSON.stringify(value) : String(value);
@@ -2156,6 +2161,73 @@ http.createServer(async (req, res) => {
       if (action === "work-inbox" && req.method === "GET") {
         assertInteractiveUser(user);
         sendJson(res, 200, { ok: true, ...buildWorkInbox(store, tenant, user) });
+        return;
+      }
+
+      // ── Automation engine (E11/h13): flows + runs ────────────────────────────
+      if (action === "automation/flows" && req.method === "GET") {
+        assertCan(user, "settings");
+        sendJson(res, 200, { ok: true, flows: automationRepo.list(tenantId, { status: url.searchParams.get("status") || undefined, trigger: url.searchParams.get("trigger") || undefined }) });
+        return;
+      }
+      if (action === "automation/flows" && req.method === "POST") {
+        assertCan(user, "settings");
+        assertApiKeyWriteAllowed(user, req);
+        let row;
+        try { row = automationRepo.insert(tenantId, await readBody(req), user.email); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "automation_flow_created", area: "automation", detail: `${row.name} · ${row.trigger}` });
+        sendJson(res, 201, { ok: true, flow: row });
+        return;
+      }
+      if (action === "automation/runs" && req.method === "GET") {
+        assertCan(user, "settings");
+        sendJson(res, 200, { ok: true, runs: automationRepo.listRuns(tenantId, { flowId: url.searchParams.get("flowId") || undefined, limit: url.searchParams.get("limit") }) });
+        return;
+      }
+      const flowItemMatch = action.match(/^automation\/flows\/([^/]+)$/);
+      if (flowItemMatch && req.method === "PATCH") {
+        assertCan(user, "settings");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        let row;
+        try { row = automationRepo.update(tenantId, flowItemMatch[1], body, user.email, body.expectedVersion); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code, currentVersion: e.currentVersion }); }
+        store.audit({ actor: user.email, tenantId, action: "automation_flow_updated", area: "automation", detail: flowItemMatch[1] });
+        sendJson(res, 200, { ok: true, flow: row });
+        return;
+      }
+      const flowTransitionMatch = action.match(/^automation\/flows\/([^/]+)\/transition$/);
+      if (flowTransitionMatch && req.method === "POST") {
+        assertCan(user, "settings");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        let row;
+        try { row = automationRepo.transition(tenantId, flowTransitionMatch[1], body.status, user.email); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "automation_flow_transition", area: "automation", detail: `${flowTransitionMatch[1]} → ${body.status}` });
+        sendJson(res, 200, { ok: true, flow: row });
+        return;
+      }
+      // Simuleren met testdata zonder productiedata te wijzigen (h13-acceptatie).
+      const flowSimulateMatch = action.match(/^automation\/flows\/([^/]+)\/simulate$/);
+      if (flowSimulateMatch && req.method === "POST") {
+        assertCan(user, "settings");
+        const body = await readBody(req);
+        const flow = automationRepo.findById(tenantId, flowSimulateMatch[1]);
+        if (!flow) return sendJson(res, 404, { ok: false, error: "Flow niet gevonden" });
+        const sampleEvent = { eventType: flow.trigger, tenantId, aggregateType: body.aggregateType || "customer", aggregateId: body.aggregateId || "sample", data: body.data || {} };
+        const run = executeFlow(store, tenant, flow, sampleEvent, { dryRun: true });
+        sendJson(res, 200, { ok: true, run });
+        return;
+      }
+      if (flowItemMatch && req.method === "DELETE") {
+        assertCan(user, "settings");
+        assertInteractiveUser(user);
+        try { automationRepo.remove(tenantId, flowItemMatch[1]); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "automation_flow_deleted", area: "automation", detail: flowItemMatch[1] });
+        sendJson(res, 200, { ok: true });
         return;
       }
 

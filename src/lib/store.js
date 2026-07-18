@@ -79,6 +79,8 @@ const REQUIRED_COLLECTIONS = [
   "stockMovements",
   "stockReservations",
   "customFields",
+  "automationFlows",
+  "automationRuns",
   "workorders",
   "clocks",
   "expenses",

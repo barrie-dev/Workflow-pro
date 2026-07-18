@@ -52,6 +52,17 @@ function ensureOutbox(store) {
   return store.data.outbox;
 }
 
+// ── Event-listeners (in-process, best-effort) ───────────────────────────────
+// De automation-engine (E11) registreert zich hier. Deze module blijft
+// cloudblind: geen import van automation · enkel een callback-contract.
+const listeners = [];
+function registerEventListener(fn) { if (typeof fn === "function") listeners.push(fn); }
+function notifyListeners(store, event) {
+  for (const fn of listeners) {
+    try { fn(store, event); } catch (_) { /* een listener mag de domain-write nooit breken */ }
+  }
+}
+
 /**
  * Emit een domeinevent naar de outbox.
  * @param {object} store
@@ -90,6 +101,7 @@ function emitDomainEvent(store, input) {
   outbox.push(event);
   if (outbox.length > OUTBOX_LIMIT) store.data.outbox = outbox.slice(-OUTBOX_LIMIT);
   if (typeof store.save === "function") store.save();
+  notifyListeners(store, event);
   return event;
 }
 
@@ -132,4 +144,4 @@ function markEventFailed(store, eventId, error, maxAttempts = 8) {
   return e;
 }
 
-module.exports = { newUlid, emitDomainEvent, listOutbox, markEventDelivered, markEventFailed };
+module.exports = { newUlid, emitDomainEvent, listOutbox, markEventDelivered, markEventFailed, registerEventListener };
