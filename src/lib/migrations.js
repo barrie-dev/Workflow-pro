@@ -185,6 +185,18 @@ const migrations = [
       });
       return context;
     }
+  },
+  {
+    // Catalogus & materiaal (master-spec E13/R-CAT): idem voor "catalog".
+    version: 14,
+    name: "tenant-admin-catalog-permission",
+    apply(data, context) {
+      data.users = (data.users || []).map(user => {
+        if (user.role !== "tenant_admin") return user;
+        return { ...user, permissions: unique([...(user.permissions || []), ...context.businessAdminPermissions]) };
+      });
+      return context;
+    }
   }
 ];
 

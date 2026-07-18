@@ -52,6 +52,8 @@ const BUNDLE_BACKFILL = {
   // Aankoop- en voorraad-packs: enkel Enterprise (à-la-carte, P2).
   procurement: ["enterprise"],
   inventory: ["enterprise"],
+  // Catalogus & prijzen (E13): gedeelde artikelbibliotheek vanaf Business.
+  catalog: ["business", "enterprise"],
 };
 
 function ensureArray(store) {

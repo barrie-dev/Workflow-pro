@@ -226,6 +226,7 @@ const { makeAssetRepository, makeMaintenancePlanRepository } = require("./platfo
 const { buildProjectFinance } = require("./platform/project-finance");
 const { makeContractRepository } = require("./platform/contracts");
 const { makeSupplierRepository, makePurchaseOrderRepository } = require("./platform/procurement");
+const { makeCatalogRepository, resolvePrice, snapshotForLine, explodeComposition } = require("./platform/catalog");
 const inventory = require("./platform/inventory");
 const { buildMonaSignals } = require("./platform/mona-signals");
 const robawsImport = require("./platform/robaws-import");
@@ -334,6 +335,7 @@ const maintenancePlanRepo = makeMaintenancePlanRepository(store);
 const contractRepo = makeContractRepository(store);
 const supplierRepo = makeSupplierRepository(store);
 const purchaseOrderRepo = makePurchaseOrderRepository(store);
+const catalogRepo = makeCatalogRepository(store);
 const configRepo = makeConfigRepository(store);
 const automationRepo = makeAutomationRepository(store);
 // Unit-of-work port (E1 · ADR-003): atomaire multi-writes, adapter-onafhankelijk.
@@ -3901,6 +3903,99 @@ http.createServer(async (req, res) => {
         try { changeOrderRepo.remove(tenantId, changeOrderItemMatch[1]); }
         catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
         store.audit({ actor: user.email, tenantId, action: "change_order_deleted", area: "construction", detail: changeOrderItemMatch[1] });
+        sendJson(res, 200, { ok: true });
+        return;
+      }
+
+      // ── Catalogus & materiaal (E13/h20) ───────────────────────────────────────
+      if (action === "articles" && req.method === "GET") {
+        assertCan(user, "catalog");
+        const opts = { includeArchived: url.searchParams.get("includeArchived") === "1", selectableOnly: url.searchParams.get("selectable") === "1" };
+        sendJson(res, 200, { ok: true, articles: catalogRepo.list(tenantId, opts) });
+        return;
+      }
+      if (action === "articles" && req.method === "POST") {
+        assertCan(user, "catalog");
+        assertApiKeyWriteAllowed(user, req);
+        let row;
+        try { row = catalogRepo.insert(tenantId, await readBody(req), user.email); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "article_created", area: "catalog", detail: `${row.number} · ${row.name}` });
+        emitDomainEvent(store, { tenantId, eventType: "article.created", aggregateType: "article", aggregateId: row.id, actor: user.email, correlationId: res.wfpRequestId });
+        sendJson(res, 201, { ok: true, article: row });
+        return;
+      }
+      const articleItemMatch = action.match(/^articles\/([^/]+)$/);
+      if (articleItemMatch && req.method === "GET") {
+        assertCan(user, "catalog");
+        const art = catalogRepo.findById(tenantId, articleItemMatch[1]);
+        if (!art) return sendJson(res, 404, { ok: false, error: "Artikel niet gevonden" });
+        const costBuildup = art.type === "composite" ? explodeComposition(store, tenant, art) : null;
+        sendJson(res, 200, { ok: true, article: art, priceRules: catalogRepo.listPriceRules(tenantId, art.id), costBuildup });
+        return;
+      }
+      if (articleItemMatch && req.method === "PATCH") {
+        assertCan(user, "catalog");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        let result;
+        try { result = catalogRepo.update(tenantId, articleItemMatch[1], body, user.email, body.expectedVersion); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code, currentVersion: e.currentVersion }); }
+        store.audit({ actor: user.email, tenantId, action: "article_updated", area: "catalog", detail: articleItemMatch[1] });
+        if (result.priceChanged) emitDomainEvent(store, { tenantId, eventType: "article.price_changed", aggregateType: "article", aggregateId: result.article.id, actor: user.email, correlationId: res.wfpRequestId, data: { costPrice: result.article.costPrice, salesPrice: result.article.salesPrice } });
+        sendJson(res, 200, { ok: true, article: result.article, priceChanged: result.priceChanged });
+        return;
+      }
+      const articleTransitionMatch = action.match(/^articles\/([^/]+)\/transition$/);
+      if (articleTransitionMatch && req.method === "POST") {
+        assertCan(user, "catalog");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        let row;
+        try { row = catalogRepo.transition(tenantId, articleTransitionMatch[1], body.status, user.email); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        emitDomainEvent(store, { tenantId, eventType: "article.status_changed", aggregateType: "article", aggregateId: row.id, actor: user.email, correlationId: res.wfpRequestId, data: { status: row.status } });
+        sendJson(res, 200, { ok: true, article: row });
+        return;
+      }
+      // Artikel → documentlijn: prijs oplossen + onveranderlijke snapshot (E13-acceptatie:
+      // een artikel kan met correcte prijs/kost/btw/eenheid in offerte/order/werkbon/factuur).
+      const articleResolveMatch = action.match(/^articles\/([^/]+)\/resolve$/);
+      if (articleResolveMatch && req.method === "POST") {
+        assertCan(user, "catalog");
+        const art = catalogRepo.findById(tenantId, articleResolveMatch[1]);
+        if (!art) return sendJson(res, 404, { ok: false, error: "Artikel niet gevonden" });
+        const body = await readBody(req).catch(() => ({}));
+        let line;
+        try { line = snapshotForLine(store, tenant, art, { qty: body.qty, unit: body.unit, customerId: body.customerId, priceGroup: body.priceGroup, manualPrice: body.manualPrice, at: body.at }); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        sendJson(res, 200, { ok: true, line });
+        return;
+      }
+
+      // ── Prijsregels / prijslijst (E13/h20) ────────────────────────────────────
+      if (action === "price_rules" && req.method === "GET") {
+        assertCan(user, "catalog");
+        sendJson(res, 200, { ok: true, priceRules: catalogRepo.listPriceRules(tenantId, url.searchParams.get("articleId") || null) });
+        return;
+      }
+      if (action === "price_rules" && req.method === "POST") {
+        assertCan(user, "catalog");
+        assertApiKeyWriteAllowed(user, req);
+        let row;
+        try { row = catalogRepo.addPriceRule(tenantId, await readBody(req), user.email); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "price_rule_added", area: "catalog", detail: `${row.articleId} · ${row.scope}` });
+        sendJson(res, 201, { ok: true, priceRule: row });
+        return;
+      }
+      const priceRuleItemMatch = action.match(/^price_rules\/([^/]+)$/);
+      if (priceRuleItemMatch && req.method === "DELETE") {
+        assertCan(user, "catalog");
+        assertInteractiveUser(user);
+        try { catalogRepo.removePriceRule(tenantId, priceRuleItemMatch[1]); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "price_rule_removed", area: "catalog", detail: priceRuleItemMatch[1] });
         sendJson(res, 200, { ok: true });
         return;
       }

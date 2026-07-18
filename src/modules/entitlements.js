@@ -126,6 +126,7 @@ const OPERATIONAL_PERMISSIONS = [
   { key: "contracts", label: "Contracten & abonnementen", modules: ["contracts"] },
   { key: "procurement", label: "Aankoop & leveranciers", modules: ["procurement"] },
   { key: "inventory", label: "Voorraadbeheer", modules: ["inventory"] },
+  { key: "catalog", label: "Catalogus & prijzen", modules: ["catalog"] },
   { key: "expenses", label: "Onkosten" },
   { key: "leaves", label: "Verlof" },
   { key: "messages", label: "Berichten" },

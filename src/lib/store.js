@@ -28,7 +28,9 @@ const BUSINESS_ADMIN_PERMISSIONS = [
   "service_assets",
   "contracts",
   "procurement",
-  "inventory"
+  "inventory",
+  "catalog",
+  "price_rules"
 ];
 
 // Manager: team planning + goedkeuringen, geen billing/settings
@@ -78,6 +80,8 @@ const REQUIRED_COLLECTIONS = [
   "purchaseOrders",
   "stockMovements",
   "stockReservations",
+  "articles",
+  "priceRules",
   "customFields",
   "automationFlows",
   "automationRuns",

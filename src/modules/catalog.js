@@ -101,6 +101,14 @@ const MODULE_CATALOG = [
   // reservaties en transfers bovenop de eenvoudige stock-module.
   { key: "inventory", label: "Voorraadbeheer (geavanceerd)", group: "Middelen", core: false,
     view: "inventory", actions: ["inventory"], submodules: [] },
+  // Catalogus & materiaal (master-spec E13/h20): gedeelde artikelbibliotheek
+  // (materiaal, arbeid, materieel, onderaanneming, samengesteld, vrij) met kost-
+  // en verkoopprijs, prijslijsten en eenheden. Voedt offerte/order/werkbon/factuur.
+  { key: "catalog", label: "Catalogus & prijzen", group: "Middelen", core: false,
+    view: "catalog", actions: ["articles", "price_rules"], submodules: [
+      { key: "price-lists", label: "Prijslijsten" },
+      { key: "composition", label: "Samenstellingen" },
+    ] },
   { key: "venues", label: "Locaties / werven", group: "Middelen", core: false,
     view: "venues", actions: ["venues"], submodules: [] },
   // Service & Assets (master-spec E16/h44): generiek assetmodel (machines,
