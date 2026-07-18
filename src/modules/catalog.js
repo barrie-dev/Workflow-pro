@@ -125,6 +125,14 @@ const MODULE_CATALOG = [
   // ── Compliance (Belgische bouw) ───────────────────────────
   // Werkongevallen-register: wettelijk verplichte registratie + opvolging van
   // de aangifte bij de verzekeraar (8 dagen) en CSV-export van het register.
+  // Vorderingsstaten (master-spec h32/PRG · R7): periodiek factureren op
+  // cumulatieve voortgang, met prijsherziening, retentie, voorschotverrekening
+  // en verletstaat. Bouw-pack bovenop projecten, offerteversies en meerwerk.
+  { key: "progress_claims", label: "Vorderingsstaten", group: "Compliance", core: false,
+    view: "progress-claims", actions: ["progress_claims"], submodules: [
+      { key: "price-revision", label: "Prijsherziening" },
+      { key: "retention", label: "Retentie en voorschot" },
+    ] },
   { key: "incidents", label: "Werkongevallen", group: "Compliance", core: false,
     view: "incidents", actions: ["incidents"], submodules: [] },
   // CIAW / Checkin@Work · verplichte aanwezigheidsregistratie naar RSZ/ONSS.

@@ -197,6 +197,18 @@ const migrations = [
       });
       return context;
     }
+  },
+  {
+    // Vorderingsstaten (master-spec h32/PRG · R7): idem voor "progress_claims".
+    version: 15,
+    name: "tenant-admin-progress-claims-permission",
+    apply(data, context) {
+      data.users = (data.users || []).map(user => {
+        if (user.role !== "tenant_admin") return user;
+        return { ...user, permissions: unique([...(user.permissions || []), ...context.businessAdminPermissions]) };
+      });
+      return context;
+    }
   }
 ];
 

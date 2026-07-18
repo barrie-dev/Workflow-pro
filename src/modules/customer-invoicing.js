@@ -32,7 +32,7 @@ function computeLines(rawLines, reverseCharge) {
     return {
       description: l.description || "", qty, unitPrice, vatRate,
       lineSubtotal, lineVat, lineTotal: round2(lineSubtotal + lineVat),
-      sourceType: ["quote", "workorder", "contract", "credit", "manual"].includes(l.sourceType) ? l.sourceType : "manual",
+      sourceType: ["quote", "workorder", "contract", "credit", "progress_claim", "manual"].includes(l.sourceType) ? l.sourceType : "manual",
       sourceId: l.sourceId || null,
     };
   });

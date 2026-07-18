@@ -30,7 +30,8 @@ const BUSINESS_ADMIN_PERMISSIONS = [
   "procurement",
   "inventory",
   "catalog",
-  "price_rules"
+  "price_rules",
+  "progress_claims"
 ];
 
 // Manager: team planning + goedkeuringen, geen billing/settings
@@ -83,6 +84,7 @@ const REQUIRED_COLLECTIONS = [
   "articles",
   "priceRules",
   "webhookEndpoints",
+  "progressClaims",
   "customFields",
   "automationFlows",
   "automationRuns",

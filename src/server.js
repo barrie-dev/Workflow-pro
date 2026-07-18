@@ -229,6 +229,7 @@ const { makeSupplierRepository, makePurchaseOrderRepository } = require("./platf
 const { makeCatalogRepository, resolvePrice, snapshotForLine, explodeComposition } = require("./platform/catalog");
 const { makeWorkOrderRepository, computeTotals: computeWoTotals, buildInvoiceLines: buildWoInvoiceLines } = require("./platform/work-orders");
 const { makeWebhookRepository, deliverPending, buildDeliveryHealth, requeueEvent } = require("./platform/webhooks");
+const { makeProgressClaimRepository, computeClaimTotals } = require("./platform/progress-claims");
 const { httpsRequest } = require("./lib/http-client");
 const inventory = require("./platform/inventory");
 const { buildMonaSignals } = require("./platform/mona-signals");
@@ -341,6 +342,7 @@ const purchaseOrderRepo = makePurchaseOrderRepository(store);
 const catalogRepo = makeCatalogRepository(store);
 const workOrderRepo = makeWorkOrderRepository(store);
 const webhookRepo = makeWebhookRepository(store);
+const progressClaimRepo = makeProgressClaimRepository(store);
 /**
  * HTTPS-transport voor de webhook-runtime (E19). De platform-laag blijft
  * cloudblind (ADR-001): zij kent geen https · deze adapter injecteert hem.
@@ -3996,6 +3998,97 @@ http.createServer(async (req, res) => {
         catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
         store.audit({ actor: user.email, tenantId, action: "change_order_deleted", area: "construction", detail: changeOrderItemMatch[1] });
         sendJson(res, 200, { ok: true });
+        return;
+      }
+
+      // ── Vorderingsstaten (h32/PRG · R7) ───────────────────────────────────────
+      if (action === "progress_claims" && req.method === "GET") {
+        assertCan(user, "progress_claims");
+        const claims = progressClaimRepo.list(tenantId, { projectId: url.searchParams.get("projectId") || undefined, status: url.searchParams.get("status") || undefined });
+        sendJson(res, 200, { ok: true, claims: claims.map(c => ({ ...c, totals: computeClaimTotals(c) })) });
+        return;
+      }
+      if (action === "progress_claims" && req.method === "POST") {
+        assertCan(user, "progress_claims");
+        assertApiKeyWriteAllowed(user, req);
+        let row;
+        try { row = progressClaimRepo.insert(tenantId, await readBody(req), user.email); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "progress_claim_created", area: "progress_claims", detail: row.number });
+        emitDomainEvent(store, { tenantId, eventType: "progress_claim.created", aggregateType: "progress_claim", aggregateId: row.id, actor: user.email, correlationId: res.wfpRequestId, data: { projectId: row.projectId, sequence: row.sequence } });
+        sendJson(res, 201, { ok: true, claim: row, totals: computeClaimTotals(row) });
+        return;
+      }
+      const claimItemMatch = action.match(/^progress_claims\/([^/]+)$/);
+      if (claimItemMatch && req.method === "GET") {
+        assertCan(user, "progress_claims");
+        const claim = progressClaimRepo.findById(tenantId, claimItemMatch[1]);
+        if (!claim) return sendJson(res, 404, { ok: false, error: "Vorderingsstaat niet gevonden" });
+        sendJson(res, 200, { ok: true, claim, totals: computeClaimTotals(claim) });
+        return;
+      }
+      if (claimItemMatch && req.method === "PATCH") {
+        assertCan(user, "progress_claims");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        let row;
+        try { row = progressClaimRepo.update(tenantId, claimItemMatch[1], body, user.email, body.expectedVersion); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code, currentVersion: e.currentVersion, lines: e.lines }); }
+        sendJson(res, 200, { ok: true, claim: row, totals: computeClaimTotals(row) });
+        return;
+      }
+      if (claimItemMatch && req.method === "DELETE") {
+        assertCan(user, "progress_claims");
+        assertInteractiveUser(user);
+        try { progressClaimRepo.remove(tenantId, claimItemMatch[1]); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "progress_claim_deleted", area: "progress_claims", detail: claimItemMatch[1] });
+        sendJson(res, 200, { ok: true });
+        return;
+      }
+      const claimTransitionMatch = action.match(/^progress_claims\/([^/]+)\/transition$/);
+      if (claimTransitionMatch && req.method === "POST") {
+        assertCan(user, "progress_claims");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        let row;
+        try { row = progressClaimRepo.transition(tenantId, claimTransitionMatch[1], body.status, user.email, { note: body.note }); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "progress_claim_status_changed", area: "progress_claims", detail: `${row.number} → ${row.status}` });
+        emitDomainEvent(store, { tenantId, eventType: "progress_claim.status_changed", aggregateType: "progress_claim", aggregateId: row.id, actor: user.email, correlationId: res.wfpRequestId, data: { status: row.status } });
+        sendJson(res, 200, { ok: true, claim: row, totals: computeClaimTotals(row) });
+        return;
+      }
+      // Factuur uit de goedgekeurde vordering · alleen de huidige periode (h32).
+      const claimInvoiceMatch = action.match(/^progress_claims\/([^/]+)\/invoice$/);
+      if (claimInvoiceMatch && req.method === "POST") {
+        assertCan(user, "progress_claims");
+        assertInvoicing(user);
+        assertApiKeyWriteAllowed(user, req);
+        let result;
+        try {
+          // Atomair (E1): factuur + koppeling committen samen of rollen samen terug.
+          result = await txManager.run(() => {
+            const payload = progressClaimRepo.invoicePayload(tenantId, claimInvoiceMatch[1]);
+            const project = (store.list("projects", tenantId) || []).find(p => p.id === payload.claim.projectId) || {};
+            const cust = project.customerId ? (customerRepo.findById(tenantId, project.customerId) || {}) : {};
+            const invoice = createCustomerInvoice(store, tenant, user, {
+              customerId: project.customerId || null,
+              customerName: cust.name || "",
+              customerAddress: cust.address || "",
+              customerVatNumber: cust.vatNumber || "",
+              projectId: payload.claim.projectId,
+              notes: `Vorderingsstaat ${payload.claim.number}${payload.claim.periodStart ? ` · periode ${payload.claim.periodStart} t/m ${payload.claim.periodEnd || ""}` : ""}`,
+              lines: payload.lines,
+            });
+            const claim = progressClaimRepo.markInvoiced(tenantId, payload.claim.id, invoice.id, user.email);
+            emitDomainEvent(store, { tenantId, eventType: "progress_claim.invoiced", aggregateType: "progress_claim", aggregateId: claim.id, actor: user.email, correlationId: res.wfpRequestId, data: { invoiceId: invoice.id, netPayable: payload.totals.netPayable } });
+            return { invoice, claim, totals: payload.totals };
+          });
+        }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "progress_claim_invoiced", area: "progress_claims", detail: `${result.claim.number} → ${result.invoice.number}` });
+        sendJson(res, 201, { ok: true, ...result });
         return;
       }
 

@@ -54,6 +54,8 @@ const BUNDLE_BACKFILL = {
   inventory: ["enterprise"],
   // Catalogus & prijzen (E13): gedeelde artikelbibliotheek vanaf Business.
   catalog: ["business", "enterprise"],
+  // Vorderingsstaten (R7): zwaar bouw-pack, enkel Enterprise (à-la-carte).
+  progress_claims: ["enterprise"],
 };
 
 function ensureArray(store) {
