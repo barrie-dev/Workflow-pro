@@ -2091,3 +2091,8 @@ button.adm-board-row:hover { background:#fafafe; }
   .wo-location-row { grid-template-columns:1fr; padding:14px 14px 0; }
 }
 
+
+.planning-legacy-location {
+  margin-top:9px; padding:10px 12px; color:#7a5b0d; background:#fff7df;
+  border:1px solid #ecdfb8; border-radius:9px; font-size:12px; line-height:1.45;
+}
