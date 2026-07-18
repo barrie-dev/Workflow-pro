@@ -233,6 +233,7 @@ const { buildWorkInbox } = require("./platform/work-inbox");
 const { makeConfigRepository } = require("./platform/config-platform");
 const { makeAutomationRepository, makeDispatcher, executeFlow } = require("./platform/automation");
 const { registerEventListener } = require("./platform/events");
+const { buildInsights } = require("./platform/insights");
 const {
   createSetupIntent,
   billingQuote,
@@ -2161,6 +2162,13 @@ http.createServer(async (req, res) => {
       if (action === "work-inbox" && req.method === "GET") {
         assertInteractiveUser(user);
         sendJson(res, 200, { ok: true, ...buildWorkInbox(store, tenant, user) });
+        return;
+      }
+
+      // ── Insights (E22/BI): rol-dashboard met herleidbare KPI's ────────────────
+      if (action === "insights" && req.method === "GET") {
+        assertInteractiveUser(user);
+        sendJson(res, 200, { ok: true, ...buildInsights(store, tenant, user) });
         return;
       }
 
