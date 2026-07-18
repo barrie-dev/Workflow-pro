@@ -227,6 +227,7 @@ const { buildProjectFinance } = require("./platform/project-finance");
 const { makeContractRepository } = require("./platform/contracts");
 const { makeSupplierRepository, makePurchaseOrderRepository } = require("./platform/procurement");
 const { makeCatalogRepository, resolvePrice, snapshotForLine, explodeComposition } = require("./platform/catalog");
+const { makeWorkOrderRepository, computeTotals: computeWoTotals, buildInvoiceLines: buildWoInvoiceLines } = require("./platform/work-orders");
 const inventory = require("./platform/inventory");
 const { buildMonaSignals } = require("./platform/mona-signals");
 const robawsImport = require("./platform/robaws-import");
@@ -336,6 +337,7 @@ const contractRepo = makeContractRepository(store);
 const supplierRepo = makeSupplierRepository(store);
 const purchaseOrderRepo = makePurchaseOrderRepository(store);
 const catalogRepo = makeCatalogRepository(store);
+const workOrderRepo = makeWorkOrderRepository(store);
 const configRepo = makeConfigRepository(store);
 const automationRepo = makeAutomationRepository(store);
 // Unit-of-work port (E1 · ADR-003): atomaire multi-writes, adapter-onafhankelijk.
@@ -5595,6 +5597,95 @@ http.createServer(async (req, res) => {
         store.remove("messages", msgId);
         store.audit({ actor: user.email, tenantId, action: "message_deleted", area: "messages", detail: msgId });
         sendJson(res, 200, { ok: true });
+        return;
+      }
+
+      // ── Werkbon v2 · mobiele uitvoering (E07/h25) ────────────────────────────
+      // Canonieke weergave (legacy-rijen worden opgewaardeerd) met totalen en
+      // factuurvoorstel volgens de gekozen strategie.
+      const woV2Match = action.match(/^workorders\/([^/]+)\/(sync|submit|sign|review|corrections|canonical)$/);
+      if (woV2Match && woV2Match[2] === "canonical" && req.method === "GET") {
+        assertCan(user, "workorders");
+        const wo = workOrderRepo.findById(tenantId, woV2Match[1]);
+        if (!wo) return sendJson(res, 404, { ok: false, error: "Werkbon niet gevonden" });
+        const strategy = url.searchParams.get("strategy") || "detail";
+        sendJson(res, 200, { ok: true, workorder: wo, totals: computeWoTotals(wo), invoiceLines: buildWoInvoiceLines(wo, strategy), strategy });
+        return;
+      }
+      // Offline-sync: baseVersion bepaalt of er een conflict is. Bij conflict
+      // 409 MET de serverstaat + de clientmutatie · nooit stil overschrijven.
+      if (woV2Match && woV2Match[2] === "sync" && req.method === "POST") {
+        assertCan(user, "workorders");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        let wo;
+        try { wo = workOrderRepo.sync(tenantId, woV2Match[1], { baseVersion: body.baseVersion, patch: body.patch, clientId: body.clientId, clientUpdatedAt: body.clientUpdatedAt }, user); }
+        catch (e) {
+          return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code, currentVersion: e.currentVersion, serverState: e.serverState, clientPatch: e.clientPatch });
+        }
+        emitDomainEvent(store, { tenantId, eventType: "workorder.synced", aggregateType: "workorder", aggregateId: wo.id, actor: user.email, correlationId: res.wfpRequestId, data: { clientId: wo.sync.clientId, version: wo.version } });
+        sendJson(res, 200, { ok: true, workorder: wo });
+        return;
+      }
+      if (woV2Match && woV2Match[2] === "submit" && req.method === "POST") {
+        assertCan(user, "workorders");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req).catch(() => ({}));
+        let wo;
+        try { wo = workOrderRepo.submit(tenantId, woV2Match[1], user, { requireSignature: body.requireSignature === true }); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code, missing: e.missing }); }
+        store.audit({ actor: user.email, tenantId, action: "workorder_submitted", area: "workorders", detail: wo.number || wo.id });
+        emitDomainEvent(store, { tenantId, eventType: "workorder.submitted", aggregateType: "workorder", aggregateId: wo.id, actor: user.email, correlationId: res.wfpRequestId });
+        sendJson(res, 200, { ok: true, workorder: wo });
+        return;
+      }
+      if (woV2Match && woV2Match[2] === "sign" && req.method === "POST") {
+        assertCan(user, "workorders");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        let wo;
+        try { wo = workOrderRepo.sign(tenantId, woV2Match[1], { by: body.by, dataRef: body.dataRef }, user); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        emitDomainEvent(store, { tenantId, eventType: "workorder.signed", aggregateType: "workorder", aggregateId: wo.id, actor: user.email, correlationId: res.wfpRequestId, data: { boundVersion: wo.signature.boundVersion } });
+        sendJson(res, 200, { ok: true, workorder: wo });
+        return;
+      }
+      if (woV2Match && woV2Match[2] === "review" && req.method === "POST") {
+        assertCan(user, "workorders");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        let wo;
+        try { wo = workOrderRepo.review(tenantId, woV2Match[1], { decision: body.decision, note: body.note }, user); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: `workorder_${body.decision === "approve" ? "approved" : "rejected"}`, area: "workorders", detail: wo.number || wo.id });
+        emitDomainEvent(store, { tenantId, eventType: body.decision === "approve" ? "workorder.approved" : "workorder.rejected", aggregateType: "workorder", aggregateId: wo.id, actor: user.email, correlationId: res.wfpRequestId });
+        sendJson(res, 200, { ok: true, workorder: wo });
+        return;
+      }
+      // Correctieboeking na goedkeuring · onveranderlijk en auditbaar (h25).
+      if (woV2Match && woV2Match[2] === "corrections" && req.method === "POST") {
+        assertCan(user, "workorders");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        let result;
+        try { result = workOrderRepo.addCorrection(tenantId, woV2Match[1], body, user); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "workorder_corrected", area: "workorders", detail: `${result.workorder.number || result.workorder.id} · ${result.correction.reason}` });
+        emitDomainEvent(store, { tenantId, eventType: "workorder.corrected", aggregateType: "workorder", aggregateId: result.workorder.id, actor: user.email, correlationId: res.wfpRequestId, data: { type: result.correction.type, reason: result.correction.reason } });
+        sendJson(res, 201, { ok: true, workorder: result.workorder, correction: result.correction });
+        return;
+      }
+      // v2-velden (workers/materials/equipment/forms) via de canonieke repository:
+      // dwingt de eigen-uren-regel, bevriezing na goedkeuring en versieconflicten af.
+      const woFieldsMatch = action.match(/^workorders\/([^/]+)\/fields$/);
+      if (woFieldsMatch && req.method === "PATCH") {
+        assertCan(user, "workorders");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        let wo;
+        try { wo = workOrderRepo.update(tenantId, woFieldsMatch[1], body, user, body.expectedVersion); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code, currentVersion: e.currentVersion, serverState: e.serverState }); }
+        sendJson(res, 200, { ok: true, workorder: wo, totals: computeWoTotals(wo) });
         return;
       }
 
