@@ -335,3 +335,23 @@ Feedback voor de backendontwikkelaar:
 - Overweeg één canonieke transactie voor bewijs + afronding, zodat handtekening en status niet gedeeltelijk kunnen slagen. Tot dan voert de frontend de handtekening bewust eerst uit.
 - Retourneer bij dubbele afronding of ontbrekende rechten een stabiele `code`, `requestId` en bruikbare foutmelding.
 - Laat documentrendering zowel `completionNote/mobileNote` als de bestaande `signature.signerName` tonen; de backend blijft bron van waarheid voor het auditspoor.
+
+
+## Tijdregistratie, rapportage en export — frontendintegratie 2026-07-18
+
+De functionele audit vond twee geldige klokvormen in het platform: self-service prikklok gebruikt ISO-velden `clockedIn/clockedOut`, terwijl beheer- en correctieflows datum + `clockIn/clockOut` gebruiken. Rapportages, loonlijsten en CSV-export lazen niet overal beide vormen en konden daardoor uren als nul of leeg tonen.
+
+Frontendoplossing:
+
+- Eén gedeelde `wfpTime`-normalisatielaag bepaalt werkdatum, begin/eindtijd, actieve status, minuten en uren.
+- Een serverberekende `durationMinutes` blijft bron van waarheid; tijdsverschil is alleen fallback.
+- Adminrapporten, loonlijst, beslissersrapport, klokoverzicht en CSV-export gebruiken hetzelfde contract.
+- De medewerkermaandstaat, dagdetail en persoonlijke CSV gebruiken dezelfde normalisatie.
+- Lopende prikkingen tellen niet als afgesloten factureerbare of loonuren.
+
+Feedback voor de backendontwikkelaar:
+
+- Kies op termijn één canoniek klokcontract voor alle endpoints en documenteer de overgang; de frontend ondersteunt beide vormen zolang migratie loopt.
+- Lever altijd `date`, `durationMinutes` en expliciete actieve status of `clockOut:null`.
+- Serverberekende duur blijft leidend voor loon, facturatie en audit; de browser mag nooit de definitieve duur bepalen.
+- Vermeld tijdzone/UTC-semantiek in het contract en retourneer een stabiele foutcode bij ongeldige of overlappende correcties.

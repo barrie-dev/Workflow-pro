@@ -14,6 +14,7 @@
   const token = () => window.wfpCore.token();
   const tenantId = () => window.wfpCore.tenantId();
   const esc = v => window.wfpCore.esc(v);
+  const timeE = window.wfpTime;
 
   function api(method, path, body) {
     const tid = tenantId();
@@ -1932,28 +1933,26 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
 
     const data = await api("GET", `/me/clock`);
     const allClocks = data.clocks || [];
-    const clocks = allClocks.filter(c => (c.clockedIn||"").slice(0,7) === `${year}-${String(month+1).padStart(2,"0")}`);
+    const clocks = allClocks.filter(c => timeE.clockDate(c).slice(0,7) === `${year}-${String(month+1).padStart(2,"0")}`);
 
     // Group by day
     const byDay = {};
     clocks.forEach(c => {
-      const day = (c.clockedIn||"").slice(0,10);
+      const day = timeE.clockDate(c);
       if (!byDay[day]) byDay[day] = [];
       byDay[day].push(c);
     });
 
-    const totalHours = clocks.reduce((s,c) => {
-      if (!c.clockedOut) return s;
-      return s + (new Date(c.clockedOut)-new Date(c.clockedIn))/3600000;
-    }, 0);
+    const totalHours = clocks.reduce((sum, clock) => sum + timeE.clockHours(clock), 0);
     const workedDays = Object.keys(byDay).length;
 
     // CSV download
     function exportCSV() {
       const rows = [["Datum","Inkloktijd","Uitkloktijd","Uren","Lopend"]];
       clocks.forEach(c => {
-        const h = c.clockedOut ? ((new Date(c.clockedOut)-new Date(c.clockedIn))/3600000).toFixed(2) : "";
-        rows.push([c.clockedIn?.slice(0,10)||"", c.clockedIn?.slice(11,16)||"", c.clockedOut?.slice(11,16)||"", h, c.clockedOut?"":"Ja"]);
+        const active = timeE.isActive(c);
+        const h = active ? "" : timeE.clockHours(c).toFixed(2);
+        rows.push([timeE.clockDate(c), timeE.clockTime(c, "in"), timeE.clockTime(c, "out"), h, active ? "Ja" : ""]);
       });
       const csv = rows.map(r=>r.map(v=>`"${v}"`).join(";")).join("\n");
       const a = document.createElement("a");
@@ -1991,7 +1990,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
 <div class="emp-card">
   <p class="emp-card-title">${t9("emp.ts.dayDetail","Dagdetail")} · ${monthLabel}</p>
   ${Object.keys(byDay).length ? Object.entries(byDay).sort((a,b)=>a[0].localeCompare(b[0])).map(([day, dc]) => {
-    const dayHours = dc.reduce((s,c)=>s+(c.clockedOut?(new Date(c.clockedOut)-new Date(c.clockedIn))/3600000:0),0);
+    const dayHours = dc.reduce((sum, clock) => sum + timeE.clockHours(clock), 0);
     const dayName = new Date(day).toLocaleDateString("nl-BE",{weekday:"short",day:"numeric",month:"short"});
     return `<div style="padding:8px 0;border-bottom:1px solid var(--gray-50);">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
@@ -1999,10 +1998,10 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
         <span style="font-size:12px;font-weight:600;color:var(--wf-green);">${dayHours.toFixed(1)} ${t9("emp.unit.h","u")}</span>
       </div>
       ${dc.map(c=>`<div style="font-size:11.5px;color:var(--gray-500);display:flex;gap:8px;padding:1px 0;">
-        <span>${c.clockedIn?new Date(c.clockedIn).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}):"-"}</span>
+        <span>${timeE.clockTime(c, "in") || "-"}</span>
         <span>–</span>
-        <span>${c.clockedOut?new Date(c.clockedOut).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}):`<span style="color:var(--wf-yellow)">${t9("emp.clock.running","Lopend")}</span>`}</span>
-        <span style="margin-left:auto;">${c.clockedOut?((new Date(c.clockedOut)-new Date(c.clockedIn))/3600000).toFixed(1)+" "+t9("emp.unit.h","u"):""}</span>
+        <span>${timeE.clockTime(c, "out") || `<span style="color:var(--wf-yellow)">${t9("emp.clock.running","Lopend")}</span>`}</span>
+        <span style="margin-left:auto;">${timeE.isActive(c) ? "" : timeE.clockHours(c).toFixed(1)+" "+t9("emp.unit.h","u")}</span>
       </div>`).join("")}
     </div>`;
   }).join("") : `<div class="emp-empty"><div class="emp-empty-text">${t9("emp.ts.noneMonth","Geen registraties in {month}").replace("{month}", monthLabel)}</div></div>`}

@@ -23,6 +23,7 @@
   const token = () => window.wfpCore.token();
   const tenantId = () => window.wfpCore.tenantId();
   const esc = v => window.wfpCore.esc(v);
+  const timeA = window.wfpTime;
 
   // ── Medewerker-naam resolver ───────────────────────────────
   // De beheerder zit in hetzelfde bedrijf: toon ALTIJD een echte naam, nooit
@@ -2918,11 +2919,8 @@ ${((window._wfpEnt && window._wfpEnt.modules) || []).includes("ai_estimate") ? `
       const data = await api("GET", `/clocks?date=${_clockDate}`);
       const clocks = data.clocks || data || [];
 
-      const totalHours = clocks.reduce((sum, c) => {
-        if (!c.clockedOut) return sum;
-        return sum + (new Date(c.clockedOut) - new Date(c.clockedIn)) / 3600000;
-      }, 0);
-      const ingeklokt = clocks.filter(c => c.status === "in" || !c.clockedOut).length;
+      const totalHours = clocks.reduce((sum, c) => sum + timeA.clockHours(c), 0);
+      const ingeklokt = clocks.filter(c => c.status === "in" || timeA.isActive(c)).length;
 
       tableEl.innerHTML = `
 <div style="display:flex;gap:12px;padding:12px 16px 0;flex-wrap:wrap;">
@@ -2943,12 +2941,12 @@ ${((window._wfpEnt && window._wfpEnt.modules) || []).includes("ai_estimate") ? `
   <thead><tr><th>${tA("adm.thEmployee","Medewerker")}</th><th>${tA("adm.clk.thIn","Inkloktijd")}</th><th>${tA("adm.clk.thOut","Uitkloktijd")}</th><th>${tA("adm.clk.thHours","Uren")}</th><th>${tA("adm.status","Status")}</th><th>${tA("adm.actions","Actie")}</th></tr></thead>
   <tbody>
     ${clocks.map(c => {
-      const hours = c.clockedOut ? ((new Date(c.clockedOut) - new Date(c.clockedIn)) / 3600000).toFixed(1) : "-";
-      const noOut = !c.clockedOut;
+      const noOut = timeA.isActive(c);
+      const hours = noOut ? "-" : timeA.clockHours(c).toFixed(1);
       return `<tr class="${noOut ? "" : "adm-row-link clk-row"}" data-id="${esc(c.id)}" ${noOut ? "" : 'title="Open correctie"'}>
         <td style="font-weight:500">${esc(uName(c))}</td>
-        <td>${c.clockedIn ? new Date(c.clockedIn).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}) : "-"}</td>
-        <td>${c.clockedOut ? new Date(c.clockedOut).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit"}) : `<span style="color:var(--wf-yellow)">${tA("adm.clk.notOut","Niet uitgeklokt")}</span>`}</td>
+        <td>${timeA.clockTime(c, "in") || "-"}</td>
+        <td>${timeA.clockTime(c, "out") || `<span style="color:var(--wf-yellow)">${tA("adm.clk.notOut","Niet uitgeklokt")}</span>`}</td>
         <td>${hours}</td>
         <td>${c.status==="in"||noOut ? `<span class="adm-status adm-status-active">${tA("dash.stClockedIn","Ingeklokt")}</span>` : `<span class="adm-status adm-status-inactive">${tA("adm.clk.clockedOut","Uitgeklokt")}</span>`}</td>
         <td>${noOut ? `<button class="adm-btn adm-btn-warning adm-btn-sm clk-force-out" data-id="${esc(c.id)}" data-uid="${esc(c.userId)}">${tA("adm.clk.forceOut","Klokt uit")}</button>` : `<button class="adm-btn adm-btn-secondary adm-btn-sm clk-edit" data-id="${esc(c.id)}">${tA("adm.clk.correct","Corrigeer")}</button>`}</td>
@@ -3044,8 +3042,8 @@ ${((window._wfpEnt && window._wfpEnt.modules) || []).includes("ai_estimate") ? `
   function openClockEditDrawer(clockId, clocks) {
     const clk = clocks.find(c => c.id === clockId);
     if (!clk) return;
-    const inTime = clk.clockedIn ? new Date(clk.clockedIn).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit",hour12:false}) : "";
-    const outTime = clk.clockedOut ? new Date(clk.clockedOut).toLocaleTimeString("nl-BE",{hour:"2-digit",minute:"2-digit",hour12:false}) : "";
+    const inTime = timeA.clockTime(clk, "in");
+    const outTime = timeA.clockTime(clk, "out");
     document.getElementById("admDrawerTitle").textContent = `Klok corrigeren · ${esc(uName(clk))}`;
     document.getElementById("admDrawerBody").innerHTML = `
 <form id="clkEditForm">
@@ -4366,10 +4364,7 @@ ${((window._wfpEnt && window._wfpEnt.modules) || []).includes("ai_estimate") ? `
         }
 
         // ── KPIs ─────────────────────────────────────────────
-        const totalHours = clocks.reduce((sum, c) => {
-          if (!c.clockedOut) return sum;
-          return sum + (new Date(c.clockedOut) - new Date(c.clockedIn)) / 3600000;
-        }, 0);
+        const totalHours = clocks.reduce((sum, c) => sum + timeA.clockHours(c), 0);
         const approvedExpenses = expenses.filter(e => ["goedgekeurd","approved"].includes(e.status));
         const totalExp = approvedExpenses.reduce((s, e) => s + Number(e.amount || 0), 0);
         const approvedLeaves = leaves.filter(l => l.status === "goedgekeurd");
@@ -4389,9 +4384,10 @@ ${((window._wfpEnt && window._wfpEnt.modules) || []).includes("ai_estimate") ? `
         const hoursByUser = {};
         clocks.forEach(c => {
           if (!hoursByUser[c.userId]) hoursByUser[c.userId] = { name: uName(c), hours: 0, days: new Set() };
-          if (c.clockedOut) {
-            hoursByUser[c.userId].hours += (new Date(c.clockedOut) - new Date(c.clockedIn)) / 3600000;
-            hoursByUser[c.userId].days.add(c.clockedIn?.slice(0,10));
+          if (!timeA.isActive(c)) {
+            hoursByUser[c.userId].hours += timeA.clockHours(c);
+            const workDate = timeA.clockDate(c);
+            if (workDate) hoursByUser[c.userId].days.add(workDate);
           }
         });
         const hourRows = Object.values(hoursByUser).sort((a,b) => b.hours - a.hours);
@@ -4450,9 +4446,10 @@ ${((window._wfpEnt && window._wfpEnt.modules) || []).includes("ai_estimate") ? `
         const payrollByUser = {};
         clocks.forEach(c => {
           if (!payrollByUser[c.userId]) payrollByUser[c.userId] = { name: uName(c), email: c.userEmail||"", hours: 0, days: new Set(), expAmt: 0, leaveDays: 0 };
-          if (c.clockedOut) {
-            payrollByUser[c.userId].hours += (new Date(c.clockedOut)-new Date(c.clockedIn))/3600000;
-            payrollByUser[c.userId].days.add(c.clockedIn?.slice(0,10));
+          if (!timeA.isActive(c)) {
+            payrollByUser[c.userId].hours += timeA.clockHours(c);
+            const workDate = timeA.clockDate(c);
+            if (workDate) payrollByUser[c.userId].days.add(workDate);
           }
         });
         expenses.filter(e => ["goedgekeurd","approved"].includes(e.status)).forEach(e => {
@@ -4527,8 +4524,8 @@ ${((window._wfpEnt && window._wfpEnt.modules) || []).includes("ai_estimate") ? `
     document.getElementById("repLoad").addEventListener("click", loadReportData);
     document.getElementById("repExportClocks").addEventListener("click", () => {
       const rows = (_repData.clocks||[]).map(c => {
-        const h = c.clockedOut ? ((new Date(c.clockedOut)-new Date(c.clockedIn))/3600000).toFixed(2) : "";
-        return [uName(c), c.clockedIn?.slice(0,10), c.clockedIn?.slice(11,16)||"", c.clockedOut?.slice(11,16)||"", h];
+        const h = timeA.isActive(c) ? "" : timeA.clockHours(c).toFixed(2);
+        return [uName(c), timeA.clockDate(c), timeA.clockTime(c, "in"), timeA.clockTime(c, "out"), h];
       });
       csvDownload("uren-export.csv", rows, ["Medewerker","Datum","Inkloktijd","Uitkloktijd","Uren"]);
     });
@@ -4575,7 +4572,7 @@ ${((window._wfpEnt && window._wfpEnt.modules) || []).includes("ai_estimate") ? `
   function printBeslissersrapport(data, tenant, from, to) {
     const fE = n => new Intl.NumberFormat("nl-BE",{style:"currency",currency:"EUR",maximumFractionDigits:0}).format(Number(n||0));
     const clocks = data.clocks||[], expenses=data.expenses||[], leaves=data.leaves||[], workorders=data.workorders||[], payroll=data.payroll||[];
-    const totalH = clocks.reduce((s,c)=>s+(c.clockedOut?(new Date(c.clockedOut)-new Date(c.clockedIn))/3600000:0),0);
+    const totalH = clocks.reduce((sum, clock) => sum + timeA.clockHours(clock), 0);
     const approvedExp = expenses.filter(e=>["goedgekeurd","approved"].includes(e.status));
     const totalExp = approvedExp.reduce((s,e)=>s+Number(e.amount||0),0);
     const doneWO = workorders.filter(w=>["Voltooid","Afgewerkt","done"].includes(w.status)).length;
