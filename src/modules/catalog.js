@@ -94,6 +94,13 @@ const MODULE_CATALOG = [
   { key: "vehicles", label: "Wagenpark", group: "Middelen", core: false,
     view: "vehicles", actions: ["vehicles"],
     submodules: [{ key: "maintenance", label: "Onderhoudsplanning" }] },
+  // Aankoop-pack (master-spec E18/h27): leveranciers, inkooporders, ontvangsten.
+  { key: "procurement", label: "Aankoop & leveranciers", group: "Middelen", core: false,
+    view: "purchasing", actions: ["suppliers", "purchase_orders"], submodules: [] },
+  // Voorraad-foundation (master-spec E17/h28): immutable mutatie-ledger,
+  // reservaties en transfers bovenop de eenvoudige stock-module.
+  { key: "inventory", label: "Voorraadbeheer (geavanceerd)", group: "Middelen", core: false,
+    view: "inventory", actions: ["inventory"], submodules: [] },
   { key: "venues", label: "Locaties / werven", group: "Middelen", core: false,
     view: "venues", actions: ["venues"], submodules: [] },
   // Service & Assets (master-spec E16/h44): generiek assetmodel (machines,

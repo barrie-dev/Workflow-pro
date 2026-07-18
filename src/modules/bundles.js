@@ -49,6 +49,9 @@ const BUNDLE_BACKFILL = {
   service_assets: ["enterprise"],
   // Contracten & abonnementen: brede commerciële capability vanaf Business.
   contracts: ["business", "enterprise"],
+  // Aankoop- en voorraad-packs: enkel Enterprise (à-la-carte, P2).
+  procurement: ["enterprise"],
+  inventory: ["enterprise"],
 };
 
 function ensureArray(store) {

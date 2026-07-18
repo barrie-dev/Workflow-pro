@@ -173,6 +173,18 @@ const migrations = [
       });
       return context;
     }
+  },
+  {
+    // Aankoop + voorraad (master-spec E17/E18/R5): idem voor "procurement"/"inventory".
+    version: 13,
+    name: "tenant-admin-procurement-inventory-permission",
+    apply(data, context) {
+      data.users = (data.users || []).map(user => {
+        if (user.role !== "tenant_admin") return user;
+        return { ...user, permissions: unique([...(user.permissions || []), ...context.businessAdminPermissions]) };
+      });
+      return context;
+    }
   }
 ];
 

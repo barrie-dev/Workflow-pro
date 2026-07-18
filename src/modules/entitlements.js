@@ -124,6 +124,8 @@ const OPERATIONAL_PERMISSIONS = [
   { key: "construction", label: "Werven & bouw", modules: ["construction"] },
   { key: "service_assets", label: "Service & Assets", modules: ["service_assets"] },
   { key: "contracts", label: "Contracten & abonnementen", modules: ["contracts"] },
+  { key: "procurement", label: "Aankoop & leveranciers", modules: ["procurement"] },
+  { key: "inventory", label: "Voorraadbeheer", modules: ["inventory"] },
   { key: "expenses", label: "Onkosten" },
   { key: "leaves", label: "Verlof" },
   { key: "messages", label: "Berichten" },

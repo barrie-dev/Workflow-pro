@@ -97,6 +97,7 @@ const WRITE_GATE_MAP = {
   incidents: ["incidents"], inquiries: ["customers"], estimate: ["invoicing", "billing"],
   projects: ["projects"], worksites: ["construction"], changeorders: ["construction"],
   assets: ["service_assets"], maintenance: ["service_assets"], contracts: ["contracts"],
+  suppliers: ["procurement"], purchase_orders: ["procurement"], inventory: ["inventory"],
   expenses: ["expenses"], leaves: ["leaves"], messages: ["messages"],
   customers: ["customers"], venues: ["venues"], stock: ["stock"], vehicles: ["vehicles"],
   facturen: ["invoicing", "billing"], offertes: ["invoicing", "billing"],
@@ -224,6 +225,8 @@ const { buildComplianceOverview } = require("./platform/compliance");
 const { makeAssetRepository, makeMaintenancePlanRepository } = require("./platform/assets");
 const { buildProjectFinance } = require("./platform/project-finance");
 const { makeContractRepository } = require("./platform/contracts");
+const { makeSupplierRepository, makePurchaseOrderRepository } = require("./platform/procurement");
+const inventory = require("./platform/inventory");
 const {
   createSetupIntent,
   billingQuote,
@@ -321,6 +324,8 @@ const changeOrderRepo = makeChangeOrderRepository(store);
 const assetRepo = makeAssetRepository(store);
 const maintenancePlanRepo = makeMaintenancePlanRepository(store);
 const contractRepo = makeContractRepository(store);
+const supplierRepo = makeSupplierRepository(store);
+const purchaseOrderRepo = makePurchaseOrderRepository(store);
 
 function csvCell(value) {
   const text = value == null ? "" : Array.isArray(value) || typeof value === "object" ? JSON.stringify(value) : String(value);
@@ -3706,6 +3711,185 @@ http.createServer(async (req, res) => {
         catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
         store.audit({ actor: user.email, tenantId, action: "change_order_deleted", area: "construction", detail: changeOrderItemMatch[1] });
         sendJson(res, 200, { ok: true });
+        return;
+      }
+
+      // ── Leveranciers (E18/h27) ────────────────────────────────────────────────
+      if (action === "suppliers" && req.method === "GET") {
+        assertCan(user, "procurement");
+        sendJson(res, 200, { ok: true, suppliers: redactSensitive(user, "suppliers", supplierRepo.list(tenantId)) });
+        return;
+      }
+      if (action === "suppliers" && req.method === "POST") {
+        assertCan(user, "procurement");
+        assertApiKeyWriteAllowed(user, req);
+        let row;
+        try { row = supplierRepo.insert(tenantId, await readBody(req), user.email); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "supplier_created", area: "procurement", detail: row.name });
+        emitDomainEvent(store, { tenantId, eventType: "supplier.created", aggregateType: "supplier", aggregateId: row.id, actor: user.email, correlationId: res.wfpRequestId });
+        sendJson(res, 201, { ok: true, supplier: row });
+        return;
+      }
+      const supplierItemMatch = action.match(/^suppliers\/([^/]+)$/);
+      if (supplierItemMatch && req.method === "PATCH") {
+        assertCan(user, "procurement");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        let row;
+        try { row = supplierRepo.update(tenantId, supplierItemMatch[1], body, user.email, body.expectedVersion); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code, currentVersion: e.currentVersion }); }
+        store.audit({ actor: user.email, tenantId, action: "supplier_updated", area: "procurement", detail: supplierItemMatch[1] });
+        sendJson(res, 200, { ok: true, supplier: row });
+        return;
+      }
+      if (supplierItemMatch && req.method === "DELETE") {
+        assertCan(user, "procurement");
+        assertInteractiveUser(user);
+        try { supplierRepo.remove(tenantId, supplierItemMatch[1]); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message }); }
+        store.audit({ actor: user.email, tenantId, action: "supplier_deleted", area: "procurement", detail: supplierItemMatch[1] });
+        sendJson(res, 200, { ok: true });
+        return;
+      }
+
+      // ── Inkooporders (E18/h27) ────────────────────────────────────────────────
+      if (action === "purchase_orders" && req.method === "GET") {
+        assertCan(user, "procurement");
+        sendJson(res, 200, { ok: true, purchaseOrders: purchaseOrderRepo.list(tenantId, { supplierId: url.searchParams.get("supplierId") || undefined, projectId: url.searchParams.get("projectId") || undefined, status: url.searchParams.get("status") || undefined }) });
+        return;
+      }
+      if (action === "purchase_orders" && req.method === "POST") {
+        assertCan(user, "procurement");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        let row;
+        try {
+          if (body.supplierId && !supplierRepo.findById(tenantId, body.supplierId)) return sendJson(res, 404, { ok: false, error: "Leverancier niet gevonden" });
+          row = purchaseOrderRepo.insert(tenantId, body, user.email);
+        }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "purchase_order_created", area: "procurement", detail: `${row.number} · €${row.subtotal.toFixed(2)}` });
+        emitDomainEvent(store, { tenantId, eventType: "purchase_order.created", aggregateType: "purchase_order", aggregateId: row.id, actor: user.email, correlationId: res.wfpRequestId });
+        sendJson(res, 201, { ok: true, purchaseOrder: row });
+        return;
+      }
+      const poItemMatch = action.match(/^purchase_orders\/([^/]+)$/);
+      if (poItemMatch && req.method === "PATCH") {
+        assertCan(user, "procurement");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        let row;
+        try { row = purchaseOrderRepo.update(tenantId, poItemMatch[1], body, user.email, body.expectedVersion); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code, currentVersion: e.currentVersion }); }
+        store.audit({ actor: user.email, tenantId, action: "purchase_order_updated", area: "procurement", detail: poItemMatch[1] });
+        sendJson(res, 200, { ok: true, purchaseOrder: row });
+        return;
+      }
+      const poTransitionMatch = action.match(/^purchase_orders\/([^/]+)\/transition$/);
+      if (poTransitionMatch && req.method === "POST") {
+        assertCan(user, "procurement");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        let row;
+        try { row = purchaseOrderRepo.transition(tenantId, poTransitionMatch[1], body.status, user.email, { reason: body.reason }); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "purchase_order_transition", area: "procurement", detail: `${poTransitionMatch[1]} → ${body.status}` });
+        emitDomainEvent(store, { tenantId, eventType: "purchase_order.status_changed", aggregateType: "purchase_order", aggregateId: row.id, actor: user.email, correlationId: res.wfpRequestId, data: { status: row.status, commitment: row.commitment } });
+        sendJson(res, 200, { ok: true, purchaseOrder: row });
+        return;
+      }
+      const poReceiveMatch = action.match(/^purchase_orders\/([^/]+)\/receive$/);
+      if (poReceiveMatch && req.method === "POST") {
+        assertCan(user, "procurement");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        let result;
+        try { result = purchaseOrderRepo.receive(tenantId, poReceiveMatch[1], body.receipts, user.email, body.locationId); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "goods_receipt", area: "procurement", detail: `${poReceiveMatch[1]} · ${result.progress.pct}%` });
+        emitDomainEvent(store, { tenantId, eventType: "purchase_order.received", aggregateType: "purchase_order", aggregateId: poReceiveMatch[1], actor: user.email, correlationId: res.wfpRequestId, data: { pct: result.progress.pct, movements: result.movements.length } });
+        sendJson(res, 201, { ok: true, ...result });
+        return;
+      }
+      if (poItemMatch && req.method === "DELETE") {
+        assertCan(user, "procurement");
+        assertInteractiveUser(user);
+        try { purchaseOrderRepo.remove(tenantId, poItemMatch[1]); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "purchase_order_deleted", area: "procurement", detail: poItemMatch[1] });
+        sendJson(res, 200, { ok: true });
+        return;
+      }
+
+      // ── Voorraad-ledger (E17/h28) ─────────────────────────────────────────────
+      if (action === "inventory/levels" && req.method === "GET") {
+        assertCan(user, "inventory");
+        sendJson(res, 200, { ok: true, levels: inventory.listLevels(store, tenantId, { articleId: url.searchParams.get("articleId") || undefined, locationId: url.searchParams.get("locationId") || undefined }) });
+        return;
+      }
+      if (action === "inventory/movements" && req.method === "POST") {
+        assertCan(user, "inventory");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        let mv;
+        try { mv = inventory.bookMovement(store, tenantId, body, user.email); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "stock_movement", area: "inventory", detail: `${body.type} · ${mv.qty}` });
+        emitDomainEvent(store, { tenantId, eventType: "stock.movement_booked", aggregateType: "stock_movement", aggregateId: mv.id, actor: user.email, correlationId: res.wfpRequestId, data: { type: mv.type } });
+        sendJson(res, 201, { ok: true, movement: mv });
+        return;
+      }
+      const mvReverseMatch = action.match(/^inventory\/movements\/([^/]+)\/reverse$/);
+      if (mvReverseMatch && req.method === "POST") {
+        assertCan(user, "inventory");
+        assertApiKeyWriteAllowed(user, req);
+        let mv;
+        try { mv = inventory.reverseMovement(store, tenantId, mvReverseMatch[1], user.email, (await readBody(req).catch(() => ({}))).reason); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "stock_movement_reversed", area: "inventory", detail: mvReverseMatch[1] });
+        sendJson(res, 201, { ok: true, movement: mv });
+        return;
+      }
+      if (action === "inventory/reservations" && req.method === "POST") {
+        assertCan(user, "inventory");
+        assertApiKeyWriteAllowed(user, req);
+        let r;
+        try { r = inventory.reserve(store, tenantId, await readBody(req), user.email); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code, available: e.available }); }
+        store.audit({ actor: user.email, tenantId, action: "stock_reserved", area: "inventory", detail: `${r.articleId} · ${r.qty}` });
+        sendJson(res, 201, { ok: true, reservation: r });
+        return;
+      }
+      const resReleaseMatch = action.match(/^inventory\/reservations\/([^/]+)$/);
+      if (resReleaseMatch && req.method === "DELETE") {
+        assertCan(user, "inventory");
+        assertApiKeyWriteAllowed(user, req);
+        let r;
+        try { r = inventory.release(store, tenantId, resReleaseMatch[1]); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "stock_released", area: "inventory", detail: resReleaseMatch[1] });
+        sendJson(res, 200, { ok: true, reservation: r });
+        return;
+      }
+      if (action === "inventory/transfer" && req.method === "POST") {
+        assertCan(user, "inventory");
+        assertApiKeyWriteAllowed(user, req);
+        let t;
+        try { t = inventory.transfer(store, tenantId, await readBody(req), user.email); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "stock_transfer", area: "inventory", detail: t.transferId });
+        sendJson(res, 201, { ok: true, transfer: t });
+        return;
+      }
+      if (action === "inventory/count" && req.method === "POST") {
+        assertCan(user, "inventory");
+        assertApiKeyWriteAllowed(user, req);
+        let result;
+        try { result = inventory.bookCount(store, tenantId, (await readBody(req)).counts, user.email); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "stock_count", area: "inventory", detail: `${result.count} correcties` });
+        sendJson(res, 201, { ok: true, ...result });
         return;
       }
 

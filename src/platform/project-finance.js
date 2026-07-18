@@ -77,7 +77,16 @@ function buildProjectFinance(store, tenant, project) {
   const invoiced = round2(invoices.reduce((s, i) => s + Number(i.subtotal ?? i.total ?? 0), 0));
   const paid = round2(invoices.filter(i => i.status === "paid").reduce((s, i) => s + Number(i.subtotal ?? i.total ?? 0), 0));
 
+  // ── Openstaande verplichtingen (commitments) uit inkooporders (E18/h27) ─────
+  // Een bestelling is een verplichting, geen gerealiseerde kost → voedt de
+  // forecast, niet de werkelijke kost.
+  const openStatuses = ["approved", "sent", "confirmed", "partially_received", "partially_invoiced"];
+  const purchaseOrders = (store.list("purchaseOrders", tenantId) || []).filter(po => po.projectId === project.id && openStatuses.includes(po.status));
+  const commitment = round2(purchaseOrders.reduce((s, po) =>
+    s + (po.lines || []).reduce((ls, l) => ls + Math.max(0, Number(l.orderedQty || 0) - Number(l.receivedQty || 0)) * Number(l.unitPrice || 0), 0), 0));
+
   const actualCost = round2(laborCost + materialCost + expenseCost);
+  const forecastCost = round2(actualCost + commitment);
   const margin = round2(invoiced - actualCost);
 
   return {
@@ -92,8 +101,11 @@ function buildProjectFinance(store, tenant, project) {
       expenses: { cost: expenseCost, sourceCount: expenses.length },
     },
     invoiced: { total: invoiced, paid, sourceCount: invoices.length, sources: invoices.slice(0, 25).map(i => ({ id: i.id, number: i.number, docType: i.docType || "invoice", amount: i.subtotal ?? i.total, status: i.status })) },
+    commitment: { total: commitment, sourceCount: purchaseOrders.length, sources: purchaseOrders.slice(0, 25).map(po => ({ id: po.id, number: po.number, open: round2((po.lines || []).reduce((ls, l) => ls + Math.max(0, Number(l.orderedQty || 0) - Number(l.receivedQty || 0)) * Number(l.unitPrice || 0), 0)) })) },
+    forecastCost,
     margin,
     budgetRemaining: round2(Number(project.budgetAmount || 0) - actualCost),
+    forecastBudgetRemaining: round2(Number(project.budgetAmount || 0) - forecastCost),
     generatedAt: new Date().toISOString(),
   };
 }
