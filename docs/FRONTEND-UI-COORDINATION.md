@@ -226,3 +226,22 @@ Feedback voor de backendontwikkelaar:
 - Onderscheid in het responsecontract expliciet een informatief antwoord, navigatie en mutatie; alleen mutaties krijgen een bevestigingsactie.
 - Geef geen secrets of onnodige persoonsgegevens mee in promptcontext of foutmeldingen. De backend blijft bron van waarheid voor rechten en datascoping.
 - Streaming kan later als progressieve verbetering worden toegevoegd; het huidige JSON-contract moet bruikbaar blijven als fallback.
+
+
+## Ruime create- en editworkspaces — frontendintegratie 2026-07-18
+
+De gedeelde tenant-admin drawer is vervangen door een ruime werkruimte. Reguliere formulieren gebruiken tot 820 px; document- en personeelsflows zoals facturen, offertes, werkbonnen en medewerkers gebruiken tot 1080 px. Op mobiel worden deze flows volledig schermvullend. Hierdoor blijven labels, documentregels, totalen en acties leesbaar zonder de onderliggende domeinlogica te wijzigen.
+
+Frontendregel:
+
+- Een korte bevestiging of enkelvoudige mutatie mag compact blijven.
+- Een aanmaak- of bewerkflow met meerdere secties, documentregels of rechten opent als ruime workspace.
+- Primaire acties blijven zichtbaar onderaan; velden worden op mobiel één kolom.
+- Nieuwe complexe formulieren moeten een herkenbaar formulier-id of workspacevariant gebruiken, zodat ze automatisch dezelfde breedte en responsive regels krijgen.
+
+Feedback voor de backendontwikkelaar:
+
+- Er wijzigen geen endpoints, payloads, validaties of permissies door deze UI-release.
+- Blijf veldfouten leveren via `fieldErrors` met `code` en `requestId`, zodat langere formulieren de fout bij de juiste sectie kunnen tonen.
+- Voor conceptdocumenten is later server-side draftopslag/autosave wenselijk; de frontend simuleert dit nu bewust niet.
+- Documenttotalen, btw-regimes, nummering en eindstatus blijven uitsluitend server-side bron van waarheid.
