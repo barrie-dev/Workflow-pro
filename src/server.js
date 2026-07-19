@@ -7,6 +7,7 @@ const { sendJson, readBody, readRawBody, securityHeaders, corsHeaders } = requir
 const { checkRateLimit } = require("./lib/rate-limit");
 const { Store, BUSINESS_ADMIN_PERMISSIONS, MANAGER_PERMISSIONS, EMPLOYEE_PERMISSIONS } = require("./lib/store");
 const { createDataAdapter } = require("./lib/data-adapters");
+const { createObjectStorage } = require("./infrastructure/object-storage-factory");
 const { hashPassword, assertStrongPassword, verifyPassword } = require("./lib/security");
 const {
   authenticate,
@@ -372,6 +373,9 @@ const formInstanceRepo = makeFormInstanceRepository(store, formTemplateRepo);
 const taskRepo = makeTaskRepository(store);
 const fileRepo = makeFileRepository(store);
 const communicationRepo = makeCommunicationRepository(store);
+// Objectopslag achter de poort (handover 4.2): lokaal volume nu, Azure Blob of
+// S3 later via dezelfde interface · een configuratiewissel, geen codewijziging.
+const objectStorage = createObjectStorage();
 /** Kosttarieven zijn gevoelige velden (h8.2): enkel beheerders zien/beheren ze. */
 function canSeeEmployeeCost(user) {
   return !!user && ["tenant_admin", "super_admin"].includes(user.role);
@@ -5696,11 +5700,48 @@ const httpServer = http.createServer(async (req, res) => {
       }
       if (action === "docfiles" && req.method === "POST") {
         assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
         let row;
-        try { row = fileRepo.insert(tenantId, await readBody(req), user.email); }
+        try {
+          // Inhoud loopt via de objectopslag-poort (handover 4.2): de key wordt
+          // SERVER-SIDE gebouwd met tenantcontext, dus een client kan nooit een
+          // pad kiezen. Zonder inhoud blijft dit puur metadata (bv. een
+          // vooraf-ondertekende upload die al gebeurd is).
+          if (body.content) {
+            const stored = await objectStorage.put({
+              tenantId,
+              scope: (body.context && body.context.entityType) || "general",
+              extension: String(body.name || "").split(".").pop(),
+              content: Buffer.from(String(body.content), body.encoding === "base64" ? "base64" : "utf8"),
+              mimeType: body.mimeType,
+              fileName: body.name,
+            });
+            body.storageRef = stored.key;
+            body.size = stored.size;
+            body.hash = stored.checksum;
+          }
+          row = fileRepo.insert(tenantId, body, user.email);
+        }
         catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
         store.audit({ actor: user.email, tenantId, action: "file_uploaded", area: "files", detail: `${row.name} v${row.currentVersion}` });
         sendJson(res, 201, { ok: true, file: row });
+        return;
+      }
+      // Vooraf-ondertekende upload-URL: de client uploadt rechtstreeks, wij
+      // geven alleen een kortlevend, ondertekend slot uit.
+      if (action === "docfiles/upload-url" && req.method === "POST") {
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        let slot;
+        try {
+          slot = await objectStorage.createUploadUrl({
+            tenantId, scope: body.scope || "general",
+            extension: String(body.name || "").split(".").pop(),
+            mimeType: body.mimeType, size: body.size,
+          });
+        }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        sendJson(res, 200, { ok: true, upload: slot });
         return;
       }
       const fileVersionMatch = action.match(/^docfiles\/([^/]+)\/versions$/);
@@ -5723,7 +5764,15 @@ const httpServer = http.createServer(async (req, res) => {
         catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
         // Downloads worden geaudit (acceptatie h39).
         store.audit({ actor: user.email, tenantId, action: "file_downloaded", area: "files", detail: `${file.name} v${entry.version}` });
-        sendJson(res, 200, { ok: true, download: entry, storageRef: (file.versions.find(v => v.version === entry.version) || {}).storageRef });
+        // Levering via een kortlevende, ondertekende URL (handover 4.2): er is
+        // geen publieke map, en een besmet bestand wordt geweigerd.
+        const ref = (file.versions.find(v => v.version === entry.version) || {}).storageRef;
+        let signed = null;
+        if (ref) {
+          try { signed = await objectStorage.createDownloadUrl({ tenantId, key: ref }); }
+          catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        }
+        sendJson(res, 200, { ok: true, download: entry, storageRef: ref, url: signed });
         return;
       }
 

@@ -54,6 +54,16 @@ const config = {
     maxConnections: Number(process.env.DATABASE_MAX_CONNECTIONS) || 10,
     statementTimeoutMs: Number(process.env.DATABASE_STATEMENT_TIMEOUT_MS) || 15000
   },
+  // Objectopslag achter een port (handover 4.2 · F-08). "local" draait overal
+  // waar een schijf is; "azure-blob"/"s3" zijn latere adapters met exact
+  // hetzelfde contract. Geen publieke containers: toegang via ondertekende URL.
+  objectStorage: {
+    adapter: process.env.OBJECT_STORAGE_ADAPTER || "local",
+    path: process.env.OBJECT_STORAGE_PATH || "",
+    urlTtlSeconds: Number(process.env.OBJECT_STORAGE_URL_TTL_SECONDS) || 900,
+    // Valt terug op de app-secret zodat dev werkt zonder extra configuratie.
+    signingKey: process.env.OBJECT_STORAGE_SIGNING_KEY || process.env.JWT_SECRET || "dev_only_replace_this_secret"
+  },
   // LEGACY · uitsluitend voor een eenmalige migratie van bestaande data.
   // De normale runtime gebruikt deze waarden niet meer (F-01/F-02).
   supabase: {
