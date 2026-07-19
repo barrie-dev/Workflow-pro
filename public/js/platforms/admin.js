@@ -49,10 +49,10 @@
     return window.wfpCore.request("/api" + fullPath, { method, body: body ? JSON.stringify(body) : undefined });
   }
 
-  // Dashboard en Actiecentrum zijn shell-views: ze bundelen enkel data uit
-  // modules waar de gebruiker al toegang toe heeft en hebben geen apart
+  // Dashboard, Actiecentrum en Werkruimte zijn shell-views: ze bundelen enkel
+  // tenantdata waar de gebruiker al toegang toe heeft en hebben geen apart
   // backend-entitlement nodig.
-  const CORE_UI_VIEWS = new Set(["dashboard", "actions"]);
+  const CORE_UI_VIEWS = new Set(["dashboard", "actions", "workos"]);
 
   // Verberg nav-items voor modules die niet in het pakket van de tenant zitten.
   function applyEntitlements() {
@@ -393,6 +393,10 @@
         <span data-i18n="nav.actions">Actiecentrum</span>
         <span class="adm-nav-badge" id="admActionBadge" style="display:none">0</span>
       </a>
+      <a class="adm-nav-item" data-view="workos" href="#">
+        <svg viewBox="0 0 24 24"><path d="M4 3h6c.55 0 1 .45 1 1v6c0 .55-.45 1-1 1H4c-.55 0-1-.45-1-1V4c0-.55.45-1 1-1zm10 0h6c.55 0 1 .45 1 1v3c0 .55-.45 1-1 1h-6c-.55 0-1-.45-1-1V4c0-.55.45-1 1-1zM4 13h6c.55 0 1 .45 1 1v6c0 .55-.45 1-1 1H4c-.55 0-1-.45-1-1v-6c0-.55.45-1 1-1zm10-3h6c.55 0 1 .45 1 1v9c0 .55-.45 1-1 1h-6c-.55 0-1-.45-1-1v-9c0-.55.45-1 1-1z"/></svg>
+        <span>Werkruimte</span>
+      </a>
       <a class="adm-nav-item" data-view="reports" href="#">
         <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
         <span data-i18n="nav.reports">Rapportages</span>
@@ -683,7 +687,7 @@
 
   // ── Navigation ─────────────────────────────────────────────
   const VIEW_LABELS = {
-    dashboard: "Dashboard", actions: "Actiecentrum", employees: "Medewerkers", planning: "Planning",
+    dashboard: "Dashboard", actions: "Actiecentrum", workos: "Werkruimte", employees: "Medewerkers", planning: "Planning",
     appointments: "Afspraken",
     clocking: "Prikklok", leaves: "Verlof", expenses: "Onkosten",
     workorders: "Werkbonnen", messages: "Berichten", reports: "Rapportages",
@@ -732,6 +736,12 @@
   // (nieuw-record-paneel). needsView gate't cross-module-links op entitlements.
   function navSubmenus() {
     return {
+      workos: [
+        { label: "+ Nieuwe taak", go: { view: "workos", click: "workOsNewTask" } },
+        { label: "+ Formulier ontwerpen", go: { view: "workos", click: "workOsNewTemplate" } },
+        { label: "+ Bestand uploaden", go: { view: "workos", click: "workOsUploadFile" } },
+        { label: "+ Contactmoment", go: { view: "workos", click: "workOsNewCommunication" } }
+      ],
       planning: [
         { label: "+ Nieuwe shift", go: { view: "planning", click: "admAddShift" } }
       ],

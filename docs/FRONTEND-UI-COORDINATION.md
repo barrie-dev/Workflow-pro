@@ -478,3 +478,33 @@ Feedback voor de backendontwikkelaar:
 - Lever altijd `date`, `durationMinutes` en expliciete actieve status of `clockOut:null`.
 - Serverberekende duur blijft leidend voor loon, facturatie en audit; de browser mag nooit de definitieve duur bepalen.
 - Vermeld tijdzone/UTC-semantiek in het contract en retourneer een stabiele foutcode bij ongeldige of overlappende correcties.
+
+## Work OS-werkruimte — frontendintegratie 2026-07-19
+
+De backend bevat intussen de gedeelde Work OS-kern voor taken, formulieren, bestanden en communicatie. De tenant-admin krijgt hiervoor één centrale, ruime **Werkruimte** in plaats van vier losse tabellen of kleine zijpanelen. De UI houdt ieder object bij één primaire dossiercontext en gebruikt uitsluitend de bestaande tenant-scoped contracten.
+
+| UI-flow | Bestaand contract | UI-gedrag |
+| --- | --- | --- |
+| Takenbord | `GET/POST/PATCH/DELETE /tasks`, `POST /tasks/:id/transition` | Toont open, bezig, geblokkeerd en afgerond met eigenaar, deadline, prioriteit en één primaire context. Alleen server-toegestane statusovergangen worden aangeboden. |
+| Formulierdesigner | `GET/POST/PATCH /forms/templates`, `POST /forms/templates/:id/transition` | Bouwt secties, vragen, verplichte velden en keuzeopties in een brede editor. Publiceren en onomkeerbaar archiveren zijn expliciete acties. |
+| Formulierinvulling | `GET/POST/PATCH /forms/instances`, `POST /forms/instances/:id/{submit,lock,photo}` | Bewaart concepten, respecteert de bevroren templateversie, toont backendvalidatie en koppelt foto's ook als dossierbestand. |
+| Dossierbestanden | `GET/POST /docfiles`, `POST /docfiles/:id/download` | Uploadt toegestane bestanden tot 25 MB, toont context, zichtbaarheid, hash, versies en vraagt per download een geauditeerde link aan. |
+| Communicatietijdlijn | `GET/POST /communications` | Legt kanaal, ontvangers, tekst, bijlagen en context als snapshot vast. De knop heet bewust “contactmoment vastleggen” en belooft geen externe aflevering. |
+
+Frontendregels:
+
+- De organisatie, klant, werkbon, project, locatie of medewerker wordt via een leesbare contextselector gekozen; de gebruiker hoeft alleen bij een onbekend extern contexttype een referentie in te vullen.
+- Een taak heeft precies één primaire context. Een extra relatie is optioneel en wordt afzonderlijk aangeboden.
+- De UI voert geen eigen formulierstatus, bestandsversie of communicatiedelivery uit; de serverresponse blijft bron van waarheid.
+- Een ingediend of vergrendeld formulier wordt alleen-lezen getoond. De snapshotnaam en templateversie blijven zichtbaar.
+- Er wordt nergens een browserprompt gebruikt. Alle create- en editflows openen in de gedeelde, gecentreerde werkruimte; de formulierdesigner gebruikt tot 1280 px en wordt op mobiel schermvullend.
+
+Feedback voor de backendontwikkelaar:
+
+- `POST /docfiles/:id/versions` bewaart momenteel alleen metadata en roept de objectopslagpoort niet aan wanneer de client echte `content` meestuurt. Lever voor een nieuwe versie dezelfde server-side `objectStorage.put`-flow als bij `POST /docfiles`, of documenteer een volledig upload-slot → bevestig-versiecontract.
+- `LocalObjectStorage.createUploadUrl/createDownloadUrl` retourneert `/api/storage/upload` en `/api/storage/download`, maar `src/server.js` exposeert die routes momenteel niet. Zonder die handlers kan een ondertekende URL niet worden gebruikt. Voeg tenantvalidatie, signaturecontrole, streaming en scanstatus toe of laat een cloudadapter een bruikbare absolute URL leveren.
+- `POST /communications` registreert een snapshot maar voert geen echte e-mail-, sms- of portaalaflevering uit. Behoud dit onderscheid in het contract. Voor echte verzending zijn minimaal `deliveryStatus`, provider-ID, foutcode, pogingen, `deliveredAt` en retry nodig.
+- Het gedeelde communicatiecontract vereist nu ook voor kanaal `note` minstens één ontvanger. Overweeg voor interne notities een aparte actor/team-semantiek; de UI gebruikt voorlopig de expliciete waarde `Intern team` wanneer geen ontvanger is gekozen.
+- De Work OS-actions zijn niet aan een module in `src/modules/catalog.js` gekoppeld en worden daardoor als kernactie behandeld. Bevestig of dit productbeleid is en definieer zo nodig afzonderlijke lees-/schrijfrechten voor taken, formulierbeheer, bestanden en communicatie.
+- Lever bij voorkeur één lichte contextcatalogus of resolver (`type`, `id`, `label`, `allowedActions`). De UI haalt nu klanten, werkbonnen, projecten, locaties en medewerkers parallel op om technische IDs niet aan de gebruiker te tonen.
+- Behoud bij taakconflicten `code: VERSION_CONFLICT` en `currentVersion`; voeg ook een `requestId` toe zodat de editor gericht kan herladen en support dezelfde fout kan traceren.
