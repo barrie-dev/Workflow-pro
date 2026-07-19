@@ -132,8 +132,10 @@ test("grid: grote export wordt een job met downloadlink en vervaldatum", () => {
   const job = createExportJob(store, TENANT, ADMIN, exp);
   assert.equal(job.status, "ready");
   assert.match(job.downloadPath, /\/grid\/exports\/exp_/);
-  assert.ok(getExportJob(store, TENANT, job.id, job.token), "download met geldig token");
-  assert.throws(() => getExportJob(store, TENANT, job.id, "fout-token"), e => e.code === "INVALID_TOKEN");
+  // Expliciet dezelfde klok als de export: anders wordt deze test vanzelf rood
+  // zodra de echte tijd voorbij de vervaldatum schuift.
+  assert.ok(getExportJob(store, TENANT, job.id, job.token, now), "download met geldig token");
+  assert.throws(() => getExportJob(store, TENANT, job.id, "fout-token", now), e => e.code === "INVALID_TOKEN");
   // Vervallen download geeft 410.
   assert.throws(() => getExportJob(store, TENANT, job.id, job.token, new Date("2026-07-20T10:00:00Z")), e => e.code === "EXPIRED");
 });

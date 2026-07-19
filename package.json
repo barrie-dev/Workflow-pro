@@ -73,7 +73,10 @@
     "status:bundle": "node scripts/generate-status-bundle.js",
     "db:migrate:sql": "node scripts/run-migrations.js",
     "db:migrate:sql:dry": "node scripts/run-migrations.js --dry-run",
-    "db:migrate:status": "node scripts/run-migrations.js --status"
+    "db:migrate:status": "node scripts/run-migrations.js --status",
+    "db:backfill:crm": "node scripts/backfill-crm.js",
+    "db:backfill:crm:dry": "node scripts/backfill-crm.js --dry-run",
+    "db:reconcile:crm": "node scripts/backfill-crm.js --reconcile"
   },
   "engines": {
     "node": ">=18"
