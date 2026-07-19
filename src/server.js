@@ -312,6 +312,18 @@ const { listReports, getReport, generateStatusBundle } = require("./modules/repo
 const { listAuditEvents } = require("./modules/audit");
 const { sendMail, setRuntimeConfig, isMailLive, recentMail, setMailSink } = require("./lib/mailer");
 const { pruneAudit } = require("./platform/audit-log");
+const { ConsoleTelemetry } = require("./infrastructure/telemetry/console-telemetry");
+const { routePattern } = require("./lib/route-pattern");
+/**
+ * Telemetrie (handover 4.7). Console-adapter schrijft gestructureerde JSON naar
+ * stdout, wat elk container-platform verzamelt zonder agent of account. Een
+ * OpenTelemetry-collector of Azure Monitor-exporter sluit hier later op aan
+ * zonder dat aanroepende code wijzigt.
+ */
+const telemetry = new ConsoleTelemetry({
+  minLevel: process.env.LOG_LEVEL || (config.isProduction ? "info" : "warn"),
+  environment: config.appEnv,
+});
 const { productionReadiness } = require("./modules/production");
 const { eventLog, backupSummary, lifecycle, resellerPayouts, securityCenter, gdprOverview } = require("./modules/platform-ops");
 const { setPlanPriceOverrides, planPricing } = require("./modules/billing");
@@ -474,6 +486,10 @@ function sendCsv(res, filename, rows) {
 
 function actor(req) {
   const user = authenticate(req, store) || authenticateApiKey(store, req.headers["x-api-key"], requestMetadata(req));
+  // Onthoud wie de aanroeper is, zodat telemetrie en securityevents een actorId
+  // kunnen meedragen (handover 4.7). Bewust het INTERNE id, geen e-mailadres:
+  // dat laatste is PII en hoort niet in telemetrie.
+  if (user) req.wfpActor = { id: user.id, tenantId: user.tenantId };
   // Read-only support-sessie: blokkeer elke schrijfactie centraal.
   if (user) assertSupportWrite(user, req.method);
   return user;
@@ -512,8 +528,39 @@ function assertApiKeyWriteAllowed(user, req) {
   }
 }
 
+/**
+ * Fouten die een SECURITYgebeurtenis zijn (handover 4.7): een geweigerde
+ * toegang moet als apart kanaal zichtbaar zijn, niet verstopt tussen gewone
+ * 4xx-ruis. De code bepaalt de soort, zodat een SOC-regel erop kan filteren.
+ */
+function securityKindFor(error) {
+  const code = String(error.code || "");
+  if (code === "CROSS_TENANT_KEY" || code === "STATE_REVISION_CONFLICT") return "cross_tenant_denied";
+  if (code === "FINANCIAL_SCOPE" || code === "OWN_HOURS_ONLY") return "permission_denied";
+  if (error.status === 403) return "permission_denied";
+  if (error.status === 401) return "auth_failure";
+  return null;
+}
+
 function handleError(req, res, error, tenantId = null) {
   const status = error.status || 500;
+  // Telemetrie vóór de response: ook een 500 moet traceerbaar zijn.
+  const kind = securityKindFor(error);
+  if (kind) {
+    telemetry.security({
+      kind, outcome: "denied",
+      message: error.message,
+      correlationId: res.wfpCorrelationId, requestId: res.wfpRequestId,
+      tenantId, actorId: (req.wfpActor && req.wfpActor.id) || null,
+      attributes: { path: new URL(req.url, config.appUrl).pathname, method: req.method, code: error.code || null },
+    });
+  } else if (status >= 500) {
+    telemetry.log({
+      level: "error", message: error.message || "Server error",
+      correlationId: res.wfpCorrelationId, requestId: res.wfpRequestId, tenantId,
+      attributes: { path: new URL(req.url, config.appUrl).pathname, method: req.method, status, code: error.code || null },
+    });
+  }
   if (status >= 500) {
     store.errorEvent({
       tenantId,
@@ -716,6 +763,11 @@ const httpServer = http.createServer(async (req, res) => {
   // testerscreenshot naar de juiste serverlog leidt. Geen gevoelige data.
   res.wfpRequestId = `req_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
   res.setHeader("x-request-id", res.wfpRequestId);
+  // Correlatievelden voor telemetrie (handover 4.7). Een correlationId van de
+  // client wordt overgenomen zodat een keten over meerdere diensten te volgen
+  // is; anders is het requestId de correlatie.
+  res.wfpCorrelationId = String(req.headers["x-correlation-id"] || res.wfpRequestId).slice(0, 64);
+  res.wfpStartedAt = Date.now();
 
   try {
     const rateLimit = checkRateLimit(req, url.pathname);
@@ -6680,6 +6732,19 @@ const httpServer = http.createServer(async (req, res) => {
       try { await store.flush(); }
       catch (err) { console.error(`[store] wegschrijven mislukt: ${err.message}`); }
     }
+    // Requestduur per route-klasse (handover 4.7 · P95-doelen per endpointklasse).
+    // Geaggregeerd, dus dit vervuilt de logs niet.
+    try {
+      telemetry.metric("http.request.duration_ms", Date.now() - (res.wfpStartedAt || Date.now()), {
+        method: req.method,
+        // Enkel het ROUTEPATROON als dimensie. Met de tenant of record-id erin
+        // zou het aantal metriekreeksen meegroeien met het aantal klanten en
+        // records · dat maakt een dashboard onbruikbaar en duur. De tenant zit
+        // al als eigen dimensie op logs en securityevents.
+        route: routePattern(url.pathname),
+        status: res.statusCode,
+      });
+    } catch (_) { /* telemetrie mag een request nooit breken */ }
   }
 });
 
@@ -6746,6 +6811,17 @@ function startServer() {
   };
   setTimeout(runAuditRetention, 120 * 1000).unref();
   setInterval(runAuditRetention, 24 * 60 * 60 * 1000).unref();
+
+  // Metrics periodiek uitschrijven (handover 4.7). Eén regel per venster met
+  // count/avg/min/max, zodat een collector of logdrain ze kan oppikken zonder
+  // dat elke meting een logregel wordt.
+  const flushMetrics = () => {
+    try {
+      const rows = telemetry.flushMetrics();
+      if (rows.length) console.log(JSON.stringify({ type: "metrics", at: new Date().toISOString(), metrics: rows }));
+    } catch (e) { console.error("[telemetry] metrics flush mislukt:", e.message); }
+  };
+  setInterval(flushMetrics, 60 * 1000).unref();
 
   // Support-toegang: jaarlijkse mededeling + auto-renew. Bij opstart + dagelijks.
   const reviewSupportAccess = () => { try { runSupportAccessReview(store); } catch (_) {} };

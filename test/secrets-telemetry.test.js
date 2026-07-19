@@ -203,3 +203,18 @@ test("telemetrie: noop-provider doet niets maar voert het werk wel uit", async (
   assert.ok(isTelemetryProvider(t));
   assert.equal(await t.span("x", async () => 42), 42);
 });
+
+test("telemetrie: routepatroon houdt de metriek-cardinaliteit begrensd", () => {
+  // Regressie: de tenant-id bleef in de route staan, waardoor het aantal
+  // metriekreeksen meegroeide met het aantal klanten.
+  const { routePattern } = require("../src/lib/route-pattern");
+  assert.equal(routePattern("/api/tenants/t_demo/customers"), "/api/tenants/:tenantId/customers");
+  assert.equal(routePattern("/api/tenants/t_andere_klant/customers"), "/api/tenants/:tenantId/customers");
+  assert.equal(
+    routePattern("/api/tenants/t_demo/articles/art_01HXKJ2M3N4P5Q6R/resolve"),
+    "/api/tenants/:tenantId/articles/:id/resolve");
+  assert.equal(routePattern("/api/admin/tenants/t_x/modules"), "/api/admin/tenants/:tenantId/modules");
+  // Statische paden blijven ongemoeid.
+  assert.equal(routePattern("/api/health"), "/api/health");
+  assert.equal(routePattern("/api/auth/login"), "/api/auth/login");
+});
