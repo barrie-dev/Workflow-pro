@@ -54,6 +54,16 @@ const config = {
     maxConnections: Number(process.env.DATABASE_MAX_CONNECTIONS) || 10,
     statementTimeoutMs: Number(process.env.DATABASE_STATEMENT_TIMEOUT_MS) || 15000
   },
+  // AI achter een port (handover 4.5 · F-07). Modelnamen staan HIER, nooit in
+  // business rules. De super-admin kan dit per platform overschrijven via de
+  // Integraties-console; zonder geldige sleutel draait de mock-adapter.
+  ai: {
+    provider: process.env.AI_PROVIDER || "openai",
+    apiKey: process.env.AI_API_KEY || process.env.OPENAI_API_KEY || "",
+    model: process.env.AI_MODEL || "gpt-4o-mini",
+    endpoint: process.env.AI_ENDPOINT || "",
+    apiVersion: process.env.AI_API_VERSION || "2024-10-21"
+  },
   // Objectopslag achter een port (handover 4.2 · F-08). "local" draait overal
   // waar een schijf is; "azure-blob"/"s3" zijn latere adapters met exact
   // hetzelfde contract. Geen publieke containers: toegang via ondertekende URL.
