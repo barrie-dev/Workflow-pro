@@ -70,9 +70,24 @@ class PostgresDataAdapter {
     this.ready = false;
   }
 
-  /** Legt het schema aan. Idempotent, dus veilig bij elke start. */
+  /**
+   * Legt de document-tabel aan die deze adapter zelf gebruikt. Idempotent, dus
+   * veilig bij elke start.
+   *
+   * De genummerde SQL-migraties met het genormaliseerde schema (handover 5.4)
+   * draaien hier BEWUST NIET. Schemawijzigingen horen een gecontroleerde
+   * deploystap te zijn (`npm run db:migrate:sql`), vóór de nieuwe versie
+   * uitrolt. Zou elke replica bij het opstarten migreren, dan wijzigt het
+   * schema terwijl de oude versie nog draait.
+   */
   async migrate() {
     await this.pool.query(SCHEMA_SQL);
+  }
+
+  /** Expliciete uitvoering van de SQL-migraties (deploystap of dev-gemak). */
+  async runSqlMigrations({ log = () => {} } = {}) {
+    const { runMigrations } = require("./migration-runner");
+    return runMigrations(this.pool, { log });
   }
 
   /**

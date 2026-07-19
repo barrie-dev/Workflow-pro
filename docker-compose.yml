@@ -44,6 +44,11 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    # Migraties als expliciete stap VÓÓR de app start, niet vanuit de app zelf:
+    # met meerdere replicas zou het schema anders wijzigen terwijl de vorige
+    # versie nog draait. De advisory lock in de runner maakt het ook veilig als
+    # meerdere containers tegelijk opkomen.
+    command: ["sh", "-c", "node scripts/run-migrations.js && node src/server.js"]
     ports:
       - "${PORT:-4280}:4280"
     environment:

@@ -70,7 +70,10 @@
     "go-live:report": "node scripts/generate-go-live-report.js",
     "roadmap:checklist": "node scripts/generate-roadmap-checklist.js",
     "reports:index": "node scripts/generate-report-index.js",
-    "status:bundle": "node scripts/generate-status-bundle.js"
+    "status:bundle": "node scripts/generate-status-bundle.js",
+    "db:migrate:sql": "node scripts/run-migrations.js",
+    "db:migrate:sql:dry": "node scripts/run-migrations.js --dry-run",
+    "db:migrate:status": "node scripts/run-migrations.js --status"
   },
   "engines": {
     "node": ">=18"
