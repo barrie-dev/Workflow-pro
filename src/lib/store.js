@@ -88,6 +88,7 @@ const REQUIRED_COLLECTIONS = [
   "employees",
   "gridViews",
   "exportJobs",
+  "mailLog",
   "formTemplates",
   "formInstances",
   "tasks",
@@ -424,14 +425,20 @@ class Store {
     return this.adapter.status();
   }
 
+  /**
+   * Auditregel wegschrijven (handover F-10).
+   *
+   * Append-only: hier wordt NOOIT afgekapt. Voorheen deed dit `slice(-500)` op
+   * één gedeelde lijst, waardoor auditregels stil verdwenen én één drukke
+   * tenant de trail van een andere kon wegduwen. Opruimen gebeurt nu via een
+   * expliciete retentie-actie (pruneAudit) die per tenant werkt, rapporteert
+   * wat ze verwijderde, en securityregels langer bewaart.
+   */
   audit(entry) {
-    this.data.auditLogs.push({
-      id: `audit_${Date.now()}_${Math.random().toString(16).slice(2)}`,
-      at: new Date().toISOString(),
-      ...entry
-    });
-    this.data.auditLogs = this.data.auditLogs.slice(-500);
-    this.save();
+    // Lazy require: audit-log zit in de platformlaag en mag niet bij het laden
+    // van de store al ingeladen worden (cyclus met events.js).
+    const { appendAudit } = require("../platform/audit-log");
+    return appendAudit(this, entry);
   }
 
   errorEvent(entry) {

@@ -310,7 +310,8 @@ const { salesSummary, salesLaunchReadiness, advanceLead, addPartnerNote } = requ
 const { goLiveReadiness } = require("./modules/go-live");
 const { listReports, getReport, generateStatusBundle } = require("./modules/reports");
 const { listAuditEvents } = require("./modules/audit");
-const { sendMail, setRuntimeConfig, isMailLive, recentMail } = require("./lib/mailer");
+const { sendMail, setRuntimeConfig, isMailLive, recentMail, setMailSink } = require("./lib/mailer");
+const { pruneAudit } = require("./platform/audit-log");
 const { productionReadiness } = require("./modules/production");
 const { eventLog, backupSummary, lifecycle, resellerPayouts, securityCenter, gdprOverview } = require("./modules/platform-ops");
 const { setPlanPriceOverrides, planPricing } = require("./modules/billing");
@@ -376,6 +377,24 @@ const communicationRepo = makeCommunicationRepository(store);
 // Objectopslag achter de poort (handover 4.2): lokaal volume nu, Azure Blob of
 // S3 later via dezelfde interface · een configuratiewissel, geen codewijziging.
 const objectStorage = createObjectStorage();
+/**
+ * Persistent verzendlog (F-09). Was een proceslokale ring-buffer: die verdween
+ * bij elke herstart en verschilde per replica, dus de superadmin zag maar een
+ * fractie. Nu in de store, met een eigen bovengrens zodat het log niet
+ * ongelimiteerd groeit.
+ */
+const MAIL_LOG_MAX = 1000;
+setMailSink({
+  record(entry) {
+    if (!Array.isArray(store.data.mailLog)) store.data.mailLog = [];
+    store.data.mailLog.push({ id: `mail_${Date.now()}_${Math.random().toString(16).slice(2)}`, ...entry });
+    if (store.data.mailLog.length > MAIL_LOG_MAX) store.data.mailLog = store.data.mailLog.slice(-MAIL_LOG_MAX);
+    store.save();
+  },
+  recent(limit = 100) {
+    return (store.data.mailLog || []).slice(-limit).reverse();
+  },
+});
 /** Kosttarieven zijn gevoelige velden (h8.2): enkel beheerders zien/beheren ze. */
 function canSeeEmployeeCost(user) {
   return !!user && ["tenant_admin", "super_admin"].includes(user.role);
@@ -6711,6 +6730,22 @@ function startServer() {
   };
   setImmediate(runBackupCycle);
   setInterval(runBackupCycle, 24 * 60 * 60 * 1000).unref();
+
+  // Auditretentie (F-10): één expliciete opruimronde per dag, PER TENANT, met
+  // een rapport. Schrijven kapt nooit af; alleen deze job verwijdert iets.
+  const runAuditRetention = () => {
+    try {
+      const res = pruneAudit(store);
+      if (res.removed > 0) {
+        console.log(`  Audit     : ${res.removed} regel(s) opgeruimd volgens retentie (${res.kept} bewaard)`);
+        // Het opruimen zelf is auditwaardig: anders is een gat niet te verklaren.
+        store.audit({ actor: "system", tenantId: null, action: "audit_retention_applied", area: "audit",
+          detail: `${res.removed} verwijderd, ${res.kept} bewaard` });
+      }
+    } catch (e) { console.error("[audit] retentie mislukt:", e.message); }
+  };
+  setTimeout(runAuditRetention, 120 * 1000).unref();
+  setInterval(runAuditRetention, 24 * 60 * 60 * 1000).unref();
 
   // Support-toegang: jaarlijkse mededeling + auto-renew. Bij opstart + dagelijks.
   const reviewSupportAccess = () => { try { runSupportAccessReview(store); } catch (_) {} };

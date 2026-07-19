@@ -218,12 +218,34 @@ async function sendViaSmtp(mail) {
  * @param {object} mail  - { to, subject, html, text, from? }
  * @returns {Promise<{ok:boolean, provider:string}>}
  */
-// Lichte in-memory ring-buffer van recente verzendpogingen · geeft de superadmin
-// zicht op deliverability (laatste 100). Best-effort: per server-instance, reset
-// bij herstart. (Voor audit-grade logging → externe provider-dashboards.)
+// Verzendlog (handover F-09). Was een proceslokale ring-buffer: die verdween bij
+// elke herstart en verschilde per replica, dus de superadmin zag maar een
+// fractie van de werkelijkheid.
+//
+// De mailer krijgt bewust GEEN store-afhankelijkheid (dat zou een cyclus geven).
+// In plaats daarvan zet de server een sink; zonder sink valt alles terug op de
+// oude in-memory buffer, zodat scripts en tests zonder store blijven werken.
 const MAIL_LOG = [];
-function recordMail(entry) { MAIL_LOG.push(entry); if (MAIL_LOG.length > 100) MAIL_LOG.shift(); }
-function recentMail() { return MAIL_LOG.slice().reverse(); }
+let mailSink = null;
+
+/** Persistente bestemming voor het verzendlog; gezet door de server. */
+function setMailSink(sink) {
+  mailSink = sink && typeof sink.record === "function" ? sink : null;
+}
+
+function recordMail(entry) {
+  MAIL_LOG.push(entry);
+  if (MAIL_LOG.length > 100) MAIL_LOG.shift();
+  // Een falend log mag een verzending nooit breken.
+  if (mailSink) { try { mailSink.record(entry); } catch (_) { /* best-effort */ } }
+}
+
+function recentMail(limit = 100) {
+  if (mailSink && typeof mailSink.recent === "function") {
+    try { return mailSink.recent(limit); } catch (_) { /* val terug op geheugen */ }
+  }
+  return MAIL_LOG.slice().reverse();
+}
 
 async function sendMail(mail) {
   if (!mail?.to || !mail?.subject) {
@@ -313,4 +335,4 @@ function isMailLive() {
   return false; // "log" of onbekend → niet live
 }
 
-module.exports = { sendMail, wrapHtml, EMAIL_FROM, setRuntimeConfig, isMailLive, recentMail };
+module.exports = { sendMail, wrapHtml, EMAIL_FROM, setRuntimeConfig, isMailLive, recentMail, setMailSink };
