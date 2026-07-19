@@ -294,19 +294,23 @@ Feedback voor de backendontwikkelaar:
 
 ## Integraties en Automation Studio — frontendintegratie 2026-07-18
 
-Het bestaande Integratiecentrum is frontendmatig genormaliseerd rond providerstatus, verbinden, synchroniseren, Robaws-document-sync en sleutelbeheer. De UI gebruikt de bestaande integratieregistry en bouwt geen alternatieve credentialopslag of providersimulatie.
+Het bestaande Integratiecentrum is frontendmatig doorontwikkeld tot één ruime connectorwerkruimte rond gezondheid, providerstatus, expliciete veldmapping, synchronisatiehistoriek, retry, Robaws-document-sync en sleutelbeheer. Browserprompts voor credentials zijn verwijderd: verbinden en configureren gebeurt in de gedeelde editorwerkruimte. De UI gebruikt de bestaande integratieregistry en bouwt geen alternatieve credentialopslag of providersimulatie.
 
 | UI-flow | Bestaand contract | UI-gedrag |
 | --- | --- | --- |
 | Providercatalogus | `GET /integrations` | Groepeert providers per categorie en toont verbindings- en syncstatus. |
 | Verbinden/herverbinden | `POST /integrations/connect` | Verstuurt bestaande providerconfig; secrets worden nooit opnieuw zichtbaar gemaakt. |
 | Synchroniseren | `POST /integrations/:id/sync` | Toont voortgang en resultaat uit de bestaande syncrespons. |
+| Veldmapping | bestaande `fieldMapping`, `mappingSummary` en providerdefaults | Toont en valideert lokale/externe velden en synchronisatierichting vóór opslaan. |
+| Synchronisatie herstellen | `POST /integrations/:id/retry` | Een retrybare fout krijgt een expliciete vervolgactie in zijn logregel. |
 | Robaws-documenten | `POST /integrations/:id/sync-documents` | Toont bestaande project- en documenttotalen na synchronisatie. |
 
 Feedback voor de backendontwikkelaar:
 
 - Voor het bestaande Integratiecentrum is geen nieuw endpoint nodig; houd providerkeys, velden en statuswaarden stabiel en non-breaking.
 - Laat de backend secrets versleutelen, maskeren en roteren. De frontend mag nooit opgeslagen credentials teruglezen of als verbindingsbewijs behandelen.
+- Behoud `hasSecret`, `syncSummary`, `mappingSummary`, `syncLogs` en provider-`fields` stabiel. Een lege `apiKey` bij een configuratie-update moet de bestaande versleutelde sleutel behouden.
+- Lever per retrybare log minstens `id`, `at`, `status`, `errorCode`, `message`, `retryable` en `resolved`, zodat oorzaak en herstel traceerbaar blijven.
 - Lever per sync een stabiele `runId`, `status`, `startedAt`, `completedAt`, `processed`, `failed`, foutcode en veilige samenvatting, zodat voortgang en retry betrouwbaar kunnen worden getoond.
 - Automation Studio heeft nog geen stabiele route of workflowcontract en is daarom bewust niet als nepflow toegevoegd. Voor frontendimplementatie is minimaal nodig: `GET/POST/PATCH /workflows`, versie/publicatiestatus, triggers, condities, acties, validatieresultaat en tenant-scoped run logs.
 - Een workflowactie moet alleen server-side toegestane actietypes en doelmodules kunnen gebruiken. Publiceren en uitvoeren vereisen auditmetadata, idempotentie en expliciete permissies.
@@ -349,7 +353,7 @@ Feedback voor de backendontwikkelaar:
 
 ## Ruime create- en editworkspaces — frontendintegratie 2026-07-18
 
-De gedeelde tenant-admin drawer is vervangen door een ruime werkruimte. Reguliere formulieren gebruiken tot 820 px; document- en personeelsflows zoals facturen, offertes, werkbonnen en medewerkers gebruiken tot 1080 px. Op mobiel worden deze flows volledig schermvullend. Hierdoor blijven labels, documentregels, totalen en acties leesbaar zonder de onderliggende domeinlogica te wijzigen.
+De gedeelde tenant-admin drawer is vervangen door een ruime, gecentreerde editorwerkruimte. Reguliere formulieren gebruiken tot 940 px; facturen, offertes en werkbonnen gebruiken een documentcanvas tot 1280 px en andere domeinworkspaces behouden hun eigen ruime variant. Op mobiel worden deze flows volledig schermvullend. De editor heeft een expliciete context, dialogsemantiek, focus, Escape-sluiting en scroll-lock. Hierdoor blijven labels, documentregels, totalen en acties leesbaar zonder de onderliggende domeinlogica te wijzigen.
 
 Frontendregel:
 
