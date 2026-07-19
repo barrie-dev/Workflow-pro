@@ -1,24 +1,35 @@
+"use strict";
+
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const css = fs.readFileSync(path.join(__dirname, "..", "public", "css", "admin.css"), "utf8");
+const root = path.join(__dirname, "..");
+const source = fs.readFileSync(path.join(root, "public", "js", "platforms", "admin.js"), "utf8");
+const css = fs.readFileSync(path.join(root, "public", "css", "admin.css"), "utf8");
 
-test("integraties gebruiken een eigen betrouwbaar Integration Center", () => {
-  assert.match(css, /Monargo Integration Center/);
-  assert.match(css, /\.adm-main\[data-view="integrations"\]/);
-  assert.match(css, /--connect-blue:var\(--wf-blue\)/);
+test("integratiecentrum toont gezondheid, catalogus en één leesbaar detail", () => {
+  assert.match(source, /adm-integration-health/);
+  assert.match(source, /Koppelingen zonder giswerk/);
+  assert.match(source, /data-provider-select/);
+  assert.match(source, /Recente synchronisaties/);
+  assert.match(css, /\.adm-integration-layout/);
+  assert.match(css, /grid-template-columns:minmax\(360px,\.8fr\) minmax\(520px,1\.35fr\)/);
 });
 
-test("providerstatus en acties blijven per kaart scanbaar", () => {
-  assert.match(css, /\.adm-grid-2>\.adm-card:has\(\.adm-status-active\)/);
-  assert.match(css, /form\[data-connect\] \{ height:100%; display:flex; flex-direction:column; \}/);
-  assert.match(css, /\.adm-card-body>div\[style\*="display:flex"\] \.adm-btn \{ min-height:37px; \}/);
+test("connectorconfiguratie gebruikt de ruime editor en geen browserprompt", () => {
+  assert.match(source, /function openIntegrationEditor\(provider, conn\)/);
+  assert.match(source, /id="integrationEditorForm"/);
+  assert.match(source, /id="integrationMappingRows"/);
+  assert.doesNotMatch(source, /window\.prompt\(`Nieuwe \$\{p\.label/);
+  assert.match(source, /Laat leeg om de huidige sleutel te behouden/);
 });
 
-test("integratiekaarten schakelen mobiel naar één kolom", () => {
-  assert.match(css, /@media \(max-width:900px\)/);
-  assert.match(css, /\.adm-main\[data-view="integrations"\] \.adm-grid-2 \{ grid-template-columns:1fr; \}/);
-  assert.match(css, /\.adm-main\[data-view="integrations"\] \.adm-page-title \{ font-size:23px; \}/);
+test("mapping en mislukte synchronisaties hebben echte vervolgacties", () => {
+  assert.match(source, /data-retry-sync/);
+  assert.match(source, /\/integrations\/\$\{btn\.dataset\.retrySync\}\/retry/);
+  assert.match(source, /fieldMapping\.some\(row => !row\.local \|\| !row\.remote\)/);
+  assert.match(css, /\.adm-integration-map-row/);
+  assert.match(css, /@media \(max-width:560px\)[\s\S]*\.adm-integration-map-row/);
 });

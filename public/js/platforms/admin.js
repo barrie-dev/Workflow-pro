@@ -591,12 +591,15 @@
   </main>
 </div>
 
-<!-- Employee drawer -->
+<!-- Platformbrede editorwerkruimte -->
 <div class="adm-overlay hidden" id="admOverlay"></div>
-<aside class="adm-drawer hidden" id="admDrawer">
+<aside class="adm-drawer hidden" id="admDrawer" role="dialog" aria-modal="true" aria-labelledby="admDrawerTitle" tabindex="-1" data-editor-kind="record">
   <div class="adm-drawer-header">
-    <h2 id="admDrawerTitle">Medewerker toevoegen</h2>
-    <button class="adm-drawer-close" id="admDrawerClose">&times;</button>
+    <div class="adm-editor-heading">
+      <span class="adm-editor-context" id="admDrawerContext">Bewerkingsruimte</span>
+      <h2 id="admDrawerTitle">Medewerker toevoegen</h2>
+    </div>
+    <button type="button" class="adm-drawer-close" id="admDrawerClose" aria-label="Bewerkingsruimte sluiten">&times;</button>
   </div>
   <div class="adm-drawer-body" id="admDrawerBody"></div>
 </aside>
@@ -642,6 +645,9 @@
     // drawer close
     document.getElementById("admDrawerClose").addEventListener("click", closeDrawer);
     document.getElementById("admOverlay").addEventListener("click", closeDrawer);
+    document.addEventListener("keydown", e => {
+      if (e.key === "Escape" && !document.getElementById("admDrawer")?.classList.contains("hidden")) closeDrawer();
+    });
 
     // primary action btn
     document.getElementById("admPrimaryAction").addEventListener("click", () => {
@@ -7194,8 +7200,9 @@ ${billing.status === "trial" ? (() => {
     } catch(e) { content.innerHTML = `<div style="padding:20px;color:var(--wf-red)">${tA("adm.error","Fout")}: ${e.message}</div>`; }
   }
 
-  // ── Settings ───────────────────────────────────────────────
-  // ── Integraties (Exact Online, Robaws, …) ─────────────────────
+  // ── Integraties (Exact Online, Robaws, …) ──────────────────
+  let _integrationSelected = null;
+
   async function renderIntegraties() {
     const content = document.getElementById("admContent");
     content.innerHTML = `<div class="adm-loading">Laden…</div>`;
@@ -7205,58 +7212,137 @@ ${billing.status === "trial" ? (() => {
     const providers = data.providers || [];
     const byProvider = Object.fromEntries((data.rows || []).map(r => [r.provider, r]));
     const fmtDT = s => s ? new Date(s).toLocaleString("nl-BE") : "-";
+    const connections = Object.values(byProvider);
+    const connected = connections.filter(row => row.status === "connected").length;
+    const syncIssues = connections.filter(row => row.syncSummary?.needsAttention).length;
+    const mappingIssues = connections.filter(row => row.mappingSummary?.needsAttention).length;
+    const missingSecrets = connections.filter(row => !row.hasSecret).length;
+    if (!_integrationSelected || !providers.some(p => p.key === _integrationSelected)) {
+      _integrationSelected = connections[0]?.provider || providers[0]?.key || null;
+    }
 
-    const providerCard = p => {
-  const conn = byProvider[p.key];
-  const ss = (conn && conn.syncSummary) || {};
-  return `
-<div class="adm-card">
-  <div class="adm-card-header">
-    <h3 class="adm-card-title">${esc(p.label)} <span style="font-weight:400;font-size:12px;color:var(--gray-400)">· ${esc(p.category)}</span></h3>
-    <span class="adm-status adm-status-${conn ? (conn.status === "connected" ? "active" : "inactive") : "pending"}">${conn ? esc(conn.status) : "niet verbonden"}</span>
-  </div>
-  <div class="adm-card-body">
-    <p style="font-size:13px;color:var(--gray-500);margin-bottom:12px">${esc(p.description)}${p.docs ? ` · <a href="${esc(p.docs)}" target="_blank" rel="noopener">documentatie</a>` : ""}</p>
-    ${conn ? `
-      <div style="font-size:13px;color:var(--gray-600);margin-bottom:10px">
-        Laatste sync: ${fmtDT(conn.lastSyncAt)}${ss.lastStatus ? ` · ${esc(ss.lastStatus)}` : ""}<br>
-        ${ss.total || 0} sync(s), ${ss.failed || 0} mislukt${conn.hasSecret ? "" : " · geen sleutel ingesteld"}
+    const providerMark = p => String(p.label || p.key || "IN").split(/\s+/).map(part => part[0]).join("").slice(0, 2).toUpperCase();
+    const statusLabel = conn => !conn ? "Niet verbonden" : conn.syncSummary?.needsAttention || conn.status === "error" ? "Actie nodig" : "Verbonden";
+    const statusTone = conn => !conn ? "pending" : conn.syncSummary?.needsAttention || conn.status === "error" ? "inactive" : "active";
+    const mappingLabel = conn => !conn ? "Na verbinding beschikbaar" : conn.mappingSummary?.needsAttention ? `${conn.mappingSummary.invalid || 0} mappingfouten` : `${conn.mappingSummary?.valid || 0} mappings klaar`;
+    const selectedProvider = () => providers.find(p => p.key === _integrationSelected) || providers[0];
+
+    const paint = () => {
+      const activeProvider = selectedProvider();
+      const activeConn = activeProvider ? byProvider[activeProvider.key] : null;
+      const logs = (activeConn?.syncLogs || []).slice(0, 8);
+      content.innerHTML = `
+<div class="adm-integration-workspace">
+  <section class="adm-workspace-head adm-integration-head">
+    <div><span class="adm-eyebrow">Connected operations</span><h2>Koppelingen zonder giswerk</h2><p>Verbind systemen, controleer veldmapping en volg synchronisaties vanuit één rustige werkruimte.</p></div>
+    ${activeProvider ? `<button type="button" class="adm-btn adm-btn-primary" data-configure="${esc(activeProvider.key)}">${activeConn ? "Configuratie beheren" : `${esc(activeProvider.label)} verbinden`}</button>` : ""}
+  </section>
+
+  <section class="adm-integration-health" aria-label="Gezondheid van koppelingen">
+    <article><span>Verbonden</span><strong>${connected}<small> / ${providers.length}</small></strong><p>actieve koppelingen</p></article>
+    <article class="${syncIssues ? "needs-attention" : ""}"><span>Syncstatus</span><strong>${syncIssues}</strong><p>${syncIssues === 1 ? "koppeling vraagt aandacht" : "koppelingen vragen aandacht"}</p></article>
+    <article class="${mappingIssues ? "needs-attention" : ""}"><span>Veldmapping</span><strong>${mappingIssues}</strong><p>${mappingIssues ? "configuraties nakijken" : "alle mappings geldig"}</p></article>
+    <article class="${missingSecrets ? "needs-attention" : ""}"><span>Credentials</span><strong>${missingSecrets}</strong><p>${missingSecrets ? "sleutels ontbreken" : "veilig opgeslagen"}</p></article>
+  </section>
+
+  <div class="adm-integration-layout">
+    <section class="adm-integration-catalog" aria-label="Beschikbare koppelingen">
+      <div class="adm-section-heading"><div><span>Connectoren</span><h3>Kies een systeem</h3></div><small>${providers.length} beschikbaar</small></div>
+      <div class="adm-integration-list">
+        ${providers.map(p => {
+          const conn = byProvider[p.key];
+          const ss = conn?.syncSummary || {};
+          return `<button type="button" class="adm-integration-item ${p.key === _integrationSelected ? "active" : ""}" data-provider-select="${esc(p.key)}">
+            <span class="adm-integration-mark">${esc(providerMark(p))}</span>
+            <span class="adm-integration-item-copy"><b>${esc(p.label)}</b><small>${esc(p.category)} · ${conn ? `laatste sync ${fmtDT(ss.lastSyncAt || conn.lastSyncAt)}` : "nog te verbinden"}</small></span>
+            <span class="adm-status adm-status-${statusTone(conn)}">${statusLabel(conn)}</span>
+            <span class="adm-integration-chevron" aria-hidden="true">›</span>
+          </button>`;
+        }).join("") || `<div class="adm-empty"><div class="adm-empty-text">Geen connectoren beschikbaar.</div></div>`}
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="adm-btn adm-btn-primary adm-btn-sm" data-sync="${esc(conn.id)}">↻ Nu synchroniseren</button>
-        ${p.key === "robaws" ? `<button class="adm-btn adm-btn-secondary adm-btn-sm" data-syncdocs="${esc(conn.id)}">Werf-documenten synchroniseren</button>` : ""}
-        <button class="adm-btn adm-btn-secondary adm-btn-sm" data-reconnect="${esc(p.key)}">Sleutel bijwerken</button>
-      </div>
-    ` : `
-      <form data-connect="${esc(p.key)}">
-        ${p.fields.map(f => `<div class="adm-form-group"><label>${esc(f.label)}${f.secret ? "" : ""}</label><input name="${esc(f.key)}" type="${f.secret ? "password" : "text"}" placeholder="${esc(f.placeholder || "")}" value="${esc(f.default || "")}" ${f.secret ? 'autocomplete="off"' : ""}></div>`).join("")}
-        <div class="adm-form-actions"><button type="submit" class="adm-btn adm-btn-primary adm-btn-sm">Verbinden</button></div>
-      </form>
-    `}
+      <div class="adm-integration-compliance"><span aria-hidden="true">i</span><p><strong>Compliance blijft automatisch.</strong> Checkin@Work en Limosa beheer je onder Compliance; die flows zijn geen handmatige connectoren.</p></div>
+    </section>
+
+    <section class="adm-integration-detail" aria-live="polite">
+      ${activeProvider ? `
+        <div class="adm-integration-detail-head">
+          <div class="adm-integration-title"><span class="adm-integration-mark large">${esc(providerMark(activeProvider))}</span><div><span>${esc(activeProvider.category)}</span><h3>${esc(activeProvider.label)}</h3></div></div>
+          <span class="adm-status adm-status-${statusTone(activeConn)}">${statusLabel(activeConn)}</span>
+        </div>
+        <p class="adm-integration-description">${esc(activeProvider.description)} ${activeProvider.docs ? `<a href="${esc(activeProvider.docs)}" target="_blank" rel="noopener">Open documentatie ↗</a>` : ""}</p>
+        <div class="adm-integration-detail-grid">
+          <article><span>Laatste synchronisatie</span><strong>${activeConn ? fmtDT(activeConn.syncSummary?.lastSyncAt || activeConn.lastSyncAt) : "Nog niet uitgevoerd"}</strong><small>${activeConn?.syncSummary?.lastMessage ? esc(activeConn.syncSummary.lastMessage) : "Start na een geldige configuratie"}</small></article>
+          <article><span>Veldmapping</span><strong>${mappingLabel(activeConn)}</strong><small>${activeConn?.mappingSummary?.total || activeProvider.defaultMappings?.length || 0} regels geconfigureerd</small></article>
+        </div>
+        <div class="adm-integration-actions">
+          <button type="button" class="adm-btn adm-btn-primary" data-configure="${esc(activeProvider.key)}">${activeConn ? "Configuratie beheren" : "Verbinden"}</button>
+          ${activeConn ? `<button type="button" class="adm-btn adm-btn-secondary" data-sync="${esc(activeConn.id)}">Nu synchroniseren</button>` : ""}
+          ${activeConn && activeProvider.key === "robaws" ? `<button type="button" class="adm-btn adm-btn-secondary" data-syncdocs="${esc(activeConn.id)}">Werfdocumenten syncen</button>` : ""}
+        </div>
+        <div class="adm-sync-log-head"><div><span>Activiteit</span><h4>Recente synchronisaties</h4></div>${activeConn ? `<small>${activeConn.syncSummary?.success || 0} geslaagd · ${activeConn.syncSummary?.unresolvedFailures || 0} open fouten</small>` : ""}</div>
+        <div class="adm-sync-log">
+          ${logs.length ? logs.map(log => `<article class="${log.status === "failed" && !log.resolved ? "failed" : ""}"><span class="adm-sync-dot"></span><div><strong>${log.status === "success" ? "Synchronisatie geslaagd" : log.resolved ? "Fout opgelost" : "Synchronisatie mislukt"}</strong><small>${fmtDT(log.at)}${log.errorCode ? ` · ${esc(log.errorCode)}` : ""}${log.message ? ` · ${esc(log.message)}` : ""}</small></div>${log.retryable ? `<button type="button" class="adm-btn adm-btn-secondary adm-btn-sm" data-retry-sync="${esc(activeConn.id)}" data-sync-id="${esc(log.id)}">Opnieuw proberen</button>` : ""}</article>`).join("") : `<div class="adm-integration-empty-log"><span>↻</span><p>Nog geen synchronisaties. Na de eerste run verschijnt hier een traceerbare historiek.</p></div>`}
+        </div>
+      ` : `<div class="adm-empty"><div class="adm-empty-title">Geen integratie geselecteerd</div><div class="adm-empty-text">Kies een connector om de configuratie te bekijken.</div></div>`}
+    </section>
   </div>
 </div>`;
-    };
-    const categories = [...new Set(providers.map(p => p.category))];
-    content.innerHTML = `
-<div style="font-size:13px;color:var(--gray-500);margin-bottom:14px">Koppel je boekhouding en werfsoftware. Sleutels worden versleuteld bewaard; zonder geldige sleutel draait een sync in testmodus.</div>
-<div class="adm-card" style="margin-bottom:16px;background:var(--wf-blue-l);border:1px solid var(--wf-blue-l)"><div class="adm-card-body" style="font-size:13px;color:var(--wf-blue-d)">ℹ️ <strong>Compliance-aangiftes</strong> (Checkin@Work / CIAW en Limosa) verlopen <strong>automatisch</strong> bij in-/uitklokken · die beheer je niet hier maar onder <strong>Compliance → Checkin@Work</strong> en <strong>A1 / Limosa</strong>.</div></div>
-${categories.map(cat => `
-  <div class="adm-nav-label" style="margin:18px 0 8px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--gray-500)">${esc(cat)}</div>
-  <div class="adm-grid-2">${providers.filter(p => p.category === cat).map(providerCard).join("")}</div>
-`).join("")}`;
 
-    content.querySelectorAll("form[data-connect]").forEach(form => {
-      form.addEventListener("submit", async e => {
+      content.querySelectorAll("[data-provider-select]").forEach(btn => btn.addEventListener("click", () => { _integrationSelected = btn.dataset.providerSelect; paint(); }));
+      content.querySelectorAll("[data-configure]").forEach(btn => btn.addEventListener("click", () => {
+        const provider = providers.find(p => p.key === btn.dataset.configure);
+        if (provider) openIntegrationEditor(provider, byProvider[provider.key]);
+      }));
+      bindIntegrationActions();
+    };
+
+    function openIntegrationEditor(provider, conn) {
+      document.getElementById("admDrawerTitle").textContent = conn ? `${provider.label} beheren` : `${provider.label} verbinden`;
+      const mappingRows = conn?.config?.fieldMapping || provider.defaultMappings || [];
+      const fieldValue = field => field.key === "baseUrl" ? (conn?.config?.baseUrl || field.default || "") : (conn?.config?.[field.key] || field.default || "");
+      const mappingRow = row => `<div class="adm-integration-map-row">
+        <input class="integration-map-local" value="${esc(row.local || "")}" placeholder="Monargo veld · bv. customers.name" aria-label="Monargo veld">
+        <span aria-hidden="true">→</span>
+        <input class="integration-map-remote" value="${esc(row.remote || "")}" placeholder="Extern veld · bv. account.name" aria-label="Extern veld">
+        <select class="integration-map-direction" aria-label="Synchronisatierichting"><option value="push" ${row.direction === "push" ? "selected" : ""}>Naar extern</option><option value="pull" ${row.direction === "pull" ? "selected" : ""}>Naar Monargo</option><option value="both" ${!row.direction || row.direction === "both" ? "selected" : ""}>Beide richtingen</option></select>
+        <button type="button" class="adm-integration-map-delete" aria-label="Mapping verwijderen">×</button>
+      </div>`;
+      document.getElementById("admDrawerBody").innerHTML = `<form id="integrationEditorForm" data-provider="${esc(provider.key)}">
+        <section class="adm-editor-intro"><span class="adm-integration-mark large">${esc(providerMark(provider))}</span><div><h3>${esc(provider.label)}</h3><p>${esc(provider.description)}</p></div><span class="adm-status adm-status-${statusTone(conn)}">${statusLabel(conn)}</span></section>
+        <div class="adm-form-section">Verbinding</div>
+        <div class="adm-integration-fields">
+          ${(provider.fields || []).map(field => `<div class="adm-form-group"><label>${esc(field.label)}</label><input name="${esc(field.key)}" type="${field.secret ? "password" : "text"}" value="${field.secret ? "" : esc(fieldValue(field))}" placeholder="${field.secret && conn?.hasSecret ? "Laat leeg om de huidige sleutel te behouden" : esc(field.placeholder || "")}" ${field.secret ? 'autocomplete="new-password"' : ""}></div>`).join("")}
+          <div class="adm-form-group"><label>Omgeving</label><select name="environment"><option value="test" ${conn?.config?.environment !== "production" ? "selected" : ""}>Testomgeving</option><option value="production" ${conn?.config?.environment === "production" ? "selected" : ""}>Productie</option></select><div class="adm-form-hint">Productie gebruikt de echte providercredentials en hoort pas na een geslaagde test actief te worden.</div></div>
+        </div>
+        <div class="adm-form-section adm-mapping-section"><span>Veldmapping</span><button type="button" class="adm-btn adm-btn-secondary adm-btn-sm" id="integrationAddMapping">+ Mapping toevoegen</button></div>
+        <p class="adm-form-hint">Bepaal expliciet welke gegevens worden uitgewisseld. Ongeldige of lege regels blokkeren de synchronisatie.</p>
+        <div id="integrationMappingRows" class="adm-integration-map-list">${mappingRows.map(mappingRow).join("")}</div>
+        <div id="integrationFormError" class="adm-inline-error" hidden></div>
+        <div class="adm-form-actions"><button type="button" class="adm-btn adm-btn-secondary" id="integrationCancel">Annuleren</button><button type="submit" class="adm-btn adm-btn-primary">${conn ? "Wijzigingen opslaan" : "Veilig verbinden"}</button></div>
+      </form>`;
+      openDrawer();
+      const rows = document.getElementById("integrationMappingRows");
+      const bindMappingDelete = () => rows?.querySelectorAll(".adm-integration-map-delete").forEach(btn => btn.onclick = () => btn.closest(".adm-integration-map-row")?.remove());
+      bindMappingDelete();
+      document.getElementById("integrationAddMapping")?.addEventListener("click", () => { rows.insertAdjacentHTML("beforeend", mappingRow({ direction:"both" })); bindMappingDelete(); });
+      document.getElementById("integrationCancel")?.addEventListener("click", closeDrawer);
+      document.getElementById("integrationEditorForm")?.addEventListener("submit", async e => {
         e.preventDefault();
-        const provider = form.dataset.connect;
-        const meta = providers.find(p => p.key === provider) || { fields: [] };
-        const fd = Object.fromEntries(new FormData(form).entries());
-        const body = { provider, apiKey: fd.apiKey || "", baseUrl: fd.baseUrl || "", config: {} };
-        (meta.fields || []).forEach(f => { if (!f.secret && f.key !== "apiKey" && f.key !== "baseUrl" && fd[f.key]) body.config[f.key] = fd[f.key]; });
-        try { await api("POST", "/integrations/connect", body); window.showToast && window.showToast(`${meta.label || provider} verbonden`, "success"); renderIntegraties(); }
-        catch (err) { window.showToast && window.showToast(err.message, "error"); }
+        const error = document.getElementById("integrationFormError");
+        const submit = e.submitter;
+        const oldLabel = submit?.textContent;
+        const fd = Object.fromEntries(new FormData(e.target).entries());
+        const fieldMapping = [...rows.querySelectorAll(".adm-integration-map-row")].map(row => ({ local:row.querySelector(".integration-map-local").value.trim(), remote:row.querySelector(".integration-map-remote").value.trim(), direction:row.querySelector(".integration-map-direction").value }));
+        if (!fieldMapping.length || fieldMapping.some(row => !row.local || !row.remote)) { error.hidden = false; error.textContent = "Vul voor elke mapping zowel het Monargo- als externe veld in."; return; }
+        const body = { provider:provider.key, apiKey:fd.apiKey || "", baseUrl:fd.baseUrl || "", environment:fd.environment || "test", fieldMapping, config:{} };
+        (provider.fields || []).forEach(field => { if (!field.secret && field.key !== "baseUrl" && fd[field.key]) body.config[field.key] = fd[field.key]; });
+        if (submit) { submit.disabled = true; submit.textContent = "Veilig opslaan…"; }
+        try { await api("POST", "/integrations/connect", body); closeDrawer(); window.showToast && window.showToast(`${provider.label} is bijgewerkt`, "success"); await renderIntegraties(); }
+        catch (err) { error.hidden = false; error.textContent = err.message; if (submit) { submit.disabled = false; submit.textContent = oldLabel; } }
       });
-    });
+    }
+
+    function bindIntegrationActions() {
     content.querySelectorAll("[data-sync]").forEach(btn => btn.addEventListener("click", async () => {
       btn.disabled = true; btn.textContent = "Bezig…";
       try {
@@ -7275,14 +7361,17 @@ ${categories.map(cat => `
         renderIntegraties();
       } catch (e) { window.showToast && window.showToast(e.message, "error"); btn.disabled = false; btn.textContent = orig; }
     }));
-    content.querySelectorAll("[data-reconnect]").forEach(btn => btn.addEventListener("click", async () => {
-      const p = providers.find(x => x.key === btn.dataset.reconnect) || {};
-      const key = window.prompt(`Nieuwe ${p.label || "API"}-sleutel/token:`);
-      if (key == null || !key.trim()) return;
-      try { await api("POST", "/integrations/connect", { provider: p.key, apiKey: key.trim() }); window.showToast && window.showToast("Sleutel bijgewerkt", "success"); renderIntegraties(); }
-      catch (e) { window.showToast && window.showToast(e.message, "error"); }
-    }));
+      content.querySelectorAll("[data-retry-sync]").forEach(btn => btn.addEventListener("click", async () => {
+        const original = btn.textContent; btn.disabled = true; btn.textContent = "Opnieuw proberen…";
+        try { await api("POST", `/integrations/${btn.dataset.retrySync}/retry`, { syncId:btn.dataset.syncId }); window.showToast && window.showToast("Synchronisatie opnieuw uitgevoerd", "success"); await renderIntegraties(); }
+        catch (e) { window.showToast && window.showToast(e.message, "error"); btn.disabled = false; btn.textContent = original; }
+      }));
+    }
+
+    paint();
   }
+
+  // ── Settings ───────────────────────────────────────────────
 
   // Gefocuste module-instelling geopend vanuit de flyout (bv. "clocking").
   // null = de volledige Instellingen-pagina.
@@ -7936,13 +8025,22 @@ ${enrolled.map(e => `
 
   // ── Helpers ────────────────────────────────────────────────
   function openDrawer() {
-    document.getElementById("admDrawer").classList.remove("hidden");
+    const drawer = document.getElementById("admDrawer");
+    const body = document.getElementById("admDrawerBody");
+    const isDocument = Boolean(body?.querySelector("#invForm, #qForm, #woForm"));
+    drawer.dataset.editorKind = isDocument ? "document" : "record";
+    const context = document.getElementById("admDrawerContext");
+    if (context) context.textContent = isDocument ? "Documentwerkruimte" : "Bewerkingsruimte";
+    drawer.classList.remove("hidden");
     document.getElementById("admOverlay").classList.remove("hidden");
+    document.documentElement.classList.add("adm-editor-open");
+    window.requestAnimationFrame(() => drawer.focus({ preventScroll:true }));
   }
 
   function closeDrawer() {
     document.getElementById("admDrawer").classList.add("hidden");
     document.getElementById("admOverlay").classList.add("hidden");
+    document.documentElement.classList.remove("adm-editor-open");
   }
 
   function getWeekStart(date) {
