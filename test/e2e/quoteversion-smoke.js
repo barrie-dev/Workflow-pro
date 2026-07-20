@@ -41,7 +41,7 @@ async function j(method, path, body, token) {
   const send2 = await j("POST", `/api/tenants/${tid}/offertes/${qid}/send`, {}, tok);
   const v2hash = send2.data.quote.documentHash;
   check("v2 andere hash dan v1", v2hash !== v1hash);
-  const accept = await j("POST", `/api/public/quote/${pubToken}`, { decision: "accept", name: "Jan Klant" });
+  const accept = await require("./_accept")(BASE, pubToken, "Jan Klant");
   check("publieke acceptatie 200", accept.status === 200 && accept.data.status === "aanvaard");
 
   // Controleer acceptance-metadata via detail (admin GET lijst)

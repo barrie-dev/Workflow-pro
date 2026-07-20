@@ -23,7 +23,7 @@ async function activeEmp(tok, tid, name, email) {
   const cust = await j("POST", `/api/tenants/${tid}/customers`, { name: "Signal Klant BV", email: "s@k.be" }, tok);
   const q = await j("POST", `/api/tenants/${tid}/offertes`, { customerId: cust.data.customer.id, customerName: "Signal Klant BV", lines: [{ description: "Werk", qty: 1, unitPrice: 1000, vatRate: 21 }] }, tok);
   const send = await j("POST", `/api/tenants/${tid}/offertes/${q.data.quote.id}/send`, {}, tok);
-  await j("POST", `/api/public/quote/${send.data.acceptUrl.split("/").pop()}`, { decision: "accept", name: "Klant" });
+  await require("./_accept")(BASE, send.data.acceptUrl.split("/").pop(), "Klant");
 
   // Vervallen factuur
   const inv = await j("POST", `/api/tenants/${tid}/facturen`, { customerName: "Signal Klant BV", dueDate: "2026-01-01", lines: [{ description: "Oud", qty: 1, unitPrice: 500 }] }, tok);

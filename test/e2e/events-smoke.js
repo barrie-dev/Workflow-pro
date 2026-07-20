@@ -31,7 +31,7 @@ async function j(method, path, body, token) {
   const qid = quote.data.quote.id;
   const sent = await j("POST", `/api/tenants/${tid}/offertes/${qid}/send`, {}, tok);
   const pubToken = sent.data.acceptUrl.split("/").pop();
-  await j("POST", `/api/public/quote/${pubToken}`, { decision: "accept" });
+  await require("./_accept")(BASE, pubToken);
   const conv = await j("POST", `/api/tenants/${tid}/offertes/${qid}/convert`, {}, tok);
   await j("PATCH", `/api/tenants/${tid}/facturen/${conv.data.invoice.id}`, { status: "paid" }, tok);
 

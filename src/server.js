@@ -339,6 +339,7 @@ const { pushConfigured, publicKey: pushPublicKey, saveSubscription: savePushSubs
 const { verifyStripeSignature } = require("./modules/stripe-webhook");
 const { seedDemoData, clearDemoData } = require("./modules/demo-seed");
 const { buildUbl, validatePeppol, sendPeppolInvoice, peppolTransportReadiness } = require("./modules/peppol-invoice");
+const quoteSigning = require("./modules/quote-signing");
 const { submitCheckin, buildPresenceRegister } = require("./modules/ciaw");
 const { listPostedWorkers, createPostedWorker, updatePostedWorker, deletePostedWorker, submitLimosa } = require("./modules/posted-workers");
 const tpl = require("./modules/templates");
@@ -671,15 +672,81 @@ async function load(){
       '</tbody></table>'+
       '<div class="tot"><div class="row"><span>Subtotaal</span><span>'+eur(q.subtotal)+'</span></div><div class="row"><span>Btw</span><span>'+eur(q.vatAmount)+'</span></div><div class="row grand"><span>Totaal</span><span>'+eur(q.total)+'</span></div></div>'+
       (q.notes?'<p style="font-size:13px;color:#64748B;margin-top:14px">'+esc(q.notes)+'</p>':"")+
-      (done? '<div class="banner '+(q.status==="aanvaard"?"ok":"warn")+'">'+(q.status==="aanvaard"?"✅ Offerte aanvaard · bedankt!":"Offerte geweigerd")+'</div>'
+      (done? '<div class="banner '+(q.status==="aanvaard"?"ok":"warn")+'">'+(q.status==="aanvaard"?"✅ Offerte ondertekend · bedankt!":"Offerte geweigerd")+'</div>'+(q.status==="aanvaard"?'<div style="text-align:center;margin-top:10px"><a href="#" onclick="showReceipt();return false" style="font-size:13px;color:#2563EB">Bekijk het ondertekeningsbewijs</a></div><div id="receipt"></div>':"")
         : expired? '<div class="banner warn">Deze offerte is verlopen. Neem contact op voor een nieuwe.</div>'
-        : '<div class="actions"><button class="accept" onclick="decide(\\'accept\\')">✓ Offerte aanvaarden</button><button class="reject" onclick="decide(\\'reject\\')">Weigeren</button></div>');
+        : '<div class="actions"><button class="accept" onclick="startSign()">✓ Offerte ondertekenen</button><button class="reject" onclick="decide(\\'reject\\')">Weigeren</button></div><div id="signPanel"></div>');
   }catch(e){ document.getElementById("body").innerHTML='<div class="muted">Er ging iets mis. Probeer later opnieuw.</div>'; }
+}
+// ── Geverifieerd ondertekenen: code naar het GEKENDE klantadres ──
+async function startSign(){
+  const r = await (await fetch("/api/public/quote/"+token+"/otp",{method:"POST"})).json();
+  if(!r.ok && r.code==="NO_EMAIL_ON_FILE"){ decide("accept"); return; }   // geen adres bekend → gewone aanvaarding
+  if(!r.ok && r.code!=="OTP_COOLDOWN"){ alert(r.error||"Er ging iets mis"); return; }
+  const panel = document.getElementById("signPanel");
+  panel.innerHTML =
+    '<div style="margin-top:18px;padding:18px;border:1.5px solid #E2E8F0;border-radius:12px">'+
+    '<div style="font-weight:700;margin-bottom:4px">Verifieer en onderteken</div>'+
+    '<div style="font-size:13px;color:#64748B;margin-bottom:14px">Er is een 6-cijferige code gestuurd naar '+esc(r.sentTo||"het gekende e-mailadres")+'.</div>'+
+    '<label style="font-size:12px;font-weight:600">Verificatiecode</label>'+
+    '<input id="sgCode" inputmode="numeric" maxlength="6" style="width:100%;padding:11px;border:1.5px solid #E2E8F0;border-radius:8px;font-size:18px;letter-spacing:6px;text-align:center;margin:4px 0 12px" placeholder="······">'+
+    '<label style="font-size:12px;font-weight:600">Naam ondertekenaar</label>'+
+    '<input id="sgName" style="width:100%;padding:11px;border:1.5px solid #E2E8F0;border-radius:8px;font-size:14px;margin:4px 0 12px" placeholder="Voor- en achternaam">'+
+    '<label style="font-size:12px;font-weight:600">Handtekening (optioneel · teken met muis of vinger)</label>'+
+    '<canvas id="sgPad" width="420" height="120" style="width:100%;border:1.5px dashed #CBD5E1;border-radius:8px;margin:4px 0 4px;touch-action:none;background:#fff"></canvas>'+
+    '<div style="display:flex;justify-content:space-between;margin-bottom:12px"><a href="#" onclick="clearPad();return false" style="font-size:12px;color:#64748B">Wissen</a>'+
+    '<a href="#" id="sgResend" onclick="resend();return false" style="font-size:12px;color:#94A3B8;pointer-events:none">Nieuwe code (60s)</a></div>'+
+    '<div id="sgErr" style="color:#B91C1C;font-size:13px;font-weight:600;margin-bottom:8px"></div>'+
+    '<button class="accept" style="width:100%" onclick="submitSign()">Onderteken offerte</button></div>';
+  initPad();
+  let left = r.cooldownSeconds||60;
+  const timer = setInterval(()=>{ left--; const a=document.getElementById("sgResend"); if(!a){clearInterval(timer);return;}
+    if(left<=0){ a.textContent="Nieuwe code sturen"; a.style.color="#2563EB"; a.style.pointerEvents="auto"; clearInterval(timer); }
+    else a.textContent="Nieuwe code ("+left+"s)"; },1000);
+  panel.scrollIntoView({behavior:"smooth",block:"center"});
+}
+let padDirty=false;
+function initPad(){
+  const cv=document.getElementById("sgPad"); if(!cv) return; const ctx=cv.getContext("2d");
+  ctx.lineWidth=2; ctx.lineCap="round"; ctx.strokeStyle="#0F172A"; let drawing=false;
+  const pos=e=>{ const r=cv.getBoundingClientRect(); const p=e.touches?e.touches[0]:e; return {x:(p.clientX-r.left)*cv.width/r.width,y:(p.clientY-r.top)*cv.height/r.height}; };
+  const start=e=>{ drawing=true; padDirty=true; const p=pos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); e.preventDefault(); };
+  const move=e=>{ if(!drawing) return; const p=pos(e); ctx.lineTo(p.x,p.y); ctx.stroke(); e.preventDefault(); };
+  const end=()=>{ drawing=false; };
+  cv.addEventListener("mousedown",start); cv.addEventListener("mousemove",move); window.addEventListener("mouseup",end);
+  cv.addEventListener("touchstart",start,{passive:false}); cv.addEventListener("touchmove",move,{passive:false}); cv.addEventListener("touchend",end);
+}
+function clearPad(){ const cv=document.getElementById("sgPad"); if(cv){ cv.getContext("2d").clearRect(0,0,cv.width,cv.height); padDirty=false; } }
+async function resend(){ document.getElementById("signPanel").innerHTML=""; startSign(); }
+async function submitSign(){
+  const code=(document.getElementById("sgCode").value||"").trim();
+  const name=(document.getElementById("sgName").value||"").trim();
+  const err=document.getElementById("sgErr");
+  if(code.length!==6){ err.textContent="Vul de 6-cijferige code in."; return; }
+  if(!name){ err.textContent="Vul de naam van de ondertekenaar in."; return; }
+  const cv=document.getElementById("sgPad");
+  const signature = padDirty && cv ? cv.toDataURL("image/png") : undefined;
+  const d = await (await fetch("/api/public/quote/"+token,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({decision:"accept",code,name,signature})})).json();
+  if(!d.ok){ err.textContent=d.error||"Ondertekenen mislukt"; return; }
+  load();
+}
+async function showReceipt(){
+  const r = await (await fetch("/api/public/quote/"+token+"/receipt")).json();
+  if(!r.ok) return;
+  const a=r.receipt;
+  document.getElementById("receipt").innerHTML =
+    '<div style="margin-top:12px;padding:16px;border:1px solid #E2E8F0;border-radius:10px;font-size:13px;text-align:left">'+
+    '<div style="font-weight:700;margin-bottom:8px">Ondertekeningsbewijs</div>'+
+    '<div>Document: offerte '+esc(a.document.number)+' · versie '+esc(a.document.version)+'</div>'+
+    '<div>Ondertekend door: '+esc(a.signer.name)+(a.signer.verified?' · <span style="color:#065F46;font-weight:600">e-mail geverifieerd</span> ('+esc(a.signer.verifiedEmail||"")+')':' · niet geverifieerd')+'</div>'+
+    '<div>Tijdstip: '+esc(a.signedAt)+'</div>'+
+    '<div style="word-break:break-all;color:#94A3B8;margin-top:6px">Documentvingerafdruk: '+esc(a.document.documentHash||"-")+'</div>'+
+    '<div style="color:#64748B;margin-top:6px">'+esc(a.note)+'</div></div>';
 }
 async function decide(decision){
   if(decision==="accept" && !confirm("Offerte aanvaarden?")) return;
   if(decision==="reject" && !confirm("Offerte weigeren?")) return;
   const d = await (await fetch("/api/public/quote/"+token,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({decision})})).json();
+  if(!d.ok && d.error) alert(d.error);
   load();
 }
 load();
@@ -1003,6 +1070,39 @@ const httpServer = http.createServer(async (req, res) => {
       }, company: { name: foundTenant.name || "Monargo One", vat: foundTenant.invoiceProfile?.vat || "" } });
       return;
     }
+    // Verificatiecode voor geverifieerd ondertekenen: gaat ALTIJD naar het
+    // e-mailadres dat al in het klantdossier staat, nooit naar bezoekersinput.
+    const pubQuoteOtpMatch = url.pathname.match(/^\/api\/public\/quote\/([a-f0-9]+)\/otp$/);
+    if (pubQuoteOtpMatch && req.method === "POST") {
+      for (const t of store.data.tenants || []) {
+        const q = store.list("quotes", t.id).find(x => x.publicToken === pubQuoteOtpMatch[1]);
+        if (!q) continue;
+        try {
+          const otp = quoteSigning.requestOtp(store, t, q);
+          await sendMail({
+            to: otp.email,
+            subject: `Verificatiecode offerte ${q.number}: ${otp.code}`,
+            text: `Beste,\n\nUw verificatiecode voor het ondertekenen van offerte ${q.number} van ${t.name || "uw leverancier"} is:\n\n    ${otp.code}\n\nDe code is 10 minuten geldig. Vroeg u geen code aan? Negeer dan deze e-mail; er wordt zonder deze code niets ondertekend.`,
+          });
+          store.audit({ actor: "public-sign", tenantId: t.id, action: "quote_otp_sent", area: "offertes", detail: `${q.number} → ${otp.masked}` });
+          return sendJson(res, 200, { ok: true, sentTo: otp.masked, cooldownSeconds: Math.round(quoteSigning.OTP_RESEND_COOLDOWN_MS / 1000) });
+        } catch (e) {
+          return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code, retryAfterSeconds: e.retryAfterSeconds });
+        }
+      }
+      return sendJson(res, 404, { ok: false, error: "Offerte niet gevonden" });
+    }
+    // Ondertekeningsbewijs · pas beschikbaar na aanvaarding.
+    const pubQuoteReceiptMatch = url.pathname.match(/^\/api\/public\/quote\/([a-f0-9]+)\/receipt$/);
+    if (pubQuoteReceiptMatch && req.method === "GET") {
+      for (const t of store.data.tenants || []) {
+        const q = store.list("quotes", t.id).find(x => x.publicToken === pubQuoteReceiptMatch[1]);
+        if (!q) continue;
+        try { return sendJson(res, 200, { ok: true, receipt: quoteSigning.acceptanceReceipt(q, t) }); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+      }
+      return sendJson(res, 404, { ok: false, error: "Offerte niet gevonden" });
+    }
     if (pubQuoteMatch && req.method === "POST") {
       const token = pubQuoteMatch[1];
       const body = await readBody(req).catch(() => ({}));
@@ -1010,26 +1110,43 @@ const httpServer = http.createServer(async (req, res) => {
         const q = store.list("quotes", t.id).find(x => x.publicToken === token);
         if (q) {
           if (["aanvaard", "geweigerd"].includes(q.status)) return sendJson(res, 409, { ok: false, error: "Offerte is al verwerkt" });
+          if (quoteSigning.isExpired(q)) return sendJson(res, 409, { ok: false, error: "Deze offerte is verlopen · vraag een nieuwe versie aan", code: "QUOTE_EXPIRED" });
           const decision = body.decision === "reject" ? "geweigerd" : "aanvaard";
           const patch = { status: decision, updatedAt: new Date().toISOString() };
           if (decision === "aanvaard") {
-            patch.acceptedAt = new Date().toISOString();
-            // Digitale goedkeuring (h19): bind aan versie + documenthash + metadata.
-            patch.acceptance = {
-              name: String(body.name || q.customerName || "klant").slice(0, 120),
-              at: patch.acceptedAt,
-              version: q.version || 1,
-              documentHash: q.documentHash || computeDocumentHash({ ...q, version: q.version || 1 }),
-              ip: (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.socket?.remoteAddress || null,
-              userAgent: String(req.headers["user-agent"] || "").slice(0, 200),
-            };
+            const ip = (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.socket?.remoteAddress || null;
+            const userAgent = String(req.headers["user-agent"] || "").slice(0, 200);
+            const signerEmail = quoteSigning.signerEmailFor(store, t, q);
+            if (signerEmail) {
+              // Gekend adres → verificatie is VERPLICHT (geen stille terugval).
+              try {
+                patch.acceptance = quoteSigning.verifySignature(store, t, q, {
+                  code: body.code, name: body.name, signatureDataUrl: body.signature, ip, userAgent,
+                });
+              } catch (e) {
+                return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code, attemptsLeft: e.attemptsLeft });
+              }
+              patch.acceptance.documentHash = patch.acceptance.documentHash || computeDocumentHash({ ...q, version: q.version || 1 });
+              patch.signing = null;   // code is verbruikt
+            } else {
+              // Geen gekend adres → link-aanvaarding, eerlijk gemarkeerd.
+              patch.acceptance = {
+                name: String(body.name || q.customerName || "klant").slice(0, 120),
+                at: new Date().toISOString(),
+                version: q.version || 1,
+                documentHash: q.documentHash || computeDocumentHash({ ...q, version: q.version || 1 }),
+                verified: false, method: "link",
+                ip, userAgent,
+              };
+            }
+            patch.acceptedAt = patch.acceptance.at;
           } else {
             patch.rejectedAt = new Date().toISOString();
           }
           store.update("quotes", q.id, patch);
-          store.audit({ actor: q.customerName || "klant", tenantId: t.id, action: `quote_${decision}_public`, area: "offertes", detail: q.number });
-          emitDomainEvent(store, { tenantId: t.id, eventType: decision === "aanvaard" ? "quote.accepted" : "quote.rejected", aggregateType: "quote", aggregateId: q.id, actor: "public-accept", correlationId: res.wfpRequestId });
-          return sendJson(res, 200, { ok: true, status: decision });
+          store.audit({ actor: (patch.acceptance && patch.acceptance.name) || q.customerName || "klant", tenantId: t.id, action: `quote_${decision}_public`, area: "offertes", detail: `${q.number}${patch.acceptance && patch.acceptance.verified ? " · e-mail-geverifieerd" : ""}` });
+          emitDomainEvent(store, { tenantId: t.id, eventType: decision === "aanvaard" ? "quote.accepted" : "quote.rejected", aggregateType: "quote", aggregateId: q.id, actor: "public-accept", correlationId: res.wfpRequestId, data: decision === "aanvaard" ? { verified: patch.acceptance.verified === true, method: patch.acceptance.method } : undefined });
+          return sendJson(res, 200, { ok: true, status: decision, verified: patch.acceptance ? patch.acceptance.verified === true : undefined });
         }
       }
       return sendJson(res, 404, { ok: false, error: "Offerte niet gevonden" });
