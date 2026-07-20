@@ -75,6 +75,14 @@ function sendJson(res, status, payload, extraHeaders = {}) {
     if (payload.error !== undefined && payload.message === undefined) payload.message = payload.error;
     if (res.wfpRequestId && payload.requestId === undefined) payload.requestId = res.wfpRequestId;
   }
+  // Moderne /v1-API (spec 5.4): een door de v1-laag gearmede response wordt hier
+  // getransformeerd (centen, 422-veldfouten, ETag/links) vóór verzending · en
+  // vóór de idempotency-vastlegging, zodat een replay de v1-vorm teruggeeft.
+  if (res.wfpV1) {
+    const t = require("./api-v1").transformResponse(res.wfpV1, status, payload);
+    status = t.status; payload = t.payload; extraHeaders = { ...extraHeaders, ...t.headers };
+    res.wfpV1 = null;
+  }
   res.writeHead(status, {
     ...securityHeaders(),
     "Content-Type": "application/json; charset=utf-8",
@@ -93,6 +101,9 @@ function sendJson(res, status, payload, extraHeaders = {}) {
 }
 
 function readBody(req, maxBytes = 2_000_000) {
+  // De /v1-laag leest en transformeert de body vóór de route dat doet; de
+  // stream is dan al leeg, dus de route krijgt de voorgelezen versie.
+  if (req.wfpPrereadBody !== undefined) return Promise.resolve(req.wfpPrereadBody);
   return readRawBody(req, maxBytes).then(body => {
     if (!body) return {};
     try {

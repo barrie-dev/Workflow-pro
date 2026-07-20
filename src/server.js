@@ -317,6 +317,7 @@ const { pruneAudit } = require("./platform/audit-log");
 const { ConsoleTelemetry } = require("./infrastructure/telemetry/console-telemetry");
 const { routePattern } = require("./lib/route-pattern");
 const idempotency = require("./lib/idempotency");
+const apiV1 = require("./lib/api-v1");
 /**
  * Telemetrie (handover 4.7). Console-adapter schrijft gestructureerde JSON naar
  * stdout, wat elk container-platform verzamelt zonder agent of account. Een
@@ -848,6 +849,29 @@ const httpServer = http.createServer(async (req, res) => {
         time: new Date().toISOString()
       });
       return;
+    }
+
+    // ── Moderne /v1-API (spec 5.4 + h41): canonieke Engelse namespace als
+    //    vertaallaag over de bestaande tenant-routes. Strangler: /api blijft
+    //    werken; /v1 herschrijft de request en armt de responstransformatie
+    //    (centen, 422-veldfouten, ETag/links) die in sendJson draait ──
+    if (url.pathname === "/v1" || url.pathname.startsWith("/v1/")) {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, code: "UNAUTHENTICATED", error: "Authenticatie vereist" });
+      // Tenantcontext komt uit het token; een superadmin kiest expliciet via header.
+      const tenantId = user.tenantId || (user.role === "super_admin" ? String(req.headers["x-tenant-id"] || "") : "");
+      if (!tenantId) return sendJson(res, 403, { ok: false, code: "TENANT_CONTEXT_REQUIRED", error: "Dit endpoint vereist tenantcontext (token van een tenant-gebruiker)" });
+      const v1 = await apiV1.prepareV1(req, url, { readBody });
+      if (v1.error) return sendJson(res, v1.error.status, v1.error.payload);
+      if (v1.discovery) return sendJson(res, 200, v1.discovery);
+      req.method = v1.method;
+      url.pathname = `/api/tenants/${tenantId}/${v1.path}`;
+      req.url = url.pathname + url.search;
+      if (v1.body !== undefined) req.wfpPrereadBody = v1.body;
+      res.wfpV1 = v1.ctx;
+      errorTenantId = tenantId;
+      // GEEN return: valt door in de normale dispatch met alle bestaande
+      // auth-, entitlement- en rechtenpoorten · pariteit is de garantie.
     }
 
     // Readiness probe (E1): faalt bij storage-uitval ZONDER het proces te doden.
@@ -2335,6 +2359,9 @@ const httpServer = http.createServer(async (req, res) => {
           const cacheKey = idempotency.cacheKeyFor({ tenantId, actorId: user.id, method: req.method, path: url.pathname, key: idemKey });
           const replay = idempotency.findReplay(store, cacheKey);
           if (replay) {
+            // Een via /v1 vastgelegde response is al v1-getransformeerd; de
+            // hook moet uit, anders zouden centen dubbel geconverteerd worden.
+            res.wfpV1 = null;
             sendJson(res, replay.status, JSON.parse(replay.body), { "Idempotency-Replayed": "true" });
             return;
           }
@@ -5925,6 +5952,23 @@ const httpServer = http.createServer(async (req, res) => {
       }
 
       // ── Universele overzichten, bulkacties en export (h11/GRD) ────────────────
+      // Entitlement-handhaving voor grid-paden: moduleForAction kijkt naar het
+      // eerste padsegment ("grid") en zag deze routes dus niet. Zonder deze
+      // mapping kon een tenant buiten zijn pakket om module-data bevragen
+      // (bv. grid/worksites/query op een Business-plan) · gevonden door de
+      // /v1-pariteitssmoke.
+      const GRID_MODULE_ACTION = {
+        customers: "customers", quotes: "offertes", invoices: "facturen",
+        workorders: "workorders", projects: "projects", articles: "articles",
+        employees: "employee_records", suppliers: "suppliers", purchaseOrders: "purchase_orders",
+        contracts: "contracts", assets: "assets", worksites: "worksites",
+        progressClaims: "progress_claims", expenses: "expenses", incidents: "incidents",
+      };
+      const gridResourceMatch = action.match(/^grid\/([^/]+)\/(query|bulk|bulk\/preview|export)$/);
+      if (gridResourceMatch && GRID_MODULE_ACTION[gridResourceMatch[1]]) {
+        assertModuleEnabled(store, user, tenant, GRID_MODULE_ACTION[gridResourceMatch[1]]);
+      }
+
       // Eén gedeeld pad voor elke resource, zodat UI en API dezelfde filters,
       // rechten en zichtbare kolommen hanteren.
       if (action === "grid/resources" && req.method === "GET") {
