@@ -32,6 +32,9 @@ const DUMMY = {
   peppol: {
     provider: "mock",                 // mock | billit | digiteal | unifiedpost
     apiKey: "peppol_DUMMY_0000000000",
+    partyId: "",                      // Billit PartyID (bedrijfscontext · sandbox ≠ productie)
+    sandbox: false,                   // true → api.sandbox.billit.be (nooit in productie)
+    authHeader: "ApiKey",             // headernaam van de sleutel (env-flip als de provider anders blijkt)
   },
   email: {
     provider: "log",                  // log | resend | sendgrid | smtp
@@ -69,6 +72,9 @@ function envOverlay() {
     peppol: {
       provider: process.env.PEPPOL_PROVIDER || undefined,
       apiKey: process.env.PEPPOL_API_KEY || undefined,
+      partyId: process.env.PEPPOL_PARTY_ID || undefined,
+      sandbox: process.env.PEPPOL_SANDBOX === "true" ? true : (process.env.PEPPOL_SANDBOX === "false" ? false : undefined),
+      authHeader: process.env.PEPPOL_AUTH_HEADER || undefined,
     },
     email: {
       provider: process.env.EMAIL_PROVIDER || undefined,
@@ -180,6 +186,8 @@ function publicPlatformConfig(store) {
     peppol: {
       provider: cfg.peppol.provider,
       apiKey: mask(cfg.peppol.apiKey),
+      partyId: cfg.peppol.partyId || "",
+      sandbox: !!cfg.peppol.sandbox,
       configured: cfg.peppol.provider !== "mock" && isReal(cfg.peppol.apiKey),
     },
     email: {
@@ -280,7 +288,8 @@ function savePlatformConfig(store, patch, actor) {
     "testSecretKey", "testPublishableKey", "testWebhookSecret",
     "liveSecretKey", "livePublishableKey", "liveWebhookSecret"]);
   if (next.stripe.mode && !["test", "live"].includes(next.stripe.mode)) delete next.stripe.mode;
-  apply("peppol", ["provider", "apiKey"]);
+  apply("peppol", ["provider", "apiKey", "partyId", "sandbox"]);
+  if (patch.peppol && patch.peppol.sandbox !== undefined) next.peppol.sandbox = patch.peppol.sandbox === true || patch.peppol.sandbox === "true";
   apply("email", ["provider", "apiKey", "from"]);
   apply("kbo", ["provider", "apiKey"]);
   apply("ciaw", ["provider", "apiKey", "baseHost"]);

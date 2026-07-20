@@ -1847,6 +1847,13 @@ ${canManage ? `
         </select>
       </label>
       <label class="sa-fld"><span>API-sleutel</span><input name="peppol.apiKey" value="${esc(cfg.peppol?.apiKey||"")}" placeholder="peppol_..."></label>
+      <label class="sa-fld"><span>PartyID (Billit · bedrijfscontext)</span><input name="peppol.partyId" value="${esc(cfg.peppol?.partyId||"")}" placeholder="uit MyBillit · sandbox ≠ productie"></label>
+      <label class="sa-fld"><span>Omgeving</span>
+        <select name="peppol.sandbox">
+          <option value="false" ${cfg.peppol?.sandbox ? "" : "selected"}>Productienetwerk</option>
+          <option value="true" ${cfg.peppol?.sandbox ? "selected" : ""}>Sandbox (testnetwerk · geblokkeerd in productie)</option>
+        </select>
+      </label>
     </div>
   </div>
 

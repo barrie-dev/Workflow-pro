@@ -133,6 +133,33 @@ bridge-data is nooit gewijzigd.
 
 ---
 
+## Peppol via Billit activeren (sandbox → live)
+
+Monargo genereert zelf de Peppol BIS 3.0 UBL; Billit is uitsluitend het
+transport (`POST /v1/peppol/sendxml`). Volgorde bij het aansluiten:
+
+1. **Sandbox-sleutel binnen?** Draai in een terminal (sleutel nooit in een
+   bestand of chat):
+   `set PEPPOL_API_KEY=... && set PEPPOL_PARTY_ID=... && npm run peppol:sandbox:check -- BE0403170701`
+   Dit bewijst de sleutel (deelnemerscheck) en met `--send` gaat er ook een
+   test-UBL van 1,21 euro het sandboxnetwerk op. Bij een 401: probeer
+   `PEPPOL_AUTH_HEADER=Authorization` · headernaam is een env-flip.
+2. **Platformbreed aanzetten (staging)**: superadmin → Integraties → Peppol:
+   provider `billit`, API-sleutel, PartyID, omgeving "Sandbox". PartyID's van
+   sandbox en productie VERSCHILLEN.
+3. **Preflight per factuur**: `GET .../facturen/:id/peppol/check` toont
+   validatiegebreken én of de ontvanger BIS v3-facturen kan ontvangen ·
+   de UI hoort dit vóór het verzenden te tonen, niet de fout erna.
+4. **Live**: omgeving op "Productienetwerk", productie-PartyID invullen.
+   De guardrail blokkeert sandbox-verzending in productie hard
+   (`peppol_sandbox_in_production`) · echte facturen kunnen nooit stil het
+   testnetwerk op.
+
+Elke mislukte verzending laat een spoor op de factuur (peppolStatus,
+peppolError, peppolAttempts); een retry is aantoonbaar poging n+1.
+
+---
+
 ## Migratie en rollback
 
 ### Schemawijzigingen

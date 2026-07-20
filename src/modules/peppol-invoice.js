@@ -170,6 +170,30 @@ function peppolTransportReadiness(input = {}, requireLive = false) {
   const providerLive = provider && provider !== "mock";
   const keyLive = isRealKey(apiKey);
 
+  // Sandbox-guardrail: een testnetwerk mag NOOIT stil echte productiefacturen
+  // dragen. In productie is sandbox een harde blokkade; daarbuiten is het een
+  // volwaardig transport (zelfde code als live · dat is precies het punt).
+  if (peppol.sandbox && requireLive) {
+    return {
+      ok: false,
+      provider,
+      transport: "none",
+      mode: "blocked",
+      errorCode: "peppol_sandbox_in_production",
+      message: "Peppol staat op sandbox; dat is niet toegestaan in productie"
+    };
+  }
+  if (peppol.sandbox && providerLive && keyLive) {
+    return {
+      ok: true,
+      provider,
+      transport: provider,
+      mode: "sandbox",
+      sandbox: true,
+      message: `Peppol-sandbox actief via ${provider}`
+    };
+  }
+
   if (!requireLive && (!providerLive || !keyLive)) {
     return {
       ok: true,
@@ -247,11 +271,19 @@ async function sendPeppolInvoice(store, tenant, invoice) {
     const key = cfg.peppol && cfg.peppol.apiKey;
     let reference, status, transport;
 
-    if (readiness.transport !== "mock") {
-      // Echte provider. Endpoints verschillen per provider; hieronder de courante
-      // Belgische opties. Faalt netjes als de provider een fout teruggeeft.
-      const hosts = { billit: "api.billit.be", digiteal: "api.digiteal.eu", unifiedpost: "api.unifiedpost.com" };
-      const host = hosts[provider] || hosts.billit;
+    if (readiness.transport !== "mock" && provider === "billit") {
+      // Billit Access Point (docs.billit.be): wij leveren de UBL, Billit is
+      // uitsluitend transport. Sandbox en productie delen deze code · alleen
+      // de host verschilt (dat is precies waarom sandbox-testen betrouwbaar is).
+      const billit = require("./peppol-billit");
+      const sent = await billit.sendUbl(cfg.peppol || {}, ubl);
+      reference = sent.reference;
+      status = sent.status;
+      transport = sent.transport;
+    } else if (readiness.transport !== "mock") {
+      // Overige providers (nog niet gecontracteerd): generiek pad, faalt netjes.
+      const hosts = { digiteal: "api.digiteal.eu", unifiedpost: "api.unifiedpost.com" };
+      const host = hosts[provider] || hosts.digiteal;
       const resp = await postJson(host, "/v1/peppol/outbound", {
         Authorization: `Bearer ${key}`, "Content-Type": "application/xml",
       }, ubl);

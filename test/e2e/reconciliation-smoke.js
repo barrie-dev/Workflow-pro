@@ -51,6 +51,11 @@ function xmlValues(xml, tag) {
   check("UBL bevat 3 factuurregels", (ubl.match(/<cac:InvoiceLine>/g) || []).length === 3);
   check("gestructureerde mededeling reist mee als PaymentID", ubl.includes(inv.structuredComm), inv.structuredComm);
 
+  // ── Preflight (h47): waarschuwt VOOR het verzenden, niet erna ──
+  const pre = await j("GET", `/api/tenants/${tid}/facturen/${inv.id}/peppol/check`, null, tok);
+  check("preflight toont validatiegebreken vooraf", pre.status === 200 && pre.data.validation.ok === false && pre.data.validation.errors.some(e => /BTW-nummer van de klant/.test(e)), pre.status);
+  check("preflight meldt transport en deelnemerstatus", pre.data.readiness.mode === "mock" && pre.data.participant && pre.data.participant.mock === true, pre.data.readiness && pre.data.readiness.mode);
+
   // ── Peppol-fout: klant-BTW ontbreekt → 400 mét spoor op de factuur ──
   const fail1 = await j("POST", `/api/tenants/${tid}/facturen/${inv.id}/peppol`, {}, tok);
   check("verzending faalt op ontbrekend klant-BTW → 400", fail1.status === 400 && (fail1.data.errors || []).some(e => /BTW-nummer van de klant/.test(e)), fail1.status);

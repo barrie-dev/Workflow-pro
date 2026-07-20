@@ -338,7 +338,7 @@ const { createSubscriptionCheckout, createBillingPortalSession, applySubscriptio
 const { pushConfigured, publicKey: pushPublicKey, saveSubscription: savePushSubscription, removeSubscription: removePushSubscription } = require("./modules/push");
 const { verifyStripeSignature } = require("./modules/stripe-webhook");
 const { seedDemoData, clearDemoData } = require("./modules/demo-seed");
-const { buildUbl, validatePeppol, sendPeppolInvoice } = require("./modules/peppol-invoice");
+const { buildUbl, validatePeppol, sendPeppolInvoice, peppolTransportReadiness } = require("./modules/peppol-invoice");
 const { submitCheckin, buildPresenceRegister } = require("./modules/ciaw");
 const { listPostedWorkers, createPostedWorker, updatePostedWorker, deletePostedWorker, submitLimosa } = require("./modules/posted-workers");
 const tpl = require("./modules/templates");
@@ -5159,6 +5159,27 @@ const httpServer = http.createServer(async (req, res) => {
       }
 
       // Peppol e-facturatie verzenden
+      // Peppol-preflight (h47): documentvalidatie + kan de ontvanger BIS v3
+      // ontvangen? Zo waarschuwt de UI VOOR het verzenden, niet erna.
+      const invoicePeppolCheckMatch = action.match(/^facturen\/([^/]+)\/peppol\/check$/);
+      if (invoicePeppolCheckMatch && req.method === "GET") {
+        assertInvoicing(user);
+        assertSubmoduleEnabled(store, user, tenant, "invoices", "peppol");
+        const inv = store.get("invoices", invoicePeppolCheckMatch[1]);
+        if (!inv || inv.tenantId !== tenantId) return sendJson(res, 404, { ok: false, error: "Factuur niet gevonden" });
+        const validation = validatePeppol(inv, tenant);
+        const cfg = loadPlatformConfig(store);
+        const readiness = peppolTransportReadiness(cfg, config.isProduction);
+        let participant = null;
+        if (readiness.ok && readiness.transport === "billit" && inv.customerVatNumber) {
+          try { participant = await require("./modules/peppol-billit").participantInfo(cfg.peppol || {}, inv.customerVatNumber); }
+          catch (e) { participant = { registered: null, error: e.message, code: e.code }; }
+        } else if (readiness.ok && readiness.transport === "mock") {
+          participant = { registered: true, canReceiveInvoice: true, mock: true, note: "Mock-transport · geen echte netwerkcheck" };
+        }
+        sendJson(res, 200, { ok: true, validation, readiness: { mode: readiness.mode, provider: readiness.provider, ok: readiness.ok, message: readiness.message }, participant });
+        return;
+      }
       const invoicePeppolMatch = action.match(/^facturen\/([^/]+)\/peppol$/);
       if (invoicePeppolMatch && req.method === "POST") {
         assertInvoicing(user);
