@@ -88,6 +88,7 @@ const REQUIRED_COLLECTIONS = [
   "employees",
   "gridViews",
   "exportJobs",
+  "payments",
   "mailLog",
   "formTemplates",
   "formInstances",

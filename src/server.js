@@ -104,7 +104,7 @@ const WRITE_GATE_MAP = {
   suppliers: ["procurement"], purchase_orders: ["procurement"], inventory: ["inventory"],
   expenses: ["expenses"], leaves: ["leaves"], messages: ["messages"],
   customers: ["customers"], venues: ["venues"], stock: ["stock"], vehicles: ["vehicles"],
-  facturen: ["invoicing", "billing"], offertes: ["invoicing", "billing"],
+  facturen: ["invoicing", "billing"], offertes: ["invoicing", "billing"], payments: ["invoicing", "billing"],
 };
 function assertNotReadOnly(user, action, method) {
   if (["GET", "HEAD", "OPTIONS"].includes(method)) return;
@@ -234,6 +234,7 @@ const { makeCatalogRepository, resolvePrice, snapshotForLine, explodeComposition
 const { makeWorkOrderRepository, computeTotals: computeWoTotals, buildInvoiceLines: buildWoInvoiceLines } = require("./platform/work-orders");
 const { makeWebhookRepository, deliverPending, buildDeliveryHealth, requeueEvent } = require("./platform/webhooks");
 const { makeProgressClaimRepository, computeClaimTotals } = require("./platform/progress-claims");
+const paymentsModule = require("./platform/payments");
 const { makeEmployeeRepository, rateOn, availabilityOn, expiringCertificates } = require("./platform/employees");
 const {
   RESOURCES: GRID_RESOURCES, OPERATORS: GRID_OPERATORS, BULK_ACTIONS: GRID_BULK_ACTIONS,
@@ -4900,10 +4901,13 @@ const httpServer = http.createServer(async (req, res) => {
         // Mark overdue: open invoices past due date
         const today = new Date().toISOString().slice(0, 10);
         const enriched = rows.map(inv => {
+          // h45: gedekt/openstaand saldo uit de betalingsallocaties.
+          const pay = paymentsModule.invoicePaymentState(store, tenantId, inv);
+          const base = { ...inv, paidAmount: pay.paidAmount, openAmount: pay.openAmount };
           if (inv.status === "open" && inv.dueDate && inv.dueDate < today) {
-            return { ...inv, status: "overdue" };
+            return { ...base, status: "overdue" };
           }
-          return inv;
+          return base;
         });
         sendJson(res, 200, { ok: true, invoices: enriched });
         return;
@@ -4920,6 +4924,71 @@ const httpServer = http.createServer(async (req, res) => {
         sendJson(res, 201, { ok: true, invoice });
         return;
       }
+      // ── Betalingen + allocatie (h45 · sluitstuk lead-to-cash) ────────────────
+      if (action === "payments" && req.method === "GET") {
+        assertInvoicing(user);
+        sendJson(res, 200, { ok: true, payments: paymentsModule.listPayments(store, tenantId, {
+          customerId: url.searchParams.get("customerId") || undefined,
+          invoiceId: url.searchParams.get("invoiceId") || undefined,
+        }) });
+        return;
+      }
+      if (action === "payments" && req.method === "POST") {
+        assertInvoicing(user);
+        assertApiKeyWriteAllowed(user, req);
+        const payment = paymentsModule.registerPayment(store, tenant, user, await readBody(req));
+        emitDomainEvent(store, { tenantId, eventType: "payment.registered", aggregateType: "payment", aggregateId: payment.id, actor: user.email, correlationId: res.wfpRequestId, data: { amount: payment.amount, method: payment.method } });
+        sendJson(res, 201, { ok: true, payment });
+        return;
+      }
+      const paymentItemMatch = action.match(/^payments\/([^/]+)$/);
+      if (paymentItemMatch && req.method === "GET") {
+        assertInvoicing(user);
+        sendJson(res, 200, { ok: true, payment: paymentsModule.decorate(store, paymentsModule.getPayment(store, tenantId, paymentItemMatch[1])) });
+        return;
+      }
+      const paymentSuggestMatch = action.match(/^payments\/([^/]+)\/suggestions$/);
+      if (paymentSuggestMatch && req.method === "GET") {
+        assertInvoicing(user);
+        sendJson(res, 200, { ok: true, suggestions: paymentsModule.suggestAllocations(store, tenant, paymentSuggestMatch[1]) });
+        return;
+      }
+      const paymentAllocateMatch = action.match(/^payments\/([^/]+)\/allocate$/);
+      if (paymentAllocateMatch && req.method === "POST") {
+        assertInvoicing(user);
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        const result = paymentsModule.allocatePayment(store, tenant, user, paymentAllocateMatch[1], body.allocations);
+        emitDomainEvent(store, { tenantId, eventType: "payment.allocated", aggregateType: "payment", aggregateId: result.payment.id, actor: user.email, correlationId: res.wfpRequestId, data: { allocations: result.allocations.map(a => ({ invoiceId: a.invoiceId, amount: a.amount })) } });
+        for (const inv of result.invoicesPaid) {
+          emitDomainEvent(store, { tenantId, eventType: "invoice.paid", aggregateType: "invoice", aggregateId: inv.id, actor: user.email, correlationId: res.wfpRequestId, data: { via: "payment_allocation", paymentId: result.payment.id } });
+        }
+        sendJson(res, 200, { ok: true, payment: result.payment, invoicesPaid: result.invoicesPaid.map(i => ({ id: i.id, number: i.number })) });
+        return;
+      }
+      const paymentReverseMatch = action.match(/^payments\/([^/]+)\/allocations\/([^/]+)\/reverse$/);
+      if (paymentReverseMatch && req.method === "POST") {
+        assertInvoicing(user);
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        const result = paymentsModule.reverseAllocation(store, tenant, user, paymentReverseMatch[1], paymentReverseMatch[2], body.reason);
+        emitDomainEvent(store, { tenantId, eventType: "payment.allocation_reversed", aggregateType: "payment", aggregateId: result.payment.id, actor: user.email, correlationId: res.wfpRequestId, data: { invoiceId: result.allocation.invoiceId, amount: result.allocation.amount, reason: result.allocation.reason } });
+        if (result.invoiceReopened) {
+          emitDomainEvent(store, { tenantId, eventType: "invoice.reopened", aggregateType: "invoice", aggregateId: result.invoiceReopened.id, actor: user.email, correlationId: res.wfpRequestId, data: { via: "allocation_reversed", paymentId: result.payment.id } });
+        }
+        sendJson(res, 200, { ok: true, payment: result.payment, invoiceReopened: result.invoiceReopened ? { id: result.invoiceReopened.id, number: result.invoiceReopened.number } : null });
+        return;
+      }
+      // Drill-down vanaf de factuur: welke betalingen dekken dit document.
+      const invoicePaymentsMatch = action.match(/^facturen\/([^/]+)\/payments$/);
+      if (invoicePaymentsMatch && req.method === "GET") {
+        assertInvoicing(user);
+        const inv = store.get("invoices", invoicePaymentsMatch[1]);
+        if (!inv || inv.tenantId !== tenantId) return sendJson(res, 404, { ok: false, error: "Factuur niet gevonden" });
+        sendJson(res, 200, { ok: true, ...paymentsModule.invoicePaymentState(store, tenantId, inv) });
+        return;
+      }
+
       // ── CIAW / Checkin@Work: aanwezigheidsaangifte voor een klokregistratie ──
       if (action === "ciaw/checkin" && req.method === "POST") {
         assertInteractiveUser(user);
@@ -5963,6 +6032,7 @@ const httpServer = http.createServer(async (req, res) => {
         employees: "employee_records", suppliers: "suppliers", purchaseOrders: "purchase_orders",
         contracts: "contracts", assets: "assets", worksites: "worksites",
         progressClaims: "progress_claims", expenses: "expenses", incidents: "incidents",
+        payments: "payments",
       };
       const gridResourceMatch = action.match(/^grid\/([^/]+)\/(query|bulk|bulk\/preview|export)$/);
       if (gridResourceMatch && GRID_MODULE_ACTION[gridResourceMatch[1]]) {

@@ -37,6 +37,7 @@ const RESOURCES = {
   "progress-claims": { action: "progress_claims",  grid: "progressClaims", rowKey: "claim" },
   "expenses":        { action: "expenses",         grid: "expenses",       rowKey: "expense" },
   "incidents":       { action: "incidents",        grid: "incidents",      rowKey: "incident" },
+  "payments":        { action: "payments",         grid: "payments",       rowKey: "payment" },
   "webhooks":        { action: "webhooks",         grid: null,             rowKey: "endpoint" },
 };
 

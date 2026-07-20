@@ -51,6 +51,7 @@ const RESOURCES = {
   assets:         { collection: "assets", permission: "service_assets", ownerFields: [], search: ["name", "serialNumber", "type", "status"], archivable: true, protectedBy: [] },
   worksites:      { collection: "worksites", permission: "construction", ownerFields: [], search: ["name", "address", "status"], archivable: true, protectedBy: [] },
   progressClaims: { collection: "progressClaims", permission: "progress_claims", ownerFields: ["createdBy"], search: ["number", "status"], financial: true, archivable: false, protectedBy: [] },
+  payments:       { collection: "payments", permission: ["invoicing", "billing"], ownerFields: ["createdBy"], search: ["reference", "method", "date"], financial: true, archivable: false, protectedBy: [] },
   expenses:       { collection: "expenses", permission: "expenses", ownerFields: ["userId"], search: ["description", "status"], financial: true, archivable: true, protectedBy: [] },
   incidents:      { collection: "incidents", permission: "incidents", ownerFields: ["userId", "reportedBy"], search: ["description", "status"], archivable: true, protectedBy: [] },
 };

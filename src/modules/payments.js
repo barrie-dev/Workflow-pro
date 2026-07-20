@@ -86,8 +86,29 @@ function markInvoicePaidById(store, invoiceId, source = "betaling") {
   const inv = store.get("invoices", invoiceId);
   if (!inv) return null;
   if (inv.status === "paid") return inv;
+  // h45: een online betaling is óók een betaling in het betalingsregister,
+  // volledig toegewezen aan deze factuur voor het nog OPENSTAANDE deel. Zo
+  // vertellen het register en de factuurstatus altijd hetzelfde verhaal, ook
+  // als er eerder al een deelbetaling handmatig was toegewezen.
+  try {
+    const ledger = require("../platform/payments");
+    const tenant = { id: inv.tenantId };
+    const actor = { email: source };
+    const open = ledger.invoicePaymentState(store, inv.tenantId, inv).openAmount;
+    if (open > 0) {
+      const payment = ledger.registerPayment(store, tenant, actor, {
+        amount: open, method: "online", customerId: inv.customerId || undefined,
+        reference: inv.structuredComm || inv.number, note: `Online betaling via ${source}`,
+      });
+      ledger.allocatePayment(store, tenant, actor, payment.id, [{ invoiceId: inv.id, amount: open }]);
+    }
+  } catch (e) {
+    // Het register mag een geslaagde betaling nooit blokkeren; de fallback
+    // hieronder zet de factuur hoe dan ook op betaald (gedrag van vóór h45).
+    store.audit({ actor: source, tenantId: inv.tenantId, action: "payment_ledger_failed", area: "facturen", detail: `${inv.number}: ${e.message}` });
+  }
   const updated = store.update("invoices", invoiceId, {
-    status: "paid", paidAt: new Date().toISOString(), paymentSource: source, updatedAt: new Date().toISOString(),
+    status: "paid", paidAt: inv.paidAt || new Date().toISOString(), paymentSource: source, updatedAt: new Date().toISOString(),
   });
   store.audit({ actor: source, tenantId: inv.tenantId, action: "invoice_paid", area: "facturen", detail: `${inv.number} via ${source}` });
   emitDomainEvent(store, { tenantId: inv.tenantId, eventType: "invoice.paid", aggregateType: "invoice", aggregateId: inv.id, actor: source, data: { source } });
