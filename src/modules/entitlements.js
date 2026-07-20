@@ -46,8 +46,13 @@ function resolveTenantModules(store, tenant) {
     }
   }
 
-  const coreViews = CORE_MODULES.map(m => m.view);
-  const gatedViews = modules.map(k => (moduleByKey(k) || {}).view).filter(Boolean);
+  // Een module kan naast zijn hoofdview extra views dragen (extraViews), bv.
+  // projects → portfolio, integrations → webhooks. Zo blijft de nav-gating
+  // rechten-gedreven zonder dat elke werkruimte een eigen verkoopbare module
+  // hoeft te zijn (één portaal, rechten-gedreven).
+  const viewsOf = m => [m.view, ...(m.extraViews || [])].filter(Boolean);
+  const coreViews = CORE_MODULES.flatMap(viewsOf);
+  const gatedViews = modules.flatMap(k => { const m = moduleByKey(k); return m ? viewsOf(m) : []; });
 
   return {
     plan: bundle ? bundle.key : (tenant && tenant.plan) || "business",

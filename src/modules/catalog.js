@@ -33,7 +33,8 @@ const MODULE_CATALOG = [
   // Project = centraal uitvoeringsdossier (master-spec E04). Bindt klant, werf,
   // offertes, jobs, werkbonnen en facturen; projectmarge en nacalculatie later.
   { key: "projects", label: "Projecten", group: "Operaties", core: false,
-    view: "projects", actions: ["projects"], submodules: [] },
+    // extraViews: portfolio (h38) hoort bij het projectenpack · geen aparte module.
+    view: "projects", extraViews: ["portfolio"], actions: ["projects"], submodules: [] },
   { key: "workorders", label: "Werkbonnen", group: "Operaties", core: false,
     view: "workorders", actions: ["workorders"],
     submodules: [
@@ -150,7 +151,8 @@ const MODULE_CATALOG = [
     view: "reports", actions: ["reports"],
     submodules: [{ key: "datahub-export", label: "Datahub export" }] },
   { key: "integrations", label: "Integraties", group: "Systeem", core: false,
-    view: "integrations", actions: ["integrations"], submodules: [] },
+    // extraViews: webhooks (E19) is onderdeel van het integratiepack.
+    view: "integrations", extraViews: ["webhooks"], actions: ["integrations"], submodules: [] },
   // Add-on: Single Sign-On via SAML 2.0. Geen eigen nav-view · de configuratie
   // leeft in Instellingen. À-la-carte: superadmin zet 'm per tenant aan via
   // moduleOverrides.add (niet standaard in een bundel).
@@ -175,8 +177,12 @@ const MODULE_CATALOG = [
 const CORE_MODULES = [
   // Dashboard = standaard-overzicht + persoonlijk/organisatie-dashboard (filter +
   // inklapbare "Aanpassen" in dezelfde view, geen apart menu-item).
-  { key: "dashboard", label: "Dashboard", group: "Kern", core: true, view: "dashboard" },
-  { key: "employees", label: "Medewerkers", group: "Kern", core: true, view: "employees" },
+  // extraViews: universele lijsten (h11) zijn platformkern ("bouwen als gedeelde
+  // kern") · elke rechten-check gebeurt server-side per resource.
+  { key: "dashboard", label: "Dashboard", group: "Kern", core: true, view: "dashboard", extraViews: ["lists"] },
+  // extraViews: personeelsfiches (h16) horen bij de kern · gebruikersaccounts en
+  // fiches zijn aparte entiteiten, maar allebei altijd beschikbaar.
+  { key: "employees", label: "Medewerkers", group: "Kern", core: true, view: "employees", extraViews: ["employee_records"] },
   { key: "billing", label: "Abonnement & facturatie", group: "Kern", core: true, view: "billing" },
   { key: "settings", label: "Instellingen", group: "Kern", core: true, view: "settings" },
   { key: "audit", label: "Audittrail", group: "Kern", core: true, view: "audit" },

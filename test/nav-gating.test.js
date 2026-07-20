@@ -11,7 +11,12 @@ const path = require("node:path");
 
 const read = p => fs.readFileSync(path.join(__dirname, "..", p), "utf8");
 const catalog = read("src/modules/catalog.js");
-const catalogViews = new Set([...catalog.matchAll(/view:\s*"([a-z_]+)"/g)].map(m => m[1]));
+// Zowel de hoofdview als extraViews tellen mee: de entitlements-resolver stelt
+// beide bloot (zie entitlements.js · viewsOf), dus de nav-gating dekt ze ook.
+const catalogViews = new Set([
+  ...[...catalog.matchAll(/view:\s*"([a-z_-]+)"/g)].map(m => m[1]),
+  ...[...catalog.matchAll(/extraViews:\s*\[([^\]]*)\]/g)].flatMap(m => [...m[1].matchAll(/"([a-z_-]+)"/g)].map(x => x[1])),
+]);
 
 function navViews(file, navClass) {
   const re = new RegExp(`${navClass}[^>]*?data-view="([a-z_]+)"`, "g");
