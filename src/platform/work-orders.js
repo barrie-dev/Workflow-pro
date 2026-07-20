@@ -368,9 +368,21 @@ function makeWorkOrderRepository(store) {
      * geven we 409 MET de serverstaat terug · nooit stilzwijgend overschrijven
      * (acceptatiecriterium h25).
      */
-    sync(tenantId, id, { baseVersion, patch, clientId, clientUpdatedAt }, actorUser) {
+    sync(tenantId, id, { baseVersion, patch, clientId, clientUpdatedAt, commandId }, actorUser) {
       const existing = this.findById(tenantId, id);
       if (!existing) { const e = new Error("Werkbon niet gevonden"); e.status = 404; throw e; }
+      // Dubbel queue-item (h45 mobile offline): een offline-wachtrij kan
+      // hetzelfde commando twee keer aanbieden (netwerk-retry na een timeout
+      // waarvan het antwoord verloren ging). Herkenning op commandId → de
+      // eerdere uitkomst teruggeven, NIET opnieuw toepassen en NIET het
+      // versieconflict-pad in (dat zou de veldwerker onterecht laten "oplossen").
+      const applied = (existing.sync && Array.isArray(existing.sync.appliedCommands)) ? existing.sync.appliedCommands : [];
+      const cmd = clean(commandId) || null;
+      if (cmd && applied.includes(cmd)) {
+        const replay = this.findById(tenantId, id);
+        replay.syncReplayed = true;
+        return replay;
+      }
       if (baseVersion == null) { const e = new Error("baseVersion is verplicht voor sync"); e.status = 400; e.code = "BASE_VERSION_REQUIRED"; throw e; }
       if (Number(existing.version) !== Number(baseVersion)) {
         const e = new Error("De werkbon is op de server gewijzigd sinds je laatste synchronisatie");
@@ -380,7 +392,13 @@ function makeWorkOrderRepository(store) {
       }
       const updated = this.update(tenantId, id, patch || {}, actorUser, baseVersion);
       const saved = store.update(col, id, {
-        sync: { clientId: clean(clientId) || null, clientUpdatedAt: clean(clientUpdatedAt) || null, lastSyncAt: new Date().toISOString() },
+        sync: {
+          clientId: clean(clientId) || null, clientUpdatedAt: clean(clientUpdatedAt) || null,
+          lastSyncAt: new Date().toISOString(),
+          // Bewaar de laatste 50 commando-id's · genoeg voor elke realistische
+          // offline-wachtrij, zonder onbegrensde groei van het document.
+          appliedCommands: cmd ? [...applied, cmd].slice(-50) : applied,
+        },
       });
       return upgradeLegacy(saved) || updated;
     },

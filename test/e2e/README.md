@@ -19,23 +19,27 @@ sessie. Dat is precies wat h51 verbiedt.
 |---|---|---|---|
 | 1 | Construction: offerte → project → planning → werkbon → factuur → marge | `quoteversion` + `projects` + `planning` + `workorder` + `finance` | **deels** · de keten is per schakel gedekt, niet als één doorlopend scenario |
 | 2 | Meerwerk met gedeeltelijke acceptatie en aparte factuurbron | `construction` (change orders) + `claims` (betwiste lijnen, aparte bron) | gedekt |
-| 3 | Offline werkbon met foto, materiaal en handtekening, incl. dubbel queue-item | `workorder` (sync-conflict, handtekening aan versie, materiaal) | **deels** · foto-upload en dubbel queue-item ontbreken |
+| 3 | Offline werkbon met foto, materiaal en handtekening, incl. dubbel queue-item | `workorder` (sync-conflict, handtekening aan versie, materiaal) + `mobile-offline` (dubbel queue-item → replay op commandId, geen dubbele toepassing) | **deels** · foto-upload ontbreekt nog |
 | 4 | Servicecontract genereert onderhoudsbeurt, assethistoriek en facturatie | `contracts` (generatie) + `assets` (historiek, beurten) | gedekt |
 | 5 | Inkooporder deelontvangst + projectverplichting, zonder dubbele kost | `proc` | gedekt |
-| 6 | Factuurnummering, PDF/UBL-reconciliatie, Peppol-fout en retry | `credit` + `finance` (nummering, bronnen) | **GAT** · PDF-vs-UBL-reconciliatie en Peppol-retry zijn niet getest (Peppol is een mock-provider) |
+| 6 | Factuurnummering, PDF/UBL-reconciliatie, Peppol-fout en retry | `credit` + `finance` (nummering, bronnen) + `reconciliation` (factuur ⟷ UBL sluitend per tarief, Peppol-fout met zichtbaar spoor, retry = poging n+1 → afgeleverd) + unittests document ⟷ factuur ⟷ UBL | **deels** · gedrag van een echte Peppol-provider vereist een testomgeving |
 | 7 | Tenant A probeert elk pad naar data van tenant B | `policy` + unittests (grid, pg-crm cross-tenant) | **deels** · geen uitputtende padenscan als één scenario |
 | 8 | Rol zonder kostprijsrecht probeert UI, API, export, zoeken en Mona | `policy` + `grid` (hiddenColumns) + `signals` | **deels** · UI- en Mona-pad niet in één scenario |
 | 9 | Legacy-migratie klant/project/werkbon met external ID en bestanden | `robaws` (external_id, idempotent, snapshots) | **deels** · bestanden migreren niet mee |
 
-**Eerlijke stand: 3 volledig, 5 deels, 1 gat.** De "deels"-scenario's zijn per
-schakel bewezen maar niet als één doorlopende keten; scenario 6 vereist eerst
-een echte Peppol-testomgeving.
+**Eerlijke stand: 3 volledig, 6 deels, 0 harde gaten.** De "deels"-scenario's
+zijn per schakel bewezen maar niet als één doorlopende keten; de restpunten
+zijn foto-upload op de werkbon en het gedrag van een echte Peppol-provider.
+
+Daarnaast draait `perf` het h50.1-budget als regressienet: P95 per
+endpointklasse (read < 800 ms, write < 1500 ms · pilotdoelen) op een gevulde
+dataset, binnen het rate-limit-budget.
 
 ## Overige smokes
 
 `catalog`, `emp`, `grid`, `workos`, `portfolio`, `webhook`, `crm`, `company`,
-`events`, `signals`, `claims` dekken de acceptatiecriteria van hun module
-(API-CONTRACTS-V2) en draaien mee als regressienet. `idempotency` bewijst het
+`events`, `signals`, `claims`, `payments`, `v1` dekken de acceptatiecriteria
+van hun module (API-CONTRACTS-V2 / API-V1) en draaien mee als regressienet. `idempotency` bewijst het
 h41-acceptatiecriterium tegen de echte server: een herhaalde POST met dezelfde
 Idempotency-Key creëert geen duplicaat maar speelt de eerste response terug.
 

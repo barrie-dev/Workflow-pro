@@ -6615,10 +6615,12 @@ const httpServer = http.createServer(async (req, res) => {
         assertApiKeyWriteAllowed(user, req);
         const body = await readBody(req);
         let wo;
-        try { wo = workOrderRepo.sync(tenantId, woV2Match[1], { baseVersion: body.baseVersion, patch: body.patch, clientId: body.clientId, clientUpdatedAt: body.clientUpdatedAt }, user); }
+        try { wo = workOrderRepo.sync(tenantId, woV2Match[1], { baseVersion: body.baseVersion, patch: body.patch, clientId: body.clientId, clientUpdatedAt: body.clientUpdatedAt, commandId: body.commandId }, user); }
         catch (e) {
           return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code, currentVersion: e.currentVersion, serverState: e.serverState, clientPatch: e.clientPatch });
         }
+        // Dubbel queue-item herkend → geen tweede toepassing, geen event.
+        if (wo.syncReplayed) return sendJson(res, 200, { ok: true, workorder: wo, replayed: true });
         emitDomainEvent(store, { tenantId, eventType: "workorder.synced", aggregateType: "workorder", aggregateId: wo.id, actor: user.email, correlationId: res.wfpRequestId, data: { clientId: wo.sync.clientId, version: wo.version } });
         sendJson(res, 200, { ok: true, workorder: wo });
         return;

@@ -216,50 +216,71 @@ function peppolTransportReadiness(input = {}, requireLive = false) {
  * @returns {Promise<{ok:boolean, provider:string, reference:string, status:string}>}
  */
 async function sendPeppolInvoice(store, tenant, invoice) {
-  const v = validatePeppol(invoice, tenant);
-  if (!v.ok) { const e = new Error("Peppol-validatie mislukt: " + v.errors.join(" ")); e.status = 400; e.errors = v.errors; throw e; }
+  // h51 scenario 6: elke mislukte poging laat een SPOOR na op de factuur
+  // (status, reden, pogingteller), zodat de foutstaat zichtbaar is en een
+  // retry aantoonbaar poging n+1 is · nooit een stille fout.
+  const attempt = Number(invoice.peppolAttempts || 0) + 1;
+  const recordFailure = e => {
+    try {
+      store.update("invoices", invoice.id, {
+        peppolStatus: "error", peppolError: e.message,
+        peppolAttempts: attempt, peppolLastAttemptAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+      store.audit({ actor: "peppol", tenantId: tenant.id, action: "peppol_failed", area: "facturen", detail: `${invoice.number} · poging ${attempt} · ${e.message}` });
+    } catch (_) { /* registratie mag de oorspronkelijke fout niet maskeren */ }
+  };
+  try {
+    const v = validatePeppol(invoice, tenant);
+    if (!v.ok) { const e = new Error("Peppol-validatie mislukt: " + v.errors.join(" ")); e.status = 400; e.errors = v.errors; throw e; }
 
-  const ubl = buildUbl(invoice, tenant);
-  const cfg = loadPlatformConfig(store);
-  const readiness = peppolTransportReadiness(cfg, config.isProduction);
-  if (!readiness.ok) {
-    const e = new Error(readiness.message);
-    e.status = 503;
-    e.code = readiness.errorCode;
+    const ubl = buildUbl(invoice, tenant);
+    const cfg = loadPlatformConfig(store);
+    const readiness = peppolTransportReadiness(cfg, config.isProduction);
+    if (!readiness.ok) {
+      const e = new Error(readiness.message);
+      e.status = 503;
+      e.code = readiness.errorCode;
+      throw e;
+    }
+    const provider = readiness.provider;
+    const key = cfg.peppol && cfg.peppol.apiKey;
+    let reference, status, transport;
+
+    if (readiness.transport !== "mock") {
+      // Echte provider. Endpoints verschillen per provider; hieronder de courante
+      // Belgische opties. Faalt netjes als de provider een fout teruggeeft.
+      const hosts = { billit: "api.billit.be", digiteal: "api.digiteal.eu", unifiedpost: "api.unifiedpost.com" };
+      const host = hosts[provider] || hosts.billit;
+      const resp = await postJson(host, "/v1/peppol/outbound", {
+        Authorization: `Bearer ${key}`, "Content-Type": "application/xml",
+      }, ubl);
+      reference = resp.id || resp.transmissionId || `${provider}_${Date.now()}`;
+      status = resp.status || "sent";
+      transport = readiness.transport;
+    } else {
+      // Mock-transport: valideert + bewaart UBL, markeert als afgeleverd.
+      reference = `PEPPOL-MOCK-${Date.now().toString(36).toUpperCase()}`;
+      status = "delivered";
+      transport = "mock";
+    }
+
+    store.update("invoices", invoice.id, {
+      peppolStatus: status,
+      peppolReference: reference,
+      peppolProvider: transport,
+      peppolSentAt: new Date().toISOString(),
+      peppolAttempts: attempt,
+      peppolError: null,
+      ublXml: ubl,
+      updatedAt: new Date().toISOString(),
+    });
+    store.audit({ actor: "peppol", tenantId: tenant.id, action: "peppol_sent", area: "facturen", detail: `${invoice.number} → ${transport} (${status}) · poging ${attempt}` });
+    return { ok: true, provider: transport, reference, status, attempts: attempt };
+  } catch (e) {
+    recordFailure(e);
     throw e;
   }
-  const provider = readiness.provider;
-  const key = cfg.peppol && cfg.peppol.apiKey;
-  let reference, status, transport;
-
-  if (readiness.transport !== "mock") {
-    // Echte provider. Endpoints verschillen per provider; hieronder de courante
-    // Belgische opties. Faalt netjes als de provider een fout teruggeeft.
-    const hosts = { billit: "api.billit.be", digiteal: "api.digiteal.eu", unifiedpost: "api.unifiedpost.com" };
-    const host = hosts[provider] || hosts.billit;
-    const resp = await postJson(host, "/v1/peppol/outbound", {
-      Authorization: `Bearer ${key}`, "Content-Type": "application/xml",
-    }, ubl);
-    reference = resp.id || resp.transmissionId || `${provider}_${Date.now()}`;
-    status = resp.status || "sent";
-    transport = readiness.transport;
-  } else {
-    // Mock-transport: valideert + bewaart UBL, markeert als afgeleverd.
-    reference = `PEPPOL-MOCK-${Date.now().toString(36).toUpperCase()}`;
-    status = "delivered";
-    transport = "mock";
-  }
-
-  store.update("invoices", invoice.id, {
-    peppolStatus: status,
-    peppolReference: reference,
-    peppolProvider: transport,
-    peppolSentAt: new Date().toISOString(),
-    ublXml: ubl,
-    updatedAt: new Date().toISOString(),
-  });
-  store.audit({ actor: "peppol", tenantId: tenant.id, action: "peppol_sent", area: "facturen", detail: `${invoice.number} → ${transport} (${status})` });
-  return { ok: true, provider: transport, reference, status };
 }
 
 module.exports = { buildUbl, validatePeppol, sendPeppolInvoice, supplierOf, peppolTransportReadiness };
