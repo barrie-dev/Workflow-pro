@@ -93,6 +93,32 @@ function level(store, tenantId, articleId, locationId) {
   return { articleId, locationId, physical, reserved, available: round2(physical - reserved) };
 }
 
+/**
+ * Mutatiehistoriek, nieuwste eerst (frontend-coverage punt 4: detail-
+ * traceerbaarheid vanuit het voorraadniveau). Tenant-gescopet leescontract
+ * over de bestaande ledger · geen tweede datalaag.
+ */
+function listMovements(store, tenantId, { articleId, locationId, limit = 100 } = {}) {
+  ensureCollections(store);
+  return store.data.stockMovements
+    .filter(m => m.tenantId === tenantId
+      && (!articleId || m.articleId === articleId)
+      && (!locationId || m.locationId === locationId))
+    .sort((a, b) => String(b.at || "").localeCompare(String(a.at || "")))
+    .slice(0, Math.min(Math.max(1, Number(limit) || 100), 500));
+}
+
+/** Reservatiehistoriek · standaard alleen actieve, met status-filter. */
+function listReservations(store, tenantId, { articleId, locationId, status = "active" } = {}) {
+  ensureCollections(store);
+  return store.data.stockReservations
+    .filter(r => r.tenantId === tenantId
+      && (!articleId || r.articleId === articleId)
+      && (!locationId || r.locationId === locationId)
+      && (status === "all" || r.status === status))
+    .sort((a, b) => String(b.at || b.createdAt || "").localeCompare(String(a.at || a.createdAt || "")));
+}
+
 /** Geaggregeerde voorraad per artikel+locatie (uit de ledger). */
 function listLevels(store, tenantId, opts = {}) {
   ensureCollections(store);
@@ -172,6 +198,6 @@ function bookCount(store, tenantId, counts, actor) {
 
 module.exports = {
   MOVEMENT_TYPES, signedQty,
-  bookMovement, reverseMovement, level, listLevels,
+  bookMovement, reverseMovement, level, listLevels, listMovements, listReservations,
   reserve, release, transfer, bookCount,
 };

@@ -4174,7 +4174,11 @@ const httpServer = http.createServer(async (req, res) => {
         assertCan(user, "projects");
         // Financiele velden (budget/forecast) enkel voor beheerders (h8.2/h22:
         // operationele en financiele info scheidbaar).
-        sendJson(res, 200, { ok: true, projects: redactSensitive(user, "projects", projectRepo.list(tenantId)) });
+        // customerName stabiel meegeven (frontend-coverage punt 1).
+        const projCustNames = new Map(store.list("customers", tenantId).map(c => [c.id, c.name]));
+        const projRows = projectRepo.list(tenantId)
+          .map(p => p.customerName || !p.customerId ? p : { ...p, customerName: projCustNames.get(p.customerId) || null });
+        sendJson(res, 200, { ok: true, projects: redactSensitive(user, "projects", projRows) });
         return;
       }
       const projectItemMatch = action.match(/^projects\/([^/]+)$/);
@@ -4650,7 +4654,36 @@ const httpServer = http.createServer(async (req, res) => {
       // ── Voorraad-ledger (E17/h28) ─────────────────────────────────────────────
       if (action === "inventory/levels" && req.method === "GET") {
         assertCan(user, "inventory");
-        sendJson(res, 200, { ok: true, levels: inventory.listLevels(store, tenantId, { articleId: url.searchParams.get("articleId") || undefined, locationId: url.searchParams.get("locationId") || undefined }) });
+        const levels = inventory.listLevels(store, tenantId, { articleId: url.searchParams.get("articleId") || undefined, locationId: url.searchParams.get("locationId") || undefined });
+        // Canonieke namen meegeven (frontend-coverage punt 3): de UI hoeft
+        // geen eigen catalogus- en locatie-verrijking meer te doen.
+        const articleById = new Map(store.list("articles", tenantId).map(a => [a.id, a]));
+        const venueById = new Map(store.list("venues", tenantId).map(v => [v.id, v]));
+        const locationById = new Map((store.data.stockLocations || []).filter(l => l.tenantId === tenantId).map(l => [l.id, l]));
+        sendJson(res, 200, { ok: true, levels: levels.map(l => {
+          const art = articleById.get(l.articleId);
+          const loc = locationById.get(l.locationId) || venueById.get(l.locationId);
+          return { ...l, articleName: (art && art.name) || null, unit: (art && art.unit) || null, locationName: (loc && loc.name) || null };
+        }) });
+        return;
+      }
+      // Leescontract voor detailtraceerbaarheid (frontend-coverage punt 4).
+      if (action === "inventory/movements" && req.method === "GET") {
+        assertCan(user, "inventory");
+        sendJson(res, 200, { ok: true, movements: inventory.listMovements(store, tenantId, {
+          articleId: url.searchParams.get("articleId") || undefined,
+          locationId: url.searchParams.get("locationId") || undefined,
+          limit: url.searchParams.get("limit") || undefined,
+        }) });
+        return;
+      }
+      if (action === "inventory/reservations" && req.method === "GET") {
+        assertCan(user, "inventory");
+        sendJson(res, 200, { ok: true, reservations: inventory.listReservations(store, tenantId, {
+          articleId: url.searchParams.get("articleId") || undefined,
+          locationId: url.searchParams.get("locationId") || undefined,
+          status: url.searchParams.get("status") || undefined,
+        }) });
         return;
       }
       if (action === "inventory/movements" && req.method === "POST") {
@@ -4721,7 +4754,12 @@ const httpServer = http.createServer(async (req, res) => {
       // ── Contracten & abonnementen (E15/h35) ───────────────────────────────────
       if (action === "contracts" && req.method === "GET") {
         assertCan(user, "contracts");
-        sendJson(res, 200, { ok: true, contracts: contractRepo.list(tenantId, { customerId: url.searchParams.get("customerId") || undefined, status: url.searchParams.get("status") || undefined }) });
+        // customerName stabiel meegeven (frontend-coverage punt 1) · geen
+        // terugval op klant-id's in de UI.
+        const custNames = new Map(store.list("customers", tenantId).map(c => [c.id, c.name]));
+        const rows = contractRepo.list(tenantId, { customerId: url.searchParams.get("customerId") || undefined, status: url.searchParams.get("status") || undefined })
+          .map(c => c.customerName || !c.customerId ? c : { ...c, customerName: custNames.get(c.customerId) || null });
+        sendJson(res, 200, { ok: true, contracts: rows });
         return;
       }
       if (action === "contracts" && req.method === "POST") {

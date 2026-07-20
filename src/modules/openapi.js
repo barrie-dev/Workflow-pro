@@ -297,6 +297,48 @@ function openApiSpec() {
     },
     servers: [{ url: config.appUrl }],
     components: {
+      schemas: {
+        // Formeel gepubliceerde vorm van GET /projects/:id/finance
+        // (frontend-coverage punt 2): `actual.total` en `invoiced.total` zijn
+        // de CANONIEKE totalen; losse aliassen als actualCost/invoicedAmount
+        // zijn compatibiliteitsvarianten en verdwijnen op termijn.
+        ProjectFinance: {
+          type: "object",
+          required: ["projectId", "budget", "actual", "invoiced"],
+          properties: {
+            projectId: { type: "string" },
+            number: { type: "string" },
+            financialStatus: { type: "string", example: "open" },
+            budget: { type: "number", description: "Budget in euro (incl. goedgekeurde change orders)" },
+            actual: {
+              type: "object",
+              required: ["total"],
+              properties: {
+                total: { type: "number", description: "CANONIEK werkelijk-totaal in euro" },
+                labor: { type: "object", properties: { hours: { type: "number" }, rate: { type: "number" }, cost: { type: "number" }, basis: { type: "string", example: "rate_estimate" }, sourceCount: { type: "integer" } } },
+                material: { type: "object", properties: { cost: { type: "number" }, sources: { type: "array", items: { type: "object" } } } },
+                expenses: { type: "object", properties: { cost: { type: "number" }, sourceCount: { type: "integer" } } },
+              },
+            },
+            invoiced: {
+              type: "object",
+              required: ["total"],
+              properties: {
+                total: { type: "number", description: "CANONIEK gefactureerd-totaal (excl. btw, creditnota's negatief)" },
+                paid: { type: "number" },
+                sourceCount: { type: "integer" },
+                sources: { type: "array", items: { type: "object" } },
+              },
+            },
+            commitment: { type: "object", properties: { total: { type: "number", description: "Openstaande inkoopverplichting" }, sourceCount: { type: "integer" }, sources: { type: "array", items: { type: "object" } } } },
+            forecastCost: { type: "number", description: "actual.total + commitment.total" },
+            margin: { type: "number", description: "invoiced.total - actual.total (euro)" },
+            budgetRemaining: { type: "number" },
+            forecastBudgetRemaining: { type: "number" },
+            generatedAt: { type: "string", format: "date-time" },
+          },
+        },
+      },
       securitySchemes: {
         bearerAuth: {
           type: "http",
@@ -331,6 +373,13 @@ function openApiSpec() {
           ...operation("Export module CSV"),
           parameters: [{ name: "module", in: "path", required: true, schema: { type: "string" } }]
         }
+      },
+      "/api/tenants/{tenantId}/projects/{projectId}/finance": {
+        get: {
+          ...operation("Project finance read-model"),
+          description: "Herleidbaar budget/werkelijk/gefactureerd/verplichting-overzicht per project. Alleen beheerders (403 FINANCIAL_SCOPE). Vorm: components.schemas.ProjectFinance · actual.total en invoiced.total zijn de canonieke totalen.",
+          responses: { 200: { description: "OK", content: { "application/json": { schema: { type: "object", properties: { ok: { type: "boolean" }, finance: { $ref: "#/components/schemas/ProjectFinance" } } } } } } },
+        },
       },
       "/api/tenants/{tenantId}/golden-path": { get: operation("Golden path readiness") },
       "/api/tenants/{tenantId}/golden-path/demo": { post: operation("Create demo golden path", "post") },

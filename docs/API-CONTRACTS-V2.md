@@ -235,6 +235,36 @@ staan. Toon een hervat-actie.
 
 ---
 
+## Bevestigde contractafspraken (frontend-coverage 2026-07-20)
+
+Deze vormen zijn CANONIEK en wijzigen niet zonder versionering:
+
+1. **customerName in lijsten** · `GET /contracts` en `GET /projects` leveren
+   `customerName` altijd mee (server-side verrijkt vanuit het klantdossier
+   wanneer het document zelf alleen `customerId` draagt). `null` betekent:
+   klant bestaat niet meer.
+2. **Projectfinance** · formeel gepubliceerd in `/api/openapi.json` als
+   `components.schemas.ProjectFinance`. `actual.total` en `invoiced.total`
+   zijn de canonieke totalen; `margin` is een getal (euro), geen object.
+3. **Voorraadniveaus** · `GET /inventory/levels` draagt per rij ook
+   `articleName`, `unit` en `locationName` (uit catalogus + locatie/werf);
+   de UI hoeft niet zelf te verrijken.
+4. **Voorraadhistoriek** · `GET /inventory/movements?articleId&locationId&limit`
+   (nieuwste eerst, max 500) en `GET /inventory/reservations?status=active|released|all`
+   zijn de tenant-gescopete leescontracten over de ledger.
+5. **PO-ontvangst** · een ontvangst mag starten vanuit exact
+   `approved`, `sent`, `confirmed`, `partially_received` · bevestigd, de
+   frontend volgt deze set.
+6. **Offerte-acceptatie** · `acceptance` draagt stabiel: `name`, `verified`,
+   `verifiedEmail`, `method` (`email-otp` | `link`), `version`,
+   `documentHash`, `signature` (optioneel), `at`, `ip`, `userAgent`.
+7. **Peppol-preflight** · `GET /facturen/:id/peppol/check` levert stabiel:
+   `validation { ok, errors[] }`, `readiness { ok, provider, mode, message }`,
+   `participant { registered, canReceiveInvoice, mock?, error?, code? }`.
+8. **Publiato** · bewust GEEN submit-route zolang Fedris geen publieke API
+   heeft; het dossier + de deadline-status is de grens.
+9. **Dimona** · registratie en bewaking, nooit een aangifte-endpoint.
+
 ## Nog niet in dit contract
 
 Deze modules hebben nog **geen UI en geen vertaalsleutels**. Dat is bewust
