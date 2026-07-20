@@ -2,7 +2,7 @@
 /**
  * Platform-integratieconfiguratie (Stripe, Peppol, e-mail).
  *
- * Bron-volgorde (laag → hoog): DUMMY defaults  ←  env-vars  ←  opgeslagen DB-waarden.
+ * Bron-volgorde (laag → hoog): lege defaults  ←  env-vars  ←  opgeslagen DB-waarden.
  * De super-admin beheert de echte sleutels via de Integraties-console; die worden
  * in de 'platformConfig'-collectie bewaard en overschrijven de env/dummy-waarden.
  *
@@ -15,13 +15,18 @@ const { config } = require("../lib/config");
 const CONFIG_ID = "platform";
 
 // Duidelijk neppe placeholder-sleutels zodat niets crasht vóór echte config.
-const DUMMY = {
+// Lege waarde = niet geconfigureerd. Bewust GEEN dummy-placeholders meer:
+// een integratiescherm vol "DUMMY" oogt als nep terwijl de producten er
+// volwaardig achter zitten · leeg + een duidelijke status is de waarheid.
+// (De PLACEHOLDER-detectie verderop blijft bestaan voor omgevingen waar zo'n
+// oude dummy-waarde nog opgeslagen staat.)
+const DEFAULTS = {
   stripe: {
     // LET OP: deepMerge kent alleen velden die hier in de template staan -
     // nieuwe stripe-velden ALTIJD ook hier toevoegen.
     mode: "",                          // "" = auto (test, tenzij legacy sk_live)
-    secretKey: "sk_test_DUMMY000000000000000000",
-    webhookSecret: "whsec_DUMMY00000000000000000000",
+    secretKey: "",
+    webhookSecret: "",
     testSecretKey: "",
     testPublishableKey: "",
     testWebhookSecret: "",
@@ -31,14 +36,14 @@ const DUMMY = {
   },
   peppol: {
     provider: "mock",                 // mock | billit | digiteal | unifiedpost
-    apiKey: "peppol_DUMMY_0000000000",
+    apiKey: "",
     partyId: "",                      // Billit PartyID (bedrijfscontext · sandbox ≠ productie)
     sandbox: false,                   // true → api.sandbox.billit.be (nooit in productie)
     authHeader: "ApiKey",             // headernaam van de sleutel (env-flip als de provider anders blijkt)
   },
   email: {
     provider: "log",                  // log | resend | sendgrid | smtp
-    apiKey: "re_DUMMY_00000000000000",
+    apiKey: "",
     from: "Monargo One <noreply@monargo.com>",
   },
   kbo: {
@@ -47,12 +52,12 @@ const DUMMY = {
   },
   ciaw: {
     provider: "mock",                 // mock | rsz | (gateway-provider)
-    apiKey: "ciaw_DUMMY_0000000000",
+    apiKey: "",
     baseHost: "api.checkinatwork.be",
   },
   openai: {
-    apiKey: "sk-DUMMY000000000000000000",   // echte OpenAI-key → Mona AI live; anders mock-modus
-    model: "gpt-4o-mini",                    // instelbaar bij go-live (bv. gpt-4o voor meer kwaliteit)
+    apiKey: "",                        // echte OpenAI-key → Mona AI live; anders mock-modus
+    model: "gpt-4o-mini",              // instelbaar bij go-live (bv. gpt-4o voor meer kwaliteit)
   },
 };
 
@@ -119,7 +124,7 @@ function storedRow(store) {
 function loadPlatformConfig(store) {
   const stored = storedRow(store) || {};
   // dummy ← env ← stored
-  const withEnv = deepMerge(DUMMY, envOverlay());
+  const withEnv = deepMerge(DEFAULTS, envOverlay());
   const merged = deepMerge(withEnv, { stripe: stored.stripe, peppol: stored.peppol, email: stored.email, kbo: stored.kbo, openai: stored.openai, ciaw: stored.ciaw });
   // Add-on-overrides (naam/prijs/omschrijving/actief per add-on) · superadmin-bewerkbaar.
   merged.addons = stored.addons || {};
@@ -155,8 +160,9 @@ const PLACEHOLDER = /DUMMY|replace[_-]?me|replace[_-]?this|changeme|xxxx/i;
 
 function mask(value) {
   const s = String(value || "");
-  if (!s) return "";
-  if (PLACEHOLDER.test(s)) return "(dummy · nog niet ingesteld)";
+  // Oude dummy-waarden die nog in een opgeslagen rij staan tonen we als LEEG:
+  // het scherm hoort "niet geconfigureerd" te zeggen, nooit "dummy".
+  if (!s || PLACEHOLDER.test(s)) return "";
   if (s.length <= 8) return "••••";
   return s.slice(0, 4) + "••••" + s.slice(-4);
 }
@@ -272,7 +278,7 @@ function savePlatformConfig(store, patch, actor) {
       updatedAt: new Date().toISOString(),
     };
   }
-  const isMaskedOrEmpty = v => v === undefined || v === null || v === "" || /••••|dummy · nog niet/.test(String(v));
+  const isMaskedOrEmpty = v => v === undefined || v === null || v === "" || /••••/.test(String(v));
   const apply = (section, keys) => {
     if (!patch[section]) return;
     for (const k of keys) {
@@ -302,4 +308,5 @@ function savePlatformConfig(store, patch, actor) {
   return publicPlatformConfig(store);
 }
 
-module.exports = { loadPlatformConfig, publicPlatformConfig, savePlatformConfig, DUMMY, CONFIG_ID };
+// DUMMY blijft als alias geëxporteerd voor bestaande imports/tests.
+module.exports = { loadPlatformConfig, publicPlatformConfig, savePlatformConfig, DEFAULTS, DUMMY: DEFAULTS, CONFIG_ID };

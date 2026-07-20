@@ -1800,10 +1800,10 @@ ${canManage ? `
         api("/api/admin/tenant-integrations").catch(() => ({ rows: [], total: 0, connected: 0 })),
       ]);
       const cfg = d.config || {};
-      const statusPill = ok => ok ? badge("Geconfigureerd","badge-green") : badge("Dummy","badge-orange");
+      const statusPill = ok => ok ? badge("Live","badge-green") : badge("Niet geconfigureerd","badge-orange");
       c.innerHTML = `
 <div class="sa-card">
-  <div class="sa-card-head"><div class="sa-card-title">Integraties &amp; API-sleutels</div><div class="sa-card-sub">Beheer hier de echte sleutels. Standaard staan dummy-waarden ingesteld zodat niets crasht.</div></div>
+  <div class="sa-card-head"><div class="sa-card-title">Integraties &amp; API-sleutels</div><div class="sa-card-sub">Elke integratie is volwaardig gebouwd en gaat live zodra de echte sleutel is ingevuld. Zonder sleutel draait het onderdeel veilig in een duidelijk gemarkeerde mock- of logmodus · nooit stil half-live.</div></div>
   <div style="padding:16px;display:flex;flex-direction:column;gap:8px">
     <div style="font-size:12px;color:var(--wf-yellow);background:var(--wf-yellow-l);border:1px solid var(--wf-yellow-l);border-radius:8px;padding:10px 12px">
       Geheime sleutels worden gemaskeerd getoond. Laat een veld op de gemaskeerde waarde staan om het ongewijzigd te laten; typ een nieuwe waarde om te overschrijven.
