@@ -82,6 +82,14 @@ function sendJson(res, status, payload, extraHeaders = {}) {
     ...extraHeaders
   });
   res.end(JSON.stringify(payload));
+  // Idempotency-Key (h41): een route die door de server "gearmed" is legt zijn
+  // succesvolle response vast, zodat een herhaalde mutatie met dezelfde sleutel
+  // deze response teruggespeeld krijgt in plaats van opnieuw uit te voeren.
+  if (res.wfpIdem) {
+    try { require("./idempotency").recordResponse(res.wfpIdem.store, res.wfpIdem.cacheKey, { status, payload }); }
+    catch (err) { /* vastleggen mag een geslaagde request nooit laten falen */ }
+    res.wfpIdem = null;
+  }
 }
 
 function readBody(req, maxBytes = 2_000_000) {

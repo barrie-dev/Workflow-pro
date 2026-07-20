@@ -316,6 +316,7 @@ const { sendMail, setRuntimeConfig, isMailLive, recentMail, setMailSink } = requ
 const { pruneAudit } = require("./platform/audit-log");
 const { ConsoleTelemetry } = require("./infrastructure/telemetry/console-telemetry");
 const { routePattern } = require("./lib/route-pattern");
+const idempotency = require("./lib/idempotency");
 /**
  * Telemetrie (handover 4.7). Console-adapter schrijft gestructureerde JSON naar
  * stdout, wat elk container-platform verzamelt zonder agent of account. Een
@@ -2325,6 +2326,22 @@ const httpServer = http.createServer(async (req, res) => {
       assertModuleEnabled(store, user, tenant, action);
       // Alleen-lezen-handhaving: read:X-gebruikers kunnen niets muteren.
       assertNotReadOnly(user, action, req.method);
+
+      // ── Idempotency-Key (h41): herhaalde mutatie met dezelfde sleutel
+      //    creëert geen duplicaat maar krijgt de eerdere response terug ──
+      if (["POST", "PATCH", "PUT", "DELETE"].includes(req.method)) {
+        const idemKey = idempotency.idempotencyKeyFrom(req);
+        if (idemKey) {
+          const cacheKey = idempotency.cacheKeyFor({ tenantId, actorId: user.id, method: req.method, path: url.pathname, key: idemKey });
+          const replay = idempotency.findReplay(store, cacheKey);
+          if (replay) {
+            sendJson(res, replay.status, JSON.parse(replay.body), { "Idempotency-Replayed": "true" });
+            return;
+          }
+          // Arm de response: sendJson legt een 2xx-resultaat vast onder deze sleutel.
+          res.wfpIdem = { store, cacheKey };
+        }
+      }
 
       // ── Mona AI-assistent (route-naam boden blijft voor compatibiliteit) (beschikbaar voor elke ingelogde tenant-gebruiker;
       //    de tools binnen Mona bewaken zelf de data-rechten) ──
@@ -6852,6 +6869,16 @@ function startServer() {
   };
   setTimeout(runAuditRetention, 120 * 1000).unref();
   setInterval(runAuditRetention, 24 * 60 * 60 * 1000).unref();
+
+  // Idempotency-sleutels (h41) verlopen na 24u; ruim ze dagelijks op.
+  const runIdempotencyPrune = () => {
+    try {
+      const removed = idempotency.pruneExpired(store);
+      if (removed > 0) console.log(`  Idempotent: ${removed} verlopen sleutel(s) opgeruimd`);
+    } catch (e) { console.error("[idempotency] opruimen mislukt:", e.message); }
+  };
+  setTimeout(runIdempotencyPrune, 180 * 1000).unref();
+  setInterval(runIdempotencyPrune, 24 * 60 * 60 * 1000).unref();
 
   // Metrics periodiek uitschrijven (handover 4.7). Eén regel per venster met
   // count/avg/min/max, zodat een collector of logdrain ze kan oppikken zonder

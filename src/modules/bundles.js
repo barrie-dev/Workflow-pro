@@ -104,7 +104,10 @@ function seedDefaults(store) {
     for (const def of DEFAULT_BUNDLES) {
       store.insert(COLLECTION, normalizeBundle({ ...def, submodules: withAllSubmodules(def.modules) }));
     }
-    return;
+    // GEEN vroege return: de backfill hieronder moet óók op een verse seed
+    // draaien. Voorheen stopte dit hier, waardoor elke NIEUWE omgeving de
+    // nagekomen modules (bv. catalog in Business) stilletjes miste · bestaande
+    // omgevingen hadden ze wél. Gevonden door de e2e-suite op verse data.
   }
   // Backfill: standaardbundels die vóór de 'popular'-introductie geseed werden
   // hebben nog geen vlag. Vul de default éénmalig in (alleen als nog niet gezet),

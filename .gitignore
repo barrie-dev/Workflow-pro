@@ -9,6 +9,8 @@ yarn-error.log*
 
 data/backups/
 data/reports/
+# Lokale object-storage van de filesystem-adapter (F-08): runtime-uploads, geen code.
+data/files/
 .tmp*/
 *.log
 

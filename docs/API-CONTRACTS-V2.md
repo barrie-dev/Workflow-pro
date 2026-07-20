@@ -27,6 +27,16 @@ keuze om te herladen. `currentVersion` zit in de response.
 **Lege staat:** elke lijst kan `[]` teruggeven. Dat is een normale toestand met
 een uitleg plus de primaire actie, geen foutmelding.
 
+**Idempotency-Key (h41):** elke muterende call (`POST`/`PATCH`/`PUT`/`DELETE`)
+onder `/api/tenants/...` mag een `Idempotency-Key`-header meesturen (max 200
+tekens, kies bv. een UUID per gebruikersactie). Een herhaalde call met dezelfde
+sleutel creëert geen duplicaat: de server speelt de eerste succesvolle response
+byte-gelijk terug, herkenbaar aan de responseheader `Idempotency-Replayed: true`.
+Sleutels zijn gescopet op tenant + gebruiker + methode + pad en verlopen na 24
+uur. Fouten (4xx/5xx) worden niet vastgelegd: een retry na een fout voert de
+call gewoon opnieuw uit. Gebruik dit standaard bij "opslaan"-knoppen en bij
+automatische retries na een netwerkfout.
+
 ---
 
 ## 1. Catalogus en prijzen (E13) · recht `catalog`
