@@ -50,7 +50,18 @@ const config = {
   // Geen providernaam, geen provider-specifieke sleutels.
   database: {
     url: process.env.DATABASE_URL || "",
-    ssl: String(process.env.DATABASE_SSL || "").toLowerCase() === "true",
+    // TLS: expliciet via DATABASE_SSL=true|false; zonder expliciete keuze
+    // automatisch AAN voor elke niet-lokale host. Managed databases (Supabase,
+    // Azure, RDS) weigeren onversleutelde verbindingen · zonder deze detectie
+    // crasht een productie-boot op "no encryption" terwijl dev gewoon werkt.
+    ssl: (() => {
+      const explicit = String(process.env.DATABASE_SSL || "").toLowerCase();
+      if (explicit === "true") return true;
+      if (explicit === "false") return false;
+      const url = process.env.DATABASE_URL || "";
+      if (/sslmode=(require|prefer|verify)/i.test(url)) return true;
+      return /^postgres(ql)?:\/\//.test(url) && !/@(localhost|127\.0\.0\.1|host\.docker\.internal|db)([:/]|$)/.test(url);
+    })(),
     maxConnections: Number(process.env.DATABASE_MAX_CONNECTIONS) || 10,
     statementTimeoutMs: Number(process.env.DATABASE_STATEMENT_TIMEOUT_MS) || 15000
   },

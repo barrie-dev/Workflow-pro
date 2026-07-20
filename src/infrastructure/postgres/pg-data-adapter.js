@@ -45,9 +45,15 @@ class PostgresDataAdapter {
    * @param {boolean} [opts.ssl]            TLS afdwingen (managed providers)
    * @param {object} [opts.pool]            injecteerbare pool (tests)
    */
-  constructor({ connectionString, ssl = false, pool = null, maxConnections = 10, statementTimeoutMs = 15000 } = {}) {
+  constructor({ connectionString, ssl = false, pool = null, maxConnections = 10, statementTimeoutMs = 15000, initialImport = null } = {}) {
     this.name = "postgres";
     this.connectionString = connectionString || "";
+    // Eenmalige data-overname bij een LEGE database: een injecteerbare functie
+    // die de bestaande dataset uit een vorige opslag oplevert, of null. Welke
+    // opslag dat is beslist de samensteller (data-adapters.js) · deze adapter
+    // blijft providerblind. Alleen gebruikt als platform_state nog geen rij
+    // heeft; daarna is deze adapter de enige waarheid.
+    this.initialImport = initialImport;
     if (!this.connectionString && !pool) {
       const e = new Error("DATABASE_URL is vereist voor de PostgreSQL-adapter");
       e.status = 500; e.code = "DATABASE_URL_MISSING";
@@ -104,13 +110,31 @@ class PostgresDataAdapter {
       this.ready = true;
       return rows[0].data;
     }
-    const initial = seed();
+    // Lege database: eerst proberen de bestaande dataset over te nemen uit de
+    // vorige opslag (strangler-cutover zonder dataverlies) · pas als dat niets
+    // oplevert een verse seed. Zonder deze stap zou een productie-omschakeling
+    // naar deze adapter opstarten met een lege omgeving NAAST de echte data.
+    let initial = null;
+    let source = "seed";
+    if (this.initialImport) {
+      try {
+        const imported = await this.initialImport();
+        if (imported && Array.isArray(imported.tenants) && imported.tenants.length) {
+          initial = imported;
+          source = `legacy-import (${imported.tenants.length} tenant(s))`;
+        }
+      } catch (e) {
+        console.error(`[pg-adapter] legacy-import mislukt · verse seed als terugval: ${e.message}`);
+      }
+    }
+    if (!initial) initial = seed();
     const inserted = await this.pool.query(
       `INSERT INTO ${STATE_TABLE} (id, data, revision) VALUES ($1, $2, 1)
        ON CONFLICT (id) DO NOTHING
        RETURNING revision`, [STATE_ID, initial]);
     this.revision = inserted.rows.length ? Number(inserted.rows[0].revision) : 1;
     this.ready = true;
+    console.log(`  Data      : platform_state geïnitialiseerd vanuit ${source}`);
     return initial;
   }
 

@@ -108,11 +108,21 @@ function createDataAdapter() {
     // Lazy require: de pg-driver wordt alleen geladen als hij echt gebruikt
     // wordt, zodat een JSON-only omgeving geen database-dependency nodig heeft.
     const { PostgresDataAdapter } = require("../infrastructure/postgres/pg-data-adapter");
+    // Cutover zonder dataverlies: staat er nog een geconfigureerde legacy
+    // Supabase-bridge naast (SUPABASE_URL + service key), dan wordt die
+    // dataset ÉÉN keer overgenomen wanneer platform_state nog leeg is. De
+    // bridge blijft daarbij onaangeroerd (alleen lezen) · rollback is dus
+    // STORAGE_ADAPTER=supabase terugzetten.
+    const legacy = new SupabasePostgresAdapter();
+    const initialImport = (legacy.supabaseUrl && legacy.serviceRoleKey)
+      ? async () => legacy.load(() => null)
+      : null;
     return new PostgresDataAdapter({
       connectionString: config.database.url,
       ssl: config.database.ssl,
       maxConnections: config.database.maxConnections,
       statementTimeoutMs: config.database.statementTimeoutMs,
+      initialImport,
     });
   }
   if (kind === "supabase") return new SupabasePostgresAdapter();

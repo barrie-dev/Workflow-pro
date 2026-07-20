@@ -101,6 +101,38 @@ escaleer, want het gaat om compliance-data.
 
 ---
 
+## Symptoom: deploy faalt met "Exited with status 1"
+
+De app weigert bewust te starten wanneer de productieconfiguratie onvolledig
+is (fail-fast in `src/lib/config.js`). Het deploy-log bevat dan letterlijk
+`Production config blokkeert start: ...` met de ontbrekende variabelen.
+
+1. Open het deploy-log en zoek die regel. De lijst is compleet · alles in één
+   keer zetten, niet per stuk proberen.
+2. Vereist in productie: `APP_URL` (https), `STORAGE_ADAPTER=postgres`,
+   `DATABASE_URL` (standaard PostgreSQL-URL), `JWT_SECRET` en
+   `ENCRYPTION_KEY` (beide ≥ 32 tekens, geen defaults).
+3. TLS naar de database wordt automatisch aangezet voor elke niet-lokale host
+   (managed databases weigeren onversleuteld). Overrulen kan expliciet met
+   `DATABASE_SSL=true|false`.
+
+### Cutover van de legacy Supabase-bridge naar de pg-adapter
+
+Bij de EERSTE start op een lege `platform_state` neemt de adapter de
+bestaande dataset automatisch over van de legacy-bridge, mits `SUPABASE_URL`
+en `SUPABASE_SERVICE_ROLE_KEY` nog gezet zijn. De bridge wordt daarbij alleen
+GELEZEN. In het boot-log staat welke bron gebruikt is:
+`Data : platform_state geïnitialiseerd vanuit legacy-import (n tenant(s))`
+· staat er "vanuit seed" terwijl je bestaande data verwachtte, stop dan en
+controleer de Supabase-variabelen vóór er iemand in de verse omgeving werkt
+(de legacy-data is niet weg; de overname gebeurt alsnog zodra je
+`platform_state` leegt en herstart).
+
+Rollback van de hele cutover = `STORAGE_ADAPTER=supabase` terugzetten: de
+bridge-data is nooit gewijzigd.
+
+---
+
 ## Migratie en rollback
 
 ### Schemawijzigingen
