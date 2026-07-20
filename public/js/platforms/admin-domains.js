@@ -798,6 +798,112 @@
     });
   }
 
+  /* ============================================================
+     7. Werkbon v2 · reviewflow (E07/h25)
+     Decorator op het bestaande werkbonnenscherm: de legacy-renderer
+     blijft onaangeroerd; wij zetten er een reviewpaneel boven.
+     Ingediende werkbonnen → goedkeuren of afwijzen; goedgekeurde →
+     correctieboeking (direct wijzigen is bevroren, contract E07).
+     ============================================================ */
+  // Legacy-statussen die canoniek "ingediend" betekenen (zie work-orders.js).
+  const WO_SUBMITTED = new Set(["voltooid", "afgewerkt", "klaar", "submitted", "to_review"]);
+  const WO_FROZEN = new Set(["approved", "locked", "partially_invoiced", "invoiced"]);
+
+  async function injectWorkorderReview() {
+    const content = A.content();
+    if (!content || document.getElementById("woReviewPanel")) return;
+    let data;
+    try { data = await api("GET", "/workorders"); }
+    catch (_) { return; }   // het legacy-scherm meldt zijn eigen fouten al
+    const all = data.workorders || [];
+    const toReview = all.filter(w => WO_SUBMITTED.has(String(w.status || "").toLowerCase()));
+    const frozen = all.filter(w => WO_FROZEN.has(String(w.status || "").toLowerCase()));
+    if (!toReview.length && !frozen.length) return;   // niets te doen → geen ruis
+
+    const panel = document.createElement("div");
+    panel.id = "woReviewPanel";
+    panel.className = "adm-card";
+    panel.innerHTML = `
+      <div class="adm-card-header"><div>
+        <h2 class="adm-card-title">${esc(t("dom.wo.review", "Werkbon-review"))}</h2>
+        <p class="adm-form-hint">${esc(t("dom.wo.reviewSub", "Ingediende werkbonnen goedkeuren vóór facturatie · na goedkeuring wijzig je enkel via een correctieboeking."))}</p>
+      </div></div>
+      <div class="adm-card-body">
+        ${toReview.length ? `<div class="adm-table-wrap"><table class="adm-table"><thead><tr>
+          <th>${esc(t("dom.wo.number", "Nummer"))}</th><th>${esc(t("dom.wo.title", "Titel"))}</th>
+          <th>${esc(t("dom.wo.date", "Datum"))}</th><th></th></tr></thead>
+        <tbody>${toReview.map(w => `<tr>
+          <td>${esc(w.number || "-")}</td><td>${esc(w.title || "")}</td><td>${fmtDate(w.date)}</td>
+          <td class="adm-form-row">
+            <button class="adm-btn adm-btn-sm adm-btn-primary" data-wo-approve="${esc(w.id)}">${esc(t("dom.wo.approve", "Goedkeuren"))}</button>
+            <button class="adm-btn adm-btn-sm" data-wo-reject="${esc(w.id)}">${esc(t("dom.wo.reject", "Afwijzen"))}</button>
+          </td></tr>`).join("")}</tbody></table></div>`
+        : `<p class="adm-form-hint">✅ ${esc(t("dom.wo.nothingToReview", "Geen werkbonnen te reviewen."))}</p>`}
+        ${frozen.length ? `<p class="adm-form-hint" style="margin-top:12px">${esc(t("dom.wo.frozenHint", "Goedgekeurde werkbonnen zijn bevroren"))}:
+          ${frozen.slice(0, 8).map(w => `<button class="adm-btn adm-btn-sm" data-wo-correct="${esc(w.id)}">${esc(w.number || w.id)} · ${esc(t("dom.wo.correct", "correctie"))}</button>`).join(" ")}</p>` : ""}
+      </div>`;
+    content.insertBefore(panel, content.firstChild);
+
+    panel.querySelectorAll("[data-wo-approve]").forEach(b => b.addEventListener("click", async () => {
+      try {
+        await api("POST", `/workorders/${b.dataset.woApprove}/submit`, {}).catch(() => {});  // legacy → submitted (idempotent pad)
+        await api("POST", `/workorders/${b.dataset.woApprove}/review`, { decision: "approve", note: "" });
+        toast(t("dom.wo.approved", "Werkbon goedgekeurd")); A.views.workorders();
+      } catch (err) { toast(err.message, "error"); }
+    }));
+    panel.querySelectorAll("[data-wo-reject]").forEach(b => b.addEventListener("click", async () => {
+      const note = window.prompt(t("dom.wo.rejectWhy", "Reden van afwijzing (gaat naar de technieker):"));
+      if (note === null) return;
+      try {
+        await api("POST", `/workorders/${b.dataset.woReject}/submit`, {}).catch(() => {});
+        await api("POST", `/workorders/${b.dataset.woReject}/review`, { decision: "reject", note });
+        toast(t("dom.wo.rejected", "Teruggestuurd voor correctie")); A.views.workorders();
+      } catch (err) { toast(err.message, "error"); }
+    }));
+    panel.querySelectorAll("[data-wo-correct]").forEach(b => b.addEventListener("click", () => openWorkorderCorrection(b.dataset.woCorrect)));
+  }
+
+  function openWorkorderCorrection(woId) {
+    drawerBody().innerHTML = `
+      <h3>${esc(t("dom.wo.correctionTitle", "Correctieboeking"))}</h3>
+      <p class="adm-form-hint">${esc(t("dom.wo.correctionSub", "Een goedgekeurde werkbon wijzig je nooit rechtstreeks: elke correctie blijft auditbaar met reden, tijdstip en actor."))}</p>
+      <div class="adm-form-section">
+        <div class="adm-form-row">
+          <div class="adm-form-group"><label>${esc(t("dom.wo.corrType", "Type"))}</label>
+            <select id="corrType" class="adm-input">
+              <option value="hours">${esc(t("dom.wo.corrHours", "Uren"))}</option>
+              <option value="material">${esc(t("dom.wo.corrMaterial", "Materiaal"))}</option>
+              <option value="equipment">${esc(t("dom.wo.corrEquipment", "Materieel"))}</option>
+              <option value="other">${esc(t("dom.wo.corrOther", "Anders"))}</option>
+            </select></div>
+          <div class="adm-form-group"><label>${esc(t("dom.wo.corrQty", "Aantal / delta"))}</label>
+            <input id="corrQty" type="number" step="0.01" class="adm-input"></div>
+        </div>
+        <div class="adm-form-group"><label>${esc(t("dom.wo.corrReason", "Reden"))} *</label>
+          <input id="corrReason" class="adm-input" placeholder="${esc(t("dom.wo.corrReasonPh", "bv. extra uren nagemeld door de klant"))}"></div>
+      </div>
+      <div class="adm-form-actions">
+        <button class="adm-btn adm-btn-primary" id="corrSave">${esc(t("dom.wo.corrSave", "Correctie boeken"))}</button>
+        <button class="adm-btn" id="corrCancel">${esc(t("dom.close", "Sluiten"))}</button>
+      </div>`;
+    A.openDrawer();
+    document.getElementById("corrCancel")?.addEventListener("click", () => A.closeDrawer());
+    document.getElementById("corrSave")?.addEventListener("click", async () => {
+      try {
+        await api("POST", `/workorders/${woId}/corrections`, {
+          type: document.getElementById("corrType").value,
+          qty: Number(document.getElementById("corrQty").value) || null,
+          reason: document.getElementById("corrReason").value,
+        });
+        toast(t("dom.wo.corrBooked", "Correctie geboekt · auditbaar vastgelegd"));
+        A.closeDrawer(); A.views.workorders();
+      } catch (err) {
+        // REASON_REQUIRED verdient een gericht bericht, geen generieke fout.
+        toast(err.code === "REASON_REQUIRED" ? t("dom.wo.corrNeedsReason", "Een correctie vereist een reden") : err.message, "error");
+      }
+    });
+  }
+
   // ── Registratie in de gedeelde registry ─────────────────────
   Object.assign(A.views, {
     catalog: renderCatalog,
@@ -807,4 +913,15 @@
     webhooks: renderWebhooks,
     lists: renderLists,
   });
+
+  // Decorator op het bestaande werkbonnenscherm: eerst de legacy-renderer,
+  // daarna het reviewpaneel erbovenop. De legacy-code blijft onaangeroerd.
+  const legacyWorkorders = A.views.workorders;
+  if (typeof legacyWorkorders === "function") {
+    A.views.workorders = async function () {
+      const result = await legacyWorkorders.apply(this, arguments);
+      try { await injectWorkorderReview(); } catch (_) { /* review is een verrijking, nooit een blokkade */ }
+      return result;
+    };
+  }
 }());
