@@ -16,6 +16,7 @@
 
 const { a1Status } = require("../modules/posted-workers");
 const { incidentDeadline } = require("../modules/incidents");
+const { dimonaRegister } = require("../modules/dimona");
 const { isModuleEnabled } = require("../modules/entitlements");
 
 const COMPLIANCE_STATES = ["missing", "pending", "valid", "expiring", "expired", "rejected"];
@@ -70,6 +71,24 @@ function buildComplianceOverview(store, tenant, now = new Date()) {
     categories.push({ key: "ciaw", enabled: true, counts, attention });
   } else {
     categories.push({ key: "ciaw", enabled: false, counts: emptyCounts(), attention: [] });
+  }
+
+  // ── Dimona (RSZ · verplichte aangifte in/uit dienst) ───────────────────────
+  // Geldt voor ELKE werkgever, dus geen module-gate. Hiaten = actieve interne
+  // medewerkers zonder (geslaagde) Dimona-IN of uit dienst zonder OUT.
+  {
+    const counts = emptyCounts();
+    const attention = [];
+    const { rows, gaps } = dimonaRegister(store, tenant.id, today);
+    for (const r of rows) {
+      if (r.status === "none") continue;                    // telt via gaps als het moet
+      counts[r.status === "accepted" || r.status === "submitted" ? "valid" : (r.status === "failed" || r.status === "rejected" ? "rejected" : "pending")] += 1;
+    }
+    for (const gap of gaps) {
+      counts.missing += 1;
+      if (attention.length < 10) attention.push({ type: "dimona", id: gap.employeeId, label: `${gap.name} · ${gap.reason}`, status: "missing" });
+    }
+    categories.push({ key: "dimona", enabled: true, counts, attention });
   }
 
   // ── Werkongevallen ─────────────────────────────────────────────────────────

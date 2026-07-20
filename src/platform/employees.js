@@ -26,6 +26,7 @@
 
 const { newUlid } = require("./events");
 const { round2 } = require("../modules/be-locale");
+const { normalizeInsz, validInsz } = require("../modules/ciaw");
 
 const EMP_STATUSES = ["candidate", "active", "temporarily_absent", "left", "archived"];
 const EMP_TRANSITIONS = {
@@ -40,6 +41,15 @@ const PLANNABLE_STATUSES = ["active"];
 const WEEKDAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 
 function clean(v) { return String(v == null ? "" : v).trim(); }
+
+// INSZ is optioneel, maar een ingevuld nummer moet de mod-97-controle halen ·
+// een fout rijksregisternummer laat elke wettelijke aangifte (Dimona/CIAW) falen.
+function normalizeEmployeeInsz(value) {
+  const insz = normalizeInsz(value);
+  if (!insz) return "";
+  if (!validInsz(insz)) { const e = new Error("Ongeldig INSZ/rijksregisternummer"); e.status = 400; e.code = "INVALID_INSZ"; throw e; }
+  return insz;
+}
 function num(v, dflt = 0) { const n = Number(v); return Number.isFinite(n) ? n : dflt; }
 function isoDate(v) { return /^\d{4}-\d{2}-\d{2}$/.test(clean(v)) ? clean(v) : null; }
 function isTime(v) { return /^\d{1,2}:\d{2}$/.test(clean(v)); }
@@ -167,6 +177,9 @@ function normalizeEmployee(payload, existing = null) {
     teamId: clean(merged.teamId) || null,
     planningGroups: (Array.isArray(merged.planningGroups) ? merged.planningGroups : []).map(clean).filter(Boolean).slice(0, 10),
     jobTitle: clean(merged.jobTitle || merged.function),
+    // INSZ/rijksregisternummer · nodig voor de wettelijke aangiftes (Dimona,
+    // CIAW). Optioneel op de fiche, maar als het er staat moet het geldig zijn.
+    insz: normalizeEmployeeInsz(merged.insz),
     activeFrom, activeTo,
     workSchedule: normalizeSchedule(merged.workSchedule),
     costRates: normalizeRates(merged.costRates),

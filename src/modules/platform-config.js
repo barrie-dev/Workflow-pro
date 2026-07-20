@@ -50,6 +50,11 @@ const DUMMY = {
     apiKey: "ciaw_DUMMY_0000000000",
     baseHost: "api.checkinatwork.be",
   },
+  dimona: {
+    provider: "mock",                 // mock | rsz (REST WS · na certificatie)
+    clientId: "",
+    clientSecret: "",
+  },
   openai: {
     apiKey: "sk-DUMMY000000000000000000",   // echte OpenAI-key → Mona AI live; anders mock-modus
     model: "gpt-4o-mini",                    // instelbaar bij go-live (bv. gpt-4o voor meer kwaliteit)
@@ -90,6 +95,11 @@ function envOverlay() {
       apiKey: process.env.CIAW_API_KEY || undefined,
       baseHost: process.env.CIAW_BASE_HOST || undefined,
     },
+    dimona: {
+      provider: process.env.DIMONA_PROVIDER || undefined,
+      clientId: process.env.DIMONA_CLIENT_ID || undefined,
+      clientSecret: process.env.DIMONA_CLIENT_SECRET || undefined,
+    },
     openai: {
       apiKey: process.env.OPENAI_API_KEY || undefined,
       model: process.env.OPENAI_MODEL || undefined,
@@ -120,7 +130,7 @@ function loadPlatformConfig(store) {
   const stored = storedRow(store) || {};
   // dummy ← env ← stored
   const withEnv = deepMerge(DUMMY, envOverlay());
-  const merged = deepMerge(withEnv, { stripe: stored.stripe, peppol: stored.peppol, email: stored.email, kbo: stored.kbo, openai: stored.openai, ciaw: stored.ciaw });
+  const merged = deepMerge(withEnv, { stripe: stored.stripe, peppol: stored.peppol, email: stored.email, kbo: stored.kbo, openai: stored.openai, ciaw: stored.ciaw, dimona: stored.dimona });
   // Add-on-overrides (naam/prijs/omschrijving/actief per add-on) · superadmin-bewerkbaar.
   merged.addons = stored.addons || {};
   // Plan-prijs-overrides (baseAnnual/seatAnnual/includedSeats per bundel-key).
@@ -207,6 +217,12 @@ function publicPlatformConfig(store) {
       baseHost: cfg.ciaw.baseHost,
       configured: cfg.ciaw.provider !== "mock" && isReal(cfg.ciaw.apiKey),
     },
+    dimona: {
+      provider: (cfg.dimona || {}).provider || "mock",
+      clientId: (cfg.dimona || {}).clientId || "",
+      clientSecret: mask((cfg.dimona || {}).clientSecret),
+      configured: (cfg.dimona || {}).provider !== "mock" && isReal((cfg.dimona || {}).clientId) && isReal((cfg.dimona || {}).clientSecret),
+    },
     openai: {
       apiKey: mask(cfg.openai.apiKey),
       model: cfg.openai.model,
@@ -231,6 +247,7 @@ function savePlatformConfig(store, patch, actor) {
     email: { ...(current.email || {}) },
     kbo: { ...(current.kbo || {}) },
     ciaw: { ...(current.ciaw || {}) },
+    dimona: { ...(current.dimona || {}) },
     openai: { ...(current.openai || {}) },
     addons: { ...(current.addons || {}) },
     planPrices: { ...(current.planPrices || {}) },
@@ -293,6 +310,7 @@ function savePlatformConfig(store, patch, actor) {
   apply("email", ["provider", "apiKey", "from"]);
   apply("kbo", ["provider", "apiKey"]);
   apply("ciaw", ["provider", "apiKey", "baseHost"]);
+  apply("dimona", ["provider", "clientId", "clientSecret"]);
   apply("openai", ["apiKey", "model"]);
 
   const existing = storedRow(store);

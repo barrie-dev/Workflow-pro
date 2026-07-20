@@ -213,7 +213,7 @@ const { lookupKboResolve } = require("./modules/kbo");
 const { createCustomerInvoice, createCreditNote, workorderInvoicePayload } = require("./modules/customer-invoicing");
 const { runPaymentReminders, reminderPolicy } = require("./modules/payment-reminders");
 const { normalizeAppointment, runAppointmentReminders } = require("./modules/appointments");
-const { normalizeIncident, incidentsToCsv } = require("./modules/incidents");
+const { normalizeIncident, incidentsToCsv, incidentDeadline } = require("./modules/incidents");
 const { INQUIRY_STATUSES, ensureIntake, intakeAddress, newIntakeToken, parseInboundPayload, resolveIntakeTenant, createInquiry } = require("./modules/inbox");
 const { estimateFromQuestion } = require("./modules/estimator");
 const { emitDomainEvent, listOutbox } = require("./platform/events");
@@ -340,6 +340,7 @@ const { verifyStripeSignature } = require("./modules/stripe-webhook");
 const { seedDemoData, clearDemoData } = require("./modules/demo-seed");
 const { buildUbl, validatePeppol, sendPeppolInvoice, peppolTransportReadiness } = require("./modules/peppol-invoice");
 const quoteSigning = require("./modules/quote-signing");
+const { submitDimona, dimonaReadiness, dimonaRegister } = require("./modules/dimona");
 const { submitCheckin, buildPresenceRegister } = require("./modules/ciaw");
 const { listPostedWorkers, createPostedWorker, updatePostedWorker, deletePostedWorker, submitLimosa } = require("./modules/posted-workers");
 const tpl = require("./modules/templates");
@@ -5682,6 +5683,31 @@ const httpServer = http.createServer(async (req, res) => {
         sendJson(res, 201, { ok: true, incident: row });
         return;
       }
+      // Publiato-dossier (Fedris · arbeidsongevallen-aangifte): het portaal
+      // heeft geen publieke API, dus dit levert het complete overtypbare
+      // dossier + de wettelijke deadline-status uit incidentDeadline.
+      const incPubliatoMatch = action.match(/^incidents\/([^/]+)\/publiato$/);
+      if (incPubliatoMatch && req.method === "GET") {
+        assertCan(user, "incidents");
+        const inc = store.list("incidents", tenantId).find(i => i.id === incPubliatoMatch[1]);
+        if (!inc) return sendJson(res, 404, { ok: false, error: "Werkongeval niet gevonden" });
+        const emp = inc.employeeId ? store.list("employees", tenantId).find(e => e.id === inc.employeeId) : null;
+        const dl = incidentDeadline(inc);
+        sendJson(res, 200, { ok: true, deadline: dl, dossier: {
+          werkgever: {
+            naam: tenant.name || "", rszNummer: (tenant.compliance && tenant.compliance.rszEmployerId) || "",
+            ondernemingsnummer: (tenant.invoiceProfile && (tenant.invoiceProfile.companyNumber || tenant.invoiceProfile.vat)) || "",
+          },
+          slachtoffer: { naam: inc.employeeName, insz: (emp && emp.insz) || "", functie: (emp && emp.jobTitle) || "" },
+          ongeval: {
+            datum: inc.date, uur: inc.time || "", plaats: inc.location || "",
+            ernst: inc.severity, omschrijving: inc.description, getuigen: inc.witnesses || "",
+          },
+          status: { verzekeraarIngelicht: !!inc.insurerReportedAt, verzekeraarIngelichtOp: inc.insurerReportedAt || null,
+            deadlineVerzekeraar: dl.deadline, ernstigOngeval: dl.serious, onmiddellijkMelden: dl.immediate },
+        } });
+        return;
+      }
       const incMatch = action.match(/^incidents\/([^/]+)$/);
       if (incMatch && req.method === "PATCH") {
         assertCan(user, "incidents");
@@ -6305,6 +6331,43 @@ const httpServer = http.createServer(async (req, res) => {
         sendJson(res, 201, { ok: true, employee: row });
         return;
       }
+      // ── Dimona (RSZ · verplichte aangifte in/uit dienst) ─────────────────────
+      const empDimonaMatch = action.match(/^employee_records\/([^/]+)\/dimona$/);
+      if (empDimonaMatch && req.method === "POST") {
+        assertCan(user, "employees");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req).catch(() => ({}));
+        const emp = employeeRepo.findById(tenantId, empDimonaMatch[1]);
+        if (!emp) return sendJson(res, 404, { ok: false, error: "Werknemer niet gevonden" });
+        const linkedUser = emp.userId ? store.get("users", emp.userId) : null;
+        const result = await submitDimona({
+          config: loadPlatformConfig(store), tenant, employee: emp, linkedUser,
+          type: body.type, date: body.date,
+        }, { requireLive: config.isProduction && loadPlatformConfig(store).dimona?.provider !== "mock" });
+        if (result.ok) {
+          const entry = { type: result.type, date: result.date, status: result.status, reference: result.reference, periodId: result.periodId || null, at: new Date().toISOString(), live: result.live, by: user.email };
+          store.update("employees", emp.id, {
+            dimona: entry,
+            dimonaHistory: [...(emp.dimonaHistory || []), entry].slice(-20),
+          });
+          store.audit({ actor: user.email, tenantId, action: "dimona_declared", area: "employees", detail: `${emp.name} · ${result.type.toUpperCase()} ${result.date} · ${result.reference}` });
+          emitDomainEvent(store, { tenantId, eventType: "employee.dimona_declared", aggregateType: "employee", aggregateId: emp.id, actor: user.email, correlationId: res.wfpRequestId, data: { type: result.type, date: result.date, live: result.live } });
+        } else {
+          // Ook een mislukte poging laat een spoor na · net als bij Peppol.
+          store.update("employees", emp.id, { dimona: { type: result.type, date: result.date, status: result.status, error: result.error, at: new Date().toISOString(), by: user.email } });
+          store.audit({ actor: user.email, tenantId, action: "dimona_failed", area: "employees", detail: `${emp.name} · ${result.error}` });
+        }
+        sendJson(res, result.ok ? 200 : 400, { ok: result.ok, dimona: result });
+        return;
+      }
+      // Aangifteregister + hiaten (actief zonder IN, uit dienst zonder OUT).
+      if (action === "dimona/declarations" && req.method === "GET") {
+        assertCan(user, "employees");
+        const readiness = dimonaReadiness(loadPlatformConfig(store), false);
+        sendJson(res, 200, { ok: true, mode: readiness.live ? "live" : "mock", ...dimonaRegister(store, tenantId) });
+        return;
+      }
+
       // Let op de volgorde: deze literale route moet vóór de generieke
       // item-regex staan, anders wordt "expiring-certificates" als een id gelezen.
       if (action === "employee_records/expiring-certificates" && req.method === "GET") {
