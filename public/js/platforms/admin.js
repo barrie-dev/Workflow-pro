@@ -381,36 +381,56 @@
       </button>
     </div>
 
+    <!-- h49 UX- en navigatiecontract: de 13 canonieke groepen. Rechten- en
+         entitlement-bewust: applyEntitlements verbergt items én lege labels. -->
     <nav class="adm-nav" aria-label="Hoofdnavigatie">
-      <!-- Hoofdmenu -->
-      <div class="adm-nav-label" data-i18n="nav.sec.overview">Overzicht</div>
+      <div class="adm-nav-label" data-i18n="nav.sec.home">Home</div>
       <a class="adm-nav-item active" data-view="dashboard" href="#">
         <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
         <span data-i18n="nav.dashboard">Dashboard</span>
       </a>
+
+      <div class="adm-nav-label" data-i18n="nav.sec.workinbox">Work Inbox</div>
       <a class="adm-nav-item" data-view="actions" href="#">
         <svg viewBox="0 0 24 24"><path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1S9.6 1.84 9.18 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm-1.8 14-3.5-3.5 1.4-1.4 2.1 2.1 5.7-5.7 1.4 1.4-7.1 7.1z"/></svg>
         <span data-i18n="nav.actions">Actiecentrum</span>
         <span class="adm-nav-badge" id="admActionBadge" style="display:none">0</span>
       </a>
-      <a class="adm-nav-item" data-view="workos" href="#">
-        <svg viewBox="0 0 24 24"><path d="M4 3h6c.55 0 1 .45 1 1v6c0 .55-.45 1-1 1H4c-.55 0-1-.45-1-1V4c0-.55.45-1 1-1zm10 0h6c.55 0 1 .45 1 1v3c0 .55-.45 1-1 1h-6c-.55 0-1-.45-1-1V4c0-.55.45-1 1-1zM4 13h6c.55 0 1 .45 1 1v6c0 .55-.45 1-1 1H4c-.55 0-1-.45-1-1v-6c0-.55.45-1 1-1zm10-3h6c.55 0 1 .45 1 1v9c0 .55-.45 1-1 1h-6c-.55 0-1-.45-1-1v-9c0-.55.45-1 1-1z"/></svg>
-        <span>Werkruimte</span>
+      <a class="adm-nav-item" data-view="inbox" href="#">
+        <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 12h-4c0 1.66-1.35 3-3 3s-3-1.34-3-3H5V5h14v10z"/></svg>
+        <span data-i18n="nav.inbox">Klantvragen</span>
+        <span class="adm-nav-badge" id="admInboxBadge" style="display:none">0</span>
       </a>
-      <a class="adm-nav-item" data-view="reports" href="#">
-        <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
-        <span data-i18n="nav.reports">Rapportages</span>
+      <a class="adm-nav-item" data-view="messages" href="#">
+        <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+        <span data-i18n="nav.messages">Berichten</span>
+        <span class="adm-nav-badge" id="admMsgBadge" style="display:none">0</span>
       </a>
+
+      <div class="adm-nav-label" data-i18n="nav.sec.crm">CRM</div>
+      <a class="adm-nav-item" data-view="customers" href="#">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+        <span data-i18n="nav.customers">Klanten</span>
+      </a>
+      <a class="adm-nav-item" data-view="venues" href="#">
+        <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+        <span data-term="venuePlural">Locaties</span>
+      </a>
+
+      <div class="adm-nav-label" data-i18n="nav.sec.sales">Verkoop</div>
+      <a class="adm-nav-item" data-view="offertes" href="#">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13zM10.5 11.5l1.4 1.4 2.6-2.6.7.7-3.3 3.3-2.1-2.1z"/></svg>
+        <span data-i18n="nav.offertes">Offertes</span>
+        <span class="adm-nav-badge" id="admOfferteBadge" style="display:none;background:var(--wf-yellow)">0</span>
+      </a>
+
+      <div class="adm-nav-label" data-i18n="nav.sec.projects">Projecten</div>
       <a class="adm-nav-item" data-view="portfolio" href="#">
         <svg viewBox="0 0 24 24"><path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99l1.5 1.5z"/></svg>
         <span data-i18n="nav.portfolio">Portfolio & capaciteit</span>
       </a>
-      <a class="adm-nav-item" data-view="lists" href="#">
-        <svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
-        <span data-i18n="nav.lists">Lijsten & export</span>
-      </a>
 
-      <div class="adm-nav-label" data-i18n="nav.sec.operations">Operaties</div>
+      <div class="adm-nav-label" data-i18n="nav.sec.planning">Planning</div>
       <a class="adm-nav-item" data-view="planning" href="#">
         <svg viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/></svg>
         <span data-i18n="nav.planning">Planning</span>
@@ -419,9 +439,15 @@
         <svg viewBox="0 0 24 24"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
         <span data-i18n="nav.appointments">Afspraken</span>
       </a>
+
+      <div class="adm-nav-label" data-i18n="nav.sec.work">Werk</div>
       <a class="adm-nav-item" data-view="workorders" href="#">
         <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
         <span data-term="jobPlural">Werkbonnen</span>
+      </a>
+      <a class="adm-nav-item" data-view="workos" href="#">
+        <svg viewBox="0 0 24 24"><path d="M4 3h6c.55 0 1 .45 1 1v6c0 .55-.45 1-1 1H4c-.55 0-1-.45-1-1V4c0-.55.45-1 1-1zm10 0h6c.55 0 1 .45 1 1v3c0 .55-.45 1-1 1h-6c-.55 0-1-.45-1-1V4c0-.55.45-1 1-1zM4 13h6c.55 0 1 .45 1 1v6c0 .55-.45 1-1 1H4c-.55 0-1-.45-1-1v-6c0-.55.45-1 1-1zm10-3h6c.55 0 1 .45 1 1v9c0 .55-.45 1-1 1h-6c-.55 0-1-.45-1-1v-9c0-.55.45-1 1-1z"/></svg>
+        <span>Werkruimte</span>
       </a>
       <a class="adm-nav-item" data-view="clocking" href="#">
         <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
@@ -437,69 +463,12 @@
         <span data-i18n="nav.expenses">Onkosten</span>
         <span class="adm-nav-badge" id="admExpenseBadge" style="display:none">0</span>
       </a>
-      <a class="adm-nav-item" data-view="messages" href="#">
-        <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
-        <span data-i18n="nav.messages">Berichten</span>
-        <span class="adm-nav-badge" id="admMsgBadge" style="display:none">0</span>
-      </a>
-
-      <div class="adm-nav-label" data-i18n="nav.sec.finance">Klanten & Financiën</div>
-      <a class="adm-nav-item" data-view="customers" href="#">
-        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
-        <span data-i18n="nav.customers">Klanten</span>
-      </a>
-      <a class="adm-nav-item" data-view="inbox" href="#">
-        <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 12h-4c0 1.66-1.35 3-3 3s-3-1.34-3-3H5V5h14v10z"/></svg>
-        <span data-i18n="nav.inbox">Klantvragen</span>
-        <span class="adm-nav-badge" id="admInboxBadge" style="display:none">0</span>
-      </a>
-      <a class="adm-nav-item" data-view="offertes" href="#">
-        <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13zM10.5 11.5l1.4 1.4 2.6-2.6.7.7-3.3 3.3-2.1-2.1z"/></svg>
-        <span data-i18n="nav.offertes">Offertes</span>
-        <span class="adm-nav-badge" id="admOfferteBadge" style="display:none;background:var(--wf-yellow)">0</span>
-      </a>
-      <a class="adm-nav-item" data-view="facturen" href="#">
-        <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
-        <span data-i18n="nav.facturen">Facturen</span>
-        <span class="adm-nav-badge adm-nav-badge-red" id="admFacturenBadge" style="display:none">0</span>
-      </a>
-      <a class="adm-nav-item" data-view="billing" href="#">
-        <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>
-        <span data-i18n="nav.billing">Facturatie</span>
-        <span class="adm-nav-badge" id="admInvoiceBadge" style="display:none">0</span>
-      </a>
-
-      <div class="adm-nav-label" data-i18n="nav.sec.resources">Middelen</div>
-      <a class="adm-nav-item" data-view="employees" href="#">
-        <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
-        <span data-i18n="nav.employees">Medewerkers</span>
-      </a>
-      <a class="adm-nav-item" data-view="employee_records" href="#">
-        <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-2 14c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-8V3.5L18.5 8H15z"/></svg>
-        <span data-i18n="nav.employeeRecords">Personeelsfiches</span>
-      </a>
-      <a class="adm-nav-item" data-view="catalog" href="#">
-        <svg viewBox="0 0 24 24"><path d="M21.9 8.89l-1.05-4.37c-.22-.9-1-1.52-1.91-1.52H5.05c-.9 0-1.69.63-1.9 1.52L2.1 8.89c-.24 1.02-.02 2.06.62 2.88.08.11.19.19.28.29V19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-6.94c.09-.09.2-.18.28-.28.64-.82.87-1.87.62-2.89zM13 5.99h2l.55 2.28c.09.66-.4 1.28-1.05 1.28-.53 0-.97-.4-1.03-.92L13 5.99zm-6.5 3.56C6.44 9.87 6 9.55 6 9.02L6.55 6h2l-.48 2.63c-.06.53-.5.92-1.02.92h-.55zM18 19H6v-6.03c.08.01.15.03.23.03.87 0 1.66-.36 2.24-.95.6.6 1.4.95 2.28.95.87 0 1.66-.36 2.24-.95.6.6 1.4.95 2.28.95.08 0 .15-.02.23-.03V19z"/></svg>
-        <span data-i18n="nav.catalog">Catalogus & prijzen</span>
-      </a>
-      <a class="adm-nav-item" data-view="vehicles" href="#">
-        <svg viewBox="0 0 24 24"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></svg>
-        <span data-i18n="nav.vehicles">Wagenpark</span>
-      </a>
-      <a class="adm-nav-item" data-view="stock" href="#">
-        <svg viewBox="0 0 24 24"><path d="M20 6h-2.18c.07-.44.18-.88.18-1.36C18 2.1 15.9 0 13.36 0c-1.3 0-2.48.52-3.35 1.36L9 2.37 7.99 1.36C7.12.52 5.94 0 4.64 0 2.1 0 0 2.1 0 4.64c0 .48.11.92.18 1.36H2c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zM2 20V8h9v12H2zm11 0V8h9v12h-9z"/></svg>
-        <span data-i18n="nav.stock">Stock</span>
-      </a>
-      <a class="adm-nav-item" data-view="venues" href="#">
-        <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-        <span data-term="venuePlural">Locaties</span>
-      </a>
-
-      <div class="adm-nav-label" data-i18n="nav.sec.compliance">Compliance</div>
       <a class="adm-nav-item" data-view="incidents" href="#">
         <svg viewBox="0 0 24 24"><path d="M12 2L1 21h22L12 2zm1 14h-2v2h2v-2zm0-6h-2v4h2v-4z"/></svg>
         <span data-i18n="nav.incidents">Werkongevallen</span>
       </a>
+
+      <div class="adm-nav-label" data-i18n="nav.sec.construction">Bouw</div>
       <a class="adm-nav-item" data-view="ciaw" href="#">
         <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
         <span data-i18n="nav.ciaw">Checkin@Work</span>
@@ -513,7 +482,56 @@
         <span data-i18n="nav.progressClaims">Vorderingsstaten</span>
       </a>
 
-      <div class="adm-nav-label" data-i18n="nav.sec.system">Systeem</div>
+      <div class="adm-nav-label" data-i18n="nav.sec.serviceassets">Service & Assets</div>
+      <a class="adm-nav-item" data-view="vehicles" href="#">
+        <svg viewBox="0 0 24 24"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></svg>
+        <span data-i18n="nav.vehicles">Wagenpark</span>
+      </a>
+
+      <div class="adm-nav-label" data-i18n="nav.sec.inventorypurchase">Voorraad & aankoop</div>
+      <a class="adm-nav-item" data-view="stock" href="#">
+        <svg viewBox="0 0 24 24"><path d="M20 6h-2.18c.07-.44.18-.88.18-1.36C18 2.1 15.9 0 13.36 0c-1.3 0-2.48.52-3.35 1.36L9 2.37 7.99 1.36C7.12.52 5.94 0 4.64 0 2.1 0 0 2.1 0 4.64c0 .48.11.92.18 1.36H2c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zM2 20V8h9v12H2zm11 0V8h9v12h-9z"/></svg>
+        <span data-i18n="nav.stock">Stock</span>
+      </a>
+      <a class="adm-nav-item" data-view="catalog" href="#">
+        <svg viewBox="0 0 24 24"><path d="M21.9 8.89l-1.05-4.37c-.22-.9-1-1.52-1.91-1.52H5.05c-.9 0-1.69.63-1.9 1.52L2.1 8.89c-.24 1.02-.02 2.06.62 2.88.08.11.19.19.28.29V19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-6.94c.09-.09.2-.18.28-.28.64-.82.87-1.87.62-2.89zM13 5.99h2l.55 2.28c.09.66-.4 1.28-1.05 1.28-.53 0-.97-.4-1.03-.92L13 5.99zm-6.5 3.56C6.44 9.87 6 9.55 6 9.02L6.55 6h2l-.48 2.63c-.06.53-.5.92-1.02.92h-.55zM18 19H6v-6.03c.08.01.15.03.23.03.87 0 1.66-.36 2.24-.95.6.6 1.4.95 2.28.95.87 0 1.66-.36 2.24-.95.6.6 1.4.95 2.28.95.08 0 .15-.02.23-.03V19z"/></svg>
+        <span data-i18n="nav.catalog">Catalogus & prijzen</span>
+      </a>
+
+      <div class="adm-nav-label" data-i18n="nav.sec.financegrp">Financiën</div>
+      <a class="adm-nav-item" data-view="facturen" href="#">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+        <span data-i18n="nav.facturen">Facturen</span>
+        <span class="adm-nav-badge adm-nav-badge-red" id="admFacturenBadge" style="display:none">0</span>
+      </a>
+      <a class="adm-nav-item" data-view="payments" href="#">
+        <svg viewBox="0 0 24 24"><path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
+        <span data-i18n="nav.payments">Betalingen</span>
+      </a>
+
+      <div class="adm-nav-label" data-i18n="nav.sec.insights">Inzichten</div>
+      <a class="adm-nav-item" data-view="reports" href="#">
+        <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+        <span data-i18n="nav.reports">Rapportages</span>
+      </a>
+      <a class="adm-nav-item" data-view="lists" href="#">
+        <svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
+        <span data-i18n="nav.lists">Lijsten & export</span>
+      </a>
+
+      <div class="adm-nav-label" data-i18n="nav.sec.system">Instellingen</div>
+      <a class="adm-nav-item" data-view="employees" href="#">
+        <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+        <span data-i18n="nav.employees">Medewerkers</span>
+      </a>
+      <a class="adm-nav-item" data-view="employee_records" href="#">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-2 14c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-8V3.5L18.5 8H15z"/></svg>
+        <span data-i18n="nav.employeeRecords">Personeelsfiches</span>
+      </a>
+      <a class="adm-nav-item" data-view="templates" href="#">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+        <span data-i18n="nav.templates">Documentsjablonen</span>
+      </a>
       <a class="adm-nav-item" data-view="integrations" href="#">
         <svg viewBox="0 0 24 24"><path d="M22 7h-7V2H9v5H2v15h20V7zM11 4h2v3h-2V4zm9 16H4V9h16v11zM9 13h2v2H9v-2zm4 0h2v2h-2v-2z"/></svg>
         <span data-i18n="nav.integrations">Koppelingen</span>
@@ -522,17 +540,18 @@
         <svg viewBox="0 0 24 24"><path d="M10 9a3 3 0 114.44 2.63l1.9 3.29a4.5 4.5 0 11-1.73 1l-1.9-3.28A3 3 0 0110 9zm-5.5 8.5a4.5 4.5 0 016.4-4.08l.9-1.56A3 3 0 1113.53 13l-.9 1.56a4.5 4.5 0 11-8.13 2.94z"/></svg>
         <span data-i18n="nav.webhooks">Webhooks</span>
       </a>
-      <a class="adm-nav-item" data-view="templates" href="#">
-        <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
-        <span data-i18n="nav.templates">Documentsjablonen</span>
+      <a class="adm-nav-item" data-view="audit" href="#">
+        <svg viewBox="0 0 24 24"><path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"/></svg>
+        <span data-i18n="nav.audit">Audittrail</span>
+      </a>
+      <a class="adm-nav-item" data-view="billing" href="#">
+        <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>
+        <span data-i18n="nav.billing">Facturatie</span>
+        <span class="adm-nav-badge" id="admInvoiceBadge" style="display:none">0</span>
       </a>
       <a class="adm-nav-item" data-view="roadmap" href="#">
         <svg viewBox="0 0 24 24"><path d="M21 3L3 10.53v.98l6.84 2.65L12.48 21h.98L21 3z"/></svg>
         <span data-i18n="nav.roadmap">Roadmap</span>
-      </a>
-      <a class="adm-nav-item" data-view="audit" href="#">
-        <svg viewBox="0 0 24 24"><path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"/></svg>
-        <span data-i18n="nav.audit">Audittrail</span>
       </a>
       <a class="adm-nav-item" data-view="settings" href="#">
         <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
@@ -723,14 +742,15 @@
     // Nieuwe domeinwerkruimtes (API-CONTRACTS-V2 · gerenderd door admin-domains.js)
     catalog: "Catalogus & prijzen", "progress-claims": "Vorderingsstaten",
     employee_records: "Personeelsfiches", portfolio: "Portfolio & capaciteit",
-    webhooks: "Webhooks", lists: "Lijsten & export"
+    webhooks: "Webhooks", lists: "Lijsten & export", payments: "Betalingen"
   };
 
   const VIEW_BTN_LABEL = {
     employees: "+ Medewerker", messages: "+ Bericht", customers: "+ Klant", appointments: "+ Afspraak",
     incidents: "+ Werkongeval", inbox: "+ Klantvraag",
     planning: "+ Inplannen", workorders: "+ Werkbon",
-    offertes: "+ Offerte", facturen: "+ Factuur", venues: "+ Locatie", vehicles: "+ Voertuig", stock: "+ Artikel"
+    offertes: "+ Offerte", facturen: "+ Factuur", venues: "+ Locatie", vehicles: "+ Voertuig", stock: "+ Artikel",
+    payments: "+ Betaling"
   };
 
   const FLOW_VIEWS = [
@@ -802,8 +822,12 @@
       ],
       facturen: [
         { label: "+ Nieuwe factuur", go: { view: "facturen" }, drawer: "factuur" },
+        { label: "Betalingen", go: { view: "payments" }, needsView: "payments" },
         { label: "Instellingen", settingsSection: "facturen", needsView: "settings" },
         { label: "Documentsjabloon", go: { view: "templates" }, needsView: "templates" }
+      ],
+      payments: [
+        { label: "+ Betaling registreren", go: { view: "payments", click: "payNew" } }
       ],
       employees: [
         { label: "+ Nieuwe medewerker", go: { view: "employees" }, drawer: "employee" },

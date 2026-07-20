@@ -904,6 +904,173 @@
     });
   }
 
+  // ── Betalingen + allocatie (h45 · Finance-groep h49) ────────
+  async function renderPayments() {
+    const content = A.content();
+    content.innerHTML = loadingHtml(t("dom.pay.loading", "Betalingen laden…"));
+    let data;
+    try { data = await api("GET", "/payments"); }
+    catch (err) {
+      content.innerHTML = errorHtml(err, "payRetry");
+      document.getElementById("payRetry")?.addEventListener("click", renderPayments);
+      return;
+    }
+    const rows = data.payments || [];
+    const STATUS_TONE = { unallocated: "warn", partial: "", allocated: "success" };
+    const statusLabel = s => t(`dom.pay.status.${s}`, { unallocated: "Niet toegewezen", partial: "Deels toegewezen", allocated: "Toegewezen" }[s] || s);
+
+    content.innerHTML = `
+      <div class="adm-card"><div class="adm-card-header">
+        <div><h2 class="adm-card-title">${esc(t("nav.payments", "Betalingen"))}</h2>
+          <p class="adm-form-hint">${esc(t("dom.pay.sub", "Registreer betalingen en wijs ze toe aan facturen · een factuur is pas betaald als het saldo nul is."))}</p></div>
+        <button class="adm-btn adm-btn-primary" id="payNew">+ ${esc(t("dom.pay.new", "Betaling registreren"))}</button></div>
+      <div class="adm-card-body">${rows.length ? `
+        <div class="adm-table-wrap"><table class="adm-table"><thead><tr>
+          <th>${esc(t("dom.date", "Datum"))}</th><th>${esc(t("dom.pay.amount", "Bedrag"))}</th>
+          <th>${esc(t("dom.pay.method", "Methode"))}</th><th>${esc(t("dom.pay.reference", "Referentie"))}</th>
+          <th>${esc(t("dom.pay.open", "Niet toegewezen"))}</th><th>${esc(t("dom.status", "Status"))}</th><th></th></tr></thead>
+        <tbody>${rows.map(p => `
+          <tr><td>${fmtDate(p.date)}</td><td>${money(p.amount)}</td>
+            <td>${esc(t(`dom.pay.method.${p.method}`, p.method))}</td>
+            <td>${esc(p.reference || "-")}${p.note ? `<br><small>${esc(p.note)}</small>` : ""}</td>
+            <td>${p.unallocatedAmount > 0 ? money(p.unallocatedAmount) : "0"}</td>
+            <td><span class="adm-badge ${STATUS_TONE[p.status] || ""}">${esc(statusLabel(p.status))}</span></td>
+            <td class="adm-form-row">
+              ${p.unallocatedAmount > 0 ? `<button class="adm-btn adm-btn-sm adm-btn-primary" data-pay-alloc="${esc(p.id)}">${esc(t("dom.pay.allocate", "Toewijzen"))}</button>` : ""}
+              ${(p.allocations || []).some(a => !a.reversedAt) ? `<button class="adm-btn adm-btn-sm" data-pay-detail="${esc(p.id)}">${esc(t("dom.pay.detail", "Toewijzingen"))}</button>` : ""}
+            </td></tr>`).join("")}</tbody></table></div>`
+        : emptyHtml(
+          t("dom.pay.emptyTitle", "Nog geen betalingen"),
+          t("dom.pay.emptyText", "Registreer een ontvangen betaling en wijs ze toe aan één of meer openstaande facturen."),
+          "payEmptyNew", t("dom.pay.new", "Betaling registreren"))}
+      </div></div>`;
+
+    // ── Registreren ──
+    const openNew = async () => {
+      let customers = [];
+      try { customers = (await api("GET", "/customers")).customers || []; } catch (_) { /* dropdown blijft leeg */ }
+      drawerBody().innerHTML = `
+        <h3>${esc(t("dom.pay.new", "Betaling registreren"))}</h3>
+        <div class="adm-form-section">
+          <div class="adm-form-group"><label>${esc(t("dom.date", "Datum"))} *</label>
+            <input id="payDate" type="date" class="adm-input" value="${new Date().toISOString().slice(0, 10)}"></div>
+          <div class="adm-form-group"><label>${esc(t("dom.pay.amount", "Bedrag"))} (EUR) *</label>
+            <input id="payAmount" type="number" step="0.01" min="0.01" class="adm-input" placeholder="0.00"></div>
+          <div class="adm-form-group"><label>${esc(t("dom.pay.method", "Methode"))}</label>
+            <select id="payMethod" class="adm-input">
+              ${["bank", "cash", "card", "online", "other"].map(m => `<option value="${m}">${esc(t(`dom.pay.method.${m}`, m))}</option>`).join("")}
+            </select></div>
+          <div class="adm-form-group"><label>${esc(t("dom.pay.customer", "Klant (voor voorstellen)"))}</label>
+            <select id="payCustomer" class="adm-input"><option value="">${esc(t("dom.pay.noCustomer", "Geen klant"))}</option>
+              ${customers.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join("")}
+            </select></div>
+          <div class="adm-form-group"><label>${esc(t("dom.pay.reference", "Referentie"))}</label>
+            <input id="payRef" class="adm-input" placeholder="+++090/9337/55493+++"></div>
+          <div class="adm-form-group"><label>${esc(t("dom.pay.note", "Notitie"))}</label>
+            <input id="payNote" class="adm-input"></div>
+        </div>
+        <div class="adm-form-actions">
+          <button class="adm-btn adm-btn-primary" id="payCreate">${esc(t("dom.pay.create", "Registreren"))}</button>
+          <button class="adm-btn" id="payCancel">${esc(t("dom.close", "Sluiten"))}</button></div>`;
+      A.openDrawer();
+      document.getElementById("payCancel")?.addEventListener("click", () => A.closeDrawer());
+      document.getElementById("payCreate")?.addEventListener("click", async () => {
+        try {
+          const res = await api("POST", "/payments", {
+            date: document.getElementById("payDate").value,
+            amount: Number(document.getElementById("payAmount").value),
+            method: document.getElementById("payMethod").value,
+            customerId: document.getElementById("payCustomer").value || undefined,
+            reference: document.getElementById("payRef").value,
+            note: document.getElementById("payNote").value,
+          });
+          A.closeDrawer();
+          toast(t("dom.pay.created", "Betaling geregistreerd"));
+          await renderPayments();
+          openAllocate(res.payment.id);          // direct door naar toewijzen
+        } catch (err) { toast(err.message, "error"); }
+      });
+    };
+    document.getElementById("payNew")?.addEventListener("click", openNew);
+    document.getElementById("payEmptyNew")?.addEventListener("click", openNew);
+
+    // ── Toewijzen (voorstel = preview, gebruiker bevestigt) ──
+    async function openAllocate(paymentId) {
+      let payment, suggestions;
+      try {
+        payment = (await api("GET", `/payments/${paymentId}`)).payment;
+        suggestions = (await api("GET", `/payments/${paymentId}/suggestions`)).suggestions || [];
+      } catch (err) { toast(err.message, "error"); return; }
+      const unallocated = payment.amount - (payment.allocations || []).filter(a => !a.reversedAt).reduce((s, a) => s + a.amount, 0);
+      drawerBody().innerHTML = `
+        <h3>${esc(t("dom.pay.allocate", "Toewijzen"))} · ${money(unallocated)}</h3>
+        <p class="adm-form-hint">${esc(t("dom.pay.allocHint", "Voorstellen op basis van de gestructureerde mededeling en de oudste open facturen. Pas bedragen aan of vink uit."))}</p>
+        ${suggestions.length ? `<div class="adm-form-section">${suggestions.map((s, i) => `
+          <div class="adm-form-row" style="align-items:center;gap:8px">
+            <input type="checkbox" id="alC${i}" checked data-inv="${esc(s.invoiceId)}">
+            <label for="alC${i}" style="flex:1">${esc(s.invoiceNumber)} · ${fmtDate(s.invoiceDate)}
+              <small>(${esc(t("dom.pay.outstanding", "open"))}: ${money(s.outstanding)}${s.matchedBy === "structured_communication" ? ` · ${esc(t("dom.pay.refMatch", "referentie-match"))}` : ""})</small></label>
+            <input type="number" step="0.01" min="0.01" class="adm-input" style="width:110px" id="alA${i}" value="${s.amount.toFixed(2)}">
+          </div>`).join("")}</div>`
+        : `<div class="adm-empty"><div class="adm-empty-text">${esc(t("dom.pay.noOpen", "Geen open facturen gevonden voor deze betaling."))}</div></div>`}
+        <div class="adm-form-actions">
+          <button class="adm-btn adm-btn-primary" id="alDo" ${suggestions.length ? "" : "disabled"}>${esc(t("dom.pay.allocConfirm", "Toewijzen"))}</button>
+          <button class="adm-btn" id="alCancel">${esc(t("dom.close", "Sluiten"))}</button></div>`;
+      A.openDrawer();
+      document.getElementById("alCancel")?.addEventListener("click", () => A.closeDrawer());
+      document.getElementById("alDo")?.addEventListener("click", async () => {
+        const allocations = suggestions
+          .map((s, i) => ({ box: document.getElementById(`alC${i}`), amt: document.getElementById(`alA${i}`), invoiceId: s.invoiceId }))
+          .filter(x => x.box && x.box.checked)
+          .map(x => ({ invoiceId: x.invoiceId, amount: Number(x.amt.value) }));
+        if (!allocations.length) { toast(t("dom.pay.pickOne", "Vink minstens één factuur aan"), "error"); return; }
+        try {
+          const res = await api("POST", `/payments/${paymentId}/allocate`, { allocations });
+          A.closeDrawer();
+          toast((res.invoicesPaid || []).length
+            ? t("dom.pay.allocPaid", "Toegewezen · factuur betaald: ") + res.invoicesPaid.map(x => x.number).join(", ")
+            : t("dom.pay.allocDone", "Toegewezen"));
+          await renderPayments();
+        } catch (err) { toast(err.message, "error"); }
+      });
+    }
+    content.querySelectorAll("[data-pay-alloc]").forEach(b => b.addEventListener("click", () => openAllocate(b.dataset.payAlloc)));
+
+    // ── Toewijzingen bekijken + terugdraaien (compensatie met reden) ──
+    async function openDetail(paymentId) {
+      let payment;
+      try { payment = (await api("GET", `/payments/${paymentId}`)).payment; } catch (err) { toast(err.message, "error"); return; }
+      const active = (payment.allocations || []).filter(a => !a.reversedAt);
+      const reversed = (payment.allocations || []).filter(a => a.reversedAt);
+      drawerBody().innerHTML = `
+        <h3>${esc(t("dom.pay.detail", "Toewijzingen"))} · ${money(payment.amount)}</h3>
+        <div class="adm-form-section">
+          ${active.map(a => `<div class="adm-form-row" style="align-items:center;gap:8px">
+            <span style="flex:1">${esc(a.invoiceNumber)} · ${money(a.amount)} <small>${fmtDate(a.at)}</small></span>
+            <button class="adm-btn adm-btn-sm" data-rev="${esc(a.id)}">${esc(t("dom.pay.reverse", "Terugdraaien"))}</button></div>`).join("")
+          || `<p class="adm-form-hint">${esc(t("dom.pay.noneActive", "Geen actieve toewijzingen."))}</p>`}
+          ${reversed.length ? `<p class="adm-form-hint">${esc(t("dom.pay.reversedList", "Teruggedraaid:"))} ${reversed.map(a => `${esc(a.invoiceNumber)} (${esc(a.reason || "")})`).join(", ")}</p>` : ""}
+        </div>
+        <div class="adm-form-actions"><button class="adm-btn" id="payDetClose">${esc(t("dom.close", "Sluiten"))}</button></div>`;
+      A.openDrawer();
+      document.getElementById("payDetClose")?.addEventListener("click", () => A.closeDrawer());
+      drawerBody().querySelectorAll("[data-rev]").forEach(b => b.addEventListener("click", async () => {
+        // Compensatie vereist een reden (h41: rollback met historiek, nooit stil).
+        const reason = window.prompt(t("dom.pay.reverseReason", "Reden voor het terugdraaien (verplicht):"));
+        if (!reason) return;
+        try {
+          const res = await api("POST", `/payments/${paymentId}/allocations/${b.dataset.rev}/reverse`, { reason });
+          toast(res.invoiceReopened
+            ? t("dom.pay.reopened", "Teruggedraaid · factuur heropend: ") + res.invoiceReopened.number
+            : t("dom.pay.reversedOk", "Toewijzing teruggedraaid"));
+          A.closeDrawer();
+          await renderPayments();
+        } catch (err) { toast(err.message, "error"); }
+      }));
+    }
+    content.querySelectorAll("[data-pay-detail]").forEach(b => b.addEventListener("click", () => openDetail(b.dataset.payDetail)));
+  }
+
   // ── Registratie in de gedeelde registry ─────────────────────
   Object.assign(A.views, {
     catalog: renderCatalog,
@@ -912,6 +1079,7 @@
     portfolio: renderPortfolio,
     webhooks: renderWebhooks,
     lists: renderLists,
+    payments: renderPayments,
   });
 
   // Decorator op het bestaande werkbonnenscherm: eerst de legacy-renderer,

@@ -81,7 +81,7 @@ const MODULE_CATALOG = [
   { key: "contracts", label: "Contracten & abonnementen", group: "Klanten & Financiën", core: false,
     view: "contracts", actions: ["contracts"], submodules: [] },
   { key: "invoices", label: "Facturen", group: "Klanten & Financiën", core: false,
-    view: "facturen", actions: ["facturen", "payments"],
+    view: "facturen", extraViews: ["payments"], actions: ["facturen", "payments"],
     submodules: [
       { key: "peppol", label: "Peppol e-facturatie" },
       { key: "reminders", label: "Betaalherinneringen" },

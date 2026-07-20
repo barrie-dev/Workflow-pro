@@ -3,7 +3,7 @@
   "configurations": [
     {
       "name": "workflowpro",
-      "runtimeExecutable": "C:\\Users\\ABMS Consultancy\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "runtimeExecutable": "node",
       "runtimeArgs": ["src/server.js"],
       "port": 4280
     }
