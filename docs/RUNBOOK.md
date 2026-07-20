@@ -136,6 +136,33 @@ Bij een mislukte uitrol:
    de wijziging ongedaan maakt, en test die eerst op een kopie.
 3. Herstel data uit de backup; zie `npm run production:backups`.
 
+### CRM-cutover (5.4 stap 5-7) · CRM_READ_SOURCE
+
+De canonieke /customers-routes hebben een bronschakelaar met drie standen.
+De procedure is strikt sequentieel; sla geen stap over.
+
+1. **Backfill + reconciliatie** (zie hieronder). Herhaal tot elke tenant
+   `Cutover: GROEN` toont.
+2. **`CRM_READ_SOURCE=shadow`** en herstart. Legacy blijft leidend; elke
+   schrijfactie gaat naar beide bronnen en elke detail-lees vergelijkt.
+   Bewaak de metriek `crm.shadow.mismatch` en de warn-logs · draai zo
+   minstens een paar dagen productieverkeer.
+3. Reconciliatie opnieuw. Groen + geen mismatches → **`CRM_READ_SOURCE=pg`**.
+   Lezen komt nu uit PostgreSQL; schrijven blijft dual, dus:
+4. **Rollback = flag terug naar `shadow` of `legacy`** en herstarten. Er gaat
+   niets verloren, want legacy ontving elke schrijfactie.
+5. Pas ná de afgesproken retentie- en rollbackperiode wordt legacy read-only
+   (5.4 stap 8) · dat is een aparte, bewuste stap, geen automatisme.
+
+Let op: een spiegel-fout gedraagt zich per stand anders. In shadow logt hij
+(`crm.mirror.failed`) en slaagt het verzoek; in pg-modus faalt het verzoek met
+503 `CRM_MIRROR_FAILED`, omdat de gebruiker anders zijn eigen schrijfactie niet
+terugziet. De legacy-rij staat er dan al · opnieuw proberen of backfillen
+herstelt het.
+
+Afgeleide naam-lookups in andere domeinen (contract, asset) lezen bewust nog
+legacy tot hun eigen domein migreert; dat is de per-domein-strangler, geen bug.
+
 ### Datamigratie (CRM naar genormaliseerde tabellen)
 
 ```

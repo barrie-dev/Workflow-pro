@@ -9,6 +9,7 @@ const { Store, BUSINESS_ADMIN_PERMISSIONS, MANAGER_PERMISSIONS, EMPLOYEE_PERMISS
 const { createDataAdapter } = require("./lib/data-adapters");
 const { createObjectStorage } = require("./infrastructure/object-storage-factory");
 const { createJobQueue } = require("./infrastructure/job-queue-factory");
+const { makeCustomerSource } = require("./infrastructure/crm-source");
 const { hashPassword, assertStrongPassword, verifyPassword } = require("./lib/security");
 const {
   authenticate,
@@ -393,6 +394,39 @@ const objectStorage = createObjectStorage();
 // JobQueue (handover 4.6): op PostgreSQL deelt hij de pool met de data-adapter,
 // zodat reserveringen een herstart en meerdere replicas overleven.
 const jobQueue = createJobQueue(storeAdapter);
+
+/**
+ * CRM-bronschakelaar (5.4 stap 5-7). Buiten legacy-modus is een PostgreSQL-
+ * verbinding nodig: gedeeld met de data-adapter als die op pg draait, anders
+ * een eigen pool op DATABASE_URL (zo kan dev met een JSON-store al schaduwen).
+ * Ontbreekt de URL, dan faalt het opstarten hard · stil terugvallen zou een
+ * cutover suggereren die er niet is (ADR-004).
+ */
+const customerSource = (() => {
+  const mode = config.crm.readSource;
+  if (mode === "legacy") return makeCustomerSource({ mode, legacyRepo: customerRepo, telemetry });
+  let pool = storeAdapter && storeAdapter.name === "postgres" ? storeAdapter.pool : null;
+  if (!pool) {
+    if (!/^postgres(ql)?:\/\//.test(config.database.url)) {
+      throw new Error(`CRM_READ_SOURCE=${mode} vereist DATABASE_URL (of STORAGE_ADAPTER=postgres)`);
+    }
+    const { Pool } = require("pg");
+    pool = new Pool({ connectionString: config.database.url, ssl: config.database.ssl ? { rejectUnauthorized: false } : undefined, max: 5 });
+  }
+  const { makePgCustomerRepository } = require("./infrastructure/postgres/pg-customer-repository");
+  const { backfillCustomers } = require("./infrastructure/postgres/crm-backfill");
+  const pgRepo = makePgCustomerRepository(pool);
+  const mirror = async (tenantId, row) => {
+    // De tenant moet in het genormaliseerde schema bestaan (FK-anker).
+    const tenant = (store.data.tenants || []).find(t => t.id === tenantId);
+    await pool.query(
+      "INSERT INTO tenants (id, name, plan) VALUES ($1,$2,$3) ON CONFLICT (id) DO NOTHING",
+      [tenantId, (tenant && tenant.name) || tenantId, (tenant && tenant.plan) || "starter"]);
+    await backfillCustomers(pool, tenantId, [row]);
+  };
+  console.log(`  CRM-bron  : ${mode}${mode === "shadow" ? " (legacy leidend, pg leest mee)" : " (cutover · dual-write actief)"}`);
+  return makeCustomerSource({ mode, legacyRepo: customerRepo, pgRepo, mirror, telemetry });
+})();
 /**
  * Persistent verzendlog (F-09). Was een proceslokale ring-buffer: die verdween
  * bij elke herstart en verschilde per replica, dus de superadmin zag maar een
@@ -4767,12 +4801,14 @@ const httpServer = http.createServer(async (req, res) => {
         return;
       }
 
-      // ── Klanten (customers) ───────────────────────────────────────────────────
+      // ── Klanten (customers) · via de bronschakelaar (5.4 stap 5-7) ───────────
+      // legacy | shadow | pg via CRM_READ_SOURCE. Dit zijn de canonieke routes
+      // die als eerste schakelen; afgeleide naam-lookups elders blijven op de
+      // synchrone legacy-repo tot hun eigen domein migreert.
       if (action === "customers" && req.method === "GET") {
         assertCan(user, "customers");
-        // Compatibility read (E03/M1): legacy platte records worden naar het
-        // canonieke model getild; gevoelige velden (creditLimit) gered. voor niet-beheerders.
-        sendJson(res, 200, { ok: true, customers: redactSensitive(user, "customers", customerRepo.list(tenantId)) });
+        const rows = await customerSource.list(tenantId);
+        sendJson(res, 200, { ok: true, customers: redactSensitive(user, "customers", rows), source: customerSource.mode });
         return;
       }
       if (action === "customers" && req.method === "POST") {
@@ -4783,7 +4819,7 @@ const httpServer = http.createServer(async (req, res) => {
         const cfCheck = configRepo.validateValues(tenantId, "customer", body.customFields);
         if (!cfCheck.ok) return sendJson(res, 400, { ok: false, error: "Ongeldige extra velden", code: "CUSTOM_FIELDS_INVALID", fieldErrors: cfCheck.errors });
         let row;
-        try { row = customerRepo.insert(tenantId, { ...body, customFields: cfCheck.values }, user.email); }
+        try { row = await customerSource.insert(tenantId, { ...body, customFields: cfCheck.values }, user.email); }
         catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
         store.audit({ actor: user.email, tenantId, action: "customer_created", area: "customers", detail: row.name });
         emitDomainEvent(store, { tenantId, eventType: "customer.created", aggregateType: "customer", aggregateId: row.id, actor: user.email, correlationId: res.wfpRequestId });
@@ -4796,7 +4832,7 @@ const httpServer = http.createServer(async (req, res) => {
         assertApiKeyWriteAllowed(user, req);
         const body = await readBody(req);
         let row;
-        try { row = customerRepo.update(tenantId, customerMatch[1], body, user.email, body.expectedVersion); }
+        try { row = await customerSource.update(tenantId, customerMatch[1], body, user.email, body.expectedVersion); }
         catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code, currentVersion: e.currentVersion }); }
         store.audit({ actor: user.email, tenantId, action: "customer_updated", area: "customers", detail: customerMatch[1] });
         emitDomainEvent(store, { tenantId, eventType: "customer.updated", aggregateType: "customer", aggregateId: customerMatch[1], actor: user.email, correlationId: res.wfpRequestId, data: { changedFields: Object.keys(body) } });
@@ -4806,7 +4842,8 @@ const httpServer = http.createServer(async (req, res) => {
       if (customerMatch && req.method === "DELETE") {
         assertCan(user, "customers");
         assertInteractiveUser(user);
-        store.remove("customers", customerMatch[1]);
+        try { await customerSource.remove(tenantId, customerMatch[1]); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
         store.audit({ actor: user.email, tenantId, action: "customer_deleted", area: "customers", detail: customerMatch[1] });
         sendJson(res, 200, { ok: true });
         return;

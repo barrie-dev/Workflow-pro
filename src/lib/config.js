@@ -54,6 +54,12 @@ const config = {
     maxConnections: Number(process.env.DATABASE_MAX_CONNECTIONS) || 10,
     statementTimeoutMs: Number(process.env.DATABASE_STATEMENT_TIMEOUT_MS) || 15000
   },
+  // CRM-bronschakelaar (handover 5.4 stap 5-7): legacy | shadow | pg.
+  // shadow = legacy leidend + pg leest mee (afwijkingen naar telemetrie);
+  // pg = cutover, met dual-write zodat rollback een flag-flip blijft.
+  crm: {
+    readSource: (process.env.CRM_READ_SOURCE || "legacy").toLowerCase()
+  },
   // AI achter een port (handover 4.5 · F-07). Modelnamen staan HIER, nooit in
   // business rules. De super-admin kan dit per platform overschrijven via de
   // Integraties-console; zonder geldige sleutel draait de mock-adapter.
