@@ -1,136 +1,55 @@
 "use strict";
 /**
- * Dimona · onmiddellijke aangifte van tewerkstelling (RSZ, socialsecurity.be).
+ * Dimona-registratie en -bewaking · BEWUST GEEN AANGIFTEKANAAL.
  *
- * Elke Belgische werkgever MOET elke in- en uitdiensttreding aangeven vóór de
- * eerste werkdag (Dimona IN) respectievelijk de eerste werkdag na uitdienst
- * (Dimona OUT). De personeelsfiche (h16) draagt de dienstperiode al
- * (activeFrom/activeTo) · deze module maakt daar de wettelijke aangifte van.
+ * Productbeslissing (2026-07-20): Monargo geeft NIETS aan bij de RSZ. De
+ * Dimona-aangifte zelf gebeurt door het sociaal secretariaat (of wie de
+ * klant daarvoor aanduidt). Wat het platform wél doet:
  *
- * Kanaal: de officiële "Web Service REST Dimona" op de SocSec API Gateway
- * (OAuth 2.0, enkel voor gecertificeerde aangevers). Zolang die certificatie
- * er niet is draait alles in mock-modus · zelfde guarded patroon als CIAW:
- * de aangifte wordt gebouwd en gevalideerd alsof hij live gaat, en het
- * resultaat wordt volwaardig geregistreerd op de fiche.
+ *  1. REGISTREREN · op de personeelsfiche vastleggen dat de aangifte extern
+ *     gebeurd is (type IN/OUT, datum, referentienummer van het secretariaat).
+ *  2. BEWAKEN · hiaten signaleren: een actieve medewerker zonder
+ *     geregistreerde Dimona-IN of iemand uit dienst zonder OUT verschijnt in
+ *     het register en op het compliance-dashboard, zodat de doorgifte aan het
+ *     secretariaat nooit vergeten wordt.
  *
- * Bewust NIET hier: DmfA (kwartaalloonaangifte) · dat is loonmotor-terrein en
- * expliciet anti-roadmap; dat blijft bij het sociaal secretariaat.
+ * Er is dus geen provider, geen OAuth en geen mock-verzending · alleen
+ * administratie en een waakhond.
  */
 
-const { postJson } = require("../lib/http-client");
-const { normalizeInsz, validInsz } = require("./ciaw");
-
 const TYPES = ["in", "out"];
-// Officiële gateway-host; exacte paden worden bij certificatie bevestigd.
-const GATEWAY_HOST = "services.socialsecurity.be";
 
-function isRealKey(k) {
-  const s = String(k || "");
-  return !!s && !/DUMMY|replace[_-]?me|changeme|xxxx/i.test(s);
-}
-
-/** Productie-gereedheid · zonder live credentials → mock (zoals CIAW). */
-function dimonaReadiness(input = {}, requireLive = false) {
-  const dimona = input.dimona || input;
-  const provider = String(dimona.provider || "mock").trim().toLowerCase();
-  const providerLive = provider && provider !== "mock";
-  const credsLive = isRealKey(dimona.clientId) && isRealKey(dimona.clientSecret);
-
-  if (!requireLive && (!providerLive || !credsLive)) {
-    return { ok: true, live: false, provider: "mock", reason: "mock-modus (geen live Dimona-certificatie)" };
-  }
-  if (!providerLive) return { ok: false, live: false, provider, errorCode: "dimona_provider_not_configured", message: "Dimona-kanaal niet ingesteld" };
-  if (!credsLive) return { ok: false, live: false, provider, errorCode: "dimona_credentials_missing", message: "Dimona OAuth-credentials ontbreken" };
-  return { ok: true, live: true, provider };
-}
-
-/** INSZ van de medewerker: fiche eerst, dan het gekoppelde gebruikersaccount. */
-function inszFor(employee, linkedUser) {
-  return normalizeInsz(
-    (employee && (employee.insz || employee.nationalId)) ||
-    (linkedUser && (linkedUser.insz || linkedUser.nationalNumber || linkedUser.nationalId)) || ""
-  );
+function fail(status, code, message) {
+  const e = new Error(message);
+  e.status = status; e.code = code;
+  throw e;
 }
 
 /**
- * Bouw een Dimona-aangifte uit de personeelsfiche. Puur + testbaar.
- * @returns {{valid:boolean, errors:string[], declaration:object|null}}
+ * Valideer en normaliseer een extern gedane Dimona-registratie.
+ * @returns {{type:string, date:string, reference:string, note:string}}
  */
-function buildDimonaDeclaration({ tenant, employee, linkedUser = null, type, date }) {
-  const errors = [];
+function normalizeDimonaRecord({ type, date, reference, note } = {}, employee = null) {
   const kind = String(type || "").toLowerCase();
-  if (!TYPES.includes(kind)) errors.push("Type moet 'in' of 'out' zijn");
-
-  const employerId = String((tenant && tenant.compliance && tenant.compliance.rszEmployerId) || "").trim();
-  if (!employerId) errors.push("RSZ-werkgeversnummer ontbreekt op de organisatie (Instellingen → Compliance)");
-
-  if (employee && employee.external) errors.push("Externe medewerkers (onderaannemers) vallen onder de Dimona van hun eigen werkgever");
-
-  const insz = inszFor(employee, linkedUser);
-  if (!validInsz(insz)) errors.push("Geldig INSZ/rijksregisternummer ontbreekt op de personeelsfiche");
-
-  const effective = String(date || (kind === "in" ? employee && employee.activeFrom : employee && employee.activeTo) || "").trim();
+  if (!TYPES.includes(kind)) fail(400, "INVALID_TYPE", "Type moet 'in' of 'out' zijn");
+  if (employee && employee.external) fail(400, "EXTERNAL_EMPLOYEE", "Externe medewerkers (onderaannemers) vallen onder de Dimona van hun eigen werkgever");
+  const effective = String(date || (employee ? (kind === "in" ? employee.activeFrom : employee.activeTo) : "") || "").trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(effective)) {
-    errors.push(kind === "out"
+    fail(400, "DATE_REQUIRED", kind === "out"
       ? "Einddatum ontbreekt (zet de uitdienstdatum op de fiche of geef een datum mee)"
       : "Startdatum ontbreekt (zet de indienstdatum op de fiche of geef een datum mee)");
   }
-
-  if (errors.length) return { valid: false, errors, declaration: null };
-  // Vorm volgt de REST-WS-structuur (employer/worker/dimonaIn|dimonaOut).
-  const declaration = {
-    employer: { nssoRegistrationNumber: employerId },
-    worker: { ssin: insz, name: employee.name || "" },
-    ...(kind === "in"
-      ? { dimonaIn: { startDate: effective, workerType: employee.dimonaWorkerType || "OTH" } }
-      : { dimonaOut: { endDate: effective } }),
-    employeeRecordId: employee.id,
+  return {
+    type: kind,
+    date: effective,
+    reference: String(reference || "").trim().slice(0, 60),
+    note: String(note || "").trim().slice(0, 200),
   };
-  return { valid: true, errors: [], declaration };
 }
 
 /**
- * Verstuur één aangifte · mock-fallback zonder live certificatie.
- * @returns {Promise<{ok:boolean, live:boolean, status:string, reference:string, type:string, date:string, error?:string, declaration?:object}>}
- */
-async function submitDimona({ config = {}, tenant, employee, linkedUser, type, date }, options = {}) {
-  const built = buildDimonaDeclaration({ tenant, employee, linkedUser, type, date });
-  const kind = String(type || "").toLowerCase();
-  const effective = built.valid
-    ? (built.declaration.dimonaIn ? built.declaration.dimonaIn.startDate : built.declaration.dimonaOut.endDate)
-    : String(date || "");
-  if (!built.valid) {
-    return { ok: false, live: false, status: "rejected", reference: "", type: kind, date: effective, error: built.errors.join("; ") };
-  }
-  const readiness = dimonaReadiness(config, !!options.requireLive);
-  if (!readiness.ok) {
-    return { ok: false, live: false, status: "failed", reference: "", type: kind, date: effective, error: readiness.message };
-  }
-  if (!readiness.live) {
-    return {
-      ok: true, live: false, status: "accepted", type: kind, date: effective,
-      reference: `DIMONA-MOCK-${Date.now().toString(36).toUpperCase()}`,
-      periodId: `P-${Math.random().toString(36).slice(2, 10).toUpperCase()}`,
-      declaration: built.declaration,
-    };
-  }
-  // Live: OAuth 2.0 client-credentials op de SocSec-gateway (na certificatie).
-  try {
-    const dimona = config.dimona || {};
-    const token = await postJson(GATEWAY_HOST, "/REST/oauth/v3/token",
-      { "Content-Type": "application/x-www-form-urlencoded" },
-      `grant_type=client_credentials&client_id=${encodeURIComponent(dimona.clientId)}&client_secret=${encodeURIComponent(dimona.clientSecret)}`);
-    const json = await postJson(GATEWAY_HOST, "/REST/dimona/v2/declarations",
-      { Authorization: `Bearer ${token.access_token}` }, built.declaration);
-    return { ok: true, live: true, status: json.status || "submitted", reference: json.dimonaPeriodId || json.reference || json.id || "", periodId: json.dimonaPeriodId || null, type: kind, date: effective };
-  } catch (err) {
-    return { ok: false, live: true, status: "failed", reference: "", type: kind, date: effective, error: err.message };
-  }
-}
-
-/**
- * Aangifteregister + hiaten: elke actieve, interne medewerker hoort een
- * geldige Dimona-IN te hebben; uit dienst hoort een OUT. Puur + testbaar.
+ * Register + hiaten: elke actieve, interne medewerker hoort een geregistreerde
+ * Dimona-IN te hebben; wie uit dienst is een OUT. Puur + testbaar.
  */
 function dimonaRegister(store, tenantId, today = new Date().toISOString().slice(0, 10)) {
   const rows = [];
@@ -138,20 +57,27 @@ function dimonaRegister(store, tenantId, today = new Date().toISOString().slice(
   for (const emp of store.list("employees", tenantId) || []) {
     if (emp.external || emp.status === "archived") continue;
     const dimona = emp.dimona || null;
-    const active = (!emp.activeFrom || emp.activeFrom <= today) && (!emp.activeTo || emp.activeTo >= today) && emp.status !== "left";
+    const started = !emp.activeFrom || emp.activeFrom <= today;
+    // In dienst OF start nog: de Dimona-IN moet er VOOR de eerste werkdag
+    // zijn, dus ook een toekomstige starter zonder registratie is een hiaat.
+    const inService = (!emp.activeTo || emp.activeTo >= today) && emp.status !== "left";
     rows.push({
       employeeId: emp.id, name: emp.name, activeFrom: emp.activeFrom || null, activeTo: emp.activeTo || null,
-      status: dimona ? dimona.status : "none", type: dimona ? dimona.type : null,
-      reference: dimona ? dimona.reference : null, at: dimona ? dimona.at : null, error: (dimona && dimona.error) || null,
+      registered: !!dimona, type: dimona ? dimona.type : null,
+      reference: dimona ? dimona.reference : null, date: dimona ? dimona.date : null, at: dimona ? dimona.at : null,
     });
-    if (active && (!dimona || dimona.type !== "in" || dimona.status === "failed" || dimona.status === "rejected")) {
-      gaps.push({ employeeId: emp.id, name: emp.name, reason: !dimona ? "geen Dimona-aangifte" : (dimona.type !== "in" ? "laatste aangifte is geen IN" : "aangifte faalde") });
+    if (inService && (!dimona || dimona.type !== "in")) {
+      gaps.push({ employeeId: emp.id, name: emp.name, reason: !dimona
+        ? (started
+          ? "geen Dimona geregistreerd · geef door aan het sociaal secretariaat"
+          : `start op ${emp.activeFrom} · Dimona moet VOOR de eerste werkdag bij het sociaal secretariaat zijn`)
+        : "laatste registratie is geen IN" });
     }
-    if (!active && emp.activeTo && emp.activeTo < today && dimona && dimona.type !== "out") {
-      gaps.push({ employeeId: emp.id, name: emp.name, reason: "uit dienst zonder Dimona-OUT" });
+    if (!inService && emp.activeTo && emp.activeTo < today && dimona && dimona.type !== "out") {
+      gaps.push({ employeeId: emp.id, name: emp.name, reason: "uit dienst zonder geregistreerde Dimona-OUT" });
     }
   }
   return { rows, gaps };
 }
 
-module.exports = { dimonaReadiness, buildDimonaDeclaration, submitDimona, dimonaRegister, inszFor, TYPES };
+module.exports = { normalizeDimonaRecord, dimonaRegister, TYPES };

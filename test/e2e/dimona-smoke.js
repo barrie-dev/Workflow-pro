@@ -1,6 +1,6 @@
-// Dimona + Publiato tegen de echte server: personeelsfiche met INSZ →
-// Dimona-IN → register + compliance-overzicht; foute INSZ geweigerd;
-// werkongeval → Publiato-dossier met wettelijke deadline.
+// Dimona-REGISTRATIE + Publiato tegen de echte server. Het platform geeft
+// NIETS aan bij de RSZ (het sociaal secretariaat doet de aangifte): hier
+// wordt geregistreerd dat ze gebeurd is en bewaakt wat nog doorgegeven moet.
 const BASE = "http://localhost:4299";
 const exitSoft = require("./_exit");
 let failures = 0;
@@ -38,22 +38,23 @@ function validTestInsz() {
   check("personeelsfiche met INSZ aangemaakt", emp.status === 201 && emp.data.employee.insz === normalizeInsz(insz), emp.status);
   const empId = emp.data.employee.id;
 
-  // ── Dimona-IN (mock-kanaal, volwaardig geregistreerd) ──
-  const zonderRsz = null; // rsz gezet hierboven; als de settings-route anders heet vangt de aangifte het af
-  const decl = await j("POST", `/api/tenants/${tid}/employee_records/${empId}/dimona`, { type: "in" }, tok);
-  if (decl.status === 400 && /RSZ-werkgeversnummer/.test(decl.data.dimona && decl.data.dimona.error || "")) {
-    check("aangifte benoemt ontbrekend RSZ-nummer helder", true, decl.data.dimona.error);
-    console.log("LET OP · RSZ-nummer kon niet via de settings-route gezet worden; foutpad is wel correct bewezen");
-  } else {
-    check("Dimona-IN aanvaard (mock)", decl.status === 200 && decl.data.dimona.status === "accepted" && /^DIMONA-MOCK-/.test(decl.data.dimona.reference), JSON.stringify(decl.data.dimona || decl.data).slice(0, 120));
-    check("aangifte draagt de startdatum van de fiche", decl.data.dimona.date === "2026-08-01");
-  }
+  // ── Vóór registratie: het register signaleert het hiaat ──
+  const voor = await j("GET", `/api/tenants/${tid}/dimona/declarations`, null, tok);
+  check("hiaat gesignaleerd: geef door aan het sociaal secretariaat", (voor.data.gaps || []).some(g => g.employeeId === empId && /sociaal secretariaat/.test(g.reason)), JSON.stringify((voor.data.gaps || []).find(g => g.employeeId === empId)));
 
-  // ── Register + hiaten ──
+  // ── Registreren dat het secretariaat de Dimona-IN heeft gedaan ──
+  const foutType = await j("POST", `/api/tenants/${tid}/employee_records/${empId}/dimona`, { type: "update" }, tok);
+  check("ongeldig type → 400 INVALID_TYPE", foutType.status === 400 && foutType.data.code === "INVALID_TYPE", foutType.data.code);
+  const decl = await j("POST", `/api/tenants/${tid}/employee_records/${empId}/dimona`, { type: "in", reference: "SSEC-2026-0042" }, tok);
+  check("Dimona-registratie vastgelegd met referentie van het secretariaat", decl.status === 200 && decl.data.dimona.reference === "SSEC-2026-0042", JSON.stringify(decl.data.dimona || decl.data).slice(0, 120));
+  check("registratie draagt de startdatum van de fiche", decl.data.dimona.date === "2026-08-01");
+
+  // ── Register: hiaat weg, registratie zichtbaar ──
   const reg = await j("GET", `/api/tenants/${tid}/dimona/declarations`, null, tok);
-  check("aangifteregister opvraagbaar (mock-modus)", reg.status === 200 && reg.data.mode === "mock" && Array.isArray(reg.data.rows), reg.data.mode);
+  check("register opvraagbaar", reg.status === 200 && Array.isArray(reg.data.rows), reg.status);
   const rij = (reg.data.rows || []).find(r => r.employeeId === empId);
-  check("medewerker staat in het register", !!rij, rij && rij.status);
+  check("medewerker geregistreerd in het register", !!rij && rij.registered === true && rij.reference === "SSEC-2026-0042", rij && rij.reference);
+  check("hiaat verdwenen na registratie", !(reg.data.gaps || []).some(g => g.employeeId === empId));
 
   // ── Compliance-overzicht bevat de Dimona-categorie ──
   const comp = await j("GET", `/api/tenants/${tid}/compliance/overview`, null, tok);

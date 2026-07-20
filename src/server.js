@@ -340,7 +340,7 @@ const { verifyStripeSignature } = require("./modules/stripe-webhook");
 const { seedDemoData, clearDemoData } = require("./modules/demo-seed");
 const { buildUbl, validatePeppol, sendPeppolInvoice, peppolTransportReadiness } = require("./modules/peppol-invoice");
 const quoteSigning = require("./modules/quote-signing");
-const { submitDimona, dimonaReadiness, dimonaRegister } = require("./modules/dimona");
+const { normalizeDimonaRecord, dimonaRegister } = require("./modules/dimona");
 const { submitCheckin, buildPresenceRegister } = require("./modules/ciaw");
 const { listPostedWorkers, createPostedWorker, updatePostedWorker, deletePostedWorker, submitLimosa } = require("./modules/posted-workers");
 const tpl = require("./modules/templates");
@@ -6331,7 +6331,10 @@ const httpServer = http.createServer(async (req, res) => {
         sendJson(res, 201, { ok: true, employee: row });
         return;
       }
-      // ── Dimona (RSZ · verplichte aangifte in/uit dienst) ─────────────────────
+      // ── Dimona-registratie · het platform geeft NIETS aan bij de RSZ ─────────
+      // De aangifte gebeurt door het sociaal secretariaat; hier wordt enkel
+      // GEREGISTREERD dat ze gebeurd is (referentie), zodat de hiaten-bewaking
+      // kan signaleren wat nog doorgegeven moet worden.
       const empDimonaMatch = action.match(/^employee_records\/([^/]+)\/dimona$/);
       if (empDimonaMatch && req.method === "POST") {
         assertCan(user, "employees");
@@ -6339,32 +6342,23 @@ const httpServer = http.createServer(async (req, res) => {
         const body = await readBody(req).catch(() => ({}));
         const emp = employeeRepo.findById(tenantId, empDimonaMatch[1]);
         if (!emp) return sendJson(res, 404, { ok: false, error: "Werknemer niet gevonden" });
-        const linkedUser = emp.userId ? store.get("users", emp.userId) : null;
-        const result = await submitDimona({
-          config: loadPlatformConfig(store), tenant, employee: emp, linkedUser,
-          type: body.type, date: body.date,
-        }, { requireLive: config.isProduction && loadPlatformConfig(store).dimona?.provider !== "mock" });
-        if (result.ok) {
-          const entry = { type: result.type, date: result.date, status: result.status, reference: result.reference, periodId: result.periodId || null, at: new Date().toISOString(), live: result.live, by: user.email };
-          store.update("employees", emp.id, {
-            dimona: entry,
-            dimonaHistory: [...(emp.dimonaHistory || []), entry].slice(-20),
-          });
-          store.audit({ actor: user.email, tenantId, action: "dimona_declared", area: "employees", detail: `${emp.name} · ${result.type.toUpperCase()} ${result.date} · ${result.reference}` });
-          emitDomainEvent(store, { tenantId, eventType: "employee.dimona_declared", aggregateType: "employee", aggregateId: emp.id, actor: user.email, correlationId: res.wfpRequestId, data: { type: result.type, date: result.date, live: result.live } });
-        } else {
-          // Ook een mislukte poging laat een spoor na · net als bij Peppol.
-          store.update("employees", emp.id, { dimona: { type: result.type, date: result.date, status: result.status, error: result.error, at: new Date().toISOString(), by: user.email } });
-          store.audit({ actor: user.email, tenantId, action: "dimona_failed", area: "employees", detail: `${emp.name} · ${result.error}` });
-        }
-        sendJson(res, result.ok ? 200 : 400, { ok: result.ok, dimona: result });
+        let record;
+        try { record = normalizeDimonaRecord(body, emp); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        const entry = { ...record, at: new Date().toISOString(), by: user.email };
+        store.update("employees", emp.id, {
+          dimona: entry,
+          dimonaHistory: [...(emp.dimonaHistory || []), entry].slice(-20),
+        });
+        store.audit({ actor: user.email, tenantId, action: "dimona_recorded", area: "employees", detail: `${emp.name} · ${record.type.toUpperCase()} ${record.date}${record.reference ? ` · ${record.reference}` : ""}` });
+        emitDomainEvent(store, { tenantId, eventType: "employee.dimona_recorded", aggregateType: "employee", aggregateId: emp.id, actor: user.email, correlationId: res.wfpRequestId, data: { type: record.type, date: record.date } });
+        sendJson(res, 200, { ok: true, dimona: entry });
         return;
       }
-      // Aangifteregister + hiaten (actief zonder IN, uit dienst zonder OUT).
+      // Register + hiaten (actief zonder geregistreerde IN, uit dienst zonder OUT).
       if (action === "dimona/declarations" && req.method === "GET") {
         assertCan(user, "employees");
-        const readiness = dimonaReadiness(loadPlatformConfig(store), false);
-        sendJson(res, 200, { ok: true, mode: readiness.live ? "live" : "mock", ...dimonaRegister(store, tenantId) });
+        sendJson(res, 200, { ok: true, ...dimonaRegister(store, tenantId) });
         return;
       }
 

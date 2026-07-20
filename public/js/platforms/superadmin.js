@@ -1898,20 +1898,6 @@ ${canManage ? `
       <label class="sa-fld"><span>API-host</span><input name="ciaw.baseHost" value="${esc(cfg.ciaw?.baseHost||"")}" placeholder="api.checkinatwork.be"></label>
     </div>
   </div>
-  <div class="sa-card">
-    <div class="sa-card-head"><div class="sa-card-title">Dimona · aangifte in/uit dienst (RSZ)</div><div class="sa-card-sub">${statusPill(cfg.dimona?.configured)}</div></div>
-    <div style="padding:16px;display:grid;gap:12px">
-      <div style="font-size:12px;color:var(--gray-500);font-weight:400">Wettelijk verplichte aangifte bij elke in- en uitdiensttreding, vanaf de personeelsfiche. Live-kanaal is de <strong>REST-webservice op de SocSec API Gateway</strong> (OAuth · vereist certificatie als aangever); zonder credentials draait alles in mock-modus met volwaardige registratie.</div>
-      <label class="sa-fld"><span>Kanaal</span>
-        <select name="dimona.provider">
-          ${["mock","rsz"].map(p=>`<option value="${p}" ${cfg.dimona?.provider===p?"selected":""}>${p}</option>`).join("")}
-        </select>
-      </label>
-      <label class="sa-fld"><span>OAuth client-ID</span><input name="dimona.clientId" value="${esc(cfg.dimona?.clientId||"")}" placeholder="na certificatie bij de RSZ"></label>
-      <label class="sa-fld"><span>OAuth client-secret</span><input name="dimona.clientSecret" value="${esc(cfg.dimona?.clientSecret||"")}" placeholder="••••"></label>
-    </div>
-  </div>
-
   <div class="sa-int-sec">AI-assistent</div>
   <div class="sa-card">
     <div class="sa-card-head"><div class="sa-card-title">Mona · slimme assistent (OpenAI)</div><div class="sa-card-sub">${statusPill(cfg.openai?.configured)}</div></div>
@@ -1945,7 +1931,7 @@ ${canManage ? `
       document.getElementById("saIntegrationsForm").addEventListener("submit", async e => {
         e.preventDefault();
         const fd = new FormData(e.target);
-        const body = { stripe:{}, peppol:{}, email:{}, kbo:{}, ciaw:{}, dimona:{}, openai:{} };
+        const body = { stripe:{}, peppol:{}, email:{}, kbo:{}, ciaw:{}, openai:{} };
         for (const [k,v] of fd.entries()) { const [s,f]=k.split("."); if(body[s]) body[s][f]=v; }
         const st = document.getElementById("saIntStatus");
         st.textContent = "Opslaan…"; st.style.color = "var(--gray-500)";
