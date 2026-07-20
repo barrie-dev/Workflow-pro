@@ -8,6 +8,7 @@ const { checkRateLimit } = require("./lib/rate-limit");
 const { Store, BUSINESS_ADMIN_PERMISSIONS, MANAGER_PERMISSIONS, EMPLOYEE_PERMISSIONS } = require("./lib/store");
 const { createDataAdapter } = require("./lib/data-adapters");
 const { createObjectStorage } = require("./infrastructure/object-storage-factory");
+const { createJobQueue } = require("./infrastructure/job-queue-factory");
 const { hashPassword, assertStrongPassword, verifyPassword } = require("./lib/security");
 const {
   authenticate,
@@ -389,6 +390,9 @@ const communicationRepo = makeCommunicationRepository(store);
 // Objectopslag achter de poort (handover 4.2): lokaal volume nu, Azure Blob of
 // S3 later via dezelfde interface · een configuratiewissel, geen codewijziging.
 const objectStorage = createObjectStorage();
+// JobQueue (handover 4.6): op PostgreSQL deelt hij de pool met de data-adapter,
+// zodat reserveringen een herstart en meerdere replicas overleven.
+const jobQueue = createJobQueue(storeAdapter);
 /**
  * Persistent verzendlog (F-09). Was een proceslokale ring-buffer: die verdween
  * bij elke herstart en verschilde per replica, dus de superadmin zag maar een
@@ -6843,14 +6847,35 @@ function startServer() {
   setTimeout(runReminderCycle, 60 * 1000).unref();
   setInterval(runReminderCycle, 6 * 60 * 60 * 1000).unref();
 
-  // Webhook-bezorging (E19/h41): elke minuut een ronde over de outbox.
-  // At-least-once met exponentiële backoff; de backoff in de outbox bepaalt
-  // zelf wanneer een mislukt event opnieuw aan de beurt is, dus een vaste
-  // korte tik is veilig. Fouten mogen de lus nooit stoppen.
-  const runWebhookDelivery = () => {
-    deliverPending(store, { transport: webhookTransport, limit: 50 })
-      .then(r => { if (r.attempted > 0) console.log(`  Webhooks: ${r.delivered} bezorgd, ${r.failed} mislukt`); })
-      .catch(e => console.error("[webhooks] bezorgronde mislukt:", e.message));
+  // Webhook-bezorging (E19/h41), gecoördineerd via de JobQueue (4.6): elke
+  // minuut één cyclus over ALLE replicas samen. De idempotencyKey is het
+  // minuutvenster, dus hoeveel replicas er ook publiceren, er ontstaat precies
+  // één job · en wie hem reserveert, draait de ronde. Crasht die replica, dan
+  // valt de job via de visibility timeout terug naar een ander.
+  const workerId = `wrk_${require("os").hostname()}_${process.pid}`;
+  const runWebhookDelivery = async () => {
+    try {
+      const minute = new Date().toISOString().slice(0, 16);   // 2026-07-20T10:15
+      await jobQueue.publish({
+        tenantId: "platform", type: "webhook.deliver_cycle",
+        payloadVersion: 1, idempotencyKey: minute, correlationId: `cycle_${minute}`,
+      });
+      const [job] = await jobQueue.reserve(workerId, 1);
+      if (!job) return;                                        // een andere replica heeft dit venster
+      try {
+        const r = await deliverPending(store, { transport: webhookTransport, limit: 50 });
+        if (r.attempted > 0) console.log(`  Webhooks: ${r.delivered} bezorgd, ${r.failed} mislukt`);
+        await jobQueue.acknowledge(job.id);
+      } catch (err) {
+        // De outbox bewaart zijn eigen retry-staat; de cyclus zelf mag opnieuw.
+        await jobQueue.retry(job.id, err.message).catch(() => {});
+        throw err;
+      }
+      // Opportunistisch oud done-werk opruimen · historie is telemetrie, geen archief.
+      await jobQueue.pruneDone(7).catch(() => {});
+    } catch (e) {
+      console.error("[webhooks] bezorgronde mislukt:", e.message);
+    }
   };
   setTimeout(runWebhookDelivery, 30 * 1000).unref();
   setInterval(runWebhookDelivery, 60 * 1000).unref();
