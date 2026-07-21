@@ -253,6 +253,7 @@ const {
 const { httpsRequest } = require("./lib/http-client");
 const inventory = require("./platform/inventory");
 const { buildMonaSignals } = require("./platform/mona-signals");
+const { buildPreparedWork, prepareProject } = require("./platform/mona-prepare");
 const robawsImport = require("./platform/robaws-import");
 const { buildWorkInbox } = require("./platform/work-inbox");
 const { makeConfigRepository } = require("./platform/config-platform");
@@ -2784,6 +2785,31 @@ const httpServer = http.createServer(async (req, res) => {
       if ((action === "mona/signals" || action === "boden/signals") && req.method === "GET") {
         assertInteractiveUser(user);
         sendJson(res, 200, { ok: true, ...buildMonaSignals(store, tenant, user) });
+        return;
+      }
+
+      // ── Mona Prepare (h48): proactief VOORBEREID werk · gratis, deterministisch,
+      //    rechten-gescoped. "Voorbereid voor jou" bij het openen van de app.
+      //    Uitvoeren van een stap blijft achter bevestiging (+ ai_actions-add-on).
+      if (action === "mona/prepared" && req.method === "GET") {
+        assertInteractiveUser(user);
+        sendJson(res, 200, { ok: true, ...buildPreparedWork(store, tenant, user) });
+        return;
+      }
+      // Op verzoek een volledig project voorbereiden (dossier + kickoff-afspraak).
+      if (action === "mona/prepare-project" && req.method === "POST") {
+        assertInteractiveUser(user);
+        const body = await readBody(req);
+        try {
+          const plan = prepareProject(store, tenant, user, {
+            customerId: body.customerId || null, customerName: body.customerName || "",
+            projectName: body.projectName || "", type: body.type || "", startDate: body.startDate || null,
+          });
+          store.audit({ actor: user.email, tenantId, action: "mona_project_prepared", area: "mona", detail: plan.title });
+          sendJson(res, 200, { ok: true, plan });
+        } catch (e) {
+          sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code });
+        }
         return;
       }
 

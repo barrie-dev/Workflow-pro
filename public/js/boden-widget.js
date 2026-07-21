@@ -15,6 +15,7 @@
   let _history = [];          // {role, content}
   let _open = false;
   let _busy = false;
+  let _preparedShown = false; // "Voorbereid voor jou" één keer per sessie laden
 
   function tenantId() {
     const u = window._wfpCurrentUser || {};
@@ -49,6 +50,14 @@
 .boden-prop button{min-height:36px;background:var(--wf-blue);color:#fff;border:none;border-radius:9px;padding:0 13px;font-size:12.5px;font-weight:650;cursor:pointer}
 .boden-prop button.sec{background:#fff;color:var(--gray-600);border:1px solid var(--gray-200);margin-left:6px}
 .boden-prop .done{color:var(--wf-green);font-weight:600}
+.boden-prep{align-self:flex-start;max-width:94%;background:#fff;border:1px solid #cfe0f3;border-left:3px solid var(--wf-blue);border-radius:14px;padding:12px 14px;font-size:13px;box-shadow:0 4px 14px rgba(15,23,42,.04)}
+.boden-prep .pt{font-weight:650;color:#172033;font-size:14px}
+.boden-prep .pw{color:var(--gray-600);font-size:12.5px;line-height:1.45;margin:5px 0 9px}
+.boden-prep-step{display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap}
+.boden-prep-step button{min-height:34px;background:var(--wf-blue);color:#fff;border:none;border-radius:9px;padding:0 12px;font-size:12.5px;font-weight:650;cursor:pointer}
+.boden-prep-step button:disabled{opacity:.5;cursor:default;background:var(--gray-200);color:var(--gray-600)}
+.boden-prep-step .done{color:var(--wf-green);font-weight:600;font-size:12px}
+.boden-prep-step .addon{color:var(--gray-500);font-size:11.5px;font-style:italic}
 .boden-typing{align-self:flex-start;color:var(--gray-500);font-size:12.5px;font-style:italic}
 .boden-foot{flex-shrink:0;border-top:1px solid #e1e4e9;padding:12px;display:flex;gap:8px;background:#fff}
 .boden-foot input{flex:1;min-width:0;height:44px;border:1.5px solid var(--gray-200);border-radius:11px;padding:0 13px;font-size:14px;font-family:inherit;outline:none}
@@ -96,7 +105,60 @@
     const p = document.getElementById("bodenPanel");
     if (p) p.classList.toggle("open", _open);
     document.getElementById("bodenFab")?.setAttribute("aria-expanded", String(_open));
-    if (_open) setTimeout(() => document.getElementById("bodenInput")?.focus(), 50);
+    if (_open) {
+      setTimeout(() => document.getElementById("bodenInput")?.focus(), 50);
+      if (!_preparedShown) { _preparedShown = true; loadPrepared(); }
+    }
+  }
+
+  // ── "Voorbereid voor jou" (Mona Prepare · h48) ─────────────────────────────
+  // Proactief: bij het openen toont Mona wat ze al heeft klaargezet. Elke
+  // actiestap hergebruikt de bestaande bevestig-flow (confirmProposal).
+  async function loadPrepared() {
+    let d;
+    try {
+      const r = await fetch(`/api/tenants/${tenantId()}/mona/prepared`, {
+        headers: { Authorization: "Bearer " + token() },
+      });
+      d = await r.json();
+      if (!r.ok || !d.plans || !d.plans.length) return;
+    } catch (e) { return; }
+
+    const intro = document.createElement("div");
+    intro.className = "boden-msg bot";
+    intro.innerHTML = fmt(`**Voorbereid voor jou** · ${d.plans.length} ding(en) staan klaar om te bevestigen:`);
+    bodyEl().appendChild(intro);
+
+    for (const plan of d.plans.slice(0, 6)) {
+      const card = document.createElement("div");
+      card.className = "boden-prep";
+      card.innerHTML = `<div class="pt">${esc(plan.title)}</div><div class="pw">${esc(plan.why || "")}</div>`;
+      for (const step of (plan.steps || [])) {
+        const prop = {
+          action: step.action, label: step.label, params: step.params || {},
+          method: step.endpoint && step.endpoint.method, path: step.endpoint && step.endpoint.path,
+        };
+        const row = document.createElement("div");
+        row.className = "boden-prep-step";
+        const btn = document.createElement("button");
+        const status = document.createElement("span");
+        if (step.action === "navigate") {
+          btn.textContent = step.label || "Ga ernaartoe";
+          btn.addEventListener("click", () => confirmProposal(prop, btn, status));
+        } else if (step.needsAddon) {
+          // Uitvoeren vereist de AI-acties-add-on · eerlijk tonen i.p.v. te doen alsof.
+          btn.textContent = step.label; btn.disabled = true;
+          status.className = "addon"; status.textContent = "AI-acties-add-on nodig";
+        } else {
+          btn.textContent = step.label;
+          btn.addEventListener("click", () => confirmProposal(prop, btn, status));
+        }
+        row.appendChild(btn); row.appendChild(status);
+        card.appendChild(row);
+      }
+      bodyEl().appendChild(card);
+    }
+    scroll();
   }
 
   function bodyEl() { return document.getElementById("bodenBody"); }

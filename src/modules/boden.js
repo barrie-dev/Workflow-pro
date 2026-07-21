@@ -25,6 +25,7 @@ const { loadPlatformConfig } = require("./platform-config");
 const { availableWidgets, renderWidgets } = require("./dashboards");
 const { terminologyFor } = require("./sectors");
 const { buildMonaSignals } = require("../platform/mona-signals");
+const { buildPreparedWork, prepareProject } = require("../platform/mona-prepare");
 
 // ── Leesbare record-types → collectie, vereist recht, module-key, samenvatter ──
 const READABLE = {
@@ -70,6 +71,13 @@ const ACTIONS = {
   create_appointment: { label: "Afspraak inplannen", perm: "planning",   full: true, path: "appointments", method: "POST", fields: ["customerName", "customerEmail", "date", "start", "end", "reminderDays", "note"] },
   create_incident:    { label: "Werkongeval registreren", perm: "incidents", full: true, path: "incidents", method: "POST", fields: ["employeeName", "date", "description", "severity"] },
   create_project:     { label: "Project aanmaken", perm: "projects",   full: true, path: "projects",     method: "POST", fields: ["name", "customerId", "customerName", "type", "startDate"] },
+  // Mona Prepare (h48): acties die de voorbereidingsengine gebruikt om
+  // signalen om te zetten in kant-en-klare stappen.
+  create_invoice:     { label: "Factuur aanmaken", perm: "billing",    full: true, path: "facturen",     method: "POST", fields: ["customerId", "customerName", "lines", "notes"] },
+  send_reminders:     { label: "Herinneringen versturen", perm: "alerts", full: true, path: "notifications/reminders", method: "POST", fields: [] },
+  // pathTemplate: het endpoint draagt een id in het pad; propose_action lost
+  // :id op uit params.id (de allowlist blijft de gate, het id is een param).
+  convert_quote:      { label: "Offerte omzetten", perm: "billing",    full: true, pathTemplate: "offertes/:id/convert", method: "POST", fields: ["id", "target"] },
 };
 
 const ACTIONS_ADDON = "ai_actions"; // betaalde add-on om écht te handelen
@@ -183,19 +191,60 @@ function runTool(store, tenant, user, name, input, proposals) {
     return { counts, signals: signals.slice(0, 25).map(s => ({ type: s.type, ernst: s.severity, titel: s.title, detail: s.detail, scherm: s.targetView })) };
   }
 
+  if (name === "prepare_work") {
+    // Mona Prepare (h48): signalen omgezet in kant-en-klare, vooraf-ingevulde
+    // plannen. Deterministisch en rechten-gescoped · Mona vat ze samen en de
+    // gebruiker bevestigt (uitvoeren blijft achter de add-on + bevestiging).
+    const { plans, counts } = buildPreparedWork(store, tenant, user);
+    return { counts, plannen: plans.map(p => ({
+      id: p.id, titel: p.title, waarom: p.why, addon_nodig: p.addonRequired,
+      stappen: p.steps.map(s => ({ actie: s.action, label: s.label, velden: Object.keys(s.params || {}) })),
+    })) };
+  }
+
+  if (name === "prepare_project") {
+    if (!hasFull(user, "projects")) return { error: "Geen toegang om projecten aan te maken." };
+    try {
+      const p = prepareProject(store, tenant, user, {
+        customerId: input.customerId || null, customerName: input.customerName || "",
+        projectName: input.projectName || "", type: input.type || "", startDate: input.startDate || null,
+      });
+      // De stappen als voorstellen aanbieden zodat de UI ze kan bevestigen.
+      for (const s of p.steps) {
+        if (s.action === "navigate") continue;
+        proposals.push({ id: `prop_${proposals.length + 1}`, action: s.action, label: s.label,
+          params: s.params, method: s.endpoint.method, path: s.endpoint.path, needsConfirm: true });
+      }
+      if (p.steps.some(s => s.action !== "navigate") && store.audit) {
+        store.audit({ actor: user.email, tenantId: tenant.id, action: "mona_project_prepared", area: "mona", detail: p.title });
+      }
+      return { id: p.id, titel: p.title, waarom: p.why, addon_nodig: p.addonRequired,
+        stappen: p.steps.map(s => ({ actie: s.action, label: s.label })),
+        melding: "Plan klaargezet. Vraag de gebruiker om te bevestigen · voer niets uit." };
+    } catch (e) { return { error: e.message }; }
+  }
+
   if (name === "propose_action") {
     const action = String(input.action || "");
     const a = ACTIONS[action];
     if (!a) return { error: `Onbekende actie '${action}'.` };
+    const hasEndpoint = !!(a.path || a.pathTemplate);
     // 'navigate' is gratis UX (geen kost, geen wijziging). Écht handelen (alles met
     // een endpoint) zit achter de betaalde add-on 'ai_actions'.
-    if (a.path && !isModuleEnabled(store, tenant, ACTIONS_ADDON)) {
+    if (hasEndpoint && !isModuleEnabled(store, tenant, ACTIONS_ADDON)) {
       return { error: "actions_addon_uit: Mona mag in dit pakket geen acties uitvoeren. Verwijs de gebruiker naar het juiste scherm of vermeld dat de AI-acties-add-on nodig is." };
     }
     if (a.perm && (a.full ? !hasFull(user, a.perm) : !hasAny(user, a.perm))) {
       return { error: `Geen toegang om '${a.label}' uit te voeren.` };
     }
     const params = (input.params && typeof input.params === "object") ? input.params : {};
+    // pathTemplate met :id → oplossen uit params (id blijft verplicht).
+    let path = a.path;
+    if (a.pathTemplate) {
+      const id = String(params.id || "").trim();
+      if (!id) return { error: `Actie '${action}' vereist een 'id' in params.` };
+      path = a.pathTemplate.replace(":id", encodeURIComponent(id));
+    }
     const proposal = {
       id: `prop_${proposals.length + 1}`,
       action,
@@ -203,11 +252,11 @@ function runTool(store, tenant, user, name, input, proposals) {
       params,
       needsConfirm: a.needsConfirm !== false,
     };
-    if (a.path) { proposal.method = a.method; proposal.path = a.path; }
+    if (path) { proposal.method = a.method; proposal.path = path; }
     proposals.push(proposal);
     // Governance (master-spec h48): elk actievoorstel wordt geauditeerd met
     // actor en veldnamen (geen waarden · geen gevoelige data in de audittrail).
-    if (a.path && store.audit) {
+    if (hasEndpoint && store.audit) {
       store.audit({ actor: user.email, tenantId: tenant.id, action: "mona_action_proposed", area: "mona", detail: `${action} · velden: ${Object.keys(params).join(",") || "-"}` });
     }
     return { ok: true, melding: "Voorstel klaar. Vraag de gebruiker om te bevestigen · voer niets uit." };
@@ -239,6 +288,14 @@ function toolDefs() {
     }, required: ["type"] }),
     fn("get_kpis", "Geef de belangrijkste kerncijfers (KPI's) die deze gebruiker mag zien, kant-en-klaar berekend. Ideaal voor 'hoe staan we ervoor', 'geef me een overzicht' of vragen naar omzet, openstaande facturen, teamgrootte, open opdrachten enz.", { type: "object", properties: {} }),
     fn("get_signals", "Geef de zaken die NU aandacht vragen: niet-gefactureerde afgewerkte werkbonnen en aanvaarde offertes (facturatie-lekkage), vervallen facturen, overlappende planning, projecten die hun budget (bijna) overschrijden, vervallende compliance en lage voorraad. Gebruik dit bij 'wat heeft mijn aandacht nodig', 'waar loopt geld verloren', 'wat moet ik vandaag doen'. Alles binnen de rechten van de gebruiker.", { type: "object", properties: {} }),
+    fn("prepare_work", "Geef de VOORBEREIDE plannen: Mona heeft het werk dat aandacht vraagt al kant-en-klaar gezet (bv. een aanvaarde offerte klaar om te factureren, een factuur klaar voor een afgewerkte werkbon, herinneringen klaar voor vervallen facturen). Elk plan heeft ingevulde stappen die de gebruiker enkel hoeft te bevestigen. Gebruik dit bij 'wat kan je voor me klaarzetten', 'bereid alles voor', 'wat kan ik zo goedkeuren', of proactief bij het begin van een gesprek over openstaand werk. Vat de belangrijkste plannen samen (kritieke eerst) en zeg wat één klik oplevert.", { type: "object", properties: {} }),
+    fn("prepare_project", "Bereid een VOLLEDIG project voor uit een bestaande klant: Mona zet het projectdossier én een kickoff-afspraak klaar met ingevulde velden. De gebruiker bevestigt enkel. Gebruik dit wanneer de gebruiker een project wil opstarten of voorbereiden voor een klant ('bereid een project voor voor klant X', 'start een project op'). Geef customerId of customerName mee.", { type: "object", properties: {
+      customerId: { type: "string", description: "Id van de bestaande klant (bij voorkeur)" },
+      customerName: { type: "string", description: "Naam van de klant als het id onbekend is" },
+      projectName: { type: "string", description: "Optionele projectnaam; anders afgeleid van de klant" },
+      type: { type: "string", description: "Optioneel projecttype" },
+      startDate: { type: "string", description: "Optionele startdatum (YYYY-MM-DD); standaard vandaag" },
+    } }),
     fn("propose_action", "Stel een actie voor die de gebruiker bevestigt en die daarna ECHT wordt uitgevoerd (de gebruiker klikt bevestigen → het beveiligde endpoint draait). Jij voert zelf niets uit. 'navigate' brengt de gebruiker naar een scherm (params.view) · altijd beschikbaar. De overige acties (clock_in, clock_out, create_leave, create_expense, create_customer, create_workorder, create_quote, create_message, create_venue, create_appointment, create_incident, create_project) vereisen de AI-acties-add-on én het juiste recht; geef params mee volgens de velden van de actie.", { type: "object", properties: {
       action: { type: "string", enum: Object.keys(ACTIONS) },
       params: { type: "object", description: "Veldwaarden voor de actie" },
@@ -265,6 +322,8 @@ function systemPrompt(store, tenant, user) {
     "- Voor 'hoeveel', 'totaal', 'gemiddeld', 'per X' of cijfervragen: gebruik 'aggregate' (count/sum/avg, eventueel groupBy) · som nooit zelf records op uit het hoofd.",
     "- Voor 'hoe staan we ervoor', overzichten of vragen naar omzet/openstaande facturen/teamgrootte: gebruik 'get_kpis'.",
     "- Voor 'wat heeft mijn aandacht nodig', 'waar loopt geld verloren', 'wat moet er nog gebeuren': gebruik 'get_signals' en vat de belangrijkste (kritieke eerst) samen met een concreet vervolg.",
+    "- WEES PROACTIEF: bij vragen als 'bereid alles voor', 'wat kan je klaarzetten', 'wat kan ik goedkeuren', of wanneer er openstaand werk is, gebruik 'prepare_work'. Mona heeft dan al kant-en-klare plannen (offerte→factuur, factuur voor afgewerkte werkbon, herinneringen) die de gebruiker enkel bevestigt. Zeg concreet wat één klik oplevert.",
+    "- Wil de gebruiker een project opstarten of voorbereiden voor een klant: gebruik 'prepare_project' zodat het projectdossier én de kickoff-afspraak meteen klaarstaan. Bevestiging volstaat.",
     "- Voor specifieke records: 'query_records' of 'search'. Roep 'get_my_context' aan als je twijfelt over de rechten.",
     "- Combineer gerust meerdere tools en redeneer met de uitkomsten (bv. een cijfer + een korte duiding of suggestie).",
     "",
@@ -330,7 +389,14 @@ function mockChat(store, tenant, user, msgs) {
   const found = runTool(store, tenant, user, "search", { query: last.slice(0, 40) }, []);
   let reply = `Mona draait in **demo-modus** (nog geen AI-sleutel ingesteld door de beheerder).\n\n`;
   reply += `Je bent ingelogd als ${ctx.gebruiker} (${ctx.rol}). Ik kan je helpen met: ${ctx.toegankelijke_record_types.join(", ") || "-"}.\n`;
-  if (found.aantal) {
+  // Proactief: toon wat er al voor de gebruiker klaarstaat (deterministisch,
+  // rechten-gescoped · werkt ook zonder AI-sleutel).
+  const prep = buildPreparedWork(store, tenant, user);
+  if (prep.plans.length) {
+    reply += `\nIk heb alvast **${prep.plans.length} ding(en) klaargezet** die je enkel hoeft te bevestigen:\n`;
+    reply += prep.plans.slice(0, 5).map(p => `• ${p.title}`).join("\n");
+    reply += `\n\nOpen "Voorbereid voor jou" om ze goed te keuren.`;
+  } else if (found.aantal) {
     reply += `\nIk vond ${found.aantal} resultaat(en) voor "${last.slice(0, 40)}":\n`;
     reply += found.resultaten.slice(0, 5).map(r => `• ${r.type}: ${r.naam || r.nummer || r.titel || r.id}`).join("\n");
   } else {
