@@ -125,8 +125,11 @@ async function checkObjectStorage() {
   } catch (e) { record("object_storage.get", false, e.message); }
 
   try {
-    const signed = store.presignUrl({ permissions: "read", key, ttlSeconds: 120 });
-    const res = await httpGetBuffer(signed.url);
+    // Gebruik de ECHTE download-URL-methode van de adapter (juiste permissie +
+    // headers per provider), niet een hand-gemaakte presign. Azure vereist bv.
+    // "r", niet "read"; createDownloadUrl doet dat intern goed.
+    const dl = await store.createDownloadUrl({ tenantId, key, ttlSeconds: 120 });
+    const res = await httpGetBuffer(dl.url);
     const okStatus = res.status >= 200 && res.status < 300;
     record("object_storage.signed_url", okStatus && res.body.equals(payload), okStatus ? (res.body.equals(payload) ? "signed URL levert de juiste bytes" : "signed URL: bytes wijken af") : `signed URL status ${res.status}`);
   } catch (e) { record("object_storage.signed_url", false, e.message); }
