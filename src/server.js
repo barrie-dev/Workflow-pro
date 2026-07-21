@@ -523,6 +523,21 @@ const companySource = (() => {
   return source;
 })();
 /**
+ * Migratie-orchestrator (P0-01 sluitstuk): coördineert de genormaliseerde
+ * snapshot-spiegel-domeinen als één geheel voor de cutover-beslissing.
+ * Dependency-volgorde: identity (tenants/users) → company → finance.
+ */
+const migrationOrchestrator = require("./infrastructure/migration-orchestrator").makeMigrationOrchestrator({
+  domains: [
+    { name: "identity", source: identitySource },
+    { name: "company", source: companySource, dependsOn: ["identity"] },
+    { name: "finance", source: financeSource, dependsOn: ["identity", "company"] },
+  ],
+  // CRM volgt een eigen (oudere) cutover-route met een eigen reconciliatie-CLI;
+  // hier alleen informatief.
+  info: { crm: () => (customerSource.status ? customerSource.status() : { source: config.crm.readSource }) },
+});
+/**
  * Persistent verzendlog (F-09). Was een proceslokale ring-buffer: die verdween
  * bij elke herstart en verschilde per replica, dus de superadmin zag maar een
  * fractie. Nu in de store, met een eigen bovengrens zodat het log niet
@@ -2126,6 +2141,26 @@ const httpServer = http.createServer(async (req, res) => {
       const result = await companySource.reconcile();
       store.audit({ actor: user.email, tenantId: null, action: "company_reconcile", area: "platform", details: { ok: result.ok } });
       sendJson(res, 200, { ok: true, reconcile: result, status: companySource.status() });
+      return;
+    }
+
+    // ── P0-01 sluitstuk · cross-domein migratiestatus + reconciliatie (ops) ──
+    // Eén blik vóór een cutover: synct en reconcilieert alle genormaliseerde
+    // domeinen in dependency-volgorde. `ok:true` = cutover-gereed.
+    if (url.pathname === "/api/admin/migration/status" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertSuperAdmin(user);
+      sendJson(res, 200, { ok: true, migration: migrationOrchestrator.status() });
+      return;
+    }
+    if (url.pathname === "/api/admin/migration/reconcile" && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertSuperAdmin(user);
+      const result = await migrationOrchestrator.reconcileAll();
+      store.audit({ actor: user.email, tenantId: null, action: "migration_reconcile", area: "platform", details: { ok: result.ok, order: result.order } });
+      sendJson(res, result.ok ? 200 : 409, { ok: result.ok, reconcile: result });
       return;
     }
 

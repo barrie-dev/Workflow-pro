@@ -298,6 +298,23 @@ definitieve nummeruitgifte, PLT-BR-005).
 Met companies genormaliseerd kunnen de finance-FK's naar companies later echte
 database-FK's worden (samen met customers, zodra ook CRM in pg-stand draait).
 
+### Cross-domein cutover-check (P0-01 sluitstuk)
+
+Vóór je een READ_SOURCE-flag omzet, geeft één endpoint het totaalbeeld over de
+genormaliseerde snapshot-spiegel-domeinen (identity → company → finance, in
+dependency-volgorde):
+
+- `GET /api/admin/migration/status` · de standen en laatste sync/reconcile per
+  domein, plus CRM informatief.
+- `POST /api/admin/migration/reconcile` · synct (force) en reconcilieert ELK
+  domein en geeft `ok:true` (HTTP 200) alleen als alles sluitend is; anders
+  `ok:false` (HTTP 409) met per-domein detail (welk domein, welke mismatches,
+  welke saldo/nummerreeks-afwijking).
+
+`ok:true` betekent cutover-gereed voor die domeinen. CRM houdt zijn eigen
+reconciliatie-CLI (`npm run db:reconcile:crm`) · het verschijnt in dit rapport
+alleen onder `info.crm`.
+
 ### Datamigratie (CRM naar genormaliseerde tabellen)
 
 ```
