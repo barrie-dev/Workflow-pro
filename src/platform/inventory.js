@@ -100,25 +100,34 @@ function level(store, tenantId, articleId, locationId) {
  */
 function listMovements(store, tenantId, { articleId, locationId, limit = 100 } = {}) {
   ensureCollections(store);
+  // De ledger is append-only, dus de INSERTIE-volgorde is de boekvolgorde.
+  // Twee boekingen binnen dezelfde milliseconde delen niet alleen `at` maar
+  // ook het ULID-tijdsprefix; de tiebreak zou dan op het RANDOM ULID-suffix
+  // vallen · niet-monotoon en dus onstabiel. De insertie-index (hoger = later
+  // geboekt = nieuwer) is de enige deterministische tiebreak.
   return store.data.stockMovements
-    .filter(m => m.tenantId === tenantId
+    .map((m, idx) => ({ m, idx }))
+    .filter(({ m }) => m.tenantId === tenantId
       && (!articleId || m.articleId === articleId)
       && (!locationId || m.locationId === locationId))
-    // Tiebreak op id (ULID = tijd-geordend): twee boekingen binnen dezelfde
-    // milliseconde hebben hetzelfde `at` en zouden anders onstabiel sorteren.
-    .sort((a, b) => String(b.at || "").localeCompare(String(a.at || "")) || String(b.id || "").localeCompare(String(a.id || "")))
-    .slice(0, Math.min(Math.max(1, Number(limit) || 100), 500));
+    .sort((a, b) => String(b.m.at || "").localeCompare(String(a.m.at || "")) || (b.idx - a.idx))
+    .slice(0, Math.min(Math.max(1, Number(limit) || 100), 500))
+    .map(({ m }) => m);
 }
 
 /** Reservatiehistoriek · standaard alleen actieve, met status-filter. */
 function listReservations(store, tenantId, { articleId, locationId, status = "active" } = {}) {
   ensureCollections(store);
+  // Insertie-index als tiebreak (zie listMovements): het ULID-suffix is binnen
+  // dezelfde milliseconde random, dus geen betrouwbare volgorde.
   return store.data.stockReservations
-    .filter(r => r.tenantId === tenantId
+    .map((r, idx) => ({ r, idx }))
+    .filter(({ r }) => r.tenantId === tenantId
       && (!articleId || r.articleId === articleId)
       && (!locationId || r.locationId === locationId)
       && (status === "all" || r.status === status))
-    .sort((a, b) => String(b.at || b.createdAt || "").localeCompare(String(a.at || a.createdAt || "")) || String(b.id || "").localeCompare(String(a.id || "")));
+    .sort((a, b) => String(b.r.at || b.r.createdAt || "").localeCompare(String(a.r.at || a.r.createdAt || "")) || (b.idx - a.idx))
+    .map(({ r }) => r);
 }
 
 /** Geaggregeerde voorraad per artikel+locatie (uit de ledger). */
