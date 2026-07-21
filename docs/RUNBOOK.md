@@ -249,6 +249,34 @@ Een pg-leesfout in pg-stand faalt eerlijk met 503 `IDENTITY_SOURCE_UNAVAILABLE`
 in plaats van stil terug te vallen. De sync is snapshot-gepoort: een
 ongewijzigd platform levert geen schrijfwerk op.
 
+### Finance-cutover (P0-01 · FINANCE_READ_SOURCE)
+
+Derde en zwaarste domein: facturen + betalingen. Zelfde route en spiegel-lus
+als identity; schrijven blijft bij legacy (nummering, allocatie en de
+saldo-invarianten). Verschil: de genormaliseerde tabellen dragen harde
+financiële invarianten die de database mede bewaakt.
+
+1. Op `postgres` met `FINANCE_READ_SOURCE=legacy` vult de spiegel-lus de
+   tabellen. Controleer met `POST /api/admin/finance/reconcile` (superadmin):
+   `reconcile.ok` én in het bijzonder `saldoMismatches: []` · dat laatste is de
+   financiële poortwachter (het openstaande saldo uit de allocatie-rijen moet
+   gelijk zijn aan de legacy-berekening).
+2. **`FINANCE_READ_SOURCE=shadow`** en herstart. De facturenlijst blijft uit
+   het (performance-getunede) legacy-pad komen; een achtergrondlezing
+   vergelijkt de saldi met pg (`finance.shadow.mismatch`).
+3. Reconciliatie groen → **`FINANCE_READ_SOURCE=pg`**. De facturen- en
+   betalingenlijst komen nu uit de tabellen, waar het saldo een SOM over de
+   allocatie-rijen is. Het `invoiceId`-filter op betalingen blijft bewust nog
+   op het legacy-pad tot dat filter ook genormaliseerd is.
+4. **Rollback = flag terug naar `shadow` of `legacy`** en herstarten.
+
+Strangler-detail (bewust): de finance-tabellen hebben GEEN database-FK naar
+companies/customers · die domeinen migreren onafhankelijk en een harde FK zou
+een big-bang eisen (5.5). De referentie-integriteit blijft in de applicatie tot
+die domeinen co-migreren; tenant-FK + RLS gelden onverkort. De sync plaatst
+zelf een minimaal tenant-anker zodat finance niet afhangt van de
+migratievolgorde van identity.
+
 ### Datamigratie (CRM naar genormaliseerde tabellen)
 
 ```

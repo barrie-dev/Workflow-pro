@@ -475,6 +475,30 @@ const identitySource = (() => {
   return source;
 })();
 /**
+ * Finance-bronschakelaar (P0-01 fase 3 · facturen + betalingen). Zelfde
+ * strangler-route en spiegel-lus als identity; schrijven blijft bij legacy
+ * (nummering, allocatie en saldo-invarianten).
+ */
+const financeSource = (() => {
+  const mode = config.finance.readSource;
+  let pool = storeAdapter && storeAdapter.name === "postgres" ? storeAdapter.pool : null;
+  if (!pool && mode !== "legacy") {
+    if (!/^postgres(ql)?:\/\//.test(config.database.url)) {
+      throw new Error(`FINANCE_READ_SOURCE=${mode} vereist DATABASE_URL (of STORAGE_ADAPTER=postgres)`);
+    }
+    const { Pool } = require("pg");
+    pool = new Pool({ connectionString: config.database.url, ssl: config.database.ssl ? { rejectUnauthorized: false } : undefined, max: 3 });
+  }
+  const { makeFinanceSource } = require("./infrastructure/finance-source");
+  const source = makeFinanceSource({ mode, store, pool, telemetry });
+  if (pool) {
+    setTimeout(() => source.syncNow().catch(() => {}), 18 * 1000).unref();
+    setInterval(() => source.syncNow().catch(() => {}), config.finance.syncIntervalMs).unref();
+    console.log(`  Finance   : ${mode}${mode === "legacy" ? " (spiegel-lus bouwt bewijs op)" : mode === "shadow" ? " (legacy leidend, pg leest mee)" : " (pg-leesbron · legacy blijft write-owner)"}`);
+  }
+  return source;
+})();
+/**
  * Persistent verzendlog (F-09). Was een proceslokale ring-buffer: die verdween
  * bij elke herstart en verschilde per replica, dus de superadmin zag maar een
  * fractie. Nu in de store, met een eigen bovengrens zodat het log niet
@@ -964,6 +988,7 @@ const httpServer = http.createServer(async (req, res) => {
         txAdapter: (pgTxManager || txManager).adapter,
         objectStorageAdapter: objectStorage.name,
         identitySource: identitySource.mode,   // P0-01-migratiestand
+        financeSource: financeSource.mode,
         storeReady: storeStatus?.ok !== false,
         modules: modules.length,
         uptime: Math.floor(process.uptime()),
@@ -2038,6 +2063,25 @@ const httpServer = http.createServer(async (req, res) => {
       const result = await identitySource.reconcile();
       store.audit({ actor: user.email, tenantId: null, action: "identity_reconcile", area: "platform", details: { ok: result.ok, checked: result.checked } });
       sendJson(res, 200, { ok: true, reconcile: result, status: identitySource.status() });
+      return;
+    }
+
+    // ── P0-01 · finance-migratiestatus + reconciliatiebewijs (ops) ───────────
+    if (url.pathname === "/api/admin/finance/status" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertSuperAdmin(user);
+      sendJson(res, 200, { ok: true, finance: financeSource.status() });
+      return;
+    }
+    if (url.pathname === "/api/admin/finance/reconcile" && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertSuperAdmin(user);
+      await financeSource.syncNow({ force: true });
+      const result = await financeSource.reconcile();
+      store.audit({ actor: user.email, tenantId: null, action: "finance_reconcile", area: "platform", details: { ok: result.ok } });
+      sendJson(res, 200, { ok: true, reconcile: result, status: financeSource.status() });
       return;
     }
 
@@ -5221,28 +5265,31 @@ const httpServer = http.createServer(async (req, res) => {
       // ── Facturen (klantfacturen) ──────────────────────────────────────────────
       if (action === "facturen" && req.method === "GET") {
         assertInvoicing(user);
-        const rows = store.list("invoices", tenantId);
-        // Mark overdue: open invoices past due date
-        const today = new Date().toISOString().slice(0, 10);
+        // Legacy-leespad (autoriteit in legacy/shadow, performance-getuned):
         // h45-saldi in ÉÉN pas over de betalingen. Per factuur alle betalingen
         // scannen was kwadratisch en brak het performancebudget bij 1200
         // facturen × 400 betalingen (loadtest 2026-07-21: P95 > 1s).
-        const allocatedCents = new Map();
-        for (const p of store.list("payments", tenantId)) {
-          for (const a of (p.allocations || [])) {
-            if (a.reversedAt) continue;
-            allocatedCents.set(a.invoiceId, (allocatedCents.get(a.invoiceId) || 0) + Math.round(Number(a.amount || 0) * 100));
+        const legacyInvoices = () => {
+          const rows = store.list("invoices", tenantId);
+          const today = new Date().toISOString().slice(0, 10);
+          const allocatedCents = new Map();
+          for (const p of store.list("payments", tenantId)) {
+            for (const a of (p.allocations || [])) {
+              if (a.reversedAt) continue;
+              allocatedCents.set(a.invoiceId, (allocatedCents.get(a.invoiceId) || 0) + Math.round(Number(a.amount || 0) * 100));
+            }
           }
-        }
-        const enriched = rows.map(inv => {
-          const cents = allocatedCents.get(inv.id) || 0;
-          const base = { ...inv, paidAmount: cents / 100, openAmount: Math.round(Number(inv.total || 0) * 100 - cents) / 100 };
-          if (inv.status === "open" && inv.dueDate && inv.dueDate < today) {
-            return { ...base, status: "overdue" };
-          }
-          return base;
-        });
-        sendJson(res, 200, { ok: true, invoices: enriched });
+          return rows.map(inv => {
+            const cents = allocatedCents.get(inv.id) || 0;
+            const base = { ...inv, paidAmount: cents / 100, openAmount: Math.round(Number(inv.total || 0) * 100 - cents) / 100 };
+            if (inv.status === "open" && inv.dueDate && inv.dueDate < today) return { ...base, status: "overdue" };
+            return base;
+          });
+        };
+        // P0-01: in pg-stand komt de lijst uit de genormaliseerde tabellen (saldo
+        // = som over allocatie-rijen); in shadow leest pg mee (telemetrie).
+        const invoices = await financeSource.readInvoices(tenantId, {}, legacyInvoices);
+        sendJson(res, 200, { ok: true, invoices });
         return;
       }
       if (action === "facturen" && req.method === "POST") {
@@ -5260,10 +5307,16 @@ const httpServer = http.createServer(async (req, res) => {
       // ── Betalingen + allocatie (h45 · sluitstuk lead-to-cash) ────────────────
       if (action === "payments" && req.method === "GET") {
         assertInvoicing(user);
-        sendJson(res, 200, { ok: true, payments: paymentsModule.listPayments(store, tenantId, {
-          customerId: url.searchParams.get("customerId") || undefined,
-          invoiceId: url.searchParams.get("invoiceId") || undefined,
-        }) });
+        const customerId = url.searchParams.get("customerId") || undefined;
+        const invoiceId = url.searchParams.get("invoiceId") || undefined;
+        // pg-stand leest betalingen uit de tabellen; het invoiceId-filter (dat
+        // op actieve allocaties werkt) blijft op het legacy-pad tot dat filter
+        // ook genormaliseerd is · legacy is en blijft de write-owner.
+        const legacyPayments = () => paymentsModule.listPayments(store, tenantId, { customerId, invoiceId });
+        const payments = invoiceId
+          ? legacyPayments()
+          : await financeSource.readPayments(tenantId, { customerId }, legacyPayments);
+        sendJson(res, 200, { ok: true, payments });
         return;
       }
       if (action === "payments" && req.method === "POST") {

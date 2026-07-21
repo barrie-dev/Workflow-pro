@@ -78,6 +78,12 @@ const config = {
     readSource: (process.env.IDENTITY_READ_SOURCE || "legacy").toLowerCase(),
     syncIntervalMs: Number(process.env.IDENTITY_SYNC_INTERVAL_MS) || 10000
   },
+  // Finance-bronschakelaar (P0-01 · derde domein: facturen + betalingen).
+  // Zelfde route en spiegel-lus als identity; schrijven blijft bij legacy.
+  finance: {
+    readSource: (process.env.FINANCE_READ_SOURCE || "legacy").toLowerCase(),
+    syncIntervalMs: Number(process.env.FINANCE_SYNC_INTERVAL_MS) || 10000
+  },
   // AI achter een port (handover 4.5 · F-07). Modelnamen staan HIER, nooit in
   // business rules. De super-admin kan dit per platform overschrijven via de
   // Integraties-console; zonder geldige sleutel draait de mock-adapter.
