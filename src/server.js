@@ -238,7 +238,8 @@ const { INQUIRY_STATUSES, ensureIntake, intakeAddress, newIntakeToken, parseInbo
 const { estimateFromQuestion } = require("./modules/estimator");
 const { emitDomainEvent, listOutbox, registerOutboxSink } = require("./platform/events");
 const { ensureDefaultCompany, issueNumber } = require("./platform/companies");
-const { applyScope, redactSensitive } = require("./platform/policy");
+const { applyScope, redactSensitive, canSeeSensitive } = require("./platform/policy");
+const { projectDossier } = require("./modules/project-dossier");
 const { makeCustomerRepository } = require("./platform/crm");
 const { makeProjectRepository } = require("./platform/projects");
 const { freezeSentVersion, reviseQuote, computeDocumentHash } = require("./platform/quote-versions");
@@ -4575,6 +4576,22 @@ const httpServer = http.createServer(async (req, res) => {
         const p = projectRepo.findById(tenantId, projectItemMatch[1]);
         if (!p) return sendJson(res, 404, { ok: false, error: "Project niet gevonden" });
         sendJson(res, 200, { ok: true, project: redactSensitive(user, "projects", p) });
+        return;
+      }
+      // ── Project 360°-dossier (#76): alle modulesporen + tijdlijn in één view ──
+      const projectDossierMatch = action.match(/^projects\/([^/]+)\/dossier$/);
+      if (projectDossierMatch && req.method === "GET") {
+        assertCan(user, "projects");
+        const p = projectRepo.findById(tenantId, projectDossierMatch[1]);
+        if (!p) return sendJson(res, 404, { ok: false, error: "Project niet gevonden" });
+        // Financiele samenvatting enkel voor wie de kosten mag zien (rechten-gedreven,
+        // zelfde poort als de finance-endpoint + costs.view uit een samengesteld profiel).
+        const mayFinance = ["tenant_admin", "super_admin"].includes(user.role) || canSeeSensitive(user);
+        const dossier = projectDossier(store, tenantId, p, { finance: mayFinance ? buildProjectFinance(store, tenant, p) : null });
+        // Gevoelige velden per deellijst redigeren (marge, kostprijs, kredietlimiet ...).
+        dossier.project = redactSensitive(user, "projects", dossier.project);
+        dossier.related.quotes = redactSensitive(user, "quotes", dossier.related.quotes);
+        sendJson(res, 200, { ok: true, dossier });
         return;
       }
       if (action === "projects" && req.method === "POST") {

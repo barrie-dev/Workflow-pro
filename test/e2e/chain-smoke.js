@@ -102,6 +102,18 @@ async function activeEmp(tok, tid, name, email) {
   check("9c· gefactureerd 1000 uit de offerteketen", F.invoiced && F.invoiced.total === 1000, F.invoiced && F.invoiced.total);
   check("9d· factuurbron traceerbaar naar de keten", F.invoiced && (F.invoiced.sources || []).some(s => s.number === inv.number), JSON.stringify((F.invoiced && F.invoiced.sources || []).map(s => s.number)));
 
+  // ── 10. Project 360°-dossier: alle modulesporen + één tijdlijn (#76) ────────
+  const dos = await j("GET", `/api/tenants/${tid}/projects/${prjId}/dossier`, null, tok);
+  const D = dos.data.dossier || {};
+  check("10a· dossier bundelt offerte + factuur + betaling van het project", dos.status === 200
+    && D.counts.quotes >= 1 && D.counts.invoices >= 1 && D.counts.payments >= 1, JSON.stringify(D.counts));
+  check("10b· één chronologische tijdlijn over de modules heen", Array.isArray(D.timeline)
+    && D.timeline.length >= 4
+    && D.timeline.some(e => e.module === "invoices")
+    && D.timeline.some(e => e.module === "payments")
+    && D.timeline.some(e => e.module === "quotes"), D.timeline && D.timeline.length);
+  check("10c· financiele samenvatting mee voor de beheerder", D.finance && D.finance.budget && D.finance.budget.total === 5000, D.finance && D.finance.budget && D.finance.budget.total);
+
   console.log(failures === 0 ? "SMOKE OK" : `SMOKE FAALT: ${failures}`);
   exitSoft(failures === 0 ? 0 : 1);
 })().catch(e => { console.error("FOUT:", e.message); exitSoft(1); });
