@@ -95,6 +95,10 @@ jobs:
             echo "::error::Blob-opslagtests werden overgeslagen terwijl de emulator draait"; exit 1;
           fi
           echo "Alle database- en opslag-gebonden tests hebben echt gedraaid."
+      - name: Test-suite evidence (DoD #10 · tests_pass)
+        # Leest de zojuist getee'de suite-uitvoer en schrijft commit-gebonden
+        # bewijs dat de suite groen draaide (0 falend, db-tests niet overgeslagen).
+        run: node scripts/check-tests.js /tmp/test-out.txt
       # ── Executing evidence-jobs (CTO-regel: bewijs = output van een draaiende
       # job, gebonden aan HEAD). Ze draaien hier omdat deze job een ECHTE pg
       # heeft; elk artefact wordt vers gegenereerd en meteen daarna gevalideerd
