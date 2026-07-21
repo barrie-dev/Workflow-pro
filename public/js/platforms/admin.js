@@ -303,6 +303,29 @@
 
   // i18n-helper voor de admin-shell (t()-gebaseerde, dynamisch opgebouwde inhoud).
   function tA(key, fallback) { return window.wfpI18n ? window.wfpI18n.t(key, fallback) : fallback; }
+  function uiDialog(options) {
+    const dialog = window.wfpAdmin && window.wfpAdmin.askDialog;
+    return typeof dialog === "function" ? dialog(options) : Promise.resolve(null);
+  }
+  function uiConfirm(message, options) {
+    const cfg = options || {};
+    return uiDialog({
+      eyebrow: cfg.eyebrow || tA("adm.dialog.action", "Actie controleren"),
+      title: cfg.title || tA("adm.dialog.confirmTitle", "Bevestig deze actie"),
+      message, confirmLabel: cfg.confirmLabel || tA("adm.dialog.confirm", "Bevestigen"),
+      danger: Boolean(cfg.danger),
+    });
+  }
+  function uiInput(label, options) {
+    const cfg = options || {};
+    return uiDialog({
+      eyebrow: cfg.eyebrow || tA("adm.dialog.input", "Aanvullende invoer"),
+      title: cfg.title || label, message: cfg.message || "", label,
+      input: cfg.input || "text", value: cfg.value || "", placeholder: cfg.placeholder || "",
+      required: cfg.required !== false, requiredMessage: cfg.requiredMessage, minlength: cfg.minlength,
+      confirmLabel: cfg.confirmLabel || tA("adm.dialog.continue", "Doorgaan"), danger: Boolean(cfg.danger),
+    });
+  }
 
   // Werkbon-status/prioriteit vertalen (server levert NL/canonieke waarden).
   function tWoStatus(s) {
@@ -423,8 +446,20 @@
         <span data-i18n="nav.offertes">Offertes</span>
         <span class="adm-nav-badge" id="admOfferteBadge" style="display:none;background:var(--wf-yellow)">0</span>
       </a>
+      <a class="adm-nav-item" data-view="contracts" href="#">
+        <svg viewBox="0 0 24 24"><path d="M16 2H8C6.9 2 6 2.9 6 4v16c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H8V4h8v16zm-6-5h4v2h-4v-2zm0-4h4v2h-4v-2zm0-4h4v2h-4V7z"/></svg>
+        <span data-i18n="nav.contracts">Contracten</span>
+      </a>
 
       <div class="adm-nav-label" data-i18n="nav.sec.projects">Projecten</div>
+      <a class="adm-nav-item" data-view="projects" href="#">
+        <svg viewBox="0 0 24 24"><path d="M10 4H2v16h20V6H12l-2-2zm10 14H4V6h5.17l2 2H20v10zM7 11h10v2H7v-2zm0 4h7v2H7v-2z"/></svg>
+        <span data-i18n="nav.projects">Projecten</span>
+      </a>
+      <a class="adm-nav-item" data-view="worksites" href="#">
+        <svg viewBox="0 0 24 24"><path d="M13 3h-2v2H5v2h14V5h-6V3zm6 6H5c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-8c0-1.1-.9-2-2-2zm0 10H5v-6h14v6zm-9-5h4v4h-4v-4z"/></svg>
+        <span data-i18n="nav.worksites">Werven</span>
+      </a>
       <a class="adm-nav-item" data-view="portfolio" href="#">
         <svg viewBox="0 0 24 24"><path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99l1.5 1.5z"/></svg>
         <span data-i18n="nav.portfolio">Portfolio & capaciteit</span>
@@ -483,6 +518,10 @@
       </a>
 
       <div class="adm-nav-label" data-i18n="nav.sec.serviceassets">Service & Assets</div>
+      <a class="adm-nav-item" data-view="assets" href="#">
+        <svg viewBox="0 0 24 24"><path d="M19.43 12.98c.04-.32.07-.65.07-.98s-.03-.66-.08-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.37-.31-.6-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98L14.5 2.42A.49.49 0 0014 2h-4a.49.49 0 00-.49.42L9.13 5.07c-.61.25-1.18.59-1.69.98l-2.49-1a.49.49 0 00-.6.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.05.32-.09.66-.09.98s.03.66.08.98l-2.11 1.65a.5.5 0 00-.12.64l2 3.46c.12.22.37.31.6.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.04.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.18-.58 1.69-.98l2.49 1c.23.08.48 0 .6-.22l2-3.46a.5.5 0 00-.12-.64l-2.02-1.65zM12 15.5A3.5 3.5 0 1112 8a3.5 3.5 0 010 7.5z"/></svg>
+        <span data-i18n="nav.assets">Assets & onderhoud</span>
+      </a>
       <a class="adm-nav-item" data-view="vehicles" href="#">
         <svg viewBox="0 0 24 24"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></svg>
         <span data-i18n="nav.vehicles">Wagenpark</span>
@@ -492,6 +531,14 @@
       <a class="adm-nav-item" data-view="stock" href="#">
         <svg viewBox="0 0 24 24"><path d="M20 6h-2.18c.07-.44.18-.88.18-1.36C18 2.1 15.9 0 13.36 0c-1.3 0-2.48.52-3.35 1.36L9 2.37 7.99 1.36C7.12.52 5.94 0 4.64 0 2.1 0 0 2.1 0 4.64c0 .48.11.92.18 1.36H2c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zM2 20V8h9v12H2zm11 0V8h9v12h-9z"/></svg>
         <span data-i18n="nav.stock">Stock</span>
+      </a>
+      <a class="adm-nav-item" data-view="inventory" href="#">
+        <svg viewBox="0 0 24 24"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2a3 3 0 006 0h6a3 3 0 006 0h2v-5l-3-4zM6 18.5A1.5 1.5 0 116 15a1.5 1.5 0 010 3.5zM15 15H8.82A3 3 0 003 15V6h12v9zm3 3.5a1.5 1.5 0 110-3.5 1.5 1.5 0 010 3.5zM17 12V10h2l1.5 2H17z"/></svg>
+        <span data-i18n="nav.inventory">Voorraadbeheer</span>
+      </a>
+      <a class="adm-nav-item" data-view="purchasing" href="#">
+        <svg viewBox="0 0 24 24"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45A1.99 1.99 0 007 17h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03L20.88 5H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/></svg>
+        <span data-i18n="nav.purchasing">Aankoop & leveranciers</span>
       </a>
       <a class="adm-nav-item" data-view="catalog" href="#">
         <svg viewBox="0 0 24 24"><path d="M21.9 8.89l-1.05-4.37c-.22-.9-1-1.52-1.91-1.52H5.05c-.9 0-1.69.63-1.9 1.52L2.1 8.89c-.24 1.02-.02 2.06.62 2.88.08.11.19.19.28.29V19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-6.94c.09-.09.2-.18.28-.28.64-.82.87-1.87.62-2.89zM13 5.99h2l.55 2.28c.09.66-.4 1.28-1.05 1.28-.53 0-.97-.4-1.03-.92L13 5.99zm-6.5 3.56C6.44 9.87 6 9.55 6 9.02L6.55 6h2l-.48 2.63c-.06.53-.5.92-1.02.92h-.55zM18 19H6v-6.03c.08.01.15.03.23.03.87 0 1.66-.36 2.24-.95.6.6 1.4.95 2.28.95.87 0 1.66-.36 2.24-.95.6.6 1.4.95 2.28.95.08 0 .15-.02.23-.03V19z"/></svg>
@@ -704,6 +751,8 @@
         customers: () => d.customer(null), offertes: () => d.offerte(null),
         facturen: () => d.factuur(null), venues: () => d.venue(null),
         vehicles: () => d.vehicle(null), stock: () => d.stock(null),
+        projects: () => d.project(), worksites: () => d.worksite(), contracts: () => d.contract(),
+        purchasing: () => d.purchasing(), inventory: () => d.inventory(), assets: () => d.asset(),
         planning: () => d.shift(null), workorders: () => d.workorder(null),
         appointments: () => d.appointment(null),
         incidents: () => d.incident(null),
@@ -735,7 +784,8 @@
     clocking: "Prikklok", leaves: "Verlof", expenses: "Onkosten",
     workorders: "Werkbonnen", messages: "Berichten", reports: "Rapportages",
     customers: "Klanten", inbox: "Klantvragen", offertes: "Offertes", facturen: "Facturen", venues: "Locaties", vehicles: "Voertuigen",
-    stock: "Stock", billing: "Facturatie",
+    stock: "Stock", billing: "Facturatie", projects: "Projecten", worksites: "Werven", contracts: "Contracten",
+    purchasing: "Aankoop & leveranciers", inventory: "Voorraadbeheer", assets: "Assets & onderhoud",
     incidents: "Werkongevallen",
     ciaw: "Checkin@Work (CIAW)", posted_workers: "A1 / Limosa detachering",
     integrations: "Koppelingen", templates: "Documentsjablonen", roadmap: "Roadmap", audit: "Audittrail", settings: "Instellingen",
@@ -750,11 +800,13 @@
     incidents: "+ Werkongeval", inbox: "+ Klantvraag",
     planning: "+ Inplannen", workorders: "+ Werkbon",
     offertes: "+ Offerte", facturen: "+ Factuur", venues: "+ Locatie", vehicles: "+ Voertuig", stock: "+ Artikel",
+    projects: "+ Project", worksites: "+ Werf", contracts: "+ Contract", purchasing: "+ Bestelling", inventory: "+ Mutatie", assets: "+ Asset",
     payments: "+ Betaling"
   };
 
   const FLOW_VIEWS = [
     { view:"customers", label:"Klant" },
+    { view:"projects", label:"Project" },
     { view:"offertes", label:"Offerte", optional:true },
     { view:"planning", label:"Planning" },
     { view:"workorders", label:"Werkbon" },
@@ -839,6 +891,31 @@
       vehicles: [
         { label: "+ Nieuw voertuig", go: { view: "vehicles" }, drawer: "vehicle" }
       ],
+      projects: [
+        { label: "+ Nieuw project", go: { view: "projects" }, drawer: "project" },
+        { label: "Portfolio & capaciteit", go: { view: "portfolio" }, needsView: "portfolio" }
+      ],
+      worksites: [
+        { label: "+ Nieuwe werf", go: { view: "worksites" }, drawer: "worksite" },
+        { label: "+ Meerwerk of minderwerk", go: { view: "worksites" }, drawer: "changeorder" }
+      ],
+      contracts: [
+        { label: "+ Nieuw contract", go: { view: "contracts" }, drawer: "contract" }
+      ],
+      purchasing: [
+        { label: "+ Nieuwe bestelling", go: { view: "purchasing" }, drawer: "purchasing" }
+      ],
+      inventory: [
+        { label: "+ Voorraadmutatie", go: { view: "inventory" }, drawer: "inventory" }
+      ],
+      integrations: [
+        { label: "Connectoren", go: { view: "integrations" }, integrationMode: "connectors" },
+        { label: "Automatisaties", go: { view: "integrations" }, integrationMode: "automations" },
+        { label: "Eigen velden", go: { view: "integrations" }, integrationMode: "fields" }
+      ],
+      assets: [
+        { label: "+ Nieuw asset", go: { view: "assets" }, drawer: "asset" }
+      ],
       stock: [
         { label: "+ Nieuw artikel", go: { view: "stock" }, drawer: "stock" }
       ],
@@ -896,6 +973,11 @@
 
   function navFlyoutGo(parentView, item) {
     hideNavFlyout(true);
+    if (item.integrationMode) {
+      _integrationMode = item.integrationMode;
+      switchView("integrations");
+      return;
+    }
     // Module-instelling: open de gefocuste sectie in de Instellingen-view.
     if (item.settingsSection) {
       _settingsSection = item.settingsSection;
@@ -1203,7 +1285,7 @@
       catch (e) { msg.style.color = "var(--wf-red)"; msg.textContent = e.message; }
     });
     document.getElementById("mbPublish")?.addEventListener("click", async () => {
-      if (!confirm("Deze widgetselectie publiceren als vast organisatie-dashboard voor iedereen?")) return;
+      if (!await uiConfirm("Deze widgetselectie publiceren als vast organisatie-dashboard voor iedereen?", { title: "Organisatiedashboard publiceren", confirmLabel: "Publiceren" })) return;
       const msg = document.getElementById("mbMsg");
       try { await api("POST", "/me/dashboard/publish", { widgets: picked() }); renderDashboard(); window.showToast && window.showToast("Gepubliceerd voor de organisatie", "success"); }
       catch (e) { msg.style.color = "var(--wf-red)"; msg.textContent = e.message; }
@@ -1800,7 +1882,7 @@ ${(() => {
       btn.addEventListener("click", async () => {
         const isActive = btn.dataset.active === "true";
         const emp = _state.employees.find(u => u.id === btn.dataset.id);
-        if (!confirm(`${isActive ? "Deactiveer" : "Activeer"} ${emp?.name || emp?.email}?`)) return;
+        if (!await uiConfirm(`${isActive ? "Deactiveer" : "Activeer"} ${emp?.name || emp?.email}?`, { title: "Medewerkertoegang wijzigen", danger: isActive })) return;
         btn.disabled = true;
         try {
           await api("PATCH", `/employees/${btn.dataset.id}`, { active: !isActive });
@@ -1908,7 +1990,7 @@ ${emp ? `
     }
 
     document.getElementById("admEmpPwReset")?.addEventListener("click", async () => {
-      const newPw = prompt("Nieuw tijdelijk wachtwoord (min. 8 tekens):");
+      const newPw = await uiInput("Nieuw tijdelijk wachtwoord", { title: "Wachtwoord resetten", message: "Gebruik minimaal 8 tekens. Deel het tijdelijke wachtwoord via een veilig kanaal.", input: "password", minlength: 8, placeholder: "Minimaal 8 tekens", confirmLabel: "Wachtwoord wijzigen", danger: true });
       if (!newPw) return;
       if (newPw.length < 8) { window.showToast("Wachtwoord moet minstens 8 tekens zijn.", "warning"); return; }
       try {
@@ -1919,7 +2001,7 @@ ${emp ? `
 
     document.getElementById("admEmpToggle")?.addEventListener("click", async () => {
       const isActive = emp.active !== false;
-      if (!confirm(`${isActive?"Deactiveer":"Activeer"} account van ${emp.name||emp.email}?`)) return;
+      if (!await uiConfirm(`${isActive?"Deactiveer":"Activeer"} account van ${emp.name||emp.email}?`, { title: "Accounttoegang wijzigen", danger: isActive })) return;
       try {
         await api("PATCH", `/employees/${emp.id}`, { active: !isActive });
         closeDrawer(); renderEmployees();
@@ -2315,7 +2397,7 @@ ${emp ? `
 
       if (isEdit) {
         document.getElementById("admShiftDelete").addEventListener("click", async () => {
-          if (!confirm(`Shift verwijderen voor ${uName(shift)} op ${shift.date}?`)) return;
+          if (!await uiConfirm(`Shift verwijderen voor ${uName(shift)} op ${shift.date}?`, { title: "Shift verwijderen", danger: true, confirmLabel: "Verwijderen" })) return;
           try {
             await api("DELETE", `/planning/${shift.id}`);
             closeDrawer(); renderPlanning();
@@ -2505,7 +2587,7 @@ ${emp ? `
       document.getElementById("aptCustEmail").value = opt.dataset.email || "";
     });
     document.getElementById("aptDelete")?.addEventListener("click", async () => {
-      if (!confirm(tA("adm.apt.deleteConfirm","Afspraak van {d} verwijderen?").replace("{d}", apt.date))) return;
+      if (!await uiConfirm(tA("adm.apt.deleteConfirm","Afspraak van {d} verwijderen?").replace("{d}", apt.date), { title: "Afspraak verwijderen", danger: true, confirmLabel: tA("adm.delete","Verwijderen") })) return;
       try { await api("DELETE", `/appointments/${apt.id}`); closeDrawer(); renderAppointments(); }
       catch (err) { const el = document.getElementById("aptFormErr"); if (el) { el.textContent = err.message; el.style.display = ""; } }
     });
@@ -2713,7 +2795,7 @@ ${emp ? `
     document.getElementById("incSeverity").addEventListener("change", sevWarn);
     sevWarn();
     document.getElementById("incDelete")?.addEventListener("click", async () => {
-      if (!confirm(tA("adm.inc.deleteConfirm","Werkongeval van {d} verwijderen?").replace("{d}", inc.date))) return;
+      if (!await uiConfirm(tA("adm.inc.deleteConfirm","Werkongeval van {d} verwijderen?").replace("{d}", inc.date), { title: "Registratie verwijderen", danger: true, confirmLabel: tA("adm.delete","Verwijderen") })) return;
       try { await api("DELETE", `/incidents/${inc.id}`); closeDrawer(); renderIncidents(); }
       catch (err) { const el = document.getElementById("incFormErr"); if (el) { el.textContent = err.message; el.style.display = ""; } }
     });
@@ -2950,7 +3032,7 @@ ${((window._wfpEnt && window._wfpEnt.modules) || []).includes("ai_estimate") ? `
       });
     });
     document.getElementById("inqDelete").addEventListener("click", async () => {
-      if (!confirm(tA("adm.inq.deleteConfirm","Deze klantvraag verwijderen?"))) return;
+      if (!await uiConfirm(tA("adm.inq.deleteConfirm","Deze klantvraag verwijderen?"), { title: "Klantvraag verwijderen", danger: true, confirmLabel: tA("adm.delete","Verwijderen") })) return;
       try { await api("DELETE", `/inquiries/${inq.id}`); closeDrawer(); renderInbox(); }
       catch (err) { const el = document.getElementById("inqFormErr"); if (el) { el.textContent = err.message; el.style.display = ""; } }
     });
@@ -3873,7 +3955,7 @@ ${((window._wfpEnt && window._wfpEnt.modules) || []).includes("ai_estimate") ? `
     document.querySelectorAll(".adm-wo-invoice").forEach(btn => {
       btn.addEventListener("click", async e => {
         e.stopPropagation();
-        if (!confirm("Factuur maken van deze werkbon?\n\nDe geklokte/factureerbare uren (of het vaste bedrag) worden overgenomen in een nieuwe klantfactuur.")) return;
+        if (!await uiConfirm("De geklokte of factureerbare uren, of het vaste bedrag, worden overgenomen in een nieuwe klantfactuur.", { title: "Factuur maken van deze werkbon", confirmLabel: "Factuur aanmaken" })) return;
         try {
           const d = await api("POST", `/workorders/${btn.dataset.id}/invoice`, {});
           window.showToast && window.showToast(`Factuur ${d.invoice?.number || ""} aangemaakt`, "success");
@@ -4048,7 +4130,7 @@ ${((window._wfpEnt && window._wfpEnt.modules) || []).includes("ai_estimate") ? `
       document.getElementById("woCancel").addEventListener("click", closeDrawer);
       document.getElementById("woMakeInvoice")?.addEventListener("click", async event => {
         const button = event.currentTarget;
-        if (!confirm("Factuur maken van deze werkbon?\n\nUren, materiaal en factureerbare onkosten worden overgenomen en de koppeling blijft behouden.")) return;
+        if (!await uiConfirm("Uren, materiaal en factureerbare onkosten worden overgenomen en de koppeling blijft behouden.", { title: "Factuur maken van deze werkbon", confirmLabel: "Factuur aanmaken" })) return;
         const originalLabel = button.textContent;
         button.disabled = true;
         button.textContent = "Factuur maken…";
@@ -4071,7 +4153,7 @@ ${((window._wfpEnt && window._wfpEnt.modules) || []).includes("ai_estimate") ? `
         catch (e) { window.showToast && window.showToast(e.message, "error"); }
       });
       document.getElementById("woDelete")?.addEventListener("click", async () => {
-        if (!confirm(`Werkbon "${workorder.title}" verwijderen?`)) return;
+        if (!await uiConfirm(`Werkbon "${workorder.title}" verwijderen?`, { title: "Werkbon verwijderen", danger: true, confirmLabel: "Verwijderen" })) return;
         try {
           await api("DELETE", `/workorders/${workorder.id}`);
           closeDrawer(); renderWorkorders();
@@ -4280,7 +4362,7 @@ ${((window._wfpEnt && window._wfpEnt.modules) || []).includes("ai_estimate") ? `
       }));
 
       content.querySelectorAll(".adm-msg-del").forEach(button => button.addEventListener("click", async () => {
-        if (!confirm("Bericht permanent verwijderen?")) return;
+        if (!await uiConfirm("Bericht permanent verwijderen?", { title: "Bericht verwijderen", danger: true, confirmLabel: "Permanent verwijderen" })) return;
         button.disabled = true;
         try {
           await api("DELETE", `/messages/${button.dataset.id}`);
@@ -5101,11 +5183,13 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
     const content = document.getElementById("admContent");
     content.innerHTML = `<div class="adm-loading">${tA("adm.loading","Laden…")}</div>`;
     try {
-      const [custData, woData, invData, qData] = await Promise.all([
+      const customFieldRuntime = window.wfpConfigFieldsWorkspace;
+      const [custData, woData, invData, qData, customerFieldDefs] = await Promise.all([
         api("GET", "/customers"),
         api("GET", "/workorders").catch(() => ({ workorders: [] })),
         api("GET", "/facturen").catch(() => ({ invoices: [] })),
-        api("GET", "/offertes").catch(() => ({ quotes: [] }))
+        api("GET", "/offertes").catch(() => ({ quotes: [] })),
+        customFieldRuntime ? customFieldRuntime.published("customer").catch(() => []) : Promise.resolve([])
       ]);
       const customer  = (custData.customers || []).find(c => c.id === customerId);
       if (!customer) { content.innerHTML = `<div class="adm-empty">${tA("adm.cust.notFound","Klant niet gevonden")}</div>`; return; }
@@ -5147,7 +5231,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
             }).join("")}</tbody>
           </table>` : `<div class="adm-empty"><div class="adm-empty-text">${tA("adm.cust.noQuotes","Geen offertes voor deze klant")}</div></div>`;
           const convert = async (id, target, label) => {
-            if (!confirm(tA("adm.cust.convertConfirm","Offerte omzetten naar {t}?").replace("{t}", label))) return;
+            if (!await uiConfirm(tA("adm.cust.convertConfirm","Offerte omzetten naar {t}?").replace("{t}", label), { title: "Offerte omzetten", confirmLabel: "Omzetten" })) return;
             try {
               const d = await api("POST", `/offertes/${id}/convert`, { target });
               window.showToast && window.showToast(`${label} ${(d.workorder?.number || d.invoice?.number || "")} ${tA("adm.created","aangemaakt")}`, "success");
@@ -5196,7 +5280,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
           });
           body.querySelectorAll(".inv-paid-cust").forEach(btn => {
             btn.addEventListener("click", async () => {
-              if (!confirm(tA("adm.inv.markPaidConfirm","Factuur als betaald markeren?"))) return;
+              if (!await uiConfirm(tA("adm.inv.markPaidConfirm","Factuur als betaald markeren?"), { title: "Betaalstatus aanpassen", confirmLabel: "Als betaald markeren" })) return;
               await api("PATCH", `/facturen/${btn.dataset.id}`, { status: "paid" });
               renderCustomerDetail(customerId);
             });
@@ -5231,6 +5315,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
       ${customer.vatNumber?`<div style="font-size:13px;"><span style="color:var(--gray-400);min-width:110px;display:inline-block">${tA("adm.cust.vatNumber","BTW-nummer")}</span><span style="font-family:monospace">${esc(customer.vatNumber)}</span></div>`:""}
       ${customer.address?`<div style="font-size:13px;"><span style="color:var(--gray-400);min-width:110px;display:inline-block">${tA("adm.cust.address","Adres")}</span>${esc(customer.address)}</div>`:""}
       ${customer.notes?`<div style="font-size:13px;margin-top:4px;"><span style="color:var(--gray-400);display:block;margin-bottom:2px;">${tA("adm.cust.notes","Notities")}</span><span style="color:var(--gray-500)">${esc(customer.notes)}</span></div>`:""}
+      ${customFieldRuntime ? customFieldRuntime.renderRuntimeValues(customerFieldDefs, customer.customFields || {}) : ""}
       <div style="margin-top:8px;display:flex;gap:8px;">
         <button class="adm-btn adm-btn-primary adm-btn-sm" id="custNewQuote">+ ${tA("adm.quote.singular","Offerte")}</button>
         <button class="adm-btn adm-btn-primary adm-btn-sm" id="custNewWO">+ ${(window.wfpTerms && window.wfpTerms.t("jobSingular")) || tA("emp.wo.default","Werkbon")}</button>
@@ -5285,7 +5370,17 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
       renderTabs();
     } catch(e) { content.innerHTML = `<div style="padding:20px;color:var(--wf-red)">${tA("adm.error","Fout")}: ${e.message}</div>`; }
   }
-  function openCustomerDrawer(customer) {
+  async function openCustomerDrawer(customer) {
+    const customFieldRuntime = window.wfpConfigFieldsWorkspace;
+    let customerFieldDefs = [];
+    let customFieldsUnavailable = false;
+    if (customFieldRuntime) {
+      document.getElementById("admDrawerTitle").textContent = customer ? tA("adm.cust.editTitle","Klant bewerken") : tA("adm.cust.newTitle","Nieuwe klant");
+      document.getElementById("admDrawerBody").innerHTML = `<div class="adm-loading"><div class="adm-spinner"></div>${tA("adm.loading","Laden…")}</div>`;
+      openDrawer();
+      try { customerFieldDefs = await customFieldRuntime.published("customer"); }
+      catch (_) { customFieldsUnavailable = true; }
+    }
     document.getElementById("admDrawerTitle").textContent = customer ? tA("adm.cust.editTitle","Klant bewerken") : tA("adm.cust.newTitle","Nieuwe klant");
     document.getElementById("admDrawerBody").innerHTML = `
 <form id="custForm">
@@ -5306,6 +5401,8 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
   </div>
   <div class="adm-form-group"><label>${tA("adm.cust.address","Adres")}</label><input name="address" value="${esc(customer?.address||"")}"></div>
   <div class="adm-form-group"><label>${tA("adm.cust.notes","Notities")}</label><textarea name="notes" rows="3" style="width:100%">${esc(customer?.notes||"")}</textarea></div>
+  ${customFieldRuntime ? customFieldRuntime.renderRuntimeFields(customerFieldDefs, customer?.customFields || {}) : ""}
+  ${customFieldsUnavailable ? `<div class="cfw-runtime-load-error">${tA("adm.cust.customFieldsUnavailable","Eigen velden konden niet worden geladen. Bestaande waarden blijven behouden.")}</div>` : ""}
   <div id="custFormErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:8px;font-size:12px;margin-bottom:8px;"></div>
   <div class="adm-form-actions">
     <button type="button" class="adm-btn adm-btn-secondary" id="custCancel">${tA("adm.cancel","Annuleren")}</button>
@@ -5347,7 +5444,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
     });
 
     document.getElementById("custDelete")?.addEventListener("click", async () => {
-      if (!confirm(tA("adm.cust.deleteConfirm",'Klant "{n}" verwijderen?').replace("{n}", customer.name))) return;
+      if (!await uiConfirm(tA("adm.cust.deleteConfirm",'Klant "{n}" verwijderen?').replace("{n}", customer.name), { title: "Klant verwijderen", danger: true, confirmLabel: tA("adm.delete","Verwijderen") })) return;
       try {
         await api("DELETE", `/customers/${customer.id}`);
         closeDrawer(); renderCustomers();
@@ -5361,7 +5458,22 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
       const errEl = document.getElementById("custFormErr");
       const body = Object.fromEntries(new FormData(e.target).entries());
       try {
+        if (customFieldRuntime && customerFieldDefs.length) {
+          const values = customFieldRuntime.collectRuntimeValues(e.target, customerFieldDefs);
+          const validation = await api("POST", "/config/fields/validate", { entity: "customer", values });
+          if (!validation.result?.ok) {
+            customFieldRuntime.showRuntimeErrors(e.target, validation.result?.errors || []);
+            if (errEl) { errEl.textContent = tA("adm.cust.customFieldsInvalid","Controleer de gemarkeerde eigen velden."); errEl.style.display = "block"; }
+            return;
+          }
+          const preserved = { ...(customer?.customFields || {}) };
+          customerFieldDefs.forEach(field => { delete preserved[field.key]; });
+          body.customFields = { ...preserved, ...(validation.result.values || {}) };
+        } else if (customer?.customFields) {
+          body.customFields = { ...customer.customFields };
+        }
         if (customer) {
+          if (customer.version != null) body.expectedVersion = customer.version;
           await api("PATCH", `/customers/${customer.id}`, body);
           closeDrawer(); renderCustomers();
         } else {
@@ -5371,6 +5483,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
           if (created.customer?.id) renderCustomerDetail(created.customer.id); else renderCustomers();
         }
       } catch(err) {
+        if (customFieldRuntime && err.data?.fieldErrors) customFieldRuntime.showRuntimeErrors(e.target, err.data.fieldErrors);
         if (errEl) { errEl.textContent = err.message; errEl.style.display = "block"; }
         else window.showToast(err.message, "error");
       }
@@ -5444,7 +5557,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
     openDrawer();
     document.getElementById("venCancel").addEventListener("click", closeDrawer);
     document.getElementById("venDelete")?.addEventListener("click", async () => {
-      if (!confirm(tA("adm.ven.deleteConfirm",'Locatie "{n}" verwijderen?').replace("{n}", venue.name))) return;
+      if (!await uiConfirm(tA("adm.ven.deleteConfirm",'Locatie "{n}" verwijderen?').replace("{n}", venue.name), { title: "Locatie verwijderen", danger: true, confirmLabel: tA("adm.delete","Verwijderen") })) return;
       try {
         await api("DELETE", `/venues/${venue.id}`);
         closeDrawer(); renderVenues();
@@ -5698,7 +5811,7 @@ ${attention.length ? `<div class="vehicle-alert-banner"><strong>${attention.leng
 
     if (vehicle) {
       document.getElementById("vehDelete")?.addEventListener("click", async () => {
-        if (!confirm(`Voertuig "${vehicle.plate}" permanent verwijderen?`)) return;
+        if (!await uiConfirm(`Voertuig "${vehicle.plate}" permanent verwijderen?`, { title: "Voertuig verwijderen", danger: true, confirmLabel: "Permanent verwijderen" })) return;
         try {
           await api("DELETE", `/vehicles/${vehicle.id}`);
           closeDrawer();
@@ -6139,7 +6252,7 @@ ${attentionItems.length ? `<div class="stock-alert-banner">
 
     if (item) {
       document.getElementById("stDelete")?.addEventListener("click", async () => {
-        if (!confirm(`Artikel "${item.name}" permanent verwijderen? Ook de mutatiehistoriek is daarna niet meer zichtbaar.`)) return;
+        if (!await uiConfirm(`Artikel "${item.name}" permanent verwijderen? Ook de mutatiehistoriek is daarna niet meer zichtbaar.`, { title: "Stockartikel verwijderen", danger: true, confirmLabel: "Permanent verwijderen" })) return;
         try {
           await api("DELETE", `/stock/${item.id}`);
           closeDrawer();
@@ -6546,12 +6659,12 @@ ${attentionItems.length ? `<div class="stock-alert-banner">
         } catch(e){ window.showToast && window.showToast(tA("adm.error","Fout")+": "+e.message, "error"); }
       }));
       content.querySelectorAll(".q-toinv").forEach(b => b.addEventListener("click", async () => {
-        if(!confirm(tA("adm.quote.toInvConfirm","Offerte omzetten naar factuur?"))) return;
+        if(!await uiConfirm(tA("adm.quote.toInvConfirm","Offerte omzetten naar factuur?"), { title: "Offerte omzetten", confirmLabel: "Factuur aanmaken" })) return;
         try { const d = await api("POST", `/offertes/${b.dataset.id}/convert`, { target:"invoice" }); window.showToast && window.showToast(tA("adm.wo.toInvoice","Factuur")+" "+(d.invoice?.number||"")+" "+tA("adm.created","aangemaakt"),"success"); switchView("facturen"); }
         catch(e){ window.showToast && window.showToast(tA("adm.error","Fout")+": "+e.message,"error"); }
       }));
       content.querySelectorAll(".q-towo").forEach(b => b.addEventListener("click", async () => {
-        if(!confirm(tA("adm.quote.toWoConfirm","Offerte omzetten naar werkbon?"))) return;
+        if(!await uiConfirm(tA("adm.quote.toWoConfirm","Offerte omzetten naar werkbon?"), { title: "Offerte omzetten", confirmLabel: "Werkbon aanmaken" })) return;
         try { const d = await api("POST", `/offertes/${b.dataset.id}/convert`, { target:"workorder" }); window.showToast && window.showToast(((window.wfpTerms && window.wfpTerms.t("jobSingular")) || tA("emp.wo.default","Werkbon"))+" "+(d.workorder?.number||"")+" "+tA("adm.created","aangemaakt"),"success"); switchView("workorders"); }
         catch(e){ window.showToast && window.showToast(tA("adm.error","Fout")+": "+e.message,"error"); }
       }));
@@ -6641,7 +6754,7 @@ ${attentionItems.length ? `<div class="stock-alert-banner">
     openDrawer();
     document.getElementById("qCancel").addEventListener("click", closeDrawer);
     document.getElementById("qDelete")?.addEventListener("click", async () => {
-      if(!confirm(tA("adm.quote.deleteConfirm","Offerte {n} verwijderen?").replace("{n}", quote.number))) return;
+      if(!await uiConfirm(tA("adm.quote.deleteConfirm","Offerte {n} verwijderen?").replace("{n}", quote.number), { title: "Offerte verwijderen", danger: true, confirmLabel: tA("adm.delete","Verwijderen") })) return;
       try { await api("DELETE", `/offertes/${quote.id}`); closeDrawer(); renderOffertes(); }
       catch(err){ const e=document.getElementById("qFormErr"); if(e){e.textContent=err.message;e.style.display="";} }
     });
@@ -6820,7 +6933,7 @@ ${attentionItems.length ? `<div class="stock-alert-banner">
       });
       document.querySelectorAll(".inv-paid").forEach(btn => {
         btn.addEventListener("click", async () => {
-          if (!confirm(tA("adm.inv.markPaidConfirm","Factuur als betaald markeren?"))) return;
+          if (!await uiConfirm(tA("adm.inv.markPaidConfirm","Factuur als betaald markeren?"), { title: "Betaalstatus aanpassen", confirmLabel: "Als betaald markeren" })) return;
           await api("PATCH", `/facturen/${btn.dataset.id}`, { status: "paid" });
           renderFacturen();
         });
@@ -6990,7 +7103,7 @@ ${attentionItems.length ? `<div class="stock-alert-banner">
     document.getElementById("invCancel").addEventListener("click", closeDrawer);
 
     document.getElementById("invDelete")?.addEventListener("click", async () => {
-      if (!confirm(tA("adm.inv.deleteConfirm","Factuur {n} verwijderen?").replace("{n}", invoice.number))) return;
+      if (!await uiConfirm(tA("adm.inv.deleteConfirm","Factuur {n} verwijderen?").replace("{n}", invoice.number), { title: "Factuur verwijderen", danger: true, confirmLabel: tA("adm.delete","Verwijderen") })) return;
       try {
         await api("DELETE", `/facturen/${invoice.id}`);
         closeDrawer(); renderFacturen();
@@ -7102,7 +7215,7 @@ ${phases.map(p => {
         } catch(e) { window.showToast && window.showToast("Fout: "+e.message,"error"); btn.disabled=false; btn.textContent="Data repareren"; }
       });
       document.getElementById("rmDemoData")?.addEventListener("click", async () => {
-        if (!confirm("Dit vult álle schermen met realistische voorbeelddata: klanten, offertes, facturen, werkbonnen, planning, klokregistraties, verlof, onkosten, stock en voertuigen.\n\nJe kunt het achteraf weer wissen met 'Demodata wissen'. Doorgaan?")) return;
+        if (!await uiConfirm("Dit vult alle schermen met realistische voorbeelddata: klanten, offertes, facturen, werkbonnen, planning, klokregistraties, verlof, onkosten, stock en voertuigen. Je kunt dit achteraf wissen via Demodata wissen.", { title: "Demodata laden", confirmLabel: "Demodata laden" })) return;
         const btn = document.getElementById("rmDemoData");
         btn.disabled = true; btn.textContent = "Laden…";
         try {
@@ -7114,7 +7227,7 @@ ${phases.map(p => {
         btn.disabled = false; btn.textContent = "Demodata laden";
       });
       document.getElementById("rmDemoClear")?.addEventListener("click", async () => {
-        if (!confirm("Alle geladen demodata verwijderen? Eigen ingevoerde data blijft staan.")) return;
+        if (!await uiConfirm("Alle geladen demodata verwijderen? Eigen ingevoerde data blijft staan.", { title: "Demodata wissen", danger: true, confirmLabel: "Demodata wissen" })) return;
         const btn = document.getElementById("rmDemoClear");
         btn.disabled = true; btn.textContent = "Wissen…";
         try {
@@ -7265,7 +7378,7 @@ ${billing.status === "trial" ? (() => {
           const msg = trialEligible
             ? tA("adm.bill.confirmTrial","Start je 14 dagen gratis proefperiode op {label}?\n\nJe geeft je kaartgegevens op via onze beveiligde betaalpagina (Stripe), maar je wordt pas na 14 dagen gefactureerd. Opzeggen kan altijd.").replace("{label}", label)
             : tA("adm.bill.confirmSwitch","Overschakelen naar het {label}-abonnement? Je wordt naar de beveiligde betaalpagina geleid.").replace("{label}", label);
-          if (!confirm(msg)) return;
+          if (!await uiConfirm(msg, { title: "Pakketwijziging bevestigen", confirmLabel: "Wijziging uitvoeren" })) return;
           btn.disabled = true; btn.textContent = tA("adm.bill.busy","Bezig…");
           try {
             const r = await api("POST", "/billing/checkout", { plan });
@@ -7326,10 +7439,19 @@ ${billing.status === "trial" ? (() => {
 
   // ── Integraties (Exact Online, Robaws, …) ──────────────────
   let _integrationSelected = null;
+  let _integrationMode = "connectors";
 
   async function renderIntegraties() {
     const content = document.getElementById("admContent");
     content.innerHTML = `<div class="adm-loading">Laden…</div>`;
+    if (_integrationMode === "automations" && window.wfpAutomationWorkspace) {
+      await window.wfpAutomationWorkspace.render({ onMode: mode => { _integrationMode = mode; renderIntegraties(); } });
+      return;
+    }
+    if (_integrationMode === "fields" && window.wfpConfigFieldsWorkspace) {
+      await window.wfpConfigFieldsWorkspace.render({ onMode: mode => { _integrationMode = mode; renderIntegraties(); } });
+      return;
+    }
     let data = { rows: [], providers: [] };
     try { data = await api("GET", "/integrations"); }
     catch (e) { content.innerHTML = `<div class="adm-card"><div class="adm-card-body">${esc(e.message)}</div></div>`; return; }
@@ -7357,6 +7479,11 @@ ${billing.status === "trial" ? (() => {
       const logs = (activeConn?.syncLogs || []).slice(0, 8);
       content.innerHTML = `
 <div class="adm-integration-workspace">
+  <nav class="adm-integration-mode" aria-label="Koppelingen en automatisaties">
+    <button type="button" class="active" data-integration-mode="connectors">Connectoren</button>
+    <button type="button" data-integration-mode="automations">Automatisaties</button>
+    <button type="button" data-integration-mode="fields">Eigen velden</button>
+  </nav>
   <section class="adm-workspace-head adm-integration-head">
     <div><span class="adm-eyebrow">Connected operations</span><h2>Koppelingen zonder giswerk</h2><p>Verbind systemen, controleer veldmapping en volg synchronisaties vanuit één rustige werkruimte.</p></div>
     ${activeProvider ? `<button type="button" class="adm-btn adm-btn-primary" data-configure="${esc(activeProvider.key)}">${activeConn ? "Configuratie beheren" : `${esc(activeProvider.label)} verbinden`}</button>` : ""}
@@ -7412,6 +7539,7 @@ ${billing.status === "trial" ? (() => {
   </div>
 </div>`;
 
+      content.querySelectorAll("[data-integration-mode]").forEach(btn => btn.addEventListener("click", () => { _integrationMode = btn.dataset.integrationMode; renderIntegraties(); }));
       content.querySelectorAll("[data-provider-select]").forEach(btn => btn.addEventListener("click", () => { _integrationSelected = btn.dataset.providerSelect; paint(); }));
       content.querySelectorAll("[data-configure]").forEach(btn => btn.addEventListener("click", () => {
         const provider = providers.find(p => p.key === btn.dataset.configure);
@@ -8025,7 +8153,7 @@ ${billing.status === "trial" ? (() => {
 
     // MFA verplichten voor alle beheerders
     document.getElementById("admMfaEnforce")?.addEventListener("click", async () => {
-      if (!confirm(tA("adm.set.mfaEnforceConfirm","MFA verplicht maken voor álle beheerders van deze organisatie?\n\nBij de volgende login is een authenticator-code vereist. Bewaar de getoonde secrets en recovery codes zorgvuldig · ze worden maar één keer getoond."))) return;
+      if (!await uiConfirm(tA("adm.set.mfaEnforceConfirm","MFA verplicht maken voor alle beheerders van deze organisatie? Bij de volgende login is een authenticator-code vereist. Bewaar de getoonde secrets en recovery codes zorgvuldig, want ze worden maar één keer getoond."), { title: "MFA verplicht maken", confirmLabel: "MFA verplicht maken" })) return;
       const wizard = document.getElementById("admMfaWizard");
       if (!wizard) return;
       wizard.style.display = "block";
@@ -8454,7 +8582,7 @@ ${typeKeys.map(tk => {
 }).join("")}`;
     document.getElementById("tplNew").addEventListener("change", e => { if (e.target.value) { _tplEditing = { type: e.target.value, ...defaultTplDraft(e.target.value) }; renderTemplates(); } });
     c.querySelectorAll(".tpl-edit").forEach(b => b.addEventListener("click", () => { _tplEditing = tpls.find(t => t.id === b.dataset.id); renderTemplates(); }));
-    c.querySelectorAll(".tpl-del").forEach(b => b.addEventListener("click", async () => { if (!confirm("Sjabloon verwijderen?")) return; try { await api("DELETE", `/templates/${b.dataset.id}`); renderTemplates(); } catch (e) { window.showToast && window.showToast(e.message, "error"); } }));
+    c.querySelectorAll(".tpl-del").forEach(b => b.addEventListener("click", async () => { if (!await uiConfirm("Sjabloon verwijderen?", { title: "Documentsjabloon verwijderen", danger: true, confirmLabel: "Verwijderen" })) return; try { await api("DELETE", `/templates/${b.dataset.id}`); renderTemplates(); } catch (e) { window.showToast && window.showToast(e.message, "error"); } }));
     c.querySelectorAll(".tpl-default").forEach(b => b.addEventListener("click", async () => { try { await api("POST", `/templates/${b.dataset.id}/default`, {}); renderTemplates(); } catch (e) { window.showToast && window.showToast(e.message, "error"); } }));
     c.querySelectorAll(".tpl-prev").forEach(b => b.addEventListener("click", async () => {
       try { const r = await api("GET", `/templates/${b.dataset.id}/preview`); const w = window.open("", "_blank"); w.document.write(r.html); w.document.close(); }
@@ -8713,7 +8841,7 @@ ${typeKeys.map(tk => {
       catch (e) { window.showToast && window.showToast(e.message, "error"); b.disabled = false; b.textContent = "Indienen"; }
     }));
     c.querySelectorAll(".pw-del").forEach(b => b.addEventListener("click", async () => {
-      if (!confirm("Dit detacheringsdossier verwijderen?")) return;
+      if (!await uiConfirm("Dit detacheringsdossier verwijderen?", { title: "Detacheringsdossier verwijderen", danger: true, confirmLabel: "Verwijderen" })) return;
       try { await api("DELETE", `/posted_workers/${b.dataset.id}`); renderPostedWorkers(); }
       catch (e) { window.showToast && window.showToast(e.message, "error"); }
     }));
@@ -8736,6 +8864,7 @@ ${typeKeys.map(tk => {
   A.subEnabled = subEnabled;
   A.viewEnabled = viewEnabled;
   A.switchView = switchView;
+  A.showIntegrationMode = mode => { _integrationMode = ["automations", "fields"].includes(mode) ? mode : "connectors"; switchView("integrations"); };
   A.VIEW_LABELS = VIEW_LABELS;
   A.VIEW_BTN_LABEL = VIEW_BTN_LABEL;
   A.renderSupportBanner = renderSupportBanner;

@@ -346,6 +346,10 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
 
   // i18n-helper voor de manager-shell (t()-gebaseerde, dynamisch opgebouwde inhoud).
   function tM(key, fallback) { return window.wfpI18n ? window.wfpI18n.t(key, fallback) : fallback; }
+  function confirmM(message, title) {
+    const dialog = window.wfpAdmin && window.wfpAdmin.askDialog;
+    return typeof dialog === "function" ? dialog({ eyebrow: tM("mgr.dialog.action", "Actie controleren"), title, message, confirmLabel: tM("mgr.dialog.confirm", "Bevestigen"), danger: true }) : Promise.resolve(null);
+  }
   // Werkbon-status/prioriteit + verlof-type/status vertalen (server = NL/canoniek).
   function tmWoStatus(s) {
     if (!s) return "-";
@@ -808,7 +812,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
 
       if (isEdit) {
         document.getElementById("shiftDelete").addEventListener("click", async () => {
-          if (!confirm(tM("mgr.shiftDelConfirm","Shift verwijderen voor {n} op {d}?").replace("{n}", shift.userName||shift.userId).replace("{d}", shift.date))) return;
+          if (!await confirmM(tM("mgr.shiftDelConfirm","Shift verwijderen voor {n} op {d}?").replace("{n}", shift.userName||shift.userId).replace("{d}", shift.date), tM("mgr.shiftDelTitle", "Shift verwijderen"))) return;
           try {
             await api("DELETE", `/planning/${shift.id}`);
             close(); renderPlanning();
@@ -941,7 +945,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     content.querySelectorAll(".mgr-clk-forceout").forEach(btn => {
       btn.addEventListener("click", async () => {
         const name = btn.dataset.name;
-        if (!confirm(tM("mgr.forceOutConfirm","{n} nu uitkloppen?").replace("{n}", name))) return;
+        if (!await confirmM(tM("mgr.forceOutConfirm","{n} nu uitkloppen?").replace("{n}", name), tM("mgr.forceOutTitle", "Medewerker uitklokken"))) return;
         btn.disabled = true; btn.textContent = "…";
         try {
           await api("PATCH", `/clocks/${btn.dataset.id}`, { clockOut: new Date().toTimeString().slice(0, 5), note: tM("mgr.clockedOutByMgr","Uitgeklokt door manager") });
@@ -2062,7 +2066,7 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
 
     if (isEdit) {
       document.getElementById("vehDelete").addEventListener("click", async () => {
-        if (!confirm(tM("adm.veh.deleteConfirm",'Voertuig "{n}" permanent verwijderen?').replace("{n}", vehicle.name||vehicle.plate))) return;
+        if (!await confirmM(tM("adm.veh.deleteConfirm",'Voertuig "{n}" permanent verwijderen?').replace("{n}", vehicle.name||vehicle.plate), tM("adm.veh.deleteTitle", "Voertuig verwijderen"))) return;
         try {
           await api("DELETE", `/vehicles/${vehicle.id}`);
           close(); renderVehicles();

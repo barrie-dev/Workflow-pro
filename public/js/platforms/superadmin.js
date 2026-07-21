@@ -16,6 +16,13 @@
   const esc    = v => window.wfpCore.esc(v);
   // i18n-helper voor de superadmin-shell (t()-gebaseerd, dynamisch opgebouwd).
   const tS = (key, fallback) => window.wfpI18n ? window.wfpI18n.t(key, fallback) : fallback;
+  const saDialog = options => {
+    const dialog = window.wfpAdmin && window.wfpAdmin.askDialog;
+    return typeof dialog === "function" ? dialog(options) : Promise.resolve(null);
+  };
+  const saNotice = (message, kind) => window.showToast ? window.showToast(message, kind || "info") : null;
+  const saConfirm = (message, title, confirmLabel) => saDialog({ eyebrow: tS("sa.dialog.action", "Platformactie"), title, message, confirmLabel: confirmLabel || tS("sa.dialog.confirm", "Bevestigen"), danger: true });
+  const saInput = (label, options) => saDialog({ eyebrow: tS("sa.dialog.input", "Aanvullende invoer"), title: options.title || label, message: options.message || "", label, input: options.input || "text", value: options.value || "", required: options.required !== false, confirmLabel: options.confirmLabel || tS("sa.dialog.continue", "Doorgaan") });
   let _saLangHandler = null;
   function saViewTitle(v) {
     const map = {
@@ -801,7 +808,7 @@ ${(s.locked||[]).length ? `<div class="sa-card" style="margin-bottom:16px"><div 
 
   async function confirmSuspend(id) {
     const t = _cache.tenants.find(x=>x.id===id);
-    if (!confirm(`Tenant "${t?.name||id}" pauzeren?`)) return;
+    if (!await saConfirm(`Tenant "${t?.name||id}" pauzeren?`, "Tenant pauzeren", "Pauzeren")) return;
     try { await api(`/api/admin/tenants/${id}/suspend`,{method:"POST"}); tenants(); }
     catch(e) { window.showToast(e.message, "error"); }
   }
@@ -847,7 +854,7 @@ ${(s.locked||[]).length ? `<div class="sa-card" style="margin-bottom:16px"><div 
 
     document.getElementById("closeDrawer")?.addEventListener("click", closeDrawer);
     document.getElementById("drawerSuspend")?.addEventListener("click", async e => {
-      if (!confirm("Pauzeren?")) return;
+      if (!await saConfirm("Deze tenant pauzeren?", "Tenant pauzeren", "Pauzeren")) return;
       try { await api(`/api/admin/tenants/${e.target.dataset.id}/suspend`,{method:"POST"}); closeDrawer(); tenants(); }
       catch(ex) { window.showToast(ex.message, "error"); }
     });
@@ -1124,12 +1131,12 @@ ${canManage ? `
         tb.querySelectorAll("[data-resume]").forEach(b => b.addEventListener("click", () => setStatus(b.dataset.resume, "active")));
         tb.querySelectorAll("[data-edit]").forEach(b => b.addEventListener("click", () => editPct(b.dataset.edit)));
       }
-      async function setStatus(id, status) { try { await api(`/api/admin/resellers/${id}`, { method: "PATCH", body: JSON.stringify({ status }) }); resellers(); } catch (e) { alert(e.message); } }
-      function editPct(id) {
+      async function setStatus(id, status) { try { await api(`/api/admin/resellers/${id}`, { method: "PATCH", body: JSON.stringify({ status }) }); resellers(); } catch (e) { saNotice(e.message, "error"); } }
+      async function editPct(id) {
         const r = rows.find(x => x.id === id) || {};
-        const pct = window.prompt(`Commissie-% voor ${r.name}:`, String(r.defaultCommissionPct || 0));
+        const pct = await saInput(`Commissiepercentage voor ${r.name}`, { title: "Commissie aanpassen", value: String(r.defaultCommissionPct || 0), confirmLabel: "Opslaan" });
         if (pct == null) return;
-        api(`/api/admin/resellers/${id}`, { method: "PATCH", body: JSON.stringify({ defaultCommissionPct: Number(pct) }) }).then(() => resellers()).catch(e => alert(e.message));
+        api(`/api/admin/resellers/${id}`, { method: "PATCH", body: JSON.stringify({ defaultCommissionPct: Number(pct) }) }).then(() => resellers()).catch(e => saNotice(e.message, "error"));
       }
       if (canManage) {
         document.getElementById("rsCreate").addEventListener("click", async () => {
@@ -1233,7 +1240,7 @@ ${canManage ? `
       }
       async function setActive(id, active) {
         try { await api(`/api/admin/staff/${id}`, { method:"PATCH", body: JSON.stringify({ active }) }); staff(); }
-        catch(e){ alert(e.message); }
+        catch(e){ saNotice(e.message, "error"); }
       }
       function editScopes(id) {
         const u = rows.find(r=>r.id===id) || {};
@@ -1351,7 +1358,7 @@ ${canManage ? `
         // Consent-gated: gebruikers pas ophalen bij het starten (klant gaf toestemming).
         let users = [];
         try { const r = await api(`/api/admin/support/${tenantId}/users`); users = (r.users||[]).slice().sort((a,b)=>(roleRank[a.role]??9)-(roleRank[b.role]??9) || String(a.name||"").localeCompare(String(b.name||""))); }
-        catch(e){ alert(e.message || "Kon gebruikers niet ophalen"); return; }
+        catch(e){ saNotice(e.message || "Kon gebruikers niet ophalen", "error"); return; }
         const ov = document.createElement("div");
         ov.style.cssText = "position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:1200;display:flex;align-items:center;justify-content:center;padding:16px;";
         ov.innerHTML = `
@@ -1389,7 +1396,7 @@ ${canManage ? `
           try {
             const r = await api("/api/admin/support/start", { method:"POST", body: JSON.stringify({ tenantId, impersonatedUserId, scope, reason }) });
             close();
-            alert(`Support-sessie gestart als ${r.session.impersonatedUserEmail||r.session.impersonatedUserId} (${r.session.scope==="write"?"lezen+schrijven":"alleen-lezen"}).\nJe neemt nu de sessie van deze gebruiker over. Verloopt ${fmtD(r.session.expiresAt)} · hard ${fmtD(r.session.hardExpiresAt)}.\nGebruik "Sessie verlaten" in de banner om terug te keren naar je eigen account.`);
+            await saDialog({ eyebrow: "Geauditeerde support", title: "Support-sessie gestart", message: `Je neemt ${r.session.impersonatedUserEmail||r.session.impersonatedUserId} over met ${r.session.scope==="write"?"lees- en schrijfrechten":"alleen-lezenrechten"}. Verloopt ${fmtD(r.session.expiresAt)}, harde limiet ${fmtD(r.session.hardExpiresAt)}. Gebruik Sessie verlaten in de banner om terug te keren.`, cancelLabel: false, confirmLabel: "Sessie openen", dismissible: false });
             // Bewaar het eigen agent-token + tenant zodat "Sessie verlaten" je terugzet.
             try { sessionStorage.setItem("wfp_agent_token", token()); sessionStorage.setItem("wfp_support_tenant", tenantId); } catch(_){}
             // Overname in DIT tabblad (pop-up/nieuw tabblad wordt op mobiel geblokkeerd).
@@ -1403,9 +1410,9 @@ ${canManage ? `
         });
       }
       async function endSession(tenantId) {
-        if (!window.confirm("Support-sessie nu beëindigen?")) return;
+        if (!await saConfirm("Support-sessie nu beëindigen?", "Support-sessie beëindigen", "Sessie beëindigen")) return;
         try { await api("/api/admin/support/end", { method:"POST", body: JSON.stringify({ tenantId }) }); support(); }
-        catch(e){ alert(e.message); }
+        catch(e){ saNotice(e.message, "error"); }
       }
 
       render();
@@ -1716,7 +1723,7 @@ ${canManage ? `
         });
         const del = document.getElementById("bDelete");
         if (del) del.addEventListener("click", async () => {
-          if (!confirm(`Bundel '${b.label}' verwijderen?`)) return;
+          if (!await saConfirm(`Bundel '${b.label}' verwijderen?`, "Bundel verwijderen", "Verwijderen")) return;
           try {
             await api(`/api/admin/bundles/${b.key}`, { method: "DELETE" });
             window.showToast && window.showToast("Bundel verwijderd", "success");
@@ -2004,7 +2011,7 @@ ${canManage ? `
 </div>`;
 
       document.getElementById("saMfaEnforce")?.addEventListener("click", async () => {
-        if (!confirm("MFA verplicht maken voor álle beheerders?\n\nBij de volgende login is een authenticator-code vereist. Bewaar de getoonde secrets en recovery codes · ze worden maar één keer getoond.")) return;
+        if (!await saConfirm("MFA verplicht maken voor alle beheerders? Bij de volgende login is een authenticator-code vereist. Bewaar de getoonde secrets en recovery codes zorgvuldig, want ze worden maar één keer getoond.", "MFA platformbreed verplichten", "MFA verplicht maken")) return;
         const btn = document.getElementById("saMfaEnforce");
         const out = document.getElementById("saMfaResult");
         btn.disabled = true; btn.textContent = "Bezig…";
