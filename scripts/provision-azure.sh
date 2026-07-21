@@ -52,11 +52,29 @@ echo "-> resource group"
 az group create -n "$RG" -l "$LOC" -o none
 
 echo "-> PostgreSQL Flexible Server (burstable) + database (kan enkele minuten duren)"
-az postgres flexible-server create \
-  --resource-group "$RG" --name "$PG" --location "$LOC" \
-  --tier Burstable --sku-name Standard_B1ms --version 16 --storage-size 32 \
-  --admin-user "$PGADMIN" --admin-password "$PGPASS" \
-  --public-access "$PUBLIC_ACCESS" --yes -o none
+# Sommige EU-regio's weigeren tijdelijk nieuwe servers (capaciteit). Probeer een
+# rij EU-regio's tot er één lukt; de winnende regio wordt ook voor storage
+# gebruikt. Overschrijfbaar via AZ_REGIONS.
+REGIONS="${AZ_REGIONS:-$LOC northeurope francecentral germanywestcentral swedencentral}"
+PG_OK=""
+for R in $REGIONS; do
+  echo "   probeer regio $R ..."
+  set +e
+  ERR="$(az postgres flexible-server create \
+    --resource-group "$RG" --name "$PG" --location "$R" \
+    --tier Burstable --sku-name Standard_B1ms --version 16 --storage-size 32 \
+    --admin-user "$PGADMIN" --admin-password "$PGPASS" \
+    --public-access "$PUBLIC_ACCESS" --yes -o none 2>&1)"
+  RC=$?
+  set -e
+  if [ $RC -eq 0 ]; then LOC="$R"; PG_OK=1; echo "   PostgreSQL aangemaakt in $R"; break; fi
+  if echo "$ERR" | grep -qiE "not accepting new customers|RequestDisallowedByAzure|not available|OfferRestricted|OverQuota|LocationNotAvailable"; then
+    echo "   $R accepteert nu geen nieuwe server · volgende regio..."
+    continue
+  fi
+  echo "   Onverwachte fout in $R:"; echo "$ERR"; exit 1
+done
+[ -n "$PG_OK" ] || { echo "FOUT: geen enkele geprobeerde regio accepteerde de PostgreSQL-server. Probeer met bv. AZ_REGIONS=\"polandcentral norwayeast\" opnieuw."; exit 1; }
 az postgres flexible-server db create -g "$RG" -s "$PG" -d "$DBNAME" -o none
 
 echo "-> firewall: Azure-diensten + je eigen IP"
