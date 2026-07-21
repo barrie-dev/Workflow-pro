@@ -111,6 +111,9 @@ async function main() {
     PORT, NODE_ENV: "development",
     RATE_LIMIT_DISABLED: "true",
     WORKFLOWPRO_INITIAL_ADMIN_PASSWORD: "Demo2026!",   // alleen in dit harnas
+    // Geen legacy-import in de loadtest: een lege database hoort hier een
+    // VERSE seed te krijgen, niet de dev-dataset uit een geconfigureerde bridge.
+    SUPABASE_URL: "", SUPABASE_SERVICE_ROLE_KEY: "",
     ...(POSTGRES
       ? { STORAGE_ADAPTER: "postgres" }               // DATABASE_URL van de aanroeper
       : { STORAGE_ADAPTER: "json", WORKFLOWPRO_DATA_FILE: path.join(dataDir, "data.json") }),
