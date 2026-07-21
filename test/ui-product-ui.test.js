@@ -9,11 +9,12 @@ const admin = fs.readFileSync(path.join(root, "public", "js", "platforms", "admi
 const workspaces = fs.readFileSync(path.join(root, "public", "js", "platforms", "admin-product-workspaces.js"), "utf8");
 const css = fs.readFileSync(path.join(root, "public", "css", "admin-product-ui.css"), "utf8");
 
-test("de admin laadt de rustige productlaag als laatste visuele bron", () => {
+test("de admin laadt de herkenbare productlaag als laatste visuele bron", () => {
   assert.match(html, /<link rel="stylesheet" href="\/css\/admin-product-ui\.css">/);
   assert.match(css, /Monargo One product UI 2026/);
-  assert.match(css, /--product-sidebar:#fbfcfd/);
-  assert.match(css, /#platform-admin \.adm-sidebar \{[\s\S]*background:var\(--product-sidebar\)/);
+  assert.match(css, /--product-navy:#111c2e/);
+  assert.match(css, /#platform-admin \.adm-sidebar \{[\s\S]*background:var\(--product-navy\)/);
+  assert.match(css, /font-size:14px/);
 });
 
 test("de productidentiteit gebruikt het echte merksymbool", () => {
@@ -22,10 +23,17 @@ test("de productidentiteit gebruikt het echte merksymbool", () => {
   assert.doesNotMatch(admin, /adm-brand-icon"><span aria-hidden="true">M<\/span>/);
 });
 
-test("dashboard en domeinen zijn data-first in plaats van marketingkaarten", () => {
+test("sectorbegrippen vallen terug op leesbare producttaal", () => {
+  assert.match(admin, /function termA\(key, fallback\)/);
+  assert.match(admin, /termA\("jobSingular", tA\("emp\.wo\.default","Werkbon"\)\)/);
+  assert.doesNotMatch(admin, /\(window\.wfpTerms && window\.wfpTerms\.t\("jobSingular"\)\) \|\|/);
+});
+
+test("dashboard en domeinen combineren datadichtheid met herkenbare hiërarchie", () => {
   assert.match(css, /#platform-admin \.adm-guided-entry \{ display:none; \}/);
   assert.match(css, /#platform-admin \.pws-hero,[\s\S]*background:#fff;/);
-  assert.match(css, /#platform-admin \.adm-command-strip \.adm-quick-actions \{ grid-template-columns:repeat\(3/);
+  assert.match(css, /#platform-admin \.adm-command-strip \{[\s\S]*grid-template-columns:220px minmax\(0,1fr\)/);
+  assert.match(css, /#platform-admin \.adm-kpi \{[\s\S]*border-top:3px solid/);
   assert.doesNotMatch(admin, /id="admQuickAi"/);
   assert.doesNotMatch(admin, /class="adm-ai-card"/);
   assert.match(workspaces, /title: l\("Projecten", "Projets", "Projects"\)/);
@@ -35,5 +43,5 @@ test("dashboard en domeinen zijn data-first in plaats van marketingkaarten", () 
 
 test("onboarding respecteert verborgen stappen en acties", () => {
   assert.match(css, /\.adm-onboarding-actions \[hidden\],[\s\S]*display:none !important;/);
-  assert.match(css, /\.adm-onboarding-dialog \{[\s\S]*border-radius:12px/);
+  assert.match(css, /\.adm-onboarding-dialog \{[\s\S]*border-radius:16px/);
 });

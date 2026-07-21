@@ -81,7 +81,21 @@
   }
 
   function empty(icon, title, text, actionId, actionLabel) {
-    return `<div class="pws-empty"><span>${esc(icon)}</span><h4>${esc(title)}</h4><p>${esc(text)}</p>${actionId ? `<button type="button" class="adm-btn adm-btn-primary" id="${actionId}">${esc(actionLabel)}</button>` : ""}</div>`;
+    const symbols = {
+      P: `<path d="M4 7.5h6l1.7 2H20v8.5a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9.5a2 2 0 0 1 2-2Z"/><path d="M7 4h6l2 3.5"/>`,
+      W: `<path d="M5 20h14M7 20V9l5-4 5 4v11M9.5 13h5M9.5 16h5"/>`,
+      C: `<path d="M6 3h9l3 3v15H6z"/><path d="M14 3v4h4M9 11h6M9 15h6"/>`,
+      A: `<path d="M5 7h14v11H5z"/><path d="M8 7V4h8v3M9 12h6"/>`,
+      O: `<path d="M12 3v3M12 18v3M4.2 6.2l2.1 2.1M17.7 17.7l2.1 2.1M3 12h3M18 12h3M4.2 17.8l2.1-2.1M17.7 6.3l2.1-2.1"/><circle cx="12" cy="12" r="4"/>`,
+      V: `<path d="M4 7h16v12H4zM8 7V4h8v3M4 12h16M9 15h6"/>`,
+      M: `<path d="M4 17V7h4l2-3h4l2 3h4v10z"/><circle cx="12" cy="12" r="3"/>`,
+      R: `<path d="M5 5h14v14H5zM8 9h8M8 13h5"/>`,
+      L: `<path d="M3 8h18M5 8v11h14V8M8 8V5h8v3M9 12h6"/>`,
+      PO: `<path d="M6 4h12v16H6zM9 8h6M9 12h6M9 16h4"/>`,
+      "±": `<path d="M5 7h8M9 3v8M5 17h8M16 7h4M18 5v4M16 17h4"/>`,
+    };
+    const paths = symbols[icon] || symbols.C;
+    return `<div class="pws-empty"><span aria-hidden="true"><svg viewBox="0 0 24 24">${paths}</svg></span><h4>${esc(title)}</h4><p>${esc(text)}</p>${actionId ? `<button type="button" class="adm-btn adm-btn-primary" id="${actionId}">${esc(actionLabel)}</button>` : ""}</div>`;
   }
 
   function kpis(items) {

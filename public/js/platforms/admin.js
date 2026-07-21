@@ -309,6 +309,11 @@
 
   // i18n-helper voor de admin-shell (t()-gebaseerde, dynamisch opgebouwde inhoud).
   function tA(key, fallback) { return window.wfpI18n ? window.wfpI18n.t(key, fallback) : fallback; }
+  function termA(key, fallback) {
+    if (!window.wfpTerms) return fallback;
+    const value = window.wfpTerms.t(key);
+    return value && value !== key ? value : fallback;
+  }
   function uiDialog(options) {
     const dialog = window.wfpAdmin && window.wfpAdmin.askDialog;
     return typeof dialog === "function" ? dialog(options) : Promise.resolve(null);
@@ -960,7 +965,7 @@
     const items = (navSubmenus()[view] || []).filter(i => !i.needsView || viewEnabled(i.needsView));
     if (!items.length) { hideNavFlyout(); return; }
     const fly = ensureNavFlyout();
-    const termTitle = window.wfpTerms && (view === "workorders" ? window.wfpTerms.t("jobPlural") : view === "venues" ? window.wfpTerms.t("venuePlural") : null);
+    const termTitle = view === "workorders" ? termA("jobPlural", null) : view === "venues" ? termA("venuePlural", null) : null;
     fly.innerHTML = `<div class="adm-nav-flyout-title">${esc(termTitle || VIEW_LABELS[view] || view)}</div>`
       + items.map((i, idx) => `<button type="button" class="adm-nav-flyout-item${i.drawer || (i.go && i.go.click) ? " act" : ""}" data-idx="${idx}">${esc(i.label)}</button>`).join("");
     fly.querySelectorAll(".adm-nav-flyout-item").forEach(btn => {
@@ -1034,7 +1039,7 @@
     });
     // Sector-terminologie voor de paginatitel (Werkbonnen/Locaties → sectorwoord),
     // anders de vertaalde nav-naam.
-    const termTitle = window.wfpTerms && (view === "workorders" ? window.wfpTerms.t("jobPlural") : view === "venues" ? window.wfpTerms.t("venuePlural") : null);
+    const termTitle = view === "workorders" ? termA("jobPlural", null) : view === "venues" ? termA("venuePlural", null) : null;
     document.getElementById("admPageTitle").textContent = termTitle || tA("nav." + view, VIEW_LABELS[view] || view);
     updateFlowNav(view);
 
@@ -1432,7 +1437,7 @@
     }
     if (viewEnabled("workorders")) kpiCards.push(`
   <div class="adm-kpi adm-kpi-link" data-goto="workorders" title="Naar werkbonnen">
-    <div class="adm-kpi-label">${dashLanguage === "nl" && window.wfpTerms && window.wfpTerms.t("jobPlural") ? window.wfpTerms.t("jobPlural") : tA("dash.openWo", bc.openWorkOrders)}</div>
+    <div class="adm-kpi-label">${dashLanguage === "nl" ? termA("jobPlural", tA("dash.openWo", bc.openWorkOrders)) : tA("dash.openWo", bc.openWorkOrders)}</div>
     <div class="adm-kpi-value">${activeWos.length}</div>
     <div class="adm-kpi-sub">${lateWos.length ? `<span class="adm-trend down">${lateWos.length} ${tA("dash.late","te laat")}</span>` : tA("dash.onSchedule","Alles op schema")}</div>
     <div class="adm-kpi-spark">${admSpark(woSerie, "var(--wf-blue)")}</div>
@@ -2184,7 +2189,7 @@ ${emp ? `
         ${unscheduled.map(order => `<button type="button" class="adm-unscheduled-work" data-id="${esc(order.id)}"><i class="${order.priority === "urgent" ? "urgent" : ""}"></i><span><b>${esc(order.title || order.number || "Werkbon")}</b><small>${esc(order.clientName || order.customerName || "Nog geen klant")} · ${esc(order.status || "open")}</small></span><em>→</em></button>`).join("") || `<p class="adm-side-empty">Alle open opdrachten zijn toegewezen.</p>`}
       </section>
       <section class="adm-planning-insight ${conflictCount ? "warning" : "ok"}"><span>${conflictCount ? "!" : "✓"}</span><div><b>${conflictCount ? `${conflictCount} planningsconflict${conflictCount === 1 ? "" : "en"}` : "Planning is conflictvrij"}</b><p>${conflictCount ? "Controleer overlappende shifts voor je de week publiceert." : "Geen overlappende shifts in deze selectie."}</p></div></section>
-      <button type="button" class="adm-copy-week" id="admCopyWeek">⧉ Kopieer deze week</button>
+      <button type="button" class="adm-copy-week" id="admCopyWeek">Kopieer deze week</button>
     </aside>
   </div>`}
 </div>`;
@@ -2219,7 +2224,7 @@ ${emp ? `
         window.showToast && window.showToast(tA("adm.plan.copied","{n} shifts gekopieerd naar volgende week").replace("{n}", copied), "success");
         _planningWeekOffset++;
         renderPlanning();
-      } catch(e) { window.showToast && window.showToast(e.message, "error"); btn.disabled = false; btn.textContent = tA("adm.plan.copyWeek","⧉ Kopieer week"); }
+      } catch(e) { window.showToast && window.showToast(e.message, "error"); btn.disabled = false; btn.textContent = tA("adm.plan.copyWeek","Kopieer week"); }
     });
     document.querySelectorAll(".adm-shift-pill").forEach(pill => {
       pill.addEventListener("click", () => {
@@ -2483,7 +2488,7 @@ ${emp ? `
     ? `<div class="adm-empty"><div class="adm-empty-text">${tA("adm.apt.empty","Geen afspraken")}</div><button class="adm-btn adm-btn-primary adm-btn-sm" id="admEmptyNewApt" style="margin-top:12px">+ ${tA("adm.apt.emptyBtn","Eerste afspraak aanmaken")}</button></div>`
     : `<div class="adm-card-body adm-table-wrap">
     <table class="adm-table">
-      <thead><tr><th>${tA("adm.date","Datum")}</th><th>${tA("adm.apt.thTime","Tijd")}</th><th>${tA("adm.thCustomer","Klant")}</th><th>${(window.wfpTerms && window.wfpTerms.t("jobSingular")) || tA("emp.wo.default","Werkbon")}</th><th>${tA("adm.apt.thReminder","Reminder")}</th><th>${tA("adm.status","Status")}</th><th>${tA("adm.actions","Acties")}</th></tr></thead>
+      <thead><tr><th>${tA("adm.date","Datum")}</th><th>${tA("adm.apt.thTime","Tijd")}</th><th>${tA("adm.thCustomer","Klant")}</th><th>${termA("jobSingular", tA("emp.wo.default","Werkbon"))}</th><th>${tA("adm.apt.thReminder","Reminder")}</th><th>${tA("adm.status","Status")}</th><th>${tA("adm.actions","Acties")}</th></tr></thead>
       <tbody>
         ${filtered.map(a => `
         <tr class="adm-row-link adm-apt-row" data-id="${esc(a.id)}">
@@ -2542,7 +2547,7 @@ ${emp ? `
     <div class="adm-form-group"><label>${tA("mgr.endTime","Eindtijd")}</label>
       <input name="end" type="time" value="${esc(apt?.end || "")}"></div>
   </div>
-  <div class="adm-form-group"><label>${(window.wfpTerms && window.wfpTerms.t("jobSingular")) || tA("emp.wo.default","Werkbon")} (${tA("adm.apt.optional","optioneel")})</label>
+  <div class="adm-form-group"><label>${termA("jobSingular", tA("emp.wo.default","Werkbon"))} (${tA("adm.apt.optional","optioneel")})</label>
     <select name="workorderId" style="width:100%">
       <option value="">${tA("mgr.noWo","Geen werkbon")}</option>
       ${openWos.map(w => `<option value="${esc(w.id)}" ${apt?.workorderId === w.id ? "selected" : ""}>${esc(w.number ? w.number + " · " : "")}${esc(w.title || "")}</option>`).join("")}
@@ -3886,24 +3891,24 @@ ${((window._wfpEnt && window._wfpEnt.modules) || []).includes("ai_estimate") ? `
     content.innerHTML = `
 <div class="adm-card">
   <div class="adm-card-header">
-    <h3 class="adm-card-title">${(window.wfpTerms && window.wfpTerms.t("jobPlural")) || tA("nav.workorders","Werkbonnen")}
+    <h3 class="adm-card-title">${termA("jobPlural", tA("nav.workorders","Werkbonnen"))}
       <span style="background:var(--wf-blue-l);color:var(--wf-blue);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${workorders.length}/${allWorkorders.length}</span>
     </h3>
-    <button class="adm-btn adm-btn-primary adm-btn-sm" id="admNewWO">+ ${(window.wfpTerms && window.wfpTerms.t("jobSingular")) || tA("emp.wo.default","Werkbon")}</button>
+    <button class="adm-btn adm-btn-primary adm-btn-sm" id="admNewWO">+ ${termA("jobSingular", tA("emp.wo.default","Werkbon"))}</button>
   </div>
 
   <!-- Filter bar -->
-  <div style="display:flex;gap:10px;flex-wrap:wrap;padding:0 20px 14px;border-bottom:1px solid var(--gray-100);">
+  <div class="adm-workorder-filters">
     <input id="admWoSearch" type="search" placeholder="${tA("adm.wo.searchPh","Zoek op titel / klant…")}" value="${esc(_woFilterSearch)}"
-      style="flex:1;min-width:160px;10px">
-    <select id="admWoStatusFilter" style="min-width:140px">
+      >
+    <select id="admWoStatusFilter">
       <option value="">${tA("adm.allStatuses","Alle statussen")}</option>
       <option value="open"        ${_woFilterStatus==="open"?"selected":""}>${tA("dash.woseg.open","Open")} (${statusCounts.open||0})</option>
       <option value="in_progress" ${_woFilterStatus==="in_progress"?"selected":""}>${tA("dash.woseg.inprog","In uitvoering")} (${statusCounts.in_progress||0})</option>
       <option value="done"        ${_woFilterStatus==="done"?"selected":""}>${tA("dash.woseg.done","Voltooid")} (${doneCount})</option>
       <option value="geannuleerd" ${_woFilterStatus==="geannuleerd"?"selected":""}>${tA("dash.woseg.cancelled","Geannuleerd")} (${statusCounts.geannuleerd||0})</option>
     </select>
-    <select id="admWoUserFilter" style="min-width:160px">
+    <select id="admWoUserFilter">
       <option value="">${tA("adm.wo.allEmployees","Alle medewerkers")}</option>
       ${employees.map(u => `<option value="${esc(u.id)}" ${_woFilterUser===u.id?"selected":""}>${esc(u.name||u.email)}</option>`).join("")}
     </select>
@@ -4694,7 +4699,7 @@ ${((window._wfpEnt && window._wfpEnt.modules) || []).includes("ai_estimate") ? `
         const custEl = document.getElementById("repCustTable");
         if (custEl) {
           custEl.innerHTML = custRows.length ? `<table class="adm-table">
-            <thead><tr><th>${tA("adm.thCustomer","Klant")}</th><th>${tA("adm.rep.revenueExVat","Omzet (excl. btw)")}</th><th>${tA("adm.cust.outstandingCap","Openstaand")}</th><th>${tA("nav.facturen","Facturen")}</th><th>${(window.wfpTerms && window.wfpTerms.t("jobPlural")) || tA("nav.workorders","Werkbonnen")}</th><th>${tA("adm.rep.hoursClocked","Uren geklokt")}</th><th>${tA("adm.rep.costPassed","Onkosten doorgerekend")}</th><th>${tA("adm.rep.costOwn","Onkosten eigen kost")}</th></tr></thead>
+            <thead><tr><th>${tA("adm.thCustomer","Klant")}</th><th>${tA("adm.rep.revenueExVat","Omzet (excl. btw)")}</th><th>${tA("adm.cust.outstandingCap","Openstaand")}</th><th>${tA("nav.facturen","Facturen")}</th><th>${termA("jobPlural", tA("nav.workorders","Werkbonnen"))}</th><th>${tA("adm.rep.hoursClocked","Uren geklokt")}</th><th>${tA("adm.rep.costPassed","Onkosten doorgerekend")}</th><th>${tA("adm.rep.costOwn","Onkosten eigen kost")}</th></tr></thead>
             <tbody>${custRows.map(r => `<tr>
               <td style="font-weight:600">${esc(r.klant)}</td>
               <td style="font-weight:600">${fmtC(r.omzet)}</td>
@@ -4785,7 +4790,7 @@ ${((window._wfpEnt && window._wfpEnt.modules) || []).includes("ai_estimate") ? `
                 <div style="font-size:13px;font-weight:600;color:var(--gray-900);">${n}</div>
                 <div style="font-size:11px;color:var(--gray-400);width:36px;text-align:right;">${(n/woTotal*100).toFixed(0)}%</div>
               </div>`).join("")}
-              <div style="font-size:11px;color:var(--gray-400);margin-top:6px;text-align:right">${tA("adm.total","Totaal")}: ${woTotal} ${((window.wfpTerms && window.wfpTerms.t("jobPlural")) || tA("nav.workorders","Werkbonnen")).toLowerCase()}</div>
+              <div style="font-size:11px;color:var(--gray-400);margin-top:6px;text-align:right">${tA("adm.total","Totaal")}: ${woTotal} ${termA("jobPlural", tA("nav.workorders","Werkbonnen")).toLowerCase()}</div>
             </div>`
           : `<div class="adm-empty">${tA("adm.rep.noWo","Geen werkbonnen in deze periode")}</div>`;
 
@@ -5225,7 +5230,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
                 <td><span class="adm-status ${st.css}">${st.label}</span></td>
                 <td style="display:flex;gap:4px;white-space:nowrap;">
                   ${q.workorderId ? `<span style="font-size:11px;color:var(--gray-400)">→ ${tA("adm.cust.toWo","werkbon")}</span>`
-                    : accepted ? `<button class="adm-btn adm-btn-secondary adm-btn-sm q-cust-towo" data-id="${q.id}">→ ${(window.wfpTerms && window.wfpTerms.t("jobSingular")) || tA("emp.wo.default","Werkbon")}</button>` : ""}
+                    : accepted ? `<button class="adm-btn adm-btn-secondary adm-btn-sm q-cust-towo" data-id="${q.id}">→ ${termA("jobSingular", tA("emp.wo.default","Werkbon"))}</button>` : ""}
                   ${q.invoiceId ? `<span style="font-size:11px;color:var(--gray-400)">→ ${tA("adm.cust.invoiced","gefactureerd")}</span>`
                     : accepted ? `<button class="adm-btn adm-btn-success adm-btn-sm q-cust-toinv" data-id="${q.id}">→ ${tA("adm.wo.toInvoice","Factuur")}</button>` : ""}
                 </td>
@@ -5240,7 +5245,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
               renderCustomerDetail(customerId);
             } catch (err) { window.showToast && window.showToast(err.message || tA("adm.cust.convertFail","Omzetten mislukt"), "error"); }
           };
-          body.querySelectorAll(".q-cust-towo").forEach(b => b.addEventListener("click", () => convert(b.dataset.id, "workorder", (window.wfpTerms && window.wfpTerms.t("jobSingular")) || tA("adm.cust.toWo","werkbon"))));
+          body.querySelectorAll(".q-cust-towo").forEach(b => b.addEventListener("click", () => convert(b.dataset.id, "workorder", termA("jobSingular", tA("adm.cust.toWo","werkbon")))));
           body.querySelectorAll(".q-cust-toinv").forEach(b => b.addEventListener("click", () => convert(b.dataset.id, "invoice", tA("adm.cust.invoiceLc","factuur"))));
           return;
         }
@@ -5300,7 +5305,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
 
 <!-- KPIs -->
 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
-  <div class="adm-kpi adm-kpi-purple"><div class="adm-kpi-label">${(window.wfpTerms && window.wfpTerms.t("jobPlural")) || tA("nav.workorders","Werkbonnen")}</div><div class="adm-kpi-value">${custWOs.length}</div><div class="adm-kpi-sub">${custWOs.filter(w=>!["Voltooid","Afgewerkt","done"].includes(w.status)).length} ${tA("dash.woseg.open","Open").toLowerCase()}</div></div>
+  <div class="adm-kpi adm-kpi-purple"><div class="adm-kpi-label">${termA("jobPlural", tA("nav.workorders","Werkbonnen"))}</div><div class="adm-kpi-value">${custWOs.length}</div><div class="adm-kpi-sub">${custWOs.filter(w=>!["Voltooid","Afgewerkt","done"].includes(w.status)).length} ${tA("dash.woseg.open","Open").toLowerCase()}</div></div>
   <div class="adm-kpi adm-kpi-blue"><div class="adm-kpi-label">${tA("nav.facturen","Facturen")}</div><div class="adm-kpi-value">${custInvs.length}</div><div class="adm-kpi-sub">${custInvs.filter(i=>["open","overdue"].includes(i.status)).length} ${tA("adm.cust.outstanding","openstaand")}</div></div>
   <div class="adm-kpi adm-kpi-green"><div class="adm-kpi-label">${tA("adm.inv.st.paid","Betaald")}</div><div class="adm-kpi-value" style="font-size:17px">${fmtEurCD(paidInvAmt)}</div></div>
   <div class="adm-kpi ${openInvAmt>0?"adm-kpi-amber":"adm-kpi-blue"}"><div class="adm-kpi-label">${tA("adm.cust.outstandingCap","Openstaand")}</div><div class="adm-kpi-value" style="font-size:17px">${fmtEurCD(openInvAmt)}</div></div>
@@ -5320,7 +5325,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
       ${customFieldRuntime ? customFieldRuntime.renderRuntimeValues(customerFieldDefs, customer.customFields || {}) : ""}
       <div style="margin-top:8px;display:flex;gap:8px;">
         <button class="adm-btn adm-btn-primary adm-btn-sm" id="custNewQuote">+ ${tA("adm.quote.singular","Offerte")}</button>
-        <button class="adm-btn adm-btn-primary adm-btn-sm" id="custNewWO">+ ${(window.wfpTerms && window.wfpTerms.t("jobSingular")) || tA("emp.wo.default","Werkbon")}</button>
+        <button class="adm-btn adm-btn-primary adm-btn-sm" id="custNewWO">+ ${termA("jobSingular", tA("emp.wo.default","Werkbon"))}</button>
         <button class="adm-btn adm-btn-secondary adm-btn-sm" id="custNewInv">${tA("adm.cust.invoiceCap","Factuur")}</button>
       </div>
     </div>
@@ -5331,7 +5336,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
     <div class="adm-card-header" style="flex-direction:column;gap:0;padding-bottom:0;" id="custDetailTabs">
       <div style="display:flex;gap:0;border-bottom:1px solid var(--gray-100);width:100%;">
         <button class="cdt-tab" data-tab="offertes" style="background:none;border:none;cursor:pointer;padding:10px 16px;font-size:13px;color:var(--gray-700);border-bottom:2px solid transparent;">${tA("nav.offertes","Offertes")} (${custQuotes.length})</button>
-        <button class="cdt-tab" data-tab="werkbonnen" style="background:none;border:none;cursor:pointer;padding:10px 16px;font-size:13px;color:var(--gray-700);border-bottom:2px solid var(--wf-purple);font-weight:600;">${(window.wfpTerms && window.wfpTerms.t("jobPlural")) || tA("nav.workorders","Werkbonnen")} (${custWOs.length})</button>
+        <button class="cdt-tab" data-tab="werkbonnen" style="background:none;border:none;cursor:pointer;padding:10px 16px;font-size:13px;color:var(--gray-700);border-bottom:2px solid var(--wf-purple);font-weight:600;">${termA("jobPlural", tA("nav.workorders","Werkbonnen"))} (${custWOs.length})</button>
         <button class="cdt-tab" data-tab="facturen" style="background:none;border:none;cursor:pointer;padding:10px 16px;font-size:13px;color:var(--gray-700);border-bottom:2px solid transparent;">${tA("nav.facturen","Facturen")} (${custInvs.length})</button>
       </div>
     </div>
@@ -5501,7 +5506,7 @@ td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px}
       content.innerHTML = `
 <div class="adm-card">
   <div class="adm-card-header">
-    <h3 class="adm-card-title">${(window.wfpTerms && window.wfpTerms.t("venuePlural")) || tA("nav.venues","Locaties / Werven")} <span style="background:var(--wf-purple-l);color:var(--wf-purple);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${rows.length}</span></h3>
+    <h3 class="adm-card-title">${termA("venuePlural", tA("nav.venues","Locaties / Werven"))} <span style="background:var(--wf-purple-l);color:var(--wf-purple);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;">${rows.length}</span></h3>
     <input id="venSearch" placeholder="${tA("adm.ven.searchPh","Zoek locatie…")}" style="font-size:12px;min-width:180px">
   </div>
   ${rows.length === 0
@@ -6634,7 +6639,7 @@ ${attentionItems.length ? `<div class="stock-alert-banner">
               <button class="adm-btn adm-btn-secondary adm-btn-sm q-pdf" data-id="${q.id}" title="${tA("adm.pdfPrint","PDF / Afdrukken")}"><svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg></button>
               ${["concept","verzonden"].includes(q.status)?`<button class="adm-btn adm-btn-secondary adm-btn-sm q-send" data-id="${q.id}" title="${tA("adm.quote.sendLink","Versturen + link")}"><svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>`:""}
               ${canConvert && !q.invoiceId?`<button class="adm-btn adm-btn-success adm-btn-sm q-toinv" data-id="${q.id}" title="${tA("adm.quote.toInvoice","Naar factuur")}">→ ${tA("adm.wo.toInvoice","Factuur")}</button>`:""}
-              ${canConvert && !q.workorderId?`<button class="adm-btn adm-btn-secondary adm-btn-sm q-towo" data-id="${q.id}" title="${tA("adm.quote.toWo","Naar werkbon")}">→ ${(window.wfpTerms && window.wfpTerms.t("jobSingular")) || tA("emp.wo.default","Werkbon")}</button>`:""}
+              ${canConvert && !q.workorderId?`<button class="adm-btn adm-btn-secondary adm-btn-sm q-towo" data-id="${q.id}" title="${tA("adm.quote.toWo","Naar werkbon")}">→ ${termA("jobSingular", tA("emp.wo.default","Werkbon"))}</button>`:""}
             </td>
           </tr>`;
         }).join("")}</tbody>
@@ -6667,7 +6672,7 @@ ${attentionItems.length ? `<div class="stock-alert-banner">
       }));
       content.querySelectorAll(".q-towo").forEach(b => b.addEventListener("click", async () => {
         if(!await uiConfirm(tA("adm.quote.toWoConfirm","Offerte omzetten naar werkbon?"), { title: "Offerte omzetten", confirmLabel: "Werkbon aanmaken" })) return;
-        try { const d = await api("POST", `/offertes/${b.dataset.id}/convert`, { target:"workorder" }); window.showToast && window.showToast(((window.wfpTerms && window.wfpTerms.t("jobSingular")) || tA("emp.wo.default","Werkbon"))+" "+(d.workorder?.number||"")+" "+tA("adm.created","aangemaakt"),"success"); switchView("workorders"); }
+        try { const d = await api("POST", `/offertes/${b.dataset.id}/convert`, { target:"workorder" }); window.showToast && window.showToast(termA("jobSingular", tA("emp.wo.default","Werkbon"))+" "+(d.workorder?.number||"")+" "+tA("adm.created","aangemaakt"),"success"); switchView("workorders"); }
         catch(e){ window.showToast && window.showToast(tA("adm.error","Fout")+": "+e.message,"error"); }
       }));
     } catch(e) { content.innerHTML = `<div style="padding:20px;color:var(--wf-red)">${tA("adm.error","Fout")}: ${e.message}</div>`; }
@@ -8330,7 +8335,7 @@ ${enrolled.map(e => `
         window.wfpI18n.apply(i18nRoot);
         paintLang();
         // t()-gebaseerde scherminhoud herrenderen (paginatitel + huidige view).
-        document.getElementById("admPageTitle").textContent = (window.wfpTerms && (_currentView === "workorders" ? window.wfpTerms.t("jobPlural") : _currentView === "venues" ? window.wfpTerms.t("venuePlural") : null)) || VIEW_LABELS[_currentView] || _currentView;
+        document.getElementById("admPageTitle").textContent = (_currentView === "workorders" ? termA("jobPlural", null) : _currentView === "venues" ? termA("venuePlural", null) : null) || VIEW_LABELS[_currentView] || _currentView;
         if (_currentView) switchView(_currentView);
       });
     }
