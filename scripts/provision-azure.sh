@@ -48,6 +48,21 @@ read -r -p "Deze resources aanmaken? (y/N) " CONFIRM
 PWRAW="$(head -c 4096 /dev/urandom | LC_ALL=C tr -dc 'A-Za-z0-9')"
 PGPASS="Aa1${PWRAW:0:24}"
 
+echo "-> resource providers registreren (eenmalig per abonnement, kan enkele minuten duren)"
+# Een nieuw abonnement moet de namespaces expliciet registreren voordat je er
+# resources van kunt maken (MissingSubscriptionRegistration). --wait blokkeert
+# tot het klaar is; al-geregistreerd wordt overgeslagen.
+for NS in Microsoft.DBforPostgreSQL Microsoft.Storage; do
+  STATE="$(az provider show -n "$NS" --query registrationState -o tsv 2>/dev/null || echo NotRegistered)"
+  if [ "$STATE" = "Registered" ]; then
+    echo "   $NS: al geregistreerd"
+  else
+    echo "   $NS: $STATE → registreren (even geduld)..."
+    az provider register --namespace "$NS" --wait
+    echo "   $NS: geregistreerd"
+  fi
+done
+
 echo "-> resource group"
 # Een resource group is enkel metadata; resources mogen in een ANDERE regio dan
 # de group staan. Bestaat de group al (bv. in westeurope van een vorige poging),
