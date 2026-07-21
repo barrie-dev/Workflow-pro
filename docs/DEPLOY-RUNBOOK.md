@@ -18,7 +18,7 @@ Voor incidenten en dagelijkse operatie: zie [RUNBOOK.md](RUNBOOK.md).
 |---|---|---|
 | Runtime | container draait de `Dockerfile` (Node 22) | elk containerplatform of Docker-host |
 | Database | standaard PostgreSQL 14+, geen extensies vereist | zelfgehost, elke beheerde Postgres |
-| Objectopslag | s3-compatibel endpoint, of een lokaal volume | MinIO (zelfgehost), elke s3-compatibele clouddienst |
+| Objectopslag | s3-compatibel endpoint, Azure Blob, of een lokaal volume | MinIO (zelfgehost), elke s3-compatibele clouddienst, Azure Blob Storage |
 
 De applicatie heeft nul npm-runtimedependencies buiten `pg` en `node-saml`;
 er is geen build-stap en geen framework dat een platform afdwingt.
@@ -94,13 +94,40 @@ URL's die de app uitgeeft (poortcontract, handover 4.2).
 **Huidig productieplatform (Render)** · `render.yaml` is de bronconfiguratie:
 build vanaf de repo, startcommando met migratiestap, envs in het dashboard.
 
-**Azure Container Apps** (als daarvoor gekozen wordt):
-- image naar een registry pushen, Container App aanmaken met dat image;
-- envs uit §2 als app-settings/secret refs; probes richten volgens §3 stap 4;
-- database: een beheerde PostgreSQL-instantie; alleen `DATABASE_URL` wijzigt;
-- objectopslag: elke s3-compatibele dienst of een MinIO-container werkt
-  ongewijzigd; kiest men niet-s3-compatibele opslag, dan is dat een nieuwe
-  adapter achter dezelfde poort, geen wijziging in domein- of applicatiecode.
+**Azure (gekozen productie-infrastructuur)** · concreet stappenplan; elke stap
+is de generieke stap uit §3 met een Azure-dienst ingevuld:
+
+1. **Registry + image**: maak een Azure Container Registry, push het image
+   (`docker build` → `docker push`) of laat een GitHub Action dat doen.
+2. **Database**: maak een *Azure Database for PostgreSQL - Flexible Server*
+   (kleinste burstable tier volstaat om te starten; TLS staat standaard aan).
+   Zet `DATABASE_URL` op de connectiestring; de app autodetecteert TLS.
+3. **Objectopslag**: maak een *Storage Account* (LRS volstaat, geen publieke
+   blob-toegang) + één container. Zet:
+   `OBJECT_STORAGE_ADAPTER=azure-blob`,
+   `OBJECT_STORAGE_ENDPOINT=https://<account>.blob.core.windows.net`,
+   `OBJECT_STORAGE_BUCKET=<container>`,
+   `OBJECT_STORAGE_ACCESS_KEY_ID=<accountnaam>`,
+   `OBJECT_STORAGE_SECRET_ACCESS_KEY=<accountsleutel>`.
+   Bewaarbeleid (§5 stap 3): zet *blob soft delete* en *versioning* aan op het
+   account · dat is het herstelvangnet bij overschrijven of verwijderen.
+4. **Container App**: maak een *Container App* met het image; minimaal 1
+   replica; ingress op poort 4280. Zet alle envs uit §2 als secrets/app-vars.
+   Startcommando laten staan (migratie zit in het image-startpad) of de
+   migratie als init-stap draaien.
+5. **Probes**: liveness → `/api/health`, readiness → `/api/ready` (§3 stap 4).
+6. **Verifieer**: `/api/health` toont `storageAdapter: "postgres"`,
+   `txAdapter: "postgres"` en `objectStorageAdapter: "azure-blob"`; draai
+   daarna het restore-bewijs uit §5 stap 5 en `npm run evidence`.
+
+Dev/test blijven lokaal: Azurite (de officiële emulator) draait via
+`docker compose --profile storage-azure up -d storage-azure` en valideert
+handtekeningen exact zoals de echte dienst · CI bewijst dat elke build.
+
+De onafhankelijkheidsgarantie blijft van kracht: geen enkele Azure-dienst
+hierboven is een harde afhankelijkheid. Terug naar (of parallel draaien op)
+een s3-compatibele of zelfgehoste stack is dezelfde app met andere
+configuratiewaarden.
 
 **Kubernetes / VPS**: compose-bestand als referentie; db + storage als
 services of extern; migratie als init-container respectievelijk pre-startstap.

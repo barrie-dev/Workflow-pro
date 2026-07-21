@@ -45,8 +45,23 @@ function createObjectStorage(overrides = {}) {
     });
   }
 
+  // Azure Blob (productiekeuze van de eigenaar): zelfde poort, zelfde
+  // gedrag, generieke envs hergebruikt (bucket=container, accessKeyId=account,
+  // secretAccessKey=accountsleutel). Terug naar s3-compatibel of local is en
+  // blijft één configuratiewijziging.
+  if (kind === "azure-blob" || kind === "azure") {
+    const { AzureBlobObjectStorage } = require("./azure/object-storage");
+    return new AzureBlobObjectStorage({
+      endpoint: settings.endpoint,
+      container: settings.bucket,
+      accountName: settings.accessKeyId,
+      accountKey: settings.secretAccessKey,
+      urlTtlSeconds: settings.urlTtlSeconds,
+    });
+  }
+
   const e = new Error(
-    `Onbekende objectopslag-adapter '${kind}'. Beschikbaar: local, s3. ` +
+    `Onbekende objectopslag-adapter '${kind}'. Beschikbaar: local, s3, azure-blob. ` +
     "Elke adapter implementeert exact hetzelfde poortcontract.");
   e.status = 500; e.code = "UNKNOWN_OBJECT_STORAGE_ADAPTER";
   throw e;

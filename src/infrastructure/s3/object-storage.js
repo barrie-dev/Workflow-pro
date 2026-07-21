@@ -71,27 +71,7 @@ function canonicalQueryString(query) {
     .join("&");
 }
 
-/** Standaard-HTTP-transport op de kernmodules; injecteerbaar voor tests. */
-function defaultTransport({ url, method, headers, body }) {
-  return new Promise((resolve, reject) => {
-    const u = new URL(url);
-    const mod = u.protocol === "http:" ? require("http") : require("https");
-    // Content-Length is verplicht bij uploads; hoort niet bij de ondertekende
-    // headers, dus hier zetten (transportlaag) is correct én voldoende.
-    const withLength = body != null
-      ? { ...headers, "content-length": String(Buffer.isBuffer(body) ? body.length : Buffer.byteLength(String(body))) }
-      : headers;
-    const req = mod.request(u, { method, headers: withLength }, res => {
-      const chunks = [];
-      res.on("data", c => chunks.push(c));
-      res.on("end", () => resolve({ status: res.statusCode, headers: res.headers, body: Buffer.concat(chunks) }));
-    });
-    req.on("error", reject);
-    req.setTimeout(30000, () => req.destroy(new Error("Opslag-endpoint antwoordt niet (timeout)")));
-    if (body != null) req.write(body);
-    req.end();
-  });
-}
+const { defaultTransport } = require("../http-transport");
 
 class S3CompatibleObjectStorage {
   /**

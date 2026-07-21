@@ -128,7 +128,26 @@ services:
       retries: 10
       start_period: 10s
 
+  # Blob-opslag-emulator (P0-08 · Azure-productiepad). Azurite is de officiële
+  # emulator met exact dezelfde handtekeningvalidatie als de echte dienst,
+  # dus dev/test bewijzen hier wat productie op Azure doet.
+  #   docker compose --profile storage-azure up -d storage-azure
+  # App-kant:  OBJECT_STORAGE_ADAPTER=azure-blob
+  #            OBJECT_STORAGE_ENDPOINT=http://storage-azure:10000/devstoreaccount1
+  #            OBJECT_STORAGE_BUCKET=monargo-files
+  #            OBJECT_STORAGE_ACCESS_KEY_ID=devstoreaccount1 (+ publieke emulatorsleutel)
+  storage-azure:
+    profiles: ["storage-azure"]
+    image: mcr.microsoft.com/azure-storage/azurite:latest
+    restart: unless-stopped
+    command: ["azurite-blob", "--blobHost", "0.0.0.0", "--location", "/data"]
+    ports:
+      - "${STORAGE_AZURE_PORT:-10000}:10000"
+    volumes:
+      - monargo-blobs:/data
+
 volumes:
   monargo-db:
   monargo-files:
   monargo-objects:
+  monargo-blobs:

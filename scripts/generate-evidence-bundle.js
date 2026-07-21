@@ -74,6 +74,7 @@ if (skipTests) {
     skipped: lastCount(out, "skipped"),
     databaseTestsIncluded: !/DATABASE_URL niet gezet/.test(out),
     objectStorageTestsIncluded: !/S3_TEST_ENDPOINT niet gezet/.test(out),
+    blobStorageTestsIncluded: !/AZURE_TEST_ENDPOINT niet gezet/.test(out),
   };
 }
 
@@ -124,7 +125,7 @@ const md = [
   "",
   "## Tests",
   t.ran
-    ? `- ${t.pass}/${t.total} geslaagd, ${t.fail} gefaald, ${t.skipped} overgeslagen (exit ${t.exitCode})\n- Database-integratietests meegedraaid: ${t.databaseTestsIncluded ? "ja" : "NEE (geen DATABASE_URL)"}\n- Objectopslag-livetests meegedraaid: ${t.objectStorageTestsIncluded ? "ja" : "NEE (geen S3_TEST_ENDPOINT)"}`
+    ? `- ${t.pass}/${t.total} geslaagd, ${t.fail} gefaald, ${t.skipped} overgeslagen (exit ${t.exitCode})\n- Database-integratietests meegedraaid: ${t.databaseTestsIncluded ? "ja" : "NEE (geen DATABASE_URL)"}\n- Objectopslag-livetests (s3-compatibel) meegedraaid: ${t.objectStorageTestsIncluded ? "ja" : "NEE (geen S3_TEST_ENDPOINT)"}\n- Blob-opslag-livetests (Azure-pad) meegedraaid: ${t.blobStorageTestsIncluded ? "ja" : "NEE (geen AZURE_TEST_ENDPOINT)"}`
     : `- Niet gedraaid (${t.reason})`,
   "",
   "## Migraties",
