@@ -82,7 +82,10 @@ EXISTING_PG="$(az postgres flexible-server list -g "$RG" --query "[?starts_with(
 if [ -n "$EXISTING_PG" ]; then
   PG="$EXISTING_PG"
   LOC="$(az postgres flexible-server show -g "$RG" -n "$PG" --query location -o tsv)"
-  echo "   bestaande server $PG in $LOC · hergebruiken"
+  # Het wachtwoord van een eerdere run is niet bewaard; zet het admin-wachtwoord
+  # naar het nieuw gegenereerde, zodat de connectiestring in .env.azure klopt.
+  echo "   bestaande server $PG in $LOC · hergebruiken (admin-wachtwoord herzetten)"
+  az postgres flexible-server update -g "$RG" -n "$PG" --admin-password "$PGPASS" -o none
 else
   REGIONS="${AZ_REGIONS:-$LOC northeurope francecentral germanywestcentral swedencentral}"
   PG_OK=""
