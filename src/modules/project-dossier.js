@@ -91,4 +91,4 @@ function projectDossier(store, tenantId, project, opts = {}) {
   };
 }
 
-module.exports = { projectDossier };
+module.exports = { projectDossier, firstDate };

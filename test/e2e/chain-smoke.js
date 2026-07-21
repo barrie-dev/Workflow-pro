@@ -114,6 +114,14 @@ async function activeEmp(tok, tid, name, email) {
     && D.timeline.some(e => e.module === "quotes"), D.timeline && D.timeline.length);
   check("10c· financiele samenvatting mee voor de beheerder", D.finance && D.finance.budget && D.finance.budget.total === 5000, D.finance && D.finance.budget && D.finance.budget.total);
 
+  // ── 11. Klant 360°-dossier: CRM + finance in één klantbeeld + saldo (#76) ───
+  const cdos = await j("GET", `/api/tenants/${tid}/customers/${custId}/dossier`, null, tok);
+  const CD = cdos.data.dossier || {};
+  check("11a· klant-360 bundelt project + offerte + factuur + betaling", cdos.status === 200
+    && CD.counts.projects >= 1 && CD.counts.invoices >= 1 && CD.counts.payments >= 1, JSON.stringify(CD.counts));
+  check("11b· klantsaldo: gefactureerd / betaald / openstaand berekend", CD.balance
+    && CD.balance.invoiced > 0 && CD.balance.paid > 0 && typeof CD.balance.outstanding === "number", JSON.stringify(CD.balance));
+
   console.log(failures === 0 ? "SMOKE OK" : `SMOKE FAALT: ${failures}`);
   exitSoft(failures === 0 ? 0 : 1);
 })().catch(e => { console.error("FOUT:", e.message); exitSoft(1); });

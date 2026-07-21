@@ -240,6 +240,7 @@ const { emitDomainEvent, listOutbox, registerOutboxSink } = require("./platform/
 const { ensureDefaultCompany, issueNumber } = require("./platform/companies");
 const { applyScope, redactSensitive, canSeeSensitive } = require("./platform/policy");
 const { projectDossier } = require("./modules/project-dossier");
+const { customerDossier } = require("./modules/customer-dossier");
 const { makeCustomerRepository } = require("./platform/crm");
 const { makeProjectRepository } = require("./platform/projects");
 const { freezeSentVersion, reviseQuote, computeDocumentHash } = require("./platform/quote-versions");
@@ -5430,6 +5431,18 @@ const httpServer = http.createServer(async (req, res) => {
         store.audit({ actor: user.email, tenantId, action: "customer_created", area: "customers", detail: row.name });
         emitDomainEvent(store, { tenantId, eventType: "customer.created", aggregateType: "customer", aggregateId: row.id, actor: user.email, correlationId: res.wfpRequestId });
         sendJson(res, 201, { ok: true, customer: row });
+        return;
+      }
+      // ── Klant 360°-dossier (#76): CRM + finance in één klantbeeld + saldo ──
+      const customerDossierMatch = action.match(/^customers\/([^/]+)\/dossier$/);
+      if (customerDossierMatch && req.method === "GET") {
+        assertCan(user, "customers");
+        const c = (await customerSource.list(tenantId)).find(x => x.id === customerDossierMatch[1]);
+        if (!c) return sendJson(res, 404, { ok: false, error: "Klant niet gevonden" });
+        const dossier = customerDossier(store, tenantId, c);
+        dossier.customer = redactSensitive(user, "customers", dossier.customer);
+        dossier.related.quotes = redactSensitive(user, "quotes", dossier.related.quotes);
+        sendJson(res, 200, { ok: true, dossier });
         return;
       }
       const customerMatch = action.match(/^customers\/([^/]+)$/);
