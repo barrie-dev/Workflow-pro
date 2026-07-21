@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "note": "Bewust aanvaarde, bekende rode punten (CTO-review PR #41). Deze blokkeren de HARDE CI-gate niet; een NIEUWE blocker die hier niet staat, laat CI wel falen. Verwijder een regel zodra het punt echt is gesloten (met bewijs).",
+  "updatedAt": "2026-07-21",
+  "accepted": [
+    { "type": "condition", "id": "R0.identity_cutover", "reason": "Identity read-cutover naar pg nog niet bewezen (DEV-03).", "owner": "dev-core", "acceptedUntil": "2026-08-15" },
+    { "type": "condition", "id": "R0.company_cutover", "reason": "Company read-cutover naar pg nog niet bewezen (DEV-03).", "owner": "dev-core", "acceptedUntil": "2026-08-15" },
+    { "type": "condition", "id": "R0.crm_cutover", "reason": "CRM read-cutover naar pg nog niet bewezen (DEV-03).", "owner": "dev-core", "acceptedUntil": "2026-08-15" },
+    { "type": "release", "id": "R1", "reason": "Geblokkeerd door R0-cutover (dependencyvolgorde).", "owner": "dev-core", "acceptedUntil": "2026-08-15" },
+    { "type": "release", "id": "R2", "reason": "Geblokkeerd door R0-cutover (dependencyvolgorde).", "owner": "dev-core", "acceptedUntil": "2026-08-15" },
+    { "type": "release", "id": "R3", "reason": "Geblokkeerd door R0-cutover (dependencyvolgorde).", "owner": "dev-core", "acceptedUntil": "2026-08-15" },
+    { "type": "release", "id": "R4", "reason": "Geblokkeerd door R0-cutover (dependencyvolgorde).", "owner": "dev-core", "acceptedUntil": "2026-08-15" },
+    { "type": "release", "id": "R5", "reason": "Geblokkeerd door R0-cutover (dependencyvolgorde).", "owner": "dev-core", "acceptedUntil": "2026-08-15" },
+    { "type": "release", "id": "R6", "reason": "Geblokkeerd door R0-cutover (dependencyvolgorde).", "owner": "dev-core", "acceptedUntil": "2026-08-15" },
+    { "type": "dod", "id": "tests_pass", "reason": "test-suite-evidence wordt door CI gegenereerd; nog geen commit-gebonden artefact (DEV-02).", "owner": "dev-core", "acceptedUntil": "2026-08-15" },
+    { "type": "dod", "id": "tenant_isolation", "reason": "security-matrix-evidence nog te genereren (DEV-08).", "owner": "security", "acceptedUntil": "2026-08-15" },
+    { "type": "dod", "id": "po_acceptance", "reason": "PO/domeinexpert-acceptatie nog niet ondertekend.", "owner": "product", "acceptedUntil": "2026-08-15" }
+  ]
+}

@@ -13,6 +13,7 @@
 
 const fs = require("fs");
 const path = require("path");
+const { loadEvidence, evidencePath } = require("./evidence");
 
 const SPEC_PATH = "docs/spec/developer-requirements.json";
 const GATE_ISSUE = "https://github.com/barrie-dev/Workflow-pro/issues/40"; // CTO Gate R0
@@ -69,30 +70,64 @@ function fileContains(repoRoot, rel, regex) {
   catch (_) { return false; }
 }
 
-// Diepere release-condities die de ECHTE kern-sluiting meten (niet enkel dat er
-// bestanden bestaan). Elk is evidence-gedreven: de cutover- en E2E-condities
-// vragen een gecommit bewijsartefact (zoals de CTO verplicht bewijs eist), de
-// transactie-conditie leidt af uit de code. Zolang die er niet zijn, is de
-// betrokken P0-release eerlijk ROOD - precies de "gedeeltelijk"-status uit het
-// CTO-oordeel, in plaats van vals-groen op bestandsaanwezigheid.
-function releaseConditions(repoRoot) {
-  const cutoverProof = (domain) => exists(repoRoot, `docs/traceability/cutover-${domain}.json`);
-  const e2eManifest = exists(repoRoot, "docs/traceability/e2e-scenarios.json");
-  const financeTx = fileContains(repoRoot, "src/infrastructure/finance-source.js", /TransactionManager|pgTx|ambientClient/)
-    || fileContains(repoRoot, "src/infrastructure/postgres/pg-finance-repository.js", /TransactionManager|pgTx|ambientClient/);
+// Per-requirement-ID mapping (docs/traceability/requirement-map.json), of leeg.
+function loadRequirementMap(repoRoot) {
+  try {
+    const obj = JSON.parse(fs.readFileSync(path.join(repoRoot, "docs/traceability/requirement-map.json"), "utf8"));
+    return obj && obj.map && typeof obj.map === "object" ? obj.map : {};
+  } catch (_) { return {}; }
+}
+
+// Geversioneerde accepted-blockers-baseline: bewust aanvaarde rode punten met
+// eigenaar/reden/deadline. Een blocker die HIER staat blokkeert CI niet; een
+// NIEUWE blocker wel. Vervangt de "|| true"-truc (CTO PR #41).
+function loadAcceptedBlockers(repoRoot) {
+  try {
+    const obj = JSON.parse(fs.readFileSync(path.join(repoRoot, "docs/traceability/accepted-blockers.json"), "utf8"));
+    const list = Array.isArray(obj.accepted) ? obj.accepted : [];
+    return new Set(list.map(b => `${b.type}:${b.id}`));
+  } catch (_) { return new Set(); }
+}
+
+// Target-release-semantiek: welke releases moeten groen zijn voor welk doel.
+const TARGETS = { pilot: "R2", commercial: "R6" };
+function releasesUpTo(releaseRows, targetId) {
+  const idx = releaseRows.findIndex(r => r.id === targetId);
+  return idx === -1 ? releaseRows : releaseRows.slice(0, idx + 1);
+}
+
+// Diepere release-condities die de ECHTE kern-sluiting meten. Elke conditie
+// hangt aan een INHOUDELIJK gevalideerd bewijsartefact dat door een uitvoerende
+// job is geschreven (schema + status=pass + commitSha == huidige commit). Geen
+// bestandsaanwezigheid, geen broncode-regex: een leeg/oud/handmatig bestand
+// maakt de conditie NIET groen (CTO-review PR #41).
+function releaseConditions(repoRoot, commitSha) {
+  // Bewijs voor een cutover-reconciliatie per domein.
+  const cutover = (domain) => {
+    const r = loadEvidence(repoRoot, evidencePath(`cutover-${domain}`), { commitSha, evidenceType: "cutover-reconcile" });
+    return { ok: r.ok, detail: r.ok ? `reconciliatie sluitend (${domain})` : `cutover-${domain}: ${r.reason} (DEV-03)` };
+  };
+  // Bewijs dat de finance multi-write-rollback-integratietest slaagde.
+  const financeTxEv = loadEvidence(repoRoot, evidencePath("finance-tx"), { commitSha, evidenceType: "finance-tx-rollback" });
+  const financeTx = { ok: financeTxEv.ok, detail: financeTxEv.ok ? "pg-rollback-integratietest bewezen" : `finance-tx: ${financeTxEv.reason} (DEV-06)` };
+  // Bewijs dat de 9 verplichte horizontale scenario's als keten slaagden.
+  const e2eEv = loadEvidence(repoRoot, evidencePath("e2e-scenarios"), { commitSha, evidenceType: "e2e-manifest" });
+  const e2eNine = { ok: e2eEv.ok, detail: e2eEv.ok ? "9 scenario's als keten bewezen" : `e2e-scenarios: ${e2eEv.reason} (DEV-03)` };
+
+  const cId = cutover("identity"), cCo = cutover("company"), cCrm = cutover("crm"), cFin = cutover("finance");
   return {
     R0: [
-      { key: "identity_cutover", label: "Identity read-cutover naar pg bewezen", ok: cutoverProof("identity"), detail: "cutover-identity.json ontbreekt · read source staat standaard op legacy (DEV-03)." },
-      { key: "company_cutover", label: "Company read-cutover naar pg bewezen", ok: cutoverProof("company"), detail: "cutover-company.json ontbreekt (DEV-03)." },
-      { key: "crm_cutover", label: "CRM read-cutover naar pg bewezen", ok: cutoverProof("crm"), detail: "cutover-crm.json ontbreekt (DEV-03)." },
+      { key: "identity_cutover", label: "Identity read-cutover naar pg bewezen", ok: cId.ok, detail: cId.detail },
+      { key: "company_cutover", label: "Company read-cutover naar pg bewezen", ok: cCo.ok, detail: cCo.detail },
+      { key: "crm_cutover", label: "CRM read-cutover naar pg bewezen", ok: cCrm.ok, detail: cCrm.detail },
     ],
     R1: [
-      { key: "horizontal_e2e", label: "9 verplichte E2E-scenario's volledig", ok: e2eManifest, detail: "e2e-scenarios.json ontbreekt · doorlopende klant→betaling-flow nog niet als één scenario (DEV-02)." },
-      { key: "finance_tx", label: "Finance-mutaties via pg TransactionManager", ok: financeTx, detail: "finance-source/pg-finance-repository gebruikt de pg TransactionManager nog niet (DEV-04)." },
-      { key: "finance_cutover", label: "Finance read-cutover naar pg bewezen", ok: cutoverProof("finance"), detail: "cutover-finance.json ontbreekt (DEV-03)." },
+      { key: "horizontal_e2e", label: "9 verplichte E2E-scenario's volledig", ok: e2eNine.ok, detail: e2eNine.detail },
+      { key: "finance_tx", label: "Finance multi-write rollback bewezen (pg-integratietest)", ok: financeTx.ok, detail: financeTx.detail },
+      { key: "finance_cutover", label: "Finance read-cutover naar pg bewezen", ok: cFin.ok, detail: cFin.detail },
     ],
     R4: [
-      { key: "pfi_tx", label: "Projectfinance database-native transactioneel", ok: financeTx, detail: "commitments/actuals/forecast nog niet database-native transactioneel (DEV-04)." },
+      { key: "pfi_tx", label: "Projectfinance database-native transactioneel", ok: financeTx.ok, detail: financeTx.detail },
     ],
   };
 }
@@ -160,20 +195,34 @@ function buildTraceability(opts = {}) {
     };
   });
 
-  // Requirement-dekking: een requirement telt als "covered" wanneer zijn domein
-  // aan een VERIFIED epic hangt. Al de rest is eerlijk "uncovered".
-  const verifiedDomains = new Set();
-  epics.filter(e => e.status === "verified").forEach(e => e.reqDomains.forEach(d => verifiedDomains.add(d)));
+  // Requirement-traceability PER ID (CTO PR #41): domein-associatie is GEEN
+  // bewijs. Elk requirement-ID moet individueel gemapt zijn naar implementatie +
+  // test in docs/traceability/requirement-map.json. De map onderscheidt de
+  // niveaus mapped → implemented → tested → accepted. Elk niveau vraagt dat de
+  // gelinkte bestanden bestaan; een requirement zonder eigen mapping blijft
+  // 'unproven'. Zo telt niets als gedekt zonder individueel bewijs.
+  const reqMap = loadRequirementMap(repoRoot);
   const requirements = spec.requirements.map(q => {
-    const domain = q.id.split("-")[0];
-    const covered = verifiedDomains.has(domain);
-    return { id: q.id, domain, priority: q.priority, module: q.module, covered };
+    const m = reqMap[q.id];
+    let level = "unproven";
+    if (m) {
+      const implOk = (m.impl || []).length > 0 && (m.impl || []).every(f => exists(repoRoot, f));
+      const testOk = (m.tests || []).length > 0 && (m.tests || []).every(f => exists(repoRoot, f));
+      const e2eOk = (m.e2e || []).length > 0 && (m.e2e || []).every(f => exists(repoRoot, f));
+      if (m.accepted === true && testOk) level = "accepted";
+      else if (testOk || e2eOk) level = "tested";
+      else if (implOk) level = "implemented";
+      else level = "mapped";
+    }
+    return { id: q.id, priority: q.priority, module: q.module, level };
   });
-  const reqCovered = requirements.filter(q => q.covered).length;
+  const reqLevels = { unproven: 0, mapped: 0, implemented: 0, tested: 0, accepted: 0 };
+  requirements.forEach(q => { reqLevels[q.level]++; });
+  const reqProven = reqLevels.tested + reqLevels.accepted;   // individueel bewezen = getest of aanvaard
 
-  // Definition of Done: elk criterium gekoppeld aan een echte, controleerbare
-  // check. Geen statische true; de status komt uit werkelijk bewijs.
-  const dod = buildDodChecks(repoRoot, spec, epics);
+  // Definition of Done: alle 15 criteria afzonderlijk, evidence-gebonden waar het
+  // om kwaliteit gaat.
+  const dod = buildDodChecks(repoRoot, spec, epics, commitSha);
 
   // Release-rollup in twee lagen:
   //  · evidenceGreen = alle epics hebben impl + test op schijf (dekking bestaat);
@@ -181,7 +230,7 @@ function buildTraceability(opts = {}) {
   //                    lagere releases zijn gateGreen (dependencyvolgorde).
   // Zo blijft niets bóven het fundament groen tot het fundament sluit - exact de
   // "R0 gedeeltelijk, hoger nog niet" die de CTO beschrijft.
-  const conditions = releaseConditions(repoRoot);
+  const conditions = releaseConditions(repoRoot, commitSha);
   const releaseRows = [];
   let cascadeBlocked = false;
   let firstRedId = null;
@@ -208,9 +257,34 @@ function buildTraceability(opts = {}) {
     if (!gateGreen && !cascadeBlocked) { cascadeBlocked = true; firstRedId = r.id; }
   }
 
-  const p0Releases = releaseRows.filter(r => String(r.priority).includes("P0"));
-  const p0Green = p0Releases.every(r => r.gateGreen);
   const dodGreen = dod.every(d => d.ok);
+
+  // Alles wat groen-worden in de weg staat, met concrete reden.
+  const blocking = [
+    ...releaseRows.filter(r => !r.gateGreen && r.epicCount > 0).flatMap(r => {
+      if (!r.evidenceGreen) return [{ type: "release", id: r.id, reason: `${r.verified}/${r.epicCount} epics evidence-verified` }];
+      if (r.blockedBy.length) return [{ type: "release", id: r.id, reason: `geblokkeerd door ${r.blockedBy.join(", ")} (dependencyvolgorde)` }];
+      return r.conditions.filter(c => !c.ok).map(c => ({ type: "condition", id: `${r.id}.${c.key}`, reason: c.detail }));
+    }),
+    ...epics.filter(e => e.status === "missing_evidence").map(e => ({ type: "epic", id: e.id, reason: `ontbrekend bewijs: ${e.evidence.missing.join(", ")}` })),
+    ...dod.filter(d => !d.ok).map(d => ({ type: "dod", id: d.key, reason: d.detail })),
+  ];
+
+  // Target-release-semantiek: een target is READY als alle releases t/m dat
+  // target gate-groen zijn ÉN de DoD groen is (pilot t/m R2, commercieel t/m R6).
+  const targets = {};
+  for (const [name, relId] of Object.entries(TARGETS)) {
+    const scope = releasesUpTo(releaseRows, relId);
+    const releasesOk = scope.length > 0 && scope.every(r => r.gateGreen);
+    targets[name] = { upTo: relId, releasesOk, dodGreen, ready: releasesOk && dodGreen };
+  }
+
+  // Accepted-blockers-baseline (vervangt || true): bekende, bewust aanvaarde rode
+  // punten. Een NIEUWE blocker die NIET in de baseline staat, laat de harde
+  // CI-gate falen. Zo houdt branch protection regressies tegen zonder dat de
+  // (terecht rode) kern-status de PR blokkeert.
+  const accepted = loadAcceptedBlockers(repoRoot);
+  const unaccepted = blocking.filter(b => !accepted.has(`${b.type}:${b.id}`));
 
   return {
     generatedAt: opts.now || null, // stempel na afloop; script vult in
@@ -218,68 +292,79 @@ function buildTraceability(opts = {}) {
     gateIssue: GATE_ISSUE,
     summary: {
       releases: releaseRows.length,
-      releasesGreen: releaseRows.filter(r => r.gateGreen).length,
+      releasesGateGreen: releaseRows.filter(r => r.gateGreen).length,
       releasesEvidenceGreen: releaseRows.filter(r => r.evidenceGreen).length,
       epics: epics.length,
       epicsVerified: epics.filter(e => e.status === "verified").length,
       epicsMissingEvidence: epics.filter(e => e.status === "missing_evidence").length,
       epicsUnmapped: epics.filter(e => e.status === "unmapped").length,
       requirements: requirements.length,
-      requirementsCovered: reqCovered,
+      requirementsProven: reqProven,
+      requirementLevels: reqLevels,
       dodTotal: dod.length,
       dodGreen: dod.filter(d => d.ok).length,
+      blocking: blocking.length,
+      unacceptedBlockers: unaccepted.length,
     },
-    // De gate: --all-phases-semantiek. P0-releases + DoD moeten groen.
+    targets,
+    // HARDE CI-gate = geen niet-aanvaarde blocker. READINESS = per target.
     gate: {
-      ok: p0Green && dodGreen,
-      p0ReleasesGreen: p0Green,
+      ok: unaccepted.length === 0,
+      pilotReady: targets.pilot.ready,
+      commercialReady: targets.commercial.ready,
       dodGreen,
-      blocking: [
-        ...p0Releases.filter(r => !r.gateGreen).flatMap(r => {
-          if (!r.evidenceGreen) return [{ type: "release", id: r.id, reason: `${r.verified}/${r.epicCount} epics evidence-verified` }];
-          if (r.blockedBy.length) return [{ type: "release", id: r.id, reason: `geblokkeerd door ${r.blockedBy.join(", ")} (dependencyvolgorde)` }];
-          return r.conditions.filter(c => !c.ok).map(c => ({ type: "condition", id: `${r.id}.${c.key}`, reason: c.detail }));
-        }),
-        ...epics.filter(e => e.status === "missing_evidence").map(e => ({ type: "epic", id: e.id, reason: `ontbrekend bewijs: ${e.evidence.missing.join(", ")}` })),
-        ...dod.filter(d => !d.ok).map(d => ({ type: "dod", id: d.key, reason: d.detail })),
-      ],
+      acceptedCount: accepted.size,
+      blocking,
+      unaccepted,
     },
     releases: releaseRows,
     epics,
     definitionOfDone: dod,
-    requirements: { total: requirements.length, covered: reqCovered, byDomainUnmapped: UNMAPPED_NOTE },
+    requirements: { total: requirements.length, proven: reqProven, levels: reqLevels, items: requirements },
   };
 }
 
-// Definition of Done als afgeleide, controleerbare checks (geen line(true)).
-function buildDodChecks(repoRoot, spec, epics) {
+// Definition of Done: ALLE 15 master-criteria afzonderlijk gemodelleerd (CTO
+// PR #41). Structurele/documentatie-criteria toetsen op de aanwezigheid van het
+// artefact (legitiem voor "gedocumenteerd"); kwaliteits-criteria (tests slagen,
+// tenant-isolatie, acceptatie) hangen aan een INHOUDELIJK gevalideerd
+// bewijsartefact van een uitvoerende job (schema + pass + commitSha). Zolang die
+// er niet zijn, is het criterium eerlijk ROOD.
+function buildDodChecks(repoRoot, spec, epics, commitSha) {
   const ciPath = path.join(repoRoot, ".github", "workflows", "ci.yml");
-  let ci = "";
-  try { ci = fs.readFileSync(ciPath, "utf8"); } catch (_) { ci = ""; }
+  let ci = ""; try { ci = fs.readFileSync(ciPath, "utf8"); } catch (_) {}
   const hasE2eInCi = /test:e2e|run-e2e/.test(ci);
   const migrationCount = fs.existsSync(path.join(repoRoot, "migrations", "sql"))
     ? fs.readdirSync(path.join(repoRoot, "migrations", "sql")).filter(f => f.endsWith(".sql")).length : 0;
-  const architectureTest = exists(repoRoot, "test/architecture.test.js");
-  const auditTest = exists(repoRoot, "test/audit-log.test.js");
-  const eventsTest = exists(repoRoot, "test/events.test.js");
-  const policyTest = exists(repoRoot, "test/policy.test.js");
-  const i18n = exists(repoRoot, "public/js/i18n.js");
-  const runbook = exists(repoRoot, "docs/DEPLOY-RUNBOOK.md");
-  const allEpicsVerified = epics.every(e => e.status === "verified");
+  const anyTest = (glob) => { try { return fs.readdirSync(path.join(repoRoot, "test")).some(f => glob.test(f)); } catch (_) { return false; } };
+  // Evidence-gebonden criteria (uitvoerende job vereist).
+  const testSuite = loadEvidence(repoRoot, evidencePath("test-suite"), { commitSha, evidenceType: "test-suite" });
+  const security = loadEvidence(repoRoot, evidencePath("security-matrix"), { commitSha, evidenceType: "security-matrix" });
+  const acceptance = loadEvidence(repoRoot, evidencePath("acceptance"), { commitSha, evidenceType: "po-acceptance" });
 
-  // Elk DoD-criterium uit de spec, elk met een concrete evidence-check.
+  const dodText = Array.isArray(spec.definition_of_done) ? spec.definition_of_done : [];
+  const C = (n, key, ok, detail) => ({ index: n, key, criterion: dodText[n - 1] || "", ok: !!ok, detail });
   const CHECKS = [
-    { key: "spec_baseline", label: "Spec-baseline aanwezig", ok: Array.isArray(spec.definition_of_done) && spec.definition_of_done.length > 0, detail: "developer-requirements.json bevat de DoD-lijst." },
-    { key: "migrations", label: "Migratiepad geïmplementeerd", ok: migrationCount >= 7, detail: `${migrationCount} SQL-migraties in migrations/sql/.` },
-    { key: "policy_enforced", label: "Server-side permissies getest", ok: policyTest, detail: "test/policy.test.js aanwezig." },
-    { key: "audit_events", label: "Audit + domeinevents getest", ok: auditTest && eventsTest, detail: "test/audit-log.test.js + test/events.test.js aanwezig." },
-    { key: "architecture", label: "Cloudblinde architectuurtest", ok: architectureTest, detail: "test/architecture.test.js bewaakt de poort/adapter-grenzen." },
-    { key: "e2e_in_ci", label: "E2E draait in CI", ok: hasE2eInCi, detail: hasE2eInCi ? "ci.yml roept test:e2e aan." : "OPEN (DEV-02): test:e2e staat nog niet in ci.yml." },
-    { key: "i18n", label: "NL/FR/EN aanwezig", ok: i18n, detail: "public/js/i18n.js met de drie taalblokken." },
-    { key: "runbook", label: "Deploy-runbook aanwezig", ok: runbook, detail: "docs/DEPLOY-RUNBOOK.md aanwezig." },
-    { key: "all_epics_verified", label: "Alle epics evidence-verified", ok: allEpicsVerified, detail: "Elke E01-E22 heeft bestaande impl + test." },
+    C(1, "purpose_documented", spec.requirements && spec.requirements.length > 0 && spec.epics && spec.epics.length > 0, "requirements + epics met outcome in spec."),
+    C(2, "entities_constraints", migrationCount >= 7, `${migrationCount} SQL-migraties met constraints in migrations/sql/.`),
+    C(3, "state_machine", exists(repoRoot, "test/policy.test.js") && (anyTest(/status|state|workorder|quote-version/i)), "status/transitie-permissies server-side getest."),
+    C(4, "ui_states", anyTest(/^ui-.*\.test\.js$/), "UI empty/loading/error/conflict/archived via ui-*-tests."),
+    C(5, "api_versioned", exists(repoRoot, "docs/API-V1.md") && exists(repoRoot, "test/api-v1.test.js"), "gedocumenteerd + versioneerd /v1-contract."),
+    C(6, "audit_events", exists(repoRoot, "test/audit-log.test.js") && exists(repoRoot, "test/events.test.js"), "audit + domeinevents getest."),
+    C(7, "search_export_policy", exists(repoRoot, "test/grid.test.js") && exists(repoRoot, "test/policy.test.js"), "search/filter/export respecteren policies."),
+    C(8, "workos_integrated", exists(repoRoot, "test/work-os.test.js") && exists(repoRoot, "test/config-platform.test.js"), "custom fields/files/tasks/timeline geïntegreerd."),
+    C(9, "idempotency_concurrency", exists(repoRoot, "test/idempotency.test.js") && exists(repoRoot, "test/pg-data-adapter.test.js"), "idempotentie + concurrency (flush-coalescing) getest."),
+    // #10/#11/#15 zijn EVIDENCE-gebonden (uitvoerende job, geen bestandspresentie).
+    C(10, "tests_pass", testSuite.ok, testSuite.ok ? "unit+integratie+e2e bewezen groen (evidence)." : `test-suite-bewijs: ${testSuite.reason}`),
+    C(11, "tenant_isolation", security.ok, security.ok ? "tenant-isolatie + privilege-matrix bewezen (evidence)." : `security-matrix-bewijs: ${security.reason}`),
+    C(12, "a11y_localization", exists(repoRoot, "public/js/i18n.js") && exists(repoRoot, "test/ui-readability.test.js"), "NL/FR/EN + accessibility-review."),
+    C(13, "observability", exists(repoRoot, "src/modules/errors.js") && exists(repoRoot, "docs/DEPLOY-RUNBOOK.md") && exists(repoRoot, "src/platform/audit-log.js"), "logs/metrics/foutcodes/runbook."),
+    C(14, "migration_rollback", exists(repoRoot, "docs/DEPLOY-RUNBOOK.md") && /rollback/i.test(safeRead(repoRoot, "docs/DEPLOY-RUNBOOK.md")), "migratie + rollback gedocumenteerd."),
+    C(15, "po_acceptance", acceptance.ok, acceptance.ok ? "PO + domeinexpert-acceptatie ondertekend (evidence)." : `acceptatie-bewijs: ${acceptance.reason}`),
   ];
   return CHECKS;
 }
+
+function safeRead(repoRoot, rel) { try { return fs.readFileSync(path.join(repoRoot, rel), "utf8"); } catch (_) { return ""; } }
 
 module.exports = { buildTraceability, evaluateEpic, EVIDENCE, GATE_ISSUE };

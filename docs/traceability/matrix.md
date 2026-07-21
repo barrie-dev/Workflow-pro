@@ -1,16 +1,17 @@
 # Monargo One · Roadmap-traceability
 
-Bron van waarheid (DEV-01). Gegenereerd op commit `52f429d` · 2026-07-21T16:23:01.672Z.
+Bron van waarheid (DEV-01). Gegenereerd op commit `de50a0d` · 2026-07-21T21:02:51.690Z.
 CTO-gate: https://github.com/barrie-dev/Workflow-pro/issues/40
 
 > De status is afgeleid uit evidence die in de repo bestaat (impl + test + migratie). Een verwijderde test maakt de betrokken epic rood. Wat niet gekoppeld is, telt als niet-bewezen.
 
-**Gate: ROOD** · P0-releases rood · DoD groen
+**CI-gate (regressie): GROEN** · 0 niet-aanvaarde blocker(s) van 12 (rest in accepted-blockers-baseline).
+**Readiness:** pilot (t/m R2) niet klaar · commercieel (t/m R6) niet klaar.
 
 - Releases gate-groen: 0/8 (evidence-groen: 7/8)
 - Epics evidence-verified: 22/22 (rood: 0, ongemapt: 0)
-- Requirements gedekt door verified epic: 693/761
-- Definition of Done: 9/9
+- Requirements individueel bewezen: 5/761 (mapped 0, implemented 0, tested 5, accepted 0, unproven 756)
+- Definition of Done: 12/15
 
 ## Releases R0-R7
 
@@ -19,7 +20,7 @@ Evidence = alle epics hebben impl + test op schijf. Gate = evidence + diepe cond
 | Release | Prio | Evidence | Gate | Epics | Open condities / blokkade |
 | --- | --- | --- | --- | --- | --- |
 | R0 Architecture foundation | P0 | GROEN | ROOD | 4/4 | Identity read-cutover naar pg bewezen; Company read-cutover naar pg bewezen; CRM read-cutover naar pg bewezen |
-| R1 Complete horizontal flow | P0 | GROEN | ROOD | 7/7 | geblokkeerd door R0; 9 verplichte E2E-scenario's volledig; Finance-mutaties via pg TransactionManager; Finance read-cutover naar pg bewezen |
+| R1 Complete horizontal flow | P0 | GROEN | ROOD | 7/7 | geblokkeerd door R0; 9 verplichte E2E-scenario's volledig; Finance multi-write rollback bewezen (pg-integratietest); Finance read-cutover naar pg bewezen |
 | R2 Construction Core | P0/P1 | GROEN | ROOD | 1/1 | geblokkeerd door R0 |
 | R3 Service & Assets | P1 | GROEN | ROOD | 1/1 | geblokkeerd door R0 |
 | R4 Project finance and contracts | P1 | GROEN | ROOD | 2/2 | geblokkeerd door R0; Projectfinance database-native transactioneel |
@@ -54,28 +55,41 @@ Evidence = alle epics hebben impl + test op schijf. Gate = evidence + diepe cond
 | E21 Mona governance | R6 | P1 | GROEN | 5 | - | AI-governance (bron/confidence/confirmatie) verder te hardenen (DEV-12) |
 | E22 Insights read models | R1 | P1 | GROEN | 1 | - | - |
 
-## Definition of Done
+## Definition of Done (15 criteria)
 
-| Criterium | Status | Bewijs |
-| --- | --- | --- |
-| Spec-baseline aanwezig | GROEN | developer-requirements.json bevat de DoD-lijst. |
-| Migratiepad geïmplementeerd | GROEN | 7 SQL-migraties in migrations/sql/. |
-| Server-side permissies getest | GROEN | test/policy.test.js aanwezig. |
-| Audit + domeinevents getest | GROEN | test/audit-log.test.js + test/events.test.js aanwezig. |
-| Cloudblinde architectuurtest | GROEN | test/architecture.test.js bewaakt de poort/adapter-grenzen. |
-| E2E draait in CI | GROEN | ci.yml roept test:e2e aan. |
-| NL/FR/EN aanwezig | GROEN | public/js/i18n.js met de drie taalblokken. |
-| Deploy-runbook aanwezig | GROEN | docs/DEPLOY-RUNBOOK.md aanwezig. |
-| Alle epics evidence-verified | GROEN | Elke E01-E22 heeft bestaande impl + test. |
+| # | Criterium | Status | Bewijs |
+| --- | --- | --- | --- |
+| 1 | Functional purpose and out-of-scope are documented. | GROEN | requirements + epics met outcome in spec. |
+| 2 | Entities and relationships are migrated or created with constraints. | GROEN | 7 SQL-migraties met constraints in migrations/sql/. |
+| 3 | State machine and transition permissions are implemented. | GROEN | status/transitie-permissies server-side getest. |
+| 4 | UI includes empty, loading, error, conflict and archived states. | GROEN | UI empty/loading/error/conflict/archived via ui-*-tests. |
+| 5 | API contract is documented and versioned. | GROEN | gedocumenteerd + versioneerd /v1-contract. |
+| 6 | Audit and domain events are emitted. | GROEN | audit + domeinevents getest. |
+| 7 | Search, filters and export respect policies. | GROEN | search/filter/export respecteren policies. |
+| 8 | Custom fields, files, tasks and activity timeline are integrated where relevant. | GROEN | custom fields/files/tasks/timeline geïntegreerd. |
+| 9 | Idempotency and concurrency are tested. | GROEN | idempotentie + concurrency (flush-coalescing) getest. |
+| 10 | Unit, integration and end-to-end tests pass. | ROOD | test-suite-bewijs: bestand ontbreekt |
+| 11 | Tenant isolation and privilege tests pass. | ROOD | security-matrix-bewijs: bestand ontbreekt |
+| 12 | Accessibility and localization review pass. | GROEN | NL/FR/EN + accessibility-review. |
+| 13 | Observability has logs, metrics, error codes and runbook. | GROEN | logs/metrics/foutcodes/runbook. |
+| 14 | Migration and rollback are documented. | GROEN | migratie + rollback gedocumenteerd. |
+| 15 | Product owner and domain expert accept the scenario. | ROOD | acceptatie-bewijs: bestand ontbreekt |
 
 ## Blokkerend voor de gate
 
-- **condition R0.identity_cutover**: cutover-identity.json ontbreekt · read source staat standaard op legacy (DEV-03).
-- **condition R0.company_cutover**: cutover-company.json ontbreekt (DEV-03).
-- **condition R0.crm_cutover**: cutover-crm.json ontbreekt (DEV-03).
+- **condition R0.identity_cutover**: cutover-identity: bestand ontbreekt (DEV-03)
+- **condition R0.company_cutover**: cutover-company: bestand ontbreekt (DEV-03)
+- **condition R0.crm_cutover**: cutover-crm: bestand ontbreekt (DEV-03)
 - **release R1**: geblokkeerd door R0 (dependencyvolgorde)
 - **release R2**: geblokkeerd door R0 (dependencyvolgorde)
+- **release R3**: geblokkeerd door R0 (dependencyvolgorde)
+- **release R4**: geblokkeerd door R0 (dependencyvolgorde)
+- **release R5**: geblokkeerd door R0 (dependencyvolgorde)
+- **release R6**: geblokkeerd door R0 (dependencyvolgorde)
+- **dod tests_pass**: test-suite-bewijs: bestand ontbreekt
+- **dod tenant_isolation**: security-matrix-bewijs: bestand ontbreekt
+- **dod po_acceptance**: acceptatie-bewijs: bestand ontbreekt
 
-## Requirements
+## Requirements (per-ID)
 
-761-requirements-baseline uit `docs/spec/developer-requirements.json`. 693/761 vallen onder een evidence-verified epic. De rest is nog niet individueel bewezen: Geen genormaliseerd epic; dekking via legacy-module, niet individueel bewezen.
+761-requirements-baseline. 5/761 zijn INDIVIDUEEL bewezen (getest of aanvaard) via `docs/traceability/requirement-map.json`. Domein-associatie telt niet als bewijs; een ID zonder eigen mapping blijft 'unproven'. Niveaus: {"unproven":756,"mapped":0,"implemented":0,"tested":5,"accepted":0}.

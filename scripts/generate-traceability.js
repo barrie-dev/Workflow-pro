@@ -34,11 +34,12 @@ function toMarkdown(m) {
   L.push("");
   L.push("> De status is afgeleid uit evidence die in de repo bestaat (impl + test + migratie). Een verwijderde test maakt de betrokken epic rood. Wat niet gekoppeld is, telt als niet-bewezen.");
   L.push("");
-  L.push(`**Gate: ${m.gate.ok ? "GROEN" : "ROOD"}** · P0-releases ${m.gate.p0ReleasesGreen ? "groen" : "rood"} · DoD ${m.gate.dodGreen ? "groen" : "rood"}`);
+  L.push(`**CI-gate (regressie): ${m.gate.ok ? "GROEN" : "ROOD"}** · ${m.summary.unacceptedBlockers} niet-aanvaarde blocker(s) van ${m.summary.blocking} (rest in accepted-blockers-baseline).`);
+  L.push(`**Readiness:** pilot (t/m R2) ${m.gate.pilotReady ? "READY" : "niet klaar"} · commercieel (t/m R6) ${m.gate.commercialReady ? "READY" : "niet klaar"}.`);
   L.push("");
-  L.push(`- Releases gate-groen: ${m.summary.releasesGreen}/${m.summary.releases} (evidence-groen: ${m.summary.releasesEvidenceGreen}/${m.summary.releases})`);
+  L.push(`- Releases gate-groen: ${m.summary.releasesGateGreen}/${m.summary.releases} (evidence-groen: ${m.summary.releasesEvidenceGreen}/${m.summary.releases})`);
   L.push(`- Epics evidence-verified: ${m.summary.epicsVerified}/${m.summary.epics} (rood: ${m.summary.epicsMissingEvidence}, ongemapt: ${m.summary.epicsUnmapped})`);
-  L.push(`- Requirements gedekt door verified epic: ${m.summary.requirementsCovered}/${m.summary.requirements}`);
+  L.push(`- Requirements individueel bewezen: ${m.summary.requirementsProven}/${m.summary.requirements} (mapped ${m.summary.requirementLevels.mapped}, implemented ${m.summary.requirementLevels.implemented}, tested ${m.summary.requirementLevels.tested}, accepted ${m.summary.requirementLevels.accepted}, unproven ${m.summary.requirementLevels.unproven})`);
   L.push(`- Definition of Done: ${m.summary.dodGreen}/${m.summary.dodTotal}`);
   L.push("");
 
@@ -68,12 +69,12 @@ function toMarkdown(m) {
   });
   L.push("");
 
-  L.push("## Definition of Done");
+  L.push("## Definition of Done (15 criteria)");
   L.push("");
-  L.push("| Criterium | Status | Bewijs |");
-  L.push("| --- | --- | --- |");
+  L.push("| # | Criterium | Status | Bewijs |");
+  L.push("| --- | --- | --- | --- |");
   m.definitionOfDone.forEach(d => {
-    L.push(`| ${d.label} | ${d.ok ? "GROEN" : "ROOD"} | ${d.detail} |`);
+    L.push(`| ${d.index} | ${d.criterion} | ${d.ok ? "GROEN" : "ROOD"} | ${d.detail} |`);
   });
   L.push("");
 
@@ -84,9 +85,9 @@ function toMarkdown(m) {
     L.push("");
   }
 
-  L.push("## Requirements");
+  L.push("## Requirements (per-ID)");
   L.push("");
-  L.push(`761-requirements-baseline uit \`docs/spec/developer-requirements.json\`. ${m.requirements.covered}/${m.requirements.total} vallen onder een evidence-verified epic. De rest is nog niet individueel bewezen: ${m.requirements.byDomainUnmapped}`);
+  L.push(`761-requirements-baseline. ${m.requirements.proven}/${m.requirements.total} zijn INDIVIDUEEL bewezen (getest of aanvaard) via \`docs/traceability/requirement-map.json\`. Domein-associatie telt niet als bewijs; een ID zonder eigen mapping blijft 'unproven'. Niveaus: ${JSON.stringify(m.requirements.levels)}.`);
   L.push("");
   return L.join("\n");
 }
@@ -103,7 +104,7 @@ function main() {
   fs.writeFileSync(path.join(OUT_DIR, "matrix.json"), JSON.stringify(t0, null, 2));
   fs.writeFileSync(path.join(OUT_DIR, "matrix.md"), toMarkdown(t0));
   console.log(`Traceability geschreven naar docs/traceability/ op commit ${t0.commitSha}`);
-  console.log(`Gate: ${t0.gate.ok ? "GROEN" : "ROOD"} · releases ${t0.summary.releasesGreen}/${t0.summary.releases} · epics ${t0.summary.epicsVerified}/${t0.summary.epics} · DoD ${t0.summary.dodGreen}/${t0.summary.dodTotal}`);
+  console.log(`CI-gate: ${t0.gate.ok ? "GROEN" : "ROOD"} (${t0.summary.unacceptedBlockers} niet-aanvaard) · req ${t0.summary.requirementsProven}/${t0.summary.requirements} bewezen · DoD ${t0.summary.dodGreen}/${t0.summary.dodTotal} · pilot ${t0.gate.pilotReady ? "READY" : "niet"}`);
 }
 
 main();

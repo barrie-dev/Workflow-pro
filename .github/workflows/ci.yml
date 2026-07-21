@@ -114,13 +114,15 @@ jobs:
         run: |
           set -o pipefail
           npm run test:e2e 2>&1 | tee /tmp/e2e-out.txt
-      - name: Roadmap-gate (DEV-01) · draai + matrix als evidence
-        # De gate is bewust ROOD tot de kern sluit (cutover/tx/e2e). We draaien
-        # hem zichtbaar en bewaren de matrix; hij wordt een HARDE gate zodra hij
-        # groen is. Daarom hier niet-blokkerend (|| true).
+      - name: Roadmap-gate (DEV-01/07) · harde regressiegate op de commit
+        # HARD (geen || true meer, CTO PR #41): de gate valideert evidence
+        # inhoudelijk op de HUIDIGE commit-SHA en faalt op elke NIET-aanvaarde
+        # blocker. Bekende, bewust aanvaarde rode punten staan in
+        # docs/traceability/accepted-blockers.json; een nieuwe blocker (of
+        # verdwenen/oud/ongeldig evidence) laat CI falen.
         run: |
           node scripts/generate-traceability.js
-          node scripts/check-roadmap-status.js || true
+          node scripts/check-roadmap-status.js
       - name: Upload E2E- en traceability-evidence
         if: always()
         uses: actions/upload-artifact@v4

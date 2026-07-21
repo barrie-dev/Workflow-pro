@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "note": "Per-requirement-ID mapping (CTO-review PR #41). Domein-associatie is GEEN bewijs. Elk ID hier wijst naar concrete implementatie + test(s); de gate verifieert dat die bestaan. Een requirement dat HIER NIET staat, blijft 'unproven'. Deze map groeit; volledigheid (761) is doorlopend werk.",
+  "map": {
+    "PLT-BR-001": {
+      "text": "Alle businessrecords dragen tenant_id en company_id.",
+      "impl": ["src/platform/companies.js", "src/lib/store.js"],
+      "tests": ["test/architecture.test.js", "test/companies.test.js"],
+      "accepted": false
+    },
+    "SEC-BR-001": {
+      "text": "MFA verplicht voor beheerders en finance.",
+      "impl": ["src/lib/auth.js"],
+      "tests": ["test/mfa-readiness.test.js", "test/auth-ui.test.js"],
+      "accepted": false
+    },
+    "SIV-BR-001": {
+      "text": "Na definitieve nummering enkel via creditnota corrigeren.",
+      "impl": ["src/modules/customer-invoicing.js", "src/infrastructure/postgres/pg-finance-repository.js"],
+      "tests": ["test/credit-notes.test.js", "test/pg-finance.test.js"],
+      "accepted": false
+    },
+    "WBO-BR-001": {
+      "text": "Mobiele registratie is offline-first met lokale mutatiewachtrij.",
+      "impl": ["src/platform/work-orders.js", "src/modules/mobile.js"],
+      "tests": ["test/work-orders.test.js"],
+      "e2e": ["test/e2e/mobile-offline-smoke.js"],
+      "accepted": false
+    },
+    "QOT-BR-001": {
+      "text": "Offertenummer en versienummer worden afzonderlijk beheerd.",
+      "impl": ["src/platform/quote-versions.js"],
+      "tests": ["test/quote-versions.test.js"],
+      "accepted": false
+    }
+  }
+}

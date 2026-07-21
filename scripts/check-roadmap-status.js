@@ -37,9 +37,9 @@ function runGate() {
   }
 
   console.log(`Monargo One roadmap-gate (R0-R7 / E01-E22 / DoD) · commit ${m.commitSha}`);
-  console.log(`Releases gate-groen: ${m.summary.releasesGreen}/${m.summary.releases} (evidence-groen ${m.summary.releasesEvidenceGreen}/${m.summary.releases})`);
-  console.log(`Epics evidence-verified: ${m.summary.epicsVerified}/${m.summary.epics} · DoD: ${m.summary.dodGreen}/${m.summary.dodTotal}`);
-  console.log(`Requirements gedekt: ${m.summary.requirementsCovered}/${m.summary.requirements}`);
+  console.log(`CI-gate (regressie): ${m.gate.ok ? "GROEN" : "ROOD"} · ${m.summary.unacceptedBlockers}/${m.summary.blocking} blocker(s) niet-aanvaard (${m.gate.acceptedCount} aanvaard in baseline)`);
+  console.log(`Readiness: pilot(t/m R2) ${m.gate.pilotReady ? "READY" : "niet"} · commercieel(t/m R6) ${m.gate.commercialReady ? "READY" : "niet"}`);
+  console.log(`Releases gate-groen: ${m.summary.releasesGateGreen}/${m.summary.releases} · epics verified ${m.summary.epicsVerified}/${m.summary.epics} · DoD ${m.summary.dodGreen}/${m.summary.dodTotal} · req bewezen ${m.summary.requirementsProven}/${m.summary.requirements}`);
   console.log("");
   m.releases.forEach(r => {
     const mark = r.gateGreen ? "GATE-GO" : (r.evidenceGreen ? "EVID-GO" : "NO-GO");
@@ -47,12 +47,12 @@ function runGate() {
   });
   if (!m.gate.ok) {
     console.log("");
-    console.log(`Gate ROOD. Blokkerend (${m.gate.blocking.length}):`);
-    m.gate.blocking.slice(0, 12).forEach(b => console.log(`   [${b.type}] ${b.id}: ${b.reason}`));
-    console.log(`\nZie docs/traceability/matrix.md · CTO-gate ${m.gateIssue}`);
+    console.log(`CI-gate ROOD · niet-aanvaarde blocker(s) (${m.gate.unaccepted.length}):`);
+    m.gate.unaccepted.slice(0, 15).forEach(b => console.log(`   [${b.type}] ${b.id}: ${b.reason}`));
+    console.log(`\nAanvaard bewust in docs/traceability/accepted-blockers.json of los op. Zie matrix.md · ${m.gateIssue}`);
     process.exit(1);
   }
-  console.log("\nGate GROEN.");
+  console.log("\nCI-gate GROEN (geen niet-aanvaarde regressie). Readiness blijft apart, zie hierboven.");
   process.exit(0);
 }
 
