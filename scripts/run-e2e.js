@@ -74,6 +74,9 @@ async function main() {
         // (veilig gedrag). De smokes loggen in met het demo-wachtwoord, dus de
         // runner zet het expliciet · alleen hier, nooit in een echte omgeving.
         WORKFLOWPRO_INITIAL_ADMIN_PASSWORD: "Demo2026!",
+        // De scenario's testen domeinflows, niet de MFA-setup. Schakel de
+        // admin-write-gate alleen in deze tijdelijke developmentserver uit.
+        REQUIRE_ADMIN_MFA: "false",
         // De webhook-smoke draait een lokale self-signed https-ontvanger.
         NODE_TLS_REJECT_UNAUTHORIZED: smoke.startsWith("webhook") ? "0" : process.env.NODE_TLS_REJECT_UNAUTHORIZED || "1",
       },

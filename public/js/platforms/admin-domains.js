@@ -27,6 +27,37 @@
   }
   function drawerBody() { return document.getElementById("admDrawerBody"); }
 
+  function askDialog(options) {
+    const cfg = options || {};
+    return new Promise(resolve => {
+      document.querySelector(".dom-dialog-backdrop")?.remove();
+      const backdrop = document.createElement("div");
+      backdrop.className = "dom-dialog-backdrop";
+      const inputHtml = cfg.input === "select"
+        ? `<select class="adm-input" data-dom-dialog-input ${cfg.required ? "required" : ""}>${(cfg.options || []).map(option => `<option value="${esc(option.value)}">${esc(option.label)}</option>`).join("")}</select>`
+        : cfg.input === "textarea"
+          ? `<textarea class="adm-input" rows="4" data-dom-dialog-input ${cfg.required ? "required" : ""} placeholder="${esc(cfg.placeholder || "")}">${esc(cfg.value || "")}</textarea>`
+          : cfg.input === "secret"
+            ? `<div class="dom-dialog-secret"><input class="adm-input" readonly data-dom-dialog-input value="${esc(cfg.value || "")}"><button type="button" class="adm-btn adm-btn-secondary" data-dom-dialog-copy>${esc(t("dom.copy", "Kopiëren"))}</button></div>`
+            : cfg.input === "password"
+              ? `<input type="password" class="adm-input" data-dom-dialog-input value="${esc(cfg.value || "")}" ${cfg.required ? "required" : ""} minlength="${Number(cfg.minlength || 1)}" autocomplete="new-password" placeholder="${esc(cfg.placeholder || "")}">`
+            : cfg.input === "text"
+              ? `<input class="adm-input" data-dom-dialog-input value="${esc(cfg.value || "")}" ${cfg.required ? "required" : ""} placeholder="${esc(cfg.placeholder || "")}">`
+              : "";
+      backdrop.innerHTML = `<form class="dom-dialog" role="dialog" aria-modal="true" aria-labelledby="domDialogTitle"><header><span>${esc(cfg.eyebrow || t("dom.action", "Actie"))}</span><h3 id="domDialogTitle">${esc(cfg.title || t("dom.confirm", "Bevestigen"))}</h3>${cfg.message ? `<p>${esc(cfg.message)}</p>` : ""}</header>${cfg.label && inputHtml ? `<label class="dom-dialog-field"><span>${esc(cfg.label)}</span>${inputHtml}</label>` : inputHtml}<div class="dom-dialog-error" data-dom-dialog-error hidden></div><footer>${cfg.cancelLabel === false ? "" : `<button type="button" class="adm-btn adm-btn-secondary" data-dom-dialog-cancel>${esc(cfg.cancelLabel || t("dom.cancel", "Annuleren"))}</button>`}<button type="submit" class="adm-btn ${cfg.danger ? "adm-btn-danger" : "adm-btn-primary"}">${esc(cfg.confirmLabel || (cfg.input === "secret" ? t("dom.close", "Sluiten") : t("dom.continue", "Doorgaan")))}</button></footer></form>`;
+      document.body.appendChild(backdrop);
+      const form = backdrop.querySelector("form"); const input = backdrop.querySelector("[data-dom-dialog-input]");
+      const close = value => { backdrop.remove(); resolve(value); };
+      backdrop.querySelector("[data-dom-dialog-cancel]")?.addEventListener("click", () => close(null));
+      backdrop.addEventListener("click", event => { if (event.target === backdrop && cfg.dismissible !== false) close(null); });
+      backdrop.addEventListener("keydown", event => { if (event.key === "Escape" && cfg.dismissible !== false) close(null); });
+      backdrop.querySelector("[data-dom-dialog-copy]")?.addEventListener("click", async () => { try { await navigator.clipboard.writeText(input.value); toast(t("dom.copied", "Gekopieerd")); } catch (_) { input.select(); } });
+      form.addEventListener("submit", event => { event.preventDefault(); const value = input ? (cfg.input === "select" ? input.value : input.value.trim()) : true; if (cfg.required && !value) { const error = backdrop.querySelector("[data-dom-dialog-error]"); error.hidden = false; error.textContent = cfg.requiredMessage || t("dom.required", "Dit veld is verplicht."); input?.focus(); return; } close(value); });
+      setTimeout(() => (input || form.querySelector("button[type=submit]"))?.focus(), 0);
+    });
+  }
+  A.askDialog = askDialog;
+
   // ── Gedeelde DoD-states ─────────────────────────────────────
   function loadingHtml(msg) {
     return `<div class="adm-loading"><div class="adm-spinner"></div>${esc(msg)}</div>`;
@@ -55,8 +86,12 @@
     try { return await fn(); }
     catch (err) {
       if (err && err.code === "VERSION_CONFLICT") {
-        const herladen = window.confirm(t("dom.conflict",
-          "Dit record is intussen door iemand anders gewijzigd. Herladen om de laatste versie te zien? (Je eigen wijzigingen gaan verloren.)"));
+        const herladen = await askDialog({
+          eyebrow: t("dom.conflictEyebrow", "Versieconflict"),
+          title: t("dom.conflictTitle", "Nieuwere versie beschikbaar"),
+          message: t("dom.conflict", "Dit record is intussen door iemand anders gewijzigd. Herladen om de laatste versie te zien? Je eigen wijzigingen gaan verloren."),
+          confirmLabel: t("dom.reload", "Laatste versie laden"), danger: true,
+        });
         if (herladen && reloadFn) await reloadFn();
         return null;
       }
@@ -397,9 +432,16 @@
     const newClaim = async () => {
       const opts = (projects.projects || []).filter(p => !["cancelled", "archived"].includes(p.status));
       if (!opts.length) { toast(t("dom.pc.noProjects", "Geen actief project gevonden · maak eerst een project met een offerte"), "error"); return; }
-      const name = window.prompt(`${t("dom.pc.pickProject", "Voor welk project? Typ het nummer")}:\n${opts.map(p => `${p.number || p.id} · ${p.name}`).join("\n")}`);
-      if (!name) return;
-      const proj = opts.find(p => (p.number || "").toLowerCase() === name.trim().toLowerCase() || p.id === name.trim());
+      const projectId = await askDialog({
+        eyebrow: t("nav.progressClaims", "Vorderingsstaten"),
+        title: t("dom.pc.pickProject", "Voor welk project?"),
+        message: t("dom.pc.pickProjectHint", "De lijnen worden server-side opgebouwd uit de aanvaarde offerte en het goedgekeurde meerwerk."),
+        label: t("dom.pc.project", "Project"), input: "select", required: true,
+        options: opts.map(project => ({ value: project.id, label: `${project.number || project.id} · ${project.name}` })),
+        confirmLabel: t("dom.pc.create", "Staat aanmaken"),
+      });
+      if (!projectId) return;
+      const proj = opts.find(p => p.id === projectId);
       if (!proj) { toast(t("dom.pc.projectNotFound", "Project niet gevonden"), "error"); return; }
       try { const res = await api("POST", "/progress_claims", { projectId: proj.id }); openClaimDetail(res.claim.id); renderProgressClaims(); }
       catch (err) { toast(err.message, "error"); }
@@ -632,15 +674,30 @@
       catch (err) { toast(err.message, "error"); }
     }));
     content.querySelectorAll("[data-wh-rotate]").forEach(b => b.addEventListener("click", async () => {
-      if (!window.confirm(t("dom.wh.rotateConfirm", "Nieuw secret genereren? Je ontvanger moet meteen bijgewerkt worden."))) return;
+      const confirmed = await askDialog({
+        eyebrow: t("nav.webhooks", "Webhooks"), title: t("dom.wh.rotateTitle", "Signing secret roteren"),
+        message: t("dom.wh.rotateConfirm", "Nieuw secret genereren? Je ontvanger moet meteen bijgewerkt worden."),
+        confirmLabel: t("dom.wh.rotate", "Secret roteren"), danger: true,
+      });
+      if (!confirmed) return;
       try {
         const res = await api("POST", `/webhooks/${b.dataset.whRotate}/rotate-secret`, {});
-        window.prompt(t("dom.wh.secretOnce", "Signing secret · wordt niet opnieuw getoond"), res.secret);
+        await askDialog({
+          eyebrow: t("dom.wh.secretEyebrow", "Eenmalig zichtbaar"), title: t("dom.wh.secretReady", "Nieuw signing secret"),
+          message: t("dom.wh.secretOnce", "Dit signing secret wordt niet opnieuw getoond. Kopieer het nu naar de ontvanger."),
+          label: t("dom.wh.secret", "Signing secret"), input: "secret", value: res.secret,
+          cancelLabel: false, confirmLabel: t("dom.close", "Sluiten"), dismissible: false,
+        });
         renderWebhooks();
       } catch (err) { toast(err.message, "error"); }
     }));
     content.querySelectorAll("[data-wh-del]").forEach(b => b.addEventListener("click", async () => {
-      if (!window.confirm(t("dom.wh.delConfirm", "Endpoint verwijderen?"))) return;
+      const confirmed = await askDialog({
+        eyebrow: t("nav.webhooks", "Webhooks"), title: t("dom.wh.delTitle", "Webhookendpoint verwijderen"),
+        message: t("dom.wh.delConfirm", "Endpoint verwijderen? Nieuwe events worden niet meer afgeleverd."),
+        confirmLabel: t("dom.wh.delete", "Endpoint verwijderen"), danger: true,
+      });
+      if (!confirmed) return;
       try { await api("DELETE", `/webhooks/${b.dataset.whDel}`); renderWebhooks(); }
       catch (err) { toast(err.message, "error"); }
     }));
@@ -751,7 +808,12 @@
       const ids = [...listState.selection];
       let payload = {};
       if (action === "set_status") {
-        const status = window.prompt(t("dom.ls.statusPrompt", "Nieuwe status:"));
+        const status = await askDialog({
+          eyebrow: t("nav.lists", "Universele lijsten"), title: t("dom.ls.statusTitle", "Status in bulk wijzigen"),
+          message: `${ids.length} ${t("dom.ls.selected", "geselecteerde records")}`,
+          label: t("dom.ls.statusPrompt", "Nieuwe status"), input: "text", required: true,
+          confirmLabel: t("dom.ls.preview", "Voorbeeld controleren"),
+        });
         if (!status) return;
         payload = { status };
       }
@@ -760,7 +822,11 @@
         const skipped = prev.preview.skipped || [];
         const msg = `${prev.preview.affectedCount} ${t("dom.ls.willChange", "records worden gewijzigd")}` +
           (skipped.length ? `\n${skipped.length} ${t("dom.ls.skipped", "overgeslagen")}:\n` + skipped.slice(0, 5).map(s => `· ${s.id}: ${s.message}`).join("\n") : "");
-        if (!window.confirm(`${msg}\n\n${t("dom.ls.proceed", "Doorgaan?")}`)) return;
+        const confirmed = await askDialog({
+          eyebrow: t("dom.ls.preview", "Bulkvoorbeeld"), title: t("dom.ls.previewTitle", "Controleer de impact"),
+          message: msg, confirmLabel: t("dom.ls.proceed", "Wijzigingen uitvoeren"), danger: action === "archive",
+        });
+        if (!confirmed) return;
         const run = await api("POST", `/grid/${listState.resource}/bulk`, { action, ids, payload });
         const failed = (run.job.results || []).filter(r => !r.ok);
         toast(`${run.job.succeeded} ${t("dom.ls.ok", "gelukt")}, ${run.job.failed} ${t("dom.wh.failed", "mislukt")}`, run.job.failed ? "error" : "success");
@@ -852,7 +918,13 @@
       } catch (err) { toast(err.message, "error"); }
     }));
     panel.querySelectorAll("[data-wo-reject]").forEach(b => b.addEventListener("click", async () => {
-      const note = window.prompt(t("dom.wo.rejectWhy", "Reden van afwijzing (gaat naar de technieker):"));
+      const note = await askDialog({
+        eyebrow: t("dom.wo.review", "Werkbonreview"), title: t("dom.wo.rejectTitle", "Terugsturen voor correctie"),
+        message: t("dom.wo.rejectHint", "De technieker ziet deze reden bij de werkbon."),
+        label: t("dom.wo.rejectWhy", "Reden van afwijzing"), input: "textarea", required: true,
+        placeholder: t("dom.wo.rejectPlaceholder", "Beschrijf concreet wat nog moet worden aangepast."),
+        confirmLabel: t("dom.wo.reject", "Afwijzen"), danger: true,
+      });
       if (note === null) return;
       try {
         await api("POST", `/workorders/${b.dataset.woReject}/submit`, {}).catch(() => {});
@@ -1056,7 +1128,13 @@
       document.getElementById("payDetClose")?.addEventListener("click", () => A.closeDrawer());
       drawerBody().querySelectorAll("[data-rev]").forEach(b => b.addEventListener("click", async () => {
         // Compensatie vereist een reden (h41: rollback met historiek, nooit stil).
-        const reason = window.prompt(t("dom.pay.reverseReason", "Reden voor het terugdraaien (verplicht):"));
+        const reason = await askDialog({
+          eyebrow: t("nav.payments", "Betalingen"), title: t("dom.pay.reverseTitle", "Toewijzing terugdraaien"),
+          message: t("dom.pay.reverseHint", "Dit maakt een geauditeerde compensatieboeking en kan de factuur opnieuw openen."),
+          label: t("dom.pay.reverseReason", "Reden voor het terugdraaien"), input: "textarea", required: true,
+          placeholder: t("dom.pay.reversePlaceholder", "Bijvoorbeeld onjuiste factuur of dubbel toegewezen betaling"),
+          confirmLabel: t("dom.pay.reverse", "Terugdraaien"), danger: true,
+        });
         if (!reason) return;
         try {
           const res = await api("POST", `/payments/${paymentId}/allocations/${b.dataset.rev}/reverse`, { reason });

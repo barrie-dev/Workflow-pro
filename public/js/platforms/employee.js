@@ -970,6 +970,10 @@
   // ── Today (widget-gebaseerd: admin bepaalt het template, medewerker
   //     kan een eigen selectie kiezen via "Aanpassen") ────────
   function t9(key, fallback) { return window.wfpI18n ? window.wfpI18n.t(key, fallback) : fallback; }
+  function confirmE(message, title) {
+    const dialog = window.wfpAdmin && window.wfpAdmin.askDialog;
+    return typeof dialog === "function" ? dialog({ eyebrow: t9("emp.dialog.action", "Actie controleren"), title, message, confirmLabel: t9("emp.dialog.confirm", "Bevestigen"), danger: true }) : Promise.resolve(null);
+  }
   // Server-statuswaarden (goedgekeurd/geweigerd/…) vertalen voor weergave.
   function tStatus(status) { return t9("emp.status." + String(status || ""), status || ""); }
   function tPrio(p) { return t9("emp.prio." + String(p || ""), p || "-"); }
@@ -1486,7 +1490,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
     document.getElementById("empNewLeave")?.addEventListener("click", openLeaveSheet);
     document.querySelectorAll(".emp-leave-cancel").forEach(btn => {
       btn.addEventListener("click", async () => {
-        if (!confirm(t9("emp.leave.cancelConfirm", "Verlofaanvraag intrekken?"))) return;
+        if (!await confirmE(t9("emp.leave.cancelConfirm", "Verlofaanvraag intrekken?"), t9("emp.leave.cancelTitle", "Verlofaanvraag intrekken"))) return;
         btn.disabled = true; btn.textContent = "…";
         try {
           await api("DELETE", `/me/leaves/${btn.dataset.id}`);
@@ -1543,7 +1547,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
     document.getElementById("empNewExp")?.addEventListener("click", openExpSheet);
     document.querySelectorAll(".emp-exp-delete").forEach(btn => {
       btn.addEventListener("click", async () => {
-        if (!confirm(t9("emp.exp.deleteConfirm", "Declaratie verwijderen?"))) return;
+        if (!await confirmE(t9("emp.exp.deleteConfirm", "Declaratie verwijderen?"), t9("emp.exp.deleteTitle", "Declaratie verwijderen"))) return;
         btn.disabled = true; btn.textContent = "…";
         try {
           await api("DELETE", `/me/expenses/${btn.dataset.id}`);

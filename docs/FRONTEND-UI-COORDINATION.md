@@ -508,3 +508,128 @@ Feedback voor de backendontwikkelaar:
 - De Work OS-actions zijn niet aan een module in `src/modules/catalog.js` gekoppeld en worden daardoor als kernactie behandeld. Bevestig of dit productbeleid is en definieer zo nodig afzonderlijke lees-/schrijfrechten voor taken, formulierbeheer, bestanden en communicatie.
 - Lever bij voorkeur één lichte contextcatalogus of resolver (`type`, `id`, `label`, `allowedActions`). De UI haalt nu klanten, werkbonnen, projecten, locaties en medewerkers parallel op om technische IDs niet aan de gebruiker te tonen.
 - Behoud bij taakconflicten `code: VERSION_CONFLICT` en `currentVersion`; voeg ook een `requestId` toe zodat de editor gericht kan herladen en support dezelfde fout kan traceren.
+
+## Productwerkruimtes voor actieve backendmodules - frontendintegratie 2026-07-21
+
+De tenant-admin heeft nu volwaardige werkruimtes voor zes domeinen die al in de backend en productcatalogus aanwezig waren, maar nog geen eigen scherm hadden. Alle schermen gebruiken de bestaande tenant-scoped API's en ontlenen statussen, financiële totalen, voorraadstanden en versies uitsluitend aan de server.
+
+| Werkruimte | Bestaand contract | Frontendgedrag |
+| --- | --- | --- |
+| Projecten | `GET/POST/PATCH /projects`, `GET /projects/:id/finance`, `POST /projects/:id/transition` | Combineert klant, projectleider, locaties, werven, budget en financiële voortgang in één dossier. Vanuit het dossier kan de gebruiker werk inplannen, een werkbon openen of een projectgebonden bestelling starten. |
+| Werven | `GET/POST/PATCH /worksites` | Biedt een operationele werfkaart met project, locatie, adres, verantwoordelijke, toegangsinformatie en status. Technische ID's worden vervangen door leesbare labels. |
+| Contracten | `GET/POST/PATCH /contracts`, `POST /contracts/:id/transition`, `POST /contracts/:id/index`, `POST /contracts/:id/generate` | Ondersteunt contractstatus, prijsafspraken, indexatiehistoriek en het genereren van operationele records binnen de geldige contractperiode. |
+| Aankoop | `GET/POST/PATCH /suppliers`, `GET/POST/PATCH /purchase_orders`, `POST /purchase_orders/:id/transition`, `POST /purchase_orders/:id/receive` | Scheidt leveranciers en bestellingen in tabs, ondersteunt meerdere bestellijnen, goedkeuringsstatussen en deelontvangsten per lijn. Projectverplichtingen blijven zichtbaar via de serverberekende commitment. |
+| Voorraad | `GET /inventory/levels`, `GET/POST /inventory/movements`, `GET/POST /inventory/reservations`, `DELETE /inventory/reservations/:id`, `POST /inventory/transfer`, `POST /inventory/count` | Toont actuele niveaus, het onveranderlijke mutatielogboek en reservaties. Handmatige mutaties, transfers en tellingen worden als nieuwe serveracties geboekt en herschrijven geen browserstand. |
+| Assets en onderhoud | `GET/POST/PATCH /assets`, `GET/POST/PATCH /maintenance/plans`, `GET /maintenance/due`, `POST /maintenance/plans/:id/generate` | Verbindt assetregister, plaatsing, status, onderhoudsplannen en vervaldatums. Een onderhoudswerkbon wordt alleen via de backendgenerator gemaakt. |
+| Werven en scopewijzigingen | `GET/POST/PATCH /worksites`, `GET/POST/PATCH /changeorders`, `POST /changeorders/:id/transition` | Combineert de uitvoeringscontext met een formeel dossier voor meerwerk en minderwerk. De oorspronkelijke offerte blijft ongewijzigd. De backend berekent soort, btw, totalen en budgetimpact. |
+
+Frontendregels:
+
+- De hoofdwerkruimte gebruikt maximaal 1540 px op grote schermen, een brede dossiereditor tot 1280 px en een schermvullende editor op mobiel.
+- Zoekfilters, tabs en lege toestanden zijn lokale presentatiestatus. Bedrijfsstatus, nummering, financiële berekeningen, voorraadstanden en toegestane overgangen komen van de backend.
+- Schrijfoperaties tonen backendvalidatie in de editor. Bij `VERSION_CONFLICT` sluit de editor en wordt de laatste serverversie herladen.
+- Verplichte redenen voor uitzonderlijke overgangen worden in een echte formulierstap gevraagd. Er worden geen browserprompts gebruikt.
+- Navigatie en primaire acties blijven onder de bestaande module-entitlements vallen. Een verborgen of niet-geactiveerde module krijgt geen omweg via een andere werkruimte.
+- De flow `klant -> project -> planning -> werkbon -> factuur` is in de hoofdnavigatie zichtbaar. Projecten vormen daarnaast de context voor werven en aankoop.
+
+Feedback voor de backendontwikkelaar:
+
+- Retourneer waar mogelijk `allowedTransitions` per record. De frontend volgt nu de gedocumenteerde statusmachines en laat de server iedere overgang definitief valideren.
+- Voeg bij lijstoproepen lichte leeslabels toe voor gerelateerde objecten, in het bijzonder leverancier, project, locatie en asset. Dit voorkomt extra catalogusopvragingen zonder technische ID's te tonen.
+- Houd financiële waarden zoals projectmarge, aankoopcommitment en voorraadwaardering serverberekend en voorzien van een valuta- of waarderingscontext.
+- Behoud voor alle wijzigbare records `version`, `code: VERSION_CONFLICT` en `currentVersion`. Voeg ook `requestId` toe voor gerichte support en audit.
+- Documenteer welke aankoopstatussen ontvangst toelaten en wanneer een afsluitreden verplicht is. De frontend toont die redenstap wanneer nog hoeveelheden openstaan.
+- Laat voorraadcorrecties onveranderlijk. Een correctie op een foutieve telling of mutatie hoort een nieuwe beweging met auditreden te zijn, nooit een mutatie van historische regels.
+- Behoud de change-orderstatemachine server-side. De frontend toont de gedocumenteerde vervolgstappen, maar iedere overgang en de budgetdelta bij aanvaarding blijven een backendbeslissing.
+- Lever bij `GET /changeorders` bij voorkeur ook `projectNumber` en `projectName`. De frontend resolveert deze labels nu via een extra projectopvraging om technische IDs te vermijden.
+
+## Automatisaties - frontendintegratie 2026-07-21
+
+De bestaande automation engine heeft nu een volwaardige tenantwerkruimte binnen Koppelingen. De gebruiker kan flows opbouwen, simuleren, activeren, pauzeren en per uitvoering controleren. De UI maakt geen alternatieve uitvoeringslogica en verwerkt geen events in de browser.
+
+| UI-flow | Bestaand contract | Frontendgedrag |
+| --- | --- | --- |
+| Flowoverzicht | `GET /automation/flows` | Toont trigger, status, versie, voorwaarden en actiestappen. |
+| Flowbuilder | `POST/PATCH /automation/flows` | Bouwt voorwaarden en acties in een ruime editor. Iedere definitiewijziging gebruikt de actuele `version`. |
+| Statusflow | `POST /automation/flows/:id/transition` | Biedt alleen de gedocumenteerde vervolgstappen aan. De backend valideert iedere overgang. |
+| Simulatie | `POST /automation/flows/:id/simulate` | Toont het serverresultaat per stap en wijzigt geen productiedata. |
+| Uitvoeringshistoriek | `GET /automation/runs` | Toont flowversie, bron-event, bronrecord, status en resultaat per stap. |
+
+Frontendregels:
+
+- De backend blijft eigenaar van eventdispatch, voorwaarden, idempotentie, lusdetectie en de actieve flowversie.
+- Veilige acties kunnen door de engine worden uitgevoerd. Financiële, document-, webhook- en verzendacties blijven zichtbaar als stappen die menselijke goedkeuring vereisen.
+- Een flow start als concept. De UI maakt simulatie en status expliciet, maar activeert niets automatisch.
+- Er worden geen browserprompts, lokale flowkopieën of client-side uitvoeringsbeslissingen gebruikt.
+
+Feedback voor de backendontwikkelaar:
+
+- Lever waar mogelijk `allowedTransitions` per flow, zodat de frontend geen gedocumenteerde statusmatrix hoeft te spiegelen.
+- Voeg op termijn een cataloguscontract toe met ondersteunde eventtypes, eventvelden, actietypes en toegestane parameters. De editor gebruikt nu de bestaande enginecontracten en algemene veldinvoer.
+- Houd bewaakte acties in `requires_approval` totdat een expliciete, geauditeerde goedkeuringsroute beschikbaar is. De frontend mag dit nooit omzeilen.
+- Behoud `flowVersion`, `runId`, `eventType`, `aggregateId`, stapstatus en detail in iedere uitvoering voor support en audit.
+
+## Eigen velden - frontendintegratie 2026-07-21
+
+Het configuratieplatform heeft nu een eigen tenantwerkruimte binnen Koppelingen. Een functioneel beheerder kan velddefinities als concept aanmaken, in drie talen labelen, publiceren en archiveren. Gepubliceerde klantvelden worden ook daadwerkelijk in het klantformulier en klantdetail gerenderd.
+
+| UI-flow | Bestaand contract | Frontendgedrag |
+| --- | --- | --- |
+| Definitieoverzicht | `GET /config/fields` | Filtert op dossier en lifecycle en toont type, groep, volgorde, verplichting en versie. |
+| Veldeditor | `POST/PATCH /config/fields` | Ondersteunt tekst, getal, datum, ja/nee, enkele keuze en meerdere keuzes, inclusief NL/FR/EN-labels en validatieregels. |
+| Lifecycle | `POST /config/fields/:id/transition` | Publiceert of archiveert via de backendstatusmachine. Technische sleutel en type zijn na publicatie alleen-lezen. |
+| Klantinvoer | `GET /config/fields?entity=customer&status=published`, `POST /config/fields/validate`, `POST/PATCH /customers` | Bouwt de extra invoer uit gepubliceerde definities, toont fouten bij het betreffende veld en stuurt alleen door de backend genormaliseerde waarden. |
+| Klantdossier | `GET /customers` | Toont opgeslagen eigen waarden met het actuele label en leesbare keuzeopties. |
+
+Frontendregels:
+
+- De browser bewaart geen eigen schema. Gepubliceerde definities worden tenant-scoped opgehaald en na configuratiewijzigingen opnieuw geladen.
+- Verplichte velden, typeconversie, minimum, maximum, patroon en keuzeopties worden door `POST /config/fields/validate` gecontroleerd voordat het klantdossier wordt opgeslagen.
+- Bij een klantupdate blijven waarden van gearchiveerde of tijdelijk onbekende velden behouden. Alleen de momenteel gepubliceerde velden worden vervangen door de gevalideerde invoer.
+- Een klantupdate gebruikt `expectedVersion`. Een conflict kan daardoor niet ongemerkt een wijziging van een andere gebruiker overschrijven.
+- De editor is breed op desktop, schermvullend op mobiel en gebruikt geen browserprompts of lokale opslag.
+
+Feedback voor de backendontwikkelaar:
+
+- De configuratiecatalogus noemt ook projecten, werkbonnen, offertes, facturen, assets, leveranciers en werven als ondersteunde entiteiten, maar hun huidige create- en updateroutes roepen `configRepo.validateValues` nog niet aan en bewaren `customFields` niet aantoonbaar. De frontend activeert runtime-invoer daarom voorlopig alleen voor klanten.
+- `POST /customers` valideert eigen velden server-side. `PATCH /customers/:id` doet dat momenteel niet. Voeg dezelfde validatie ook aan updates toe, zodat API-clients de regel niet kunnen omzeilen.
+- `configRepo.update` controleert een sleutelwijziging alleen na publicatie, maar schrijft daarna voor iedere lifecyclefase toch altijd `existing.key` terug. De frontend maakt de sleutel daarom na aanmaak alleen-lezen. Als sleutelwijziging in concept bedoeld blijft, moet de repository de nieuwe genormaliseerde sleutel bewaren en opnieuw op uniciteit controleren.
+- De configuratieleesroute vereist het recht `settings`. Bevestig hoe een gebruiker die klanten mag wijzigen maar geen instellingen mag beheren de gepubliceerde velddefinities veilig kan lezen. Een apart read-only schemarecht of opname in het klantformuliercontract voorkomt dat zulke gebruikers verplichte velden missen.
+- Behoud gearchiveerde waarden bij updates. Archiveren hoort nieuwe invoer te verbergen zonder historische dossierdata te verwijderen.
+- Retourneer bij `CUSTOM_FIELDS_INVALID` stabiel `fieldErrors: [{ key, error }]`, plus `requestId`, zodat ieder probleem naast het juiste veld kan verschijnen.
+
+## Veilige actiedialogen - frontendintegratie 2026-07-21
+
+De tenant-admin, manager en medewerker gebruiken nu dezelfde applicatiedialoog voor bevestigingen en aanvullende invoer. Browserprompts zijn verwijderd uit de dagelijkse SaaS-schermen. Daardoor behouden risicovolle acties context, een duidelijke titel, een benoemde actieknop en een mobiele layout.
+
+De gedeelde dialoog wordt onder meer gebruikt voor:
+
+- projectselectie bij een nieuwe vorderingsstaat;
+- webhooksecretrotatie met een eenmalig zichtbaar kopieerveld;
+- bulkstatus en impactpreview in universele lijsten;
+- afwijzingsredenen bij werkbonreview en compensatieredenen bij betalingen;
+- klant-, factuur-, offerte-, planning-, voorraad- en dossieracties in tenantbeheer;
+- wachtwoordreset, MFA, pakketwissel en demodatabeheer;
+- manageracties en het intrekken van verlof of onkosten door medewerkers.
+- platformbeheer voor tenantpauze, resellercommissie, supportovername, bundels en platform-MFA;
+- API-keyrotatie, tenantherstel, partnernotities en MFA-verificatie in de oudere beheerschermen.
+
+Frontendregels:
+
+- Escape sluit een gewone dialoog. Een eenmalig signing secret kan alleen met de expliciete sluitknop worden verlaten.
+- Verplichte redenen worden in het formulier gevalideerd voordat de bestaande API-actie start.
+- Risicovolle acties gebruiken een visueel waarschuwende primaire knop. Annuleren verandert niets.
+- Op mobiel verschijnt de dialoog als onderste sheet met volledige knopbreedte. Op desktop blijft ze gecentreerd en toetsenbordbedienbaar.
+- De dialoog voert zelf geen domeinactie uit en verandert geen payload. Ze verzamelt en bevestigt uitsluitend de invoer voor het bestaande backendcontract.
+
+## Validatie van deze frontendfase - 2026-07-21
+
+De volledige frontendfase is opnieuw gevalideerd op de actuele backendbasis `52f429d6`.
+
+- `npm test`: 1.021 geslaagd, 11 bewust overgeslagen, 0 mislukt.
+- `npm run test:e2e`: 35 van 35 scenario's groen.
+- `npm run check`: repositorybrede syntaxcontrole groen.
+- `git diff --check`: geen witruimte- of patchfouten.
+- Gerichte UI-suites dekken productwerkruimtes, automatisaties, eigen velden, tenantrechten, integraties en applicatiedialogen.
+
+De featurebranch is niet gepubliceerd. Voor een latere merge moet hij opnieuw tegen de dan actuele `main` worden vergeleken, omdat backendontwikkeling parallel doorloopt.

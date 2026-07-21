@@ -81,6 +81,11 @@ const allowedApiKeyScopes = ["read", "write", "planning", "workorders", "billing
 const moduleApiKeyScopes = ["planning", "workorders", "billing", "integrations"];
 const viewConfig = window.WorkFlowProConfig?.views || {};
 
+function appDialog(options) {
+  const dialog = window.wfpAdmin && window.wfpAdmin.askDialog;
+  return typeof dialog === "function" ? dialog(options) : Promise.resolve(null);
+}
+
 /**
  * Toast-meldingen. type: "success" | "error" | "warning" | "info"
  * (boolean blijft werken voor oude aanroepen: true=success, false=error).
@@ -1519,7 +1524,7 @@ async function rotateApiKey(keyId) {
     const suggestedScopes = apiKeyScopeWarning(current || {})
       ? "read,planning"
       : (current?.scopes || ["read", "planning"]).join(",");
-    const scopeText = window.prompt("Nieuwe scopes voor geroteerde key", suggestedScopes);
+    const scopeText = await appDialog({ eyebrow: "API-beveiliging", title: "API-key roteren", message: "Kies de scopes voor de nieuwe sleutel. De oude sleutel wordt ingetrokken.", label: "Scopes, gescheiden door komma's", input: "text", value: suggestedScopes, required: true, confirmLabel: "Key roteren", danger: true });
     if (!scopeText) return;
     const scopes = scopeList(scopeText);
     const scopeError = validateApiKeyScopes(scopes);
@@ -1641,7 +1646,7 @@ async function previewBackup(backupId) {
 async function restoreBackup(backupId) {
   try {
     await previewBackup(backupId);
-    const confirmed = window.confirm("Herstel deze tenant vanuit de gekozen backup? Dit overschrijft tenantdata.");
+    const confirmed = await appDialog({ eyebrow: "Backup en herstel", title: "Tenant herstellen", message: "Herstel deze tenant vanuit de gekozen backup? Dit overschrijft tenantdata.", confirmLabel: "Backup herstellen", danger: true });
     if (!confirmed) return;
     const result = await api(`/api/tenants/${tenantId}/admin/backups/${backupId}/restore`, {
       method: "POST",
@@ -2076,7 +2081,7 @@ async function updatePartnerStatus(partnerId, status) {
 
 async function addPartnerNote(partnerId) {
   if (!token) return;
-  const note = window.prompt("Partnernotitie");
+  const note = await appDialog({ eyebrow: "Partnerdossier", title: "Partnernotitie toevoegen", label: "Notitie", input: "textarea", required: true, placeholder: "Leg de afspraak of opvolging vast", confirmLabel: "Notitie opslaan" });
   if (!note) return;
   try {
     const result = await api(`/api/tenants/${tenantId}/partners/${partnerId}/notes`, {
@@ -2452,7 +2457,7 @@ async function loginAs(email, password, intro) {
   if (result.mfaRequired) {
     setText("sessionState", "MFA vereist");
     el("sessionState").classList.add("muted");
-    const code = window.prompt("MFA code");
+    const code = await appDialog({ eyebrow: "Beveiligde login", title: "MFA-verificatie", message: "Open je authenticator-app of gebruik een recoverycode.", label: "Authenticatorcode", input: "text", required: true, placeholder: "6 cijfers of recoverycode", confirmLabel: "Verifiëren" });
     if (!code) return;
     pendingMfaLogin = { email, password, intro, code };
     return loginAs(email, password, intro);
