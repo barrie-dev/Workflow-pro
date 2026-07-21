@@ -75,30 +75,45 @@ else
 fi
 
 echo "-> PostgreSQL Flexible Server (burstable) + database (kan enkele minuten duren)"
-# Sommige EU-regio's weigeren tijdelijk nieuwe servers (capaciteit). Probeer een
-# rij EU-regio's tot er één lukt; de winnende regio wordt ook voor storage
-# gebruikt. Overschrijfbaar via AZ_REGIONS.
-REGIONS="${AZ_REGIONS:-$LOC northeurope francecentral germanywestcentral swedencentral}"
-PG_OK=""
-for R in $REGIONS; do
-  echo "   probeer regio $R ..."
-  set +e
-  ERR="$(az postgres flexible-server create \
-    --resource-group "$RG" --name "$PG" --location "$R" \
-    --tier Burstable --sku-name Standard_B1ms --version 16 --storage-size 32 \
-    --admin-user "$PGADMIN" --admin-password "$PGPASS" \
-    --public-access "$PUBLIC_ACCESS" --yes -o none 2>&1)"
-  RC=$?
-  set -e
-  if [ $RC -eq 0 ]; then LOC="$R"; PG_OK=1; echo "   PostgreSQL aangemaakt in $R"; break; fi
-  if echo "$ERR" | grep -qiE "not accepting new customers|RequestDisallowedByAzure|not available|OfferRestricted|OverQuota|LocationNotAvailable|SkuNotAvailable|not supported|InvalidResourceLocation|NoRegisteredProvider|ServiceUnavailable"; then
-    echo "   $R kan de server nu niet leveren · volgende regio..."
-    continue
-  fi
-  echo "   Onverwachte fout in $R:"; echo "$ERR"; exit 1
-done
-[ -n "$PG_OK" ] || { echo "FOUT: geen enkele geprobeerde regio accepteerde de PostgreSQL-server. Probeer met bv. AZ_REGIONS=\"polandcentral norwayeast\" opnieuw."; exit 1; }
-az postgres flexible-server db create -g "$RG" -s "$PG" -d "$DBNAME" -o none
+# Hervatbaar: bestaat er al een monargo-pg-server in de group, hergebruik hem
+# (voorkomt een tweede, verweesde server na een herstart). Anders: probeer een
+# rij EU-regio's tot er één lukt (capaciteit); overschrijfbaar via AZ_REGIONS.
+EXISTING_PG="$(az postgres flexible-server list -g "$RG" --query "[?starts_with(name, 'monargo-pg')].name | [0]" -o tsv 2>/dev/null || true)"
+if [ -n "$EXISTING_PG" ]; then
+  PG="$EXISTING_PG"
+  LOC="$(az postgres flexible-server show -g "$RG" -n "$PG" --query location -o tsv)"
+  echo "   bestaande server $PG in $LOC · hergebruiken"
+else
+  REGIONS="${AZ_REGIONS:-$LOC northeurope francecentral germanywestcentral swedencentral}"
+  PG_OK=""
+  for R in $REGIONS; do
+    echo "   probeer regio $R ..."
+    set +e
+    ERR="$(az postgres flexible-server create \
+      --resource-group "$RG" --name "$PG" --location "$R" \
+      --tier Burstable --sku-name Standard_B1ms --version 16 --storage-size 32 \
+      --admin-user "$PGADMIN" --admin-password "$PGPASS" \
+      --public-access "$PUBLIC_ACCESS" --yes -o none 2>&1)"
+    RC=$?
+    set -e
+    if [ $RC -eq 0 ]; then LOC="$R"; PG_OK=1; echo "   PostgreSQL aangemaakt in $R"; break; fi
+    if echo "$ERR" | grep -qiE "not accepting new customers|RequestDisallowedByAzure|not available|OfferRestricted|OverQuota|LocationNotAvailable|SkuNotAvailable|not supported|InvalidResourceLocation|NoRegisteredProvider|ServiceUnavailable"; then
+      echo "   $R kan de server nu niet leveren · volgende regio..."
+      continue
+    fi
+    echo "   Onverwachte fout in $R:"; echo "$ERR"; exit 1
+  done
+  [ -n "$PG_OK" ] || { echo "FOUT: geen enkele geprobeerde regio accepteerde de PostgreSQL-server. Probeer met bv. AZ_REGIONS=\"polandcentral norwayeast\" opnieuw."; exit 1; }
+fi
+
+echo "-> database $DBNAME"
+set +e
+DBERR="$(az postgres flexible-server db create -g "$RG" -s "$PG" -n "$DBNAME" -o none 2>&1)"
+DBRC=$?
+set -e
+if [ $DBRC -ne 0 ]; then
+  echo "$DBERR" | grep -qi "already exists" && echo "   bestaat al · ok" || { echo "$DBERR"; exit 1; }
+fi
 
 echo "-> firewall: Azure-diensten + je eigen IP"
 az postgres flexible-server firewall-rule create -g "$RG" -n "$PG" \
@@ -110,8 +125,14 @@ if [ -n "$MYIP" ]; then
 fi
 
 echo "-> Storage Account + private container + herstelvangnet"
-az storage account create -g "$RG" -n "$SA" -l "$LOC" \
-  --sku Standard_LRS --kind StorageV2 --allow-blob-public-access false --min-tls-version TLS1_2 -o none
+# Hervatbaar: bestaande monargostore-account hergebruiken (geen dubbele).
+EXISTING_SA="$(az storage account list -g "$RG" --query "[?starts_with(name, 'monargostore')].name | [0]" -o tsv 2>/dev/null || true)"
+if [ -n "$EXISTING_SA" ]; then
+  SA="$EXISTING_SA"; echo "   bestaande storage $SA · hergebruiken"
+else
+  az storage account create -g "$RG" -n "$SA" -l "$LOC" \
+    --sku Standard_LRS --kind StorageV2 --allow-blob-public-access false --min-tls-version TLS1_2 -o none
+fi
 KEY="$(az storage account keys list -g "$RG" -n "$SA" --query '[0].value' -o tsv)"
 az storage container create --account-name "$SA" --account-key "$KEY" -n "$CONTAINER" --public-access off -o none
 az storage account blob-service-properties update -g "$RG" -n "$SA" \
