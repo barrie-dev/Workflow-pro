@@ -95,18 +95,39 @@ jobs:
             echo "::error::Blob-opslagtests werden overgeslagen terwijl de emulator draait"; exit 1;
           fi
           echo "Alle database- en opslag-gebonden tests hebben echt gedraaid."
-      - name: Finance multi-write atomiciteit (DEV-06 · executing evidence-job)
-        # CTO-regel: bewijs = de OUTPUT van een draaiende job. Deze job commit een
-        # volledige finance-flow en laat drie varianten middenin falen; is een
-        # rollback niet volledig (state + nummer + outbox), dan exit 1 → CI faalt.
-        # Schrijft docs/traceability/evidence/finance-tx.json, gebonden aan HEAD.
+      # ── Executing evidence-jobs (CTO-regel: bewijs = output van een draaiende
+      # job, gebonden aan HEAD). Ze draaien hier omdat deze job een ECHTE pg
+      # heeft; elk artefact wordt vers gegenereerd en meteen daarna gevalideerd
+      # door de gate op DEZELFDE commit + filesystem. Geen bestand-op-schijf-truc.
+      - name: Finance multi-write atomiciteit (DEV-06)
+        # Commit een volledige finance-flow, laat drie varianten middenin falen;
+        # is een rollback niet volledig (state + nummer + outbox) → exit 1.
         run: node scripts/check-finance-tx.js
-      - name: Upload finance-tx evidence
+      - name: Read-cutover reconciliatie per domein (DEV-03)
+        # Spiegelt identity/company/finance + CRM naar pg en bewijst dat legacy
+        # en projectie SLUITEND zijn (beide richtingen, nul afwijkingen) → exit 1
+        # bij elke openstaande afwijking.
+        run: node scripts/check-cutover.js
+      - name: Verplichte E2E-scenario's + manifest (DEV-02)
+        # Draait de negen verplichte horizontale scenario's (verse server per
+        # smoke); één rode smoke → exit 1. Schrijft het eerlijke manifest.
+        run: node scripts/check-e2e-scenarios.js
+      - name: Roadmap-gate (DEV-01/07) · harde regressiegate op de commit
+        # HARD (geen || true, CTO PR #41): valideert alle zojuist gegenereerde
+        # evidence INHOUDELIJK op de HUIDIGE commit-SHA en faalt op elke
+        # NIET-aanvaarde blocker (docs/traceability/accepted-blockers.json).
+        run: |
+          node scripts/generate-traceability.js
+          node scripts/check-roadmap-status.js
+      - name: Upload traceability- en evidence-artefacten
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: finance-tx-evidence
-          path: docs/traceability/evidence/finance-tx.json
+          name: traceability-and-evidence
+          path: |
+            docs/traceability/matrix.json
+            docs/traceability/matrix.md
+            docs/traceability/evidence/*.json
           if-no-files-found: warn
 
   # ── E2E-scenario's (CTO DEV-02): verplicht ná unit/integratie, vóór de
@@ -123,28 +144,20 @@ jobs:
           node-version: "22"
       - name: Install dependencies
         run: npm install --omit=dev
-      - name: E2E-suite (verse dataset per scenario)
+      - name: E2E-suite (verse dataset per scenario · volledig regressienet)
+        # De volledige suite (alle smokes). De HARDE roadmap-gate + de
+        # commit-gebonden evidence draaien in de test-job (die een echte pg
+        # heeft); deze job is het brede regressienet vóór build/release.
         run: |
           set -o pipefail
           npm run test:e2e 2>&1 | tee /tmp/e2e-out.txt
-      - name: Roadmap-gate (DEV-01/07) · harde regressiegate op de commit
-        # HARD (geen || true meer, CTO PR #41): de gate valideert evidence
-        # inhoudelijk op de HUIDIGE commit-SHA en faalt op elke NIET-aanvaarde
-        # blocker. Bekende, bewust aanvaarde rode punten staan in
-        # docs/traceability/accepted-blockers.json; een nieuwe blocker (of
-        # verdwenen/oud/ongeldig evidence) laat CI falen.
-        run: |
-          node scripts/generate-traceability.js
-          node scripts/check-roadmap-status.js
-      - name: Upload E2E- en traceability-evidence
+      - name: Upload E2E-output
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-and-traceability
-          path: |
-            /tmp/e2e-out.txt
-            docs/traceability/matrix.json
-            docs/traceability/matrix.md
+          name: e2e-output
+          path: /tmp/e2e-out.txt
+          if-no-files-found: warn
 
   # ── Containersmoke (CTO P0-01/P0-05): het gedocumenteerde standaardpad ─────
   # Bouw de echte image, start db + app via compose (incl. migratiestap in de

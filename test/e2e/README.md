@@ -17,7 +17,7 @@ sessie. Dat is precies wat h51 verbiedt.
 
 | # | Verplicht scenario | Gedekt door | Status |
 |---|---|---|---|
-| 1 | Construction: offerte → project → planning → werkbon → factuur → marge | `quoteversion` + `projects` + `planning` + `workorder` + `finance` | **deels** · de keten is per schakel gedekt, niet als één doorlopend scenario |
+| 1 | Construction: offerte → project → planning → werkbon → factuur → marge | `chain` (één doorlopende keten) + `quoteversion` + `projects` + `planning` + `workorder` + `finance` | **volledig** · `chain-smoke` bewijst de hele keten als één scenario: klant → offerte → verzenden + geverifieerd ondertekenen → factuur (draagt projectId) → planning → werkbon (uren/materiaal/handtekening/goedkeuring) → betaling (allocatie) → projectfinance (budget/arbeid/gefactureerd, bron traceerbaar) |
 | 2 | Meerwerk met gedeeltelijke acceptatie en aparte factuurbron | `construction` (change orders) + `claims` (betwiste lijnen, aparte bron) | gedekt |
 | 3 | Offline werkbon met foto, materiaal en handtekening, incl. dubbel queue-item | `workorder` (sync-conflict, handtekening aan versie, materiaal) + `mobile-offline` (dubbel queue-item → replay op commandId, geen dubbele toepassing) | **deels** · foto-upload ontbreekt nog |
 | 4 | Servicecontract genereert onderhoudsbeurt, assethistoriek en facturatie | `contracts` (generatie) + `assets` (historiek, beurten) | gedekt |
@@ -27,9 +27,13 @@ sessie. Dat is precies wat h51 verbiedt.
 | 8 | Rol zonder kostprijsrecht probeert UI, API, export, zoeken en Mona | `policy` + `grid` (hiddenColumns) + `signals` | **deels** · UI- en Mona-pad niet in één scenario |
 | 9 | Legacy-migratie klant/project/werkbon met external ID en bestanden | `robaws` (external_id, idempotent, snapshots) | **deels** · bestanden migreren niet mee |
 
-**Eerlijke stand: 3 volledig, 6 deels, 0 harde gaten.** De "deels"-scenario's
-zijn per schakel bewezen maar niet als één doorlopende keten; de restpunten
-zijn foto-upload op de werkbon en het gedrag van een echte Peppol-provider.
+**Eerlijke stand: 4 volledig, 5 deels, 0 harde gaten.** Sinds `chain-smoke` is
+scenario 1 een doorlopende keten. De resterende "deels"-scenario's zijn per
+schakel bewezen maar nog niet als één doorlopende keten; de restpunten zijn
+foto-upload op de werkbon, het gedrag van een echte Peppol-provider en een
+uitputtende tenant-padenscan. Het executing evidence-artefact
+`docs/traceability/evidence/e2e-scenarios.json` legt deze stand per scenario
+vast (green + fullChain), en `scripts/check-e2e-scenarios.js` is de harde gate.
 
 Daarnaast draait `perf` het h50.1-budget als regressienet: P95 per
 endpointklasse (read < 800 ms, write < 1500 ms · pilotdoelen) op een gevulde
