@@ -84,6 +84,24 @@ test("events-sink: emit en delivered lopen via de geregistreerde sink; zonder si
 
 // ── Live tegen echte PostgreSQL (CI draait dit; lokaal met DATABASE_URL) ────
 const LIVE_URL = process.env.DATABASE_URL || "";
+
+/**
+ * Andere testbestanden draaien parallel tegen dezelfde database en kunnen de
+ * platform_state-revisie tussentijds ophogen. Dat is precies het scenario
+ * waarvoor het conflictontwerp bestaat: herladen en opnieuw aanbieden · de
+ * mutatie én de outbox-wachtrij blijven staan (requeue). Deze helper doet wat
+ * de server bij een conflict ook doet.
+ */
+async function flushWithRetry(adapter, attempts = 5) {
+  for (let i = 0; ; i++) {
+    try { return await adapter.flush(); }
+    catch (err) {
+      if (err.code !== "STATE_REVISION_CONFLICT" || i >= attempts) throw err;
+      await adapter.loadAsync(() => ({ tenants: [] }));
+    }
+  }
+}
+
 test("outbox live: event overleeft de in-memory cap in de duurzame tabel · status en retentie kloppen",
   { skip: !LIVE_URL && "DATABASE_URL niet gezet" }, async () => {
     const { Pool } = require("pg");
@@ -96,7 +114,7 @@ test("outbox live: event overleeft de in-memory cap in de duurzame tabel · stat
       await adapter.loadAsync(() => ({ tenants: [] }));
       adapter.save({ tenants: [], marker: evtId });
       adapter.queueOutboxAppend(makeEvent(evtId));
-      await adapter.flush();
+      await flushWithRetry(adapter);
 
       const { rows } = await pool.query(`SELECT * FROM outbox_events WHERE id = $1`, [evtId]);
       assert.equal(rows.length, 1, "event duurzaam in de tabel");
@@ -106,14 +124,14 @@ test("outbox live: event overleeft de in-memory cap in de duurzame tabel · stat
       // Idempotent: nogmaals aanbieden dupliceert niet.
       adapter.queueOutboxAppend(makeEvent(evtId));
       adapter.save({ tenants: [], marker: evtId, weer: true });
-      await adapter.flush();
+      await flushWithRetry(adapter);
       const again = await pool.query(`SELECT count(*)::int AS n FROM outbox_events WHERE id = $1`, [evtId]);
       assert.equal(again.rows[0].n, 1);
 
       // Statusupdate + retentie: delivered en oud → opgeruimd; pending blijft.
       adapter.queueOutboxStatus({ id: evtId, status: "delivered", attempts: 1 });
       adapter.save({ tenants: [], marker: evtId, klaar: true });
-      await adapter.flush();
+      await flushWithRetry(adapter);
       await pool.query(`UPDATE outbox_events SET occurred_at = now() - interval '60 days' WHERE id = $1`, [evtId]);
       const pruned = await adapter.pruneOutbox({ keepDays: 30 });
       assert.ok(pruned.removed >= 1, "bezorgd + oud → opgeruimd");
