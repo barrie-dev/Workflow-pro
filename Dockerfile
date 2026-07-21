@@ -2,7 +2,8 @@
 # Build:  docker build -t workflowpro .
 # Run:    docker run -p 4280:4280 --env-file .env.production workflowpro
 
-FROM node:20-alpine
+# Node 22 = de ENIGE runtime (CI, container en Azure gelijk · CTO P0-09).
+FROM node:22-alpine
 
 # Minimale OS-packages voor crypto-native modules
 RUN apk add --no-cache dumb-init
@@ -13,9 +14,13 @@ WORKDIR /app
 COPY package.json ./
 RUN npm install --omit=dev --no-fund --no-audit
 
-# App-code
+# App-code + migraties + operationele scripts. De migratiestap
+# (node scripts/run-migrations.js) draait IN de container vóór de app start ·
+# zonder deze COPY's faalde het gedocumenteerde standaardpad (CTO P0-05).
 COPY src/ ./src/
 COPY public/ ./public/
+COPY scripts/ ./scripts/
+COPY migrations/ ./migrations/
 
 # Non-root user voor security
 RUN addgroup -S wfp && adduser -S wfp -G wfp && chown -R wfp:wfp /app

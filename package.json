@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "description": "Production-oriented WorkFlow Pro full-stack foundation.",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "start": "node src/server.js",
     "dev": "node src/server.js",

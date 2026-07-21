@@ -7,11 +7,31 @@ on:
     branches: [main]
 
 jobs:
+  # ── Unit + integratie tegen een ECHTE PostgreSQL (CTO P0-02/P0-06) ─────────
+  # Zonder database bewijzen unit tests geen tenant- of migratiegedrag: de
+  # DB-gebonden tests (pg-adapter-contract, RLS/cross-tenant, jobqueue,
+  # CRM-backfill/reconciliatie) sloegen dan stil over. Hier draaien ze echt.
   test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: monargo
+          POSTGRES_PASSWORD: monargo
+          POSTGRES_DB: monargo
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U monargo -d monargo"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql://monargo:monargo@localhost:5432/monargo
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node.js
+      - name: Setup Node.js 22 (enige runtime · CI = Docker = Azure)
         uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -19,5 +39,67 @@ jobs:
         run: npm install --omit=dev
       - name: Syntax check (src)
         run: npm run check
-      - name: Run tests (syntax sweep + units + HTTP smoke)
-        run: npm test
+      - name: Migratiegate · toepassen op lege database
+        run: node scripts/run-migrations.js
+      - name: Migratiegate · idempotentie (tweede run wijzigt niets)
+        run: |
+          node scripts/run-migrations.js
+          node scripts/run-migrations.js --status --json | node -e "
+            const st = JSON.parse(require('fs').readFileSync(0, 'utf8'));
+            if (st.pending.length) { console.error('Openstaande migraties na run:', st.pending); process.exit(1); }
+            console.log('Migraties toegepast en idempotent:', st.applied.length + '/' + st.total);
+          "
+      - name: Tests incl. database-integratie en tenant-isolatie
+        # DATABASE_URL staat, dus de DB-tests draaien ECHT · de suite faalt
+        # hard op databasefouten in plaats van stil over te slaan. pipefail
+        # zodat tee een falende suite niet maskeert.
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee /tmp/test-out.txt
+      - name: Bewijs · geen overgeslagen database-tests
+        run: |
+          if grep -q "DATABASE_URL niet gezet" /tmp/test-out.txt; then
+            echo "::error::Database-tests werden overgeslagen terwijl DATABASE_URL gezet is"; exit 1;
+          fi
+          echo "Alle database-gebonden tests hebben echt gedraaid."
+
+  # ── Containersmoke (CTO P0-01/P0-05): het gedocumenteerde standaardpad ─────
+  # Bouw de echte image, start db + app via compose (incl. migratiestap in de
+  # container) en bewijs health + readiness vanaf een LEGE database.
+  container-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compose build + start (leeg → migraties → app)
+        run: docker compose up -d --build
+      - name: Wacht op health
+        run: |
+          for i in $(seq 1 30); do
+            status=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:4280/api/health || true)
+            if [ "$status" = "200" ]; then echo "health OK na ${i} pogingen"; exit 0; fi
+            sleep 3
+          done
+          echo "::error::App werd niet gezond binnen 90s"
+          docker compose logs app | tail -50
+          exit 1
+      - name: Readiness + opslagcontrole
+        run: |
+          curl -sf http://localhost:4280/api/ready | tee /tmp/ready.json
+          node -e "
+            const r = JSON.parse(require('fs').readFileSync('/tmp/ready.json', 'utf8'));
+            if (!r.ok || r.checks.storageAdapter !== 'postgres') { console.error('Readiness faalt of draait niet op postgres:', r); process.exit(1); }
+            console.log('Container draait gezond op de pg-adapter · revision', r.store.revision);
+          "
+      - name: Herstart-smoke (data overleeft een containerrestart)
+        run: |
+          docker compose restart app
+          sleep 5
+          for i in $(seq 1 20); do
+            status=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:4280/api/health || true)
+            if [ "$status" = "200" ]; then echo "herstart OK"; exit 0; fi
+            sleep 3
+          done
+          echo "::error::App kwam niet terug na herstart"; exit 1
+      - name: Opruimen
+        if: always()
+        run: docker compose down -v

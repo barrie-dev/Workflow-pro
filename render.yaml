@@ -12,7 +12,10 @@ services:
     region: frankfurt          # dichtstbij België/Nederland
     plan: starter              # upgrade naar standard voor productie-SLA
     buildCommand: npm install --omit=dev
-    startCommand: node src/server.js
+    # Migraties als expliciete stap VOOR de app start (zelfde volgorde als de
+    # container en de RUNBOOK). De advisory lock in de runner maakt dit ook
+    # veilig wanneer meerdere instanties tegelijk deployen.
+    startCommand: node scripts/run-migrations.js && node src/server.js
     healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
@@ -30,6 +33,9 @@ services:
         sync: false
       - key: ENCRYPTION_KEY
         sync: false
+      # LEGACY · alleen nog voor de eenmalige data-overname en het rollback-pad
+      # (STORAGE_ADAPTER=supabase). Verwijderen zodra de retentieperiode van de
+      # cutover voorbij is; nieuwe omgevingen hebben deze NIET nodig.
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
