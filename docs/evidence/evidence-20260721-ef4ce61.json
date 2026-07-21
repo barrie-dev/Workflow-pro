@@ -1,0 +1,58 @@
+{
+  "generatedAt": "2026-07-21T11:09:44.311Z",
+  "commit": {
+    "sha": "ef4ce61e7b368c21b1cf0c3594b6096aa47ecfdf",
+    "branch": "main",
+    "dirty": false,
+    "subject": "CTO P0-01 fase 3: kerntransacties (facturen + betalingen) genormaliseerd in runtime"
+  },
+  "runtime": {
+    "node": "v24.16.0",
+    "platform": "win32"
+  },
+  "tests": {
+    "ran": true,
+    "exitCode": 0,
+    "total": 944,
+    "pass": 944,
+    "fail": 0,
+    "skipped": 0,
+    "databaseTestsIncluded": true,
+    "objectStorageTestsIncluded": true,
+    "blobStorageTestsIncluded": true
+  },
+  "migrations": {
+    "files": [
+      "001_core.sql",
+      "002_crm.sql",
+      "003_jobs.sql",
+      "004_outbox.sql",
+      "005_identity.sql",
+      "006_finance.sql"
+    ],
+    "count": 6,
+    "database": {
+      "applied": 6,
+      "pending": [],
+      "total": 6
+    }
+  },
+  "posture": {
+    "appEnv": "development",
+    "storageAdapter": "(standaard)",
+    "objectStorageAdapter": "local",
+    "crmReadSource": "(standaard)",
+    "databaseConfigured": true
+  },
+  "artifacts": {
+    "Dockerfile": true,
+    "docker-compose.yml": true,
+    ".github/workflows/ci.yml": true,
+    "render.yaml": true,
+    "docs/RUNBOOK.md": true,
+    "docs/DEPLOY-RUNBOOK.md": true,
+    "docs/PERFORMANCE-BASELINE.md": true,
+    "docs/LIVE-SECURITY-CHECKLIST.md": true,
+    "migrations/sql": true
+  }
+}
