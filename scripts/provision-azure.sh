@@ -18,7 +18,7 @@
 set -euo pipefail
 
 RG="${AZ_RG:-monargo-prod}"
-LOC="${AZ_LOC:-westeurope}"
+LOC="${AZ_LOC:-belgiumcentral}"
 DBNAME="${AZ_DB:-monargo}"
 CONTAINER="${AZ_CONTAINER:-monargo-files}"
 PGADMIN="${AZ_PGADMIN:-monargoadmin}"
@@ -68,8 +68,8 @@ for R in $REGIONS; do
   RC=$?
   set -e
   if [ $RC -eq 0 ]; then LOC="$R"; PG_OK=1; echo "   PostgreSQL aangemaakt in $R"; break; fi
-  if echo "$ERR" | grep -qiE "not accepting new customers|RequestDisallowedByAzure|not available|OfferRestricted|OverQuota|LocationNotAvailable"; then
-    echo "   $R accepteert nu geen nieuwe server · volgende regio..."
+  if echo "$ERR" | grep -qiE "not accepting new customers|RequestDisallowedByAzure|not available|OfferRestricted|OverQuota|LocationNotAvailable|SkuNotAvailable|not supported|InvalidResourceLocation|NoRegisteredProvider|ServiceUnavailable"; then
+    echo "   $R kan de server nu niet leveren · volgende regio..."
     continue
   fi
   echo "   Onverwachte fout in $R:"; echo "$ERR"; exit 1
