@@ -4514,6 +4514,24 @@ ${((window._wfpEnt && window._wfpEnt.modules) || []).includes("ai_estimate") ? `
   </div>
 </div>
 
+<!-- Sociaal secretariaat · prestatie-export (geen RSZ-aangifte) -->
+<div class="adm-card" style="margin-top:16px;">
+  <div class="adm-card-header">
+    <h3 class="adm-card-title">${tA("adm.rep.payrollExport","Sociaal secretariaat · prestatie-export")}</h3>
+    <button class="adm-btn adm-btn-primary adm-btn-sm" id="repPayrollDownload">${tA("adm.rep.payrollDownload","Download prestatiestaat")}</button>
+  </div>
+  <div class="adm-card-body">
+    <p style="margin:0 0 12px;color:var(--gray-600);font-size:13px">${tA("adm.rep.payrollNote","Levert de gewerkte uren en goedgekeurde afwezigheden van de gekozen periode aan je sociaal secretariaat. Monargo doet zelf geen RSZ-aangifte · dit is een overdracht.")}</p>
+    <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end">
+      <label style="font-size:12.5px">${tA("adm.rep.payrollProvider","Sociaal secretariaat")}<br><select id="repPayrollProvider" class="adm-input" style="min-width:180px"></select></label>
+      <label style="font-size:12.5px">${tA("adm.rep.payrollAffiliate","Aansluitingsnummer")}<br><input id="repPayrollAffiliate" class="adm-input" placeholder="bv. 12345" style="min-width:150px"></label>
+      <label style="font-size:12.5px">${tA("adm.rep.payrollNorm","Dagnorm (u)")}<br><input id="repPayrollNorm" class="adm-input" type="number" step="0.5" placeholder="8" style="width:90px"></label>
+      <button class="adm-btn adm-btn-secondary adm-btn-sm" id="repPayrollSave">${tA("adm.common.save","Opslaan")}</button>
+      <span id="repPayrollStatus" style="font-size:12.5px;color:var(--gray-600)"></span>
+    </div>
+  </div>
+</div>
+
 <!-- Winstgevendheid per klant -->
 <div class="adm-card" style="margin-top:16px;">
   <div class="adm-card-header">
@@ -4792,6 +4810,50 @@ ${((window._wfpEnt && window._wfpEnt.modules) || []).includes("ai_estimate") ? `
       const rows = (_repData.payroll||[]).map(r => [r.name, r.days.size, r.hours.toFixed(2), r.days.size?(r.hours/r.days.size).toFixed(2):"0", r.leaveDays, r.expAmt.toFixed(2)]);
       csvDownload(`loonlijst-${from}-${to}.csv`, rows, ["Medewerker","Gewerkte dagen","Gewerkte uren","Gem uur/dag","Verlof (d)","Onkosten (EUR)"]);
     });
+    // ── Sociaal secretariaat · prestatie-export ──────────────────────────────
+    (async function initPayrollExport() {
+      const sel = document.getElementById("repPayrollProvider");
+      const aff = document.getElementById("repPayrollAffiliate");
+      const norm = document.getElementById("repPayrollNorm");
+      const status = document.getElementById("repPayrollStatus");
+      if (!sel) return;
+      try {
+        const cfg = await api("GET", "/payroll/config");
+        (cfg.providers || []).forEach(p => { const o = document.createElement("option"); o.value = p.key; o.textContent = p.label; sel.appendChild(o); });
+        const r = cfg.readiness || {};
+        sel.value = r.provider || "generic";
+        aff.value = r.affiliateNumber || "";
+        norm.value = r.dailyNormHours || "";
+        status.textContent = r.ready ? "Klaar om te exporteren" : ("Nog in te vullen: " + (r.missing || []).join(", "));
+        status.style.color = r.ready ? "var(--wf-green)" : "var(--wf-orange, #c60)";
+      } catch (e) { status.textContent = "Kon configuratie niet laden"; }
+
+      document.getElementById("repPayrollSave").addEventListener("click", async () => {
+        status.textContent = "Opslaan…";
+        try {
+          const r = await api("POST", "/payroll/config", { provider: sel.value, affiliateNumber: aff.value.trim(), dailyNormHours: Number(norm.value) || undefined });
+          const rd = r.readiness || {};
+          status.textContent = rd.ready ? "Opgeslagen · klaar" : ("Opgeslagen · nog: " + (rd.missing || []).join(", "));
+          status.style.color = rd.ready ? "var(--wf-green)" : "var(--wf-orange, #c60)";
+        } catch (e) { status.textContent = "Opslaan mislukt: " + (e.message || ""); status.style.color = "var(--wf-red)"; }
+      });
+
+      document.getElementById("repPayrollDownload").addEventListener("click", async () => {
+        const from = document.getElementById("repFrom").value, to = document.getElementById("repTo").value;
+        if (!from || !to) { status.textContent = "Kies eerst een periode (van/tot)"; return; }
+        status.textContent = "Prestatiestaat ophalen…";
+        try {
+          const resp = await fetch(`/api/tenants/${tenantId()}/payroll/prestaties?from=${from}&to=${to}&format=csv`, { headers: { Authorization: "Bearer " + token() } });
+          if (!resp.ok) throw new Error("Export mislukt (" + resp.status + ")");
+          const blob = await resp.blob();
+          const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `prestaties-${from}_${to}.csv`; a.click();
+          URL.revokeObjectURL(a.href);
+          status.textContent = "Prestatiestaat gedownload · door te sturen naar je secretariaat";
+          status.style.color = "var(--wf-green)";
+        } catch (e) { status.textContent = e.message; status.style.color = "var(--wf-red)"; }
+      });
+    })();
+
     document.getElementById("repExportCust").addEventListener("click", () => {
       const from = document.getElementById("repFrom").value;
       const to   = document.getElementById("repTo").value;

@@ -6,7 +6,8 @@ const { test } = require("node:test");
 const assert = require("node:assert");
 
 const {
-  buildPayrollExport, toCsv, payrollReadiness, workingDaysBetween, PRESTATION_CODES,
+  buildPayrollExport, buildPayrollDigest, toCsv, payrollReadiness, workingDaysBetween,
+  nightMinutes, providerList, PRESTATION_CODES,
 } = require("../src/platform/social-secretariat");
 
 const INSZ_OK = "93051822361";      // geldige mod-97
@@ -155,4 +156,104 @@ test("periode: ongeldige of omgekeerde periode faalt netjes", () => {
 test("hulpfunctie: workingDaysBetween sluit weekends uit", () => {
   // 2026-06-05 = vrijdag, 06-06 za, 07-06 zo, 08-06 ma.
   assert.deepEqual(workingDaysBetween("2026-06-05", "2026-06-08"), ["2026-06-05", "2026-06-08"]);
+});
+
+// ── Acerta-pilot: overuren, weekend, nacht, uitgebreide codes, digest ───────
+test("overuren: uren boven de dagnorm krijgen een aparte overuren-code", () => {
+  const store = mkStore();
+  // Jan werkt 10u op een weekdag (di 2 juni) → 8 normaal + 2 overuren.
+  store.data.clocks = [{ id: "c1", tenantId: "t1", userId: "u1", date: "2026-06-02", clockIn: "07:00", clockOut: "17:00", durationMinutes: 600 }];
+  store.data.leaves = [];
+  const out = buildPayrollExport(store, store.data.tenants[0], { from: "2026-06-01", to: "2026-06-30" });
+  const jan = out.employees.find(e => e.employeeId === "u1");
+  const work = jan.lines.find(l => l.key === "work");
+  const ot = jan.lines.find(l => l.key === "overtime");
+  assert.equal(work.quantity, 8, "tot de dagnorm normaal");
+  assert.equal(ot.quantity, 2, "boven de norm overuren");
+  assert.equal(jan.overtimeHours, 2);
+});
+
+test("weekend: op zaterdag/zondag gewerkte uren krijgen de weekend-code", () => {
+  const store = mkStore();
+  // 2026-06-06 = zaterdag.
+  store.data.clocks = [{ id: "c1", tenantId: "t1", userId: "u1", date: "2026-06-06", clockIn: "08:00", clockOut: "13:00", durationMinutes: 300 }];
+  store.data.leaves = [];
+  const out = buildPayrollExport(store, store.data.tenants[0], { from: "2026-06-01", to: "2026-06-30" });
+  const jan = out.employees.find(e => e.employeeId === "u1");
+  assert.ok(jan.lines.every(l => l.key !== "work"), "geen normale werkcode in het weekend");
+  const wk = jan.lines.find(l => l.key === "weekend");
+  assert.equal(wk.quantity, 5);
+  assert.equal(jan.weekendHours, 5);
+});
+
+test("nacht: enkel met een geconfigureerd nachtvenster, als aparte toeslaglijn", () => {
+  const store = mkStore();
+  store.data.tenants[0].compliance.socialSecretariat.nightWindow = { from: "22:00", to: "06:00" };
+  // Weekdag 04:00-09:00 → 5u werk, waarvan 2u nacht (04:00-06:00).
+  store.data.clocks = [{ id: "c1", tenantId: "t1", userId: "u1", date: "2026-06-02", clockIn: "04:00", clockOut: "09:00", durationMinutes: 300 }];
+  store.data.leaves = [];
+  const out = buildPayrollExport(store, store.data.tenants[0], { from: "2026-06-01", to: "2026-06-30" });
+  const jan = out.employees.find(e => e.employeeId === "u1");
+  const night = jan.lines.find(l => l.key === "night");
+  assert.ok(night, "nachttoeslag-lijn aanwezig");
+  assert.equal(night.quantity, 2, "04:00-06:00 = 2 nachturen");
+  assert.equal(jan.nightHours, 2);
+});
+
+test("nacht: nachtvenster over middernacht (22:00-06:00) telt beide zijden", () => {
+  assert.equal(nightMinutes("21:00", "23:00", { from: "22:00", to: "06:00" }), 60, "22:00-23:00");
+  assert.equal(nightMinutes("04:00", "08:00", { from: "22:00", to: "06:00" }), 120, "04:00-06:00");
+  assert.equal(nightMinutes("09:00", "17:00", { from: "22:00", to: "06:00" }), 0, "overdag geen nacht");
+});
+
+test("uitgebreide codes: ADV/recup en klein verlet mappen; onbekend type waarschuwt", () => {
+  const store = mkStore();
+  store.data.clocks = [];
+  store.data.leaves = [
+    { id: "l1", tenantId: "t1", userId: "u1", startDate: "2026-06-02", endDate: "2026-06-02", type: "recup", status: "goedgekeurd" },
+    { id: "l2", tenantId: "t1", userId: "u1", startDate: "2026-06-03", endDate: "2026-06-03", type: "verzonnen_type", status: "goedgekeurd" },
+  ];
+  const out = buildPayrollExport(store, store.data.tenants[0], { from: "2026-06-01", to: "2026-06-30" });
+  const jan = out.employees.find(e => e.employeeId === "u1");
+  assert.ok(jan.lines.some(l => l.key === "adv"), "recup → ADV/inhaalrust");
+  assert.ok(jan.lines.some(l => l.key === "onbetaald"), "onbekend type → onbetaald");
+  assert.ok(jan.warnings.some(w => /onbekend verloftype/i.test(w)), "onbekend type gemeld");
+});
+
+test("dagnorm: uit het werkrooster van de werknemer indien aanwezig", () => {
+  const store = mkStore();
+  store.data.users.find(u => u.id === "u1").workSchedule = { days: { ma: { start: "08:00", end: "14:00" } } };  // 6u-norm
+  store.data.clocks = [{ id: "c1", tenantId: "t1", userId: "u1", date: "2026-06-02", clockIn: "08:00", clockOut: "16:00", durationMinutes: 480 }];
+  store.data.leaves = [];
+  const out = buildPayrollExport(store, store.data.tenants[0], { from: "2026-06-01", to: "2026-06-30" });
+  const jan = out.employees.find(e => e.employeeId === "u1");
+  assert.equal(jan.dailyNorm, 6, "norm uit het rooster");
+  assert.equal(jan.lines.find(l => l.key === "overtime").quantity, 2, "8u - 6u norm = 2 overuren");
+});
+
+test("digest: samenvatting van de vorige maand met provider-label", () => {
+  const store = mkStore();
+  // Zet prikking in mei zodat 'vorige maand' t.o.v. juni data heeft.
+  store.data.clocks = [{ id: "c1", tenantId: "t1", userId: "u1", date: "2026-05-15", clockOut: "16:00", durationMinutes: 480 }];
+  store.data.leaves = [];
+  const dg = buildPayrollDigest(store, store.data.tenants[0], new Date("2026-06-10T00:00:00Z"));
+  assert.equal(dg.month, "2026-05");
+  assert.equal(dg.workedHours, 8);
+  assert.equal(dg.hasData, true);
+  assert.equal(dg.providerLabel, "Securex");
+});
+
+test("providerlijst: Acerta staat erin met label", () => {
+  const list = providerList();
+  const acerta = list.find(p => p.key === "acerta");
+  assert.ok(acerta && acerta.label === "Acerta");
+  assert.ok(list.find(p => p.key === "sdworx" && p.label === "SD Worx"));
+});
+
+test("readiness: provider-label + bevestig-de-codes-melding", () => {
+  const store = mkStore();
+  store.data.tenants[0].compliance.socialSecretariat.provider = "acerta";
+  const r = payrollReadiness(store.data.tenants[0]);
+  assert.equal(r.providerLabel, "Acerta");
+  assert.match(r.codeNote, /Acerta/);
 });

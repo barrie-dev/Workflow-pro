@@ -19,10 +19,15 @@ const from = `${month}-01`, to = `${month}-28`;
   const tok = (await j("POST", "/api/auth/login", { email: "admin@demobouw.be", password: "Demo2026!" })).data.token;
   const tid = (await j("GET", "/api/me", null, tok)).data.user.tenantId;
 
-  // 1) Config van het sociaal secretariaat zetten (aansluitingsnummer + provider).
-  const cfg = await j("POST", `/api/tenants/${tid}/payroll/config`, { provider: "securex", affiliateNumber: "SEC-12345" }, tok);
-  check("config: sociaal secretariaat ingesteld", cfg.status === 200 && cfg.data.readiness.provider === "securex", cfg.data.readiness && cfg.data.readiness.provider);
+  // 0) Providerlijst bevat Acerta (pilot-partner).
+  const cfg0 = await j("GET", `/api/tenants/${tid}/payroll/config`, null, tok);
+  check("providers: Acerta beschikbaar als sociaal secretariaat", (cfg0.data.providers || []).some(p => p.key === "acerta" && p.label === "Acerta"), (cfg0.data.providers || []).map(p => p.key).join(","));
+
+  // 1) Config zetten op ACERTA (pilot) met dagnorm 8u.
+  const cfg = await j("POST", `/api/tenants/${tid}/payroll/config`, { provider: "acerta", affiliateNumber: "ACE-12345", dailyNormHours: 8 }, tok);
+  check("config: Acerta ingesteld", cfg.status === 200 && cfg.data.readiness.provider === "acerta", cfg.data.readiness && cfg.data.readiness.provider);
   check("config: melding dat Monargo zelf niet aangeeft", /geen RSZ-aangifte/i.test(cfg.data.readiness.note || ""), cfg.data.readiness && cfg.data.readiness.note);
+  check("config: bevestig-codes-melding vermeldt Acerta", /Acerta/.test(cfg.data.readiness.codeNote || ""), cfg.data.readiness && cfg.data.readiness.codeNote);
 
   // 2) Bestaande actieve werknemers: Jan (krijgt INSZ + verlof), Sara (geen INSZ → waakhond).
   const janMe = await j("POST", "/api/auth/login", { email: "jan@demobouw.be", password: "Demo2026!" });
@@ -57,6 +62,15 @@ const from = `${month}-01`, to = `${month}-28`;
   // 6) Rechten: een gewone werknemer mag de prestatie-export NIET opvragen.
   const denied = await j("GET", `/api/tenants/${tid}/payroll/prestaties?from=${from}&to=${to}`, null, empTok);
   check("rechten: werknemer zonder personeelsrecht geweigerd", denied.status === 403, denied.status);
+
+  // 7) Maandelijkse Mona-melding (vorige maand) · idempotent per maand.
+  const dg = await j("POST", `/api/tenants/${tid}/payroll/digest`, {}, tok);
+  check("digest: maandsamenvatting opgehaald", dg.status === 200 && dg.data.digest && typeof dg.data.digest.month === "string", dg.data.digest && dg.data.digest.month);
+  // Er is mogelijk geen data in de vorige maand (verlof stond in deze maand) ·
+  // dan wordt er terecht geen melding gemaakt. We toetsen enkel dat het endpoint
+  // consistent reageert (idempotentie bij herhaling).
+  const dg2 = await j("POST", `/api/tenants/${tid}/payroll/digest`, {}, tok);
+  check("digest: idempotent (geen dubbele melding bij data)", dg.data.notified ? dg2.data.notified === false : dg2.data.notified === false, `${dg.data.notified}/${dg2.data.notified}`);
 
   console.log(failures ? `\n${failures} controle(s) faalden` : "\nPrestatie-export-smoke groen");
   exitSoft(failures ? 1 : 0);

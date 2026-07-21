@@ -342,7 +342,7 @@ const { seedDemoData, clearDemoData } = require("./modules/demo-seed");
 const { buildUbl, validatePeppol, sendPeppolInvoice, peppolTransportReadiness } = require("./modules/peppol-invoice");
 const quoteSigning = require("./modules/quote-signing");
 const { normalizeDimonaRecord, dimonaRegister } = require("./modules/dimona");
-const { buildPayrollExport, toCsv: payrollToCsv, payrollReadiness, KNOWN_PROVIDERS: payrollProviders } = require("./platform/social-secretariat");
+const { buildPayrollExport, buildPayrollDigest, toCsv: payrollToCsv, payrollReadiness, providerList: payrollProviderList, KNOWN_PROVIDERS: payrollProviders } = require("./platform/social-secretariat");
 const { submitCheckin, buildPresenceRegister } = require("./modules/ciaw");
 const { listPostedWorkers, createPostedWorker, updatePostedWorker, deletePostedWorker, submitLimosa } = require("./modules/posted-workers");
 const tpl = require("./modules/templates");
@@ -6765,24 +6765,53 @@ const httpServer = http.createServer(async (req, res) => {
       // het secretariaat kan verlonen. Monargo geeft zelf NIETS aan bij de RSZ.
       if (action === "payroll/config" && req.method === "GET") {
         assertCan(user, "employees");
-        sendJson(res, 200, { ok: true, readiness: payrollReadiness(tenant), providers: payrollProviders });
+        sendJson(res, 200, { ok: true, readiness: payrollReadiness(tenant), providers: payrollProviderList() });
         return;
       }
       if (action === "payroll/config" && req.method === "POST") {
         assertCan(user, "settings");
         assertApiKeyWriteAllowed(user, req);
         const body = await readBody(req).catch(() => ({}));
+        const prevSs = (tenant.compliance || {}).socialSecretariat || {};
         const compliance = { ...(tenant.compliance || {}) };
         const provider = payrollProviders.includes(String(body.provider || "").toLowerCase()) ? String(body.provider).toLowerCase() : "generic";
+        // Nachtvenster alleen bewaren als beide tijden geldig zijn (anders geen nachtmeting).
+        const nw = body.nightWindow || {};
+        const nightWindow = (/^\d{2}:\d{2}$/.test(String(nw.from)) && /^\d{2}:\d{2}$/.test(String(nw.to)))
+          ? { from: String(nw.from), to: String(nw.to) } : null;
         compliance.socialSecretariat = {
           provider,
           affiliateNumber: String(body.affiliateNumber || "").trim(),
-          codeMap: (body.codeMap && typeof body.codeMap === "object") ? body.codeMap : ((tenant.compliance || {}).socialSecretariat || {}).codeMap || {},
+          codeMap: (body.codeMap && typeof body.codeMap === "object") ? body.codeMap : prevSs.codeMap || {},
+          dailyNormHours: Number(body.dailyNormHours) > 0 ? Number(body.dailyNormHours) : (prevSs.dailyNormHours || undefined),
+          nightWindow: nightWindow || (body.nightWindow === null ? null : prevSs.nightWindow || null),
         };
         store.updateTenant(tenant.id, { compliance });
         tenant.compliance = compliance;
         store.audit({ actor: user.email, tenantId, action: "payroll_config_updated", area: "employees", detail: `secretariaat=${provider}` });
         sendJson(res, 200, { ok: true, readiness: payrollReadiness(tenant) });
+        return;
+      }
+      // Maandelijkse samenvatting (vorige maand) · GET toont, POST maakt de
+      // melding idempotent aan. Handmatige trigger voor ops en tests.
+      if (action === "payroll/digest" && (req.method === "GET" || req.method === "POST")) {
+        assertCan(user, "employees");
+        let digest;
+        try { digest = buildPayrollDigest(store, tenant); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        let notified = false;
+        if (req.method === "POST" && digest.hasData) {
+          const sourceRef = `payroll:digest:${digest.month}`;
+          if (!(store.data.notifications || []).some(n => n.tenantId === tenantId && n.sourceRef === sourceRef)) {
+            createNotification(store, tenant, {
+              type: "mona", audience: "admins", title: `Prestatiestaat ${digest.month} klaar`,
+              body: `De prestatiestaat van ${digest.month} staat klaar om door te sturen naar ${digest.providerLabel}: ${digest.exportable} werknemer(s), ${digest.workedHours} gewerkte uren, ${digest.leaveDays} verlofdag(en).`,
+              priority: "normal", sourceRef,
+            }, user);
+            notified = true;
+          }
+        }
+        sendJson(res, 200, { ok: true, digest, notified });
         return;
       }
       if (action === "payroll/prestaties" && req.method === "GET") {
@@ -7704,6 +7733,30 @@ function startServer() {
   };
   setTimeout(runMonaDigest, 90 * 1000).unref();
   setInterval(runMonaDigest, 24 * 60 * 60 * 1000).unref();
+
+  // Maandelijkse prestatiestaat-melding: begin van de maand meldt Mona dat de
+  // prestatiestaat van de VORIGE maand klaarstaat om door te sturen naar het
+  // sociaal secretariaat. Idempotent per maand (sourceRef). Enkel als het
+  // secretariaat geconfigureerd is én er data is. Geen aangifte · een seintje.
+  const runPayrollDigest = () => {
+    try {
+      for (const tenant of store.data.tenants || []) {
+        const ss = (tenant.compliance || {}).socialSecretariat;
+        if (!ss || !ss.affiliateNumber) continue;   // niet geconfigureerd → geen melding
+        const digest = buildPayrollDigest(store, tenant);
+        if (!digest.hasData) continue;
+        const sourceRef = `payroll:digest:${digest.month}`;
+        if ((store.data.notifications || []).some(n => n.tenantId === tenant.id && n.sourceRef === sourceRef)) continue;
+        createNotification(store, tenant, {
+          type: "mona", audience: "admins", title: `Prestatiestaat ${digest.month} klaar`,
+          body: `De prestatiestaat van ${digest.month} staat klaar om door te sturen naar ${digest.providerLabel}: ${digest.exportable} werknemer(s), ${digest.workedHours} gewerkte uren, ${digest.leaveDays} verlofdag(en). Download via Rapporten · Sociaal secretariaat.`,
+          priority: "normal", sourceRef,
+        }, { email: "mona" });
+      }
+    } catch (_) { /* een digest mag nooit het proces breken */ }
+  };
+  setTimeout(runPayrollDigest, 120 * 1000).unref();
+  setInterval(runPayrollDigest, 24 * 60 * 60 * 1000).unref();
 
   // Webhook-bezorging (E19/h41), gecoördineerd via de JobQueue (4.6): elke
   // minuut één cyclus over ALLE replicas samen. De idempotencyKey is het
