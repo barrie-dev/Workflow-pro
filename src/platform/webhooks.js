@@ -151,72 +151,144 @@ function makeWebhookRepository(store) {
  * @param {string} [opts.tenantId] beperk tot één tenant
  * @returns rapport met per poging het resultaat
  */
-async function deliverPending(store, { transport, limit = 25, tenantId = null, now = new Date() } = {}) {
-  if (typeof transport !== "function") throw new Error("deliverPending vereist een transport-functie");
-  // Alle endpoints (elke status) tellen mee voor het MATCHEN; alleen actieve
-  // krijgen effectief een levering. Zo wordt een event voor een gepauzeerd of
-  // fout endpoint niet stilzwijgend weggegooid, maar blijft het als achterstand
-  // staan tot het endpoint hervat wordt.
+// ── Deliveryrecords per event × endpoint (CTO P0-04) ────────────────────────
+// Eén event met meerdere abonnees kreeg vroeger ÉÉN deliverystatus: het eerste
+// succes markeerde het event als bezorgd terwijl andere endpoints nog niets
+// hadden. Elke (event × endpoint)-combinatie heeft nu een eigen record met
+// eigen pogingen, backoff en dead-letter · het event-niveau is een rollup.
+const DELIVERY_CAP = 5000;
+
+function ensureDeliveries(store) {
+  if (!Array.isArray(store.data.webhookDeliveries)) store.data.webhookDeliveries = [];
+  return store.data.webhookDeliveries;
+}
+
+function deliveryBackoffMs(attempts) {
+  return Math.min(60000 * 2 ** (attempts - 1), 6 * 3600000);   // 1m, 2m, 4m … cap 6u
+}
+
+/**
+ * Zorg dat elk openstaand event een deliveryrecord heeft per MATCHEND endpoint
+ * (ongeacht endpointstatus: een gepauzeerd endpoint houdt zo zichtbare
+ * achterstand). Deterministische id's maken dit idempotent. Events zonder
+ * enige abonnee worden als bezorgd gemarkeerd zodat de outbox niet volloopt.
+ */
+function materializeDeliveries(store, { tenantId = null, now = new Date() } = {}) {
+  const deliveries = ensureDeliveries(store);
+  const byId = new Set(deliveries.map(d => d.id));
   const endpoints = store.list("webhookEndpoints", tenantId) || [];
-  if (!endpoints.length) return { attempted: 0, delivered: 0, failed: 0, results: [] };
-
-  const nowIso = now.toISOString();
-  const pending = listOutbox(store, { status: "pending", tenantId, limit: 200 })
-    // Respecteer de backoff: nog niet toe aan een nieuwe poging → overslaan.
-    .filter(e => !e.delivery.nextAttemptAt || e.delivery.nextAttemptAt <= nowIso)
-    .reverse();                        // oudste eerst: volgorde zo veel mogelijk bewaren
-
+  const pending = listOutbox(store, { status: "pending", tenantId, limit: 200 });
   const results = [];
-  let delivered = 0, failed = 0;
   for (const event of pending) {
     const subscribed = endpoints.filter(ep => ep.tenantId === event.tenantId && matchesEventType(ep.eventTypes, event.eventType));
     if (!subscribed.length) {
-      // Niemand luistert: markeer als bezorgd zodat de outbox niet volloopt.
       markEventDelivered(store, event.id);
       results.push({ eventId: event.id, endpointId: null, status: "no_subscribers" });
       continue;
     }
-    const targets = subscribed.filter(ep => ep.status === "active");
-    if (!targets.length) {
-      // Wel abonnees, maar geen enkele actief: laat het event PENDING staan zodat
-      // het zichtbaar blijft als achterstand en alsnog vertrekt na hervatting.
-      results.push({ eventId: event.id, endpointId: null, status: "endpoint_inactive" });
-      continue;
+    for (const ep of subscribed) {
+      const id = `dl_${event.id}_${ep.id}`;
+      if (byId.has(id)) continue;
+      byId.add(id);
+      deliveries.push({
+        id, tenantId: event.tenantId, eventId: event.id, eventType: event.eventType, endpointId: ep.id,
+        status: "pending", attempts: 0, nextAttemptAt: null, lastError: null, statusCode: null,
+        createdAt: now.toISOString(), deliveredAt: null,
+      });
     }
-    for (const ep of targets) {
-      if (delivered + failed >= limit) break;
-      // Envelope zonder delivery-metadata en zonder actor-PII (h46).
-      const payload = {
-        id: event.id, eventType: event.eventType, tenantId: event.tenantId, companyId: event.companyId,
-        aggregateType: event.aggregateType, aggregateId: event.aggregateId,
-        occurredAt: event.occurredAt, correlationId: event.correlationId, version: event.version, data: event.data,
-      };
-      const body = JSON.stringify(payload);
-      const ts = Math.floor(now.getTime() / 1000);
-      const headers = {
-        "Content-Type": "application/json",
-        // De ontvanger dedupliceert op deze event-ID (at-least-once, h41).
-        "X-Monargo-Event-Id": event.id,
-        "X-Monargo-Event-Type": event.eventType,
-        "X-Monargo-Signature": signatureHeader(body, ep.secret, ts),
-        "X-Monargo-Delivery-Attempt": String((event.delivery.attempts || 0) + 1),
-      };
-      let ok = false, errorText = null, statusCode = 0;
-      try {
-        const res = await transport({ url: ep.url, body, headers });
-        statusCode = Number(res && res.statusCode) || 0;
-        ok = statusCode >= 200 && statusCode < 300;
-        if (!ok) errorText = `HTTP ${statusCode}${res && res.text ? ` · ${String(res.text).slice(0, 120)}` : ""}`;
-      } catch (e) {
-        errorText = String((e && e.message) || e).slice(0, 200);
-      }
-      recordEndpointResult(store, ep, ok, errorText, nowIso);
-      if (ok) { markEventDelivered(store, event.id); delivered++; }
-      else { markEventFailed(store, event.id, errorText, MAX_ATTEMPTS); failed++; }
-      results.push({ eventId: event.id, endpointId: ep.id, status: ok ? "delivered" : "failed", statusCode, error: errorText });
-    }
-    if (delivered + failed >= limit) break;
   }
+  if (deliveries.length > DELIVERY_CAP) {
+    // Alleen AFGEHANDELDE records opruimen; open werk blijft altijd staan.
+    const done = deliveries.filter(d => d.status === "delivered");
+    const keepDone = new Set(done.slice(-Math.max(0, DELIVERY_CAP - (deliveries.length - done.length))).map(d => d.id));
+    store.data.webhookDeliveries = deliveries.filter(d => d.status !== "delivered" || keepDone.has(d.id));
+  }
+  return results;
+}
+
+/** Rollup naar het event: pas bezorgd wanneer ÁLLE deliveries bezorgd zijn. */
+function rollupEvent(store, eventId) {
+  const rows = ensureDeliveries(store).filter(d => d.eventId === eventId);
+  if (!rows.length) return;
+  if (rows.every(d => d.status === "delivered")) { markEventDelivered(store, eventId); return; }
+  const event = (store.data.outbox || []).find(e => e.id === eventId);
+  if (!event) return;
+  const anyOpen = rows.some(d => d.status === "pending");
+  event.delivery = {
+    ...event.delivery,
+    status: anyOpen ? "pending" : "dead_letter",
+    lastError: rows.map(d => d.lastError).filter(Boolean).slice(-1)[0] || event.delivery.lastError || null,
+  };
+}
+
+async function deliverPending(store, { transport, limit = 25, tenantId = null, now = new Date() } = {}) {
+  if (typeof transport !== "function") throw new Error("deliverPending vereist een transport-functie");
+  const endpoints = store.list("webhookEndpoints", tenantId) || [];
+  if (!endpoints.length) return { attempted: 0, delivered: 0, failed: 0, results: [] };
+  const endpointById = new Map(endpoints.map(ep => [ep.id, ep]));
+
+  const nowIso = now.toISOString();
+  const results = materializeDeliveries(store, { tenantId, now });
+
+  // Due = openstaand, backoff verstreken, endpoint actief. Een niet-actief
+  // endpoint houdt zijn records als zichtbare achterstand tot hervatting.
+  const due = ensureDeliveries(store)
+    .filter(d => (!tenantId || d.tenantId === tenantId)
+      && d.status === "pending"
+      && (!d.nextAttemptAt || d.nextAttemptAt <= nowIso)
+      && endpointById.get(d.endpointId)
+      && endpointById.get(d.endpointId).status === "active")
+    .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)))   // oudste eerst
+    .slice(0, limit);
+
+  let delivered = 0, failed = 0;
+  const touchedEvents = new Set();
+  for (const d of due) {
+    const ep = endpointById.get(d.endpointId);
+    const event = (store.data.outbox || []).find(e => e.id === d.eventId);
+    if (!event) { d.status = "delivered"; d.deliveredAt = nowIso; continue; }   // event geruimd → niets meer te doen
+    // Envelope zonder delivery-metadata en zonder actor-PII (h46).
+    const payload = {
+      id: event.id, eventType: event.eventType, tenantId: event.tenantId, companyId: event.companyId,
+      aggregateType: event.aggregateType, aggregateId: event.aggregateId,
+      occurredAt: event.occurredAt, correlationId: event.correlationId, version: event.version, data: event.data,
+    };
+    const body = JSON.stringify(payload);
+    const ts = Math.floor(now.getTime() / 1000);
+    const headers = {
+      "Content-Type": "application/json",
+      // De ontvanger dedupliceert op deze event-ID (at-least-once, h41).
+      "X-Monargo-Event-Id": event.id,
+      "X-Monargo-Event-Type": event.eventType,
+      "X-Monargo-Signature": signatureHeader(body, ep.secret, ts),
+      "X-Monargo-Delivery-Attempt": String((d.attempts || 0) + 1),
+    };
+    let ok = false, errorText = null, statusCode = 0;
+    try {
+      const res = await transport({ url: ep.url, body, headers });
+      statusCode = Number(res && res.statusCode) || 0;
+      ok = statusCode >= 200 && statusCode < 300;
+      if (!ok) errorText = `HTTP ${statusCode}${res && res.text ? ` · ${String(res.text).slice(0, 120)}` : ""}`;
+    } catch (e) {
+      errorText = String((e && e.message) || e).slice(0, 200);
+    }
+    d.attempts = (d.attempts || 0) + 1;
+    d.statusCode = statusCode || null;
+    if (ok) {
+      d.status = "delivered"; d.deliveredAt = nowIso; d.lastError = null; d.nextAttemptAt = null;
+      delivered++;
+    } else {
+      d.lastError = errorText;
+      if (d.attempts >= MAX_ATTEMPTS) { d.status = "dead_letter"; d.nextAttemptAt = null; }
+      else { d.nextAttemptAt = new Date(now.getTime() + deliveryBackoffMs(d.attempts)).toISOString(); }
+      failed++;
+    }
+    recordEndpointResult(store, ep, ok, errorText, nowIso);
+    touchedEvents.add(d.eventId);
+    results.push({ eventId: d.eventId, endpointId: ep.id, deliveryId: d.id, status: ok ? "delivered" : (d.status === "dead_letter" ? "dead_letter" : "failed"), statusCode, error: errorText });
+  }
+  for (const eventId of touchedEvents) rollupEvent(store, eventId);
+  if (typeof store.save === "function" && (due.length || results.length)) store.save();
   return { attempted: delivered + failed, delivered, failed, results };
 }
 
@@ -239,12 +311,12 @@ function recordEndpointResult(store, endpoint, ok, errorText, nowIso) {
 function buildDeliveryHealth(store, tenantId, now = new Date()) {
   const nowIso = now.toISOString();
   const endpoints = store.list("webhookEndpoints", tenantId) || [];
+  const deliveries = ensureDeliveries(store).filter(d => d.tenantId === tenantId);
   const pending = listOutbox(store, { status: "pending", tenantId, limit: 200 });
-  const deadLetter = listOutbox(store, { status: "dead_letter", tenantId, limit: 200 });
   return {
     generatedAt: nowIso,
     endpoints: endpoints.map(ep => {
-      const backlog = pending.filter(e => matchesEventType(ep.eventTypes, e.eventType)).length;
+      const mine = deliveries.filter(d => d.endpointId === ep.id);
       const h = ep.health || {};
       return {
         id: ep.id, url: ep.url, status: ep.status, eventTypes: ep.eventTypes,
@@ -254,21 +326,51 @@ function buildDeliveryHealth(store, tenantId, now = new Date()) {
         consecutiveFailures: h.consecutiveFailures || 0,
         delivered: h.delivered || 0,
         failed: h.failed || 0,
-        backlog,
+        // Achterstand en dead-letter nu PER ENDPOINT uit de deliveryrecords
+        // (P0-04) · niet meer afgeleid uit de gedeelde eventstatus.
+        backlog: mine.filter(d => d.status === "pending").length,
+        deadLetter: mine.filter(d => d.status === "dead_letter").length,
       };
     }),
-    backlogTotal: pending.length,
-    deadLetterTotal: deadLetter.length,
+    backlogTotal: deliveries.filter(d => d.status === "pending").length || pending.length,
+    deadLetterTotal: deliveries.filter(d => d.status === "dead_letter").length,
   };
 }
 
+/** Deliveryrecords opvragen (integratiebeheer · filter per endpoint/status). */
+function listDeliveries(store, tenantId, { endpointId, eventId, status, limit = 100 } = {}) {
+  return ensureDeliveries(store)
+    .filter(d => d.tenantId === tenantId
+      && (!endpointId || d.endpointId === endpointId)
+      && (!eventId || d.eventId === eventId)
+      && (!status || d.status === status))
+    .slice()
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+    .slice(0, Math.min(Number(limit) || 100, 500));
+}
+
 /**
- * Handmatige herbezorging (h41 "fout opnieuw verwerken"): zet een dead-letter-
- * of mislukt event terug op pending zodat de volgende run het weer probeert.
+ * Handmatige herbezorging (h41 "fout opnieuw verwerken") van ÉÉN delivery:
+ * alleen dit endpoint probeert opnieuw, bezorgde endpoints blijven met rust.
  */
+function requeueDelivery(store, tenantId, deliveryId) {
+  const d = ensureDeliveries(store).find(x => x.id === deliveryId && x.tenantId === tenantId);
+  if (!d) { const e = new Error("Delivery niet gevonden"); e.status = 404; throw e; }
+  d.status = "pending"; d.attempts = 0; d.nextAttemptAt = null; d.lastError = null;
+  const event = (store.data.outbox || []).find(e => e.id === d.eventId && e.tenantId === tenantId);
+  if (event && event.delivery.status === "dead_letter") event.delivery = { ...event.delivery, status: "pending" };
+  if (typeof store.save === "function") store.save();
+  return d;
+}
+
+/** Herbezorging van een heel event: alle niet-bezorgde deliveries opnieuw. */
 function requeueEvent(store, tenantId, eventId) {
   const event = (store.data.outbox || []).find(e => e.id === eventId && e.tenantId === tenantId);
   if (!event) { const e = new Error("Event niet gevonden"); e.status = 404; throw e; }
+  for (const d of ensureDeliveries(store).filter(x => x.eventId === eventId && x.tenantId === tenantId)) {
+    if (d.status === "delivered") continue;   // al bezorgde endpoints niet dubbel beleveren
+    d.status = "pending"; d.attempts = 0; d.nextAttemptAt = null; d.lastError = null;
+  }
   event.delivery = { ...event.delivery, status: "pending", attempts: 0, nextAttemptAt: null, lastError: null };
   if (typeof store.save === "function") store.save();
   return event;
@@ -279,4 +381,5 @@ module.exports = {
   computeSignature, signatureHeader, verifySignature, matchesEventType,
   normalizeEndpoint, makeWebhookRepository,
   deliverPending, buildDeliveryHealth, requeueEvent,
+  materializeDeliveries, listDeliveries, requeueDelivery,
 };

@@ -104,11 +104,14 @@ test("webhook: mislukte levering gaat in retry met backoff, daarna dead-letter",
 
   const first = await deliverPending(store, { transport });
   assert.equal(first.failed, 1);
-  assert.match(first.results[0].error, /HTTP 500/);
-  let ev = store.data.outbox[0];
-  assert.equal(ev.delivery.status, "pending", "blijft pending voor een nieuwe poging");
-  assert.equal(ev.delivery.attempts, 1);
-  assert.ok(ev.delivery.nextAttemptAt, "backoff ingesteld");
+  const failResult = first.results.find(r => r.status === "failed");
+  assert.match(failResult.error, /HTTP 500/);
+  // Backoff en pogingen leven op het DELIVERYRECORD (P0-04).
+  let d = store.data.webhookDeliveries[0];
+  assert.equal(d.status, "pending", "blijft pending voor een nieuwe poging");
+  assert.equal(d.attempts, 1);
+  assert.ok(d.nextAttemptAt, "backoff ingesteld");
+  assert.equal(store.data.outbox[0].delivery.status, "pending", "event-rollup blijft pending");
 
   // Binnen de backoff wordt er niet opnieuw geprobeerd.
   const tooSoon = await deliverPending(store, { transport });
@@ -116,12 +119,13 @@ test("webhook: mislukte levering gaat in retry met backoff, daarna dead-letter",
 
   // Forceer de resterende pogingen (alsof de backoff verstreken is).
   for (let i = 1; i < MAX_ATTEMPTS; i++) {
-    store.data.outbox[0].delivery.nextAttemptAt = null;
+    store.data.webhookDeliveries.forEach(x => { x.nextAttemptAt = null; });
     await deliverPending(store, { transport });
   }
-  ev = store.data.outbox[0];
-  assert.equal(ev.delivery.status, "dead_letter", `na ${MAX_ATTEMPTS} pogingen naar dead-letter`);
-  assert.equal(ev.delivery.attempts, MAX_ATTEMPTS);
+  d = store.data.webhookDeliveries[0];
+  assert.equal(d.status, "dead_letter", `na ${MAX_ATTEMPTS} pogingen naar dead-letter`);
+  assert.equal(d.attempts, MAX_ATTEMPTS);
+  assert.equal(store.data.outbox[0].delivery.status, "dead_letter", "rollup volgt de delivery");
 });
 
 test("webhook: endpoint gaat op error na opeenvolgende fouten en herstelt bij succes", async () => {
@@ -134,25 +138,26 @@ test("webhook: endpoint gaat op error na opeenvolgende fouten en herstelt bij su
   // Blijven falen tot de circuit breaker het endpoint uitschakelt.
   for (let i = 0; i < 30 && repo.findById("t1", ep.id).status === "active"; i++) {
     emitDomainEvent(store, { tenantId: "t1", eventType: "job.done", aggregateType: "job", aggregateId: `j${i}` });
-    store.data.outbox.forEach(e => { e.delivery.nextAttemptAt = null; });
+    (store.data.webhookDeliveries || []).forEach(x => { x.nextAttemptAt = null; });
     await deliverPending(store, { transport });
   }
   assert.equal(repo.findById("t1", ep.id).status, "error");
   assert.ok(repo.findById("t1", ep.id).health.consecutiveFailures >= ERROR_THRESHOLD);
 
-  // Een endpoint in "error" krijgt geen leveringen meer, maar de events blijven
-  // als ACHTERSTAND staan (niet stilzwijgend weggegooid).
+  // Een endpoint in "error" krijgt geen leveringen meer, maar de deliveries
+  // blijven als ACHTERSTAND staan (niet stilzwijgend weggegooid).
   emitDomainEvent(store, { tenantId: "t1", eventType: "job.done", aggregateType: "job", aggregateId: "j99" });
-  store.data.outbox.forEach(e => { e.delivery.nextAttemptAt = null; });
+  (store.data.webhookDeliveries || []).forEach(x => { x.nextAttemptAt = null; });
   const skipped = await deliverPending(store, { transport });
   assert.equal(skipped.attempted, 0, "niet-actief endpoint krijgt geen leveringen");
-  assert.ok(skipped.results.some(r => r.status === "endpoint_inactive"), "wel zichtbaar als wachtend");
+  const { buildDeliveryHealth } = require("../src/platform/webhooks");
+  assert.ok(buildDeliveryHealth(store, "t1").endpoints[0].backlog > 0, "achterstand zichtbaar per endpoint");
   assert.ok(listOutbox(store, { status: "pending", tenantId: "t1" }).length > 0, "events blijven bewaard");
 
   // Hervatten + succes → status terug actief.
   mode = "ok";
   repo.update("t1", ep.id, { url: ep.url, eventTypes: ep.eventTypes, status: "active" }, "admin");
-  store.data.outbox.forEach(e => { e.delivery.nextAttemptAt = null; });
+  (store.data.webhookDeliveries || []).forEach(x => { x.nextAttemptAt = null; });
   await deliverPending(store, { transport });
   assert.equal(repo.findById("t1", ep.id).status, "active", "zelfherstel na succesvolle levering");
 });
@@ -192,7 +197,7 @@ test("webhook: dead-letter kan handmatig opnieuw in de wachtrij", async () => {
   const event = emitDomainEvent(store, { tenantId: "t1", eventType: "invoice.created", aggregateType: "invoice", aggregateId: "i1" });
   const transport = fakeTransport(() => ({ statusCode: 500 }));
   for (let i = 0; i < MAX_ATTEMPTS; i++) {
-    store.data.outbox.forEach(e => { e.delivery.nextAttemptAt = null; });
+    (store.data.webhookDeliveries || []).forEach(x => { x.nextAttemptAt = null; });
     await deliverPending(store, { transport });
   }
   assert.equal(store.data.outbox[0].delivery.status, "dead_letter");
@@ -202,6 +207,58 @@ test("webhook: dead-letter kan handmatig opnieuw in de wachtrij", async () => {
   // En dan lukt het alsnog.
   const ok = await deliverPending(store, { transport: fakeTransport(() => ({ statusCode: 200 })) });
   assert.equal(ok.delivered, 1);
+});
+
+test("P0-04-kern: twee abonnees, één faalt → event pas bezorgd als BEIDE het hebben", async () => {
+  const store = fakeStore();
+  const repo = makeWebhookRepository(store);
+  repo.insert("t1", { url: "https://ok.be/hook", eventTypes: ["invoice.created"] }, "admin");
+  repo.insert("t1", { url: "https://stuk.be/hook", eventTypes: ["invoice.created"] }, "admin");
+  emitDomainEvent(store, { tenantId: "t1", eventType: "invoice.created", aggregateType: "invoice", aggregateId: "i1" });
+
+  const calls = [];
+  const transport = async ({ url }) => { calls.push(url); return { statusCode: url.includes("ok.be") ? 200 : 500 }; };
+
+  const first = await deliverPending(store, { transport });
+  assert.equal(first.delivered, 1);
+  assert.equal(first.failed, 1);
+  // VROEGER: het eerste succes markeerde het event als bezorgd en stuk.be
+  // kreeg het nooit. NU: het event blijft pending tot iedereen het heeft.
+  assert.equal(store.data.outbox[0].delivery.status, "pending", "één succes is niet genoeg");
+  const perEndpoint = new Map(store.data.webhookDeliveries.map(d => [d.endpointId, d.status]));
+  assert.deepEqual([...perEndpoint.values()].sort(), ["delivered", "pending"], "status per endpoint apart");
+
+  // Retry raakt ALLEEN het falende endpoint · ok.be wordt niet dubbel beleverd.
+  const callsBefore = calls.length;
+  store.data.webhookDeliveries.forEach(d => { d.nextAttemptAt = null; });
+  const second = await deliverPending(store, { transport: async ({ url }) => { calls.push(url); return { statusCode: 200 }; } });
+  assert.equal(second.attempted, 1, "alleen de openstaande delivery");
+  assert.equal(calls.length, callsBefore + 1);
+  assert.ok(!calls.slice(callsBefore).some(u => u.includes("ok.be")), "bezorgd endpoint blijft met rust");
+  assert.equal(store.data.outbox[0].delivery.status, "delivered", "nu iedereen het heeft → bezorgd");
+});
+
+test("P0-04: requeue van één delivery raakt alleen dat endpoint", async () => {
+  const store = fakeStore();
+  const repo = makeWebhookRepository(store);
+  repo.insert("t1", { url: "https://ok.be/hook", eventTypes: ["invoice.created"] }, "admin");
+  repo.insert("t1", { url: "https://stuk.be/hook", eventTypes: ["invoice.created"] }, "admin");
+  emitDomainEvent(store, { tenantId: "t1", eventType: "invoice.created", aggregateType: "invoice", aggregateId: "i1" });
+  const transport = async ({ url }) => ({ statusCode: url.includes("ok.be") ? 200 : 500 });
+  for (let i = 0; i < MAX_ATTEMPTS; i++) {
+    (store.data.webhookDeliveries || []).forEach(d => { d.nextAttemptAt = null; });
+    await deliverPending(store, { transport });
+  }
+  const dead = store.data.webhookDeliveries.find(d => d.status === "dead_letter");
+  assert.ok(dead, "falend endpoint eindigt in dead-letter");
+
+  const { requeueDelivery, listDeliveries } = require("../src/platform/webhooks");
+  requeueDelivery(store, "t1", dead.id);
+  assert.equal(store.data.webhookDeliveries.find(d => d.id === dead.id).status, "pending");
+  assert.equal(listDeliveries(store, "t1", { status: "delivered" }).length, 1, "bezorgde delivery onaangeroerd");
+  const ok = await deliverPending(store, { transport: async () => ({ statusCode: 200 }) });
+  assert.equal(ok.delivered, 1);
+  assert.equal(store.data.outbox[0].delivery.status, "delivered");
 });
 
 test("webhook: transport is verplicht (cloudblind · geen impliciete netwerkcall)", async () => {

@@ -232,7 +232,7 @@ const { makeContractRepository } = require("./platform/contracts");
 const { makeSupplierRepository, makePurchaseOrderRepository } = require("./platform/procurement");
 const { makeCatalogRepository, resolvePrice, snapshotForLine, explodeComposition } = require("./platform/catalog");
 const { makeWorkOrderRepository, computeTotals: computeWoTotals, buildInvoiceLines: buildWoInvoiceLines } = require("./platform/work-orders");
-const { makeWebhookRepository, deliverPending, buildDeliveryHealth, requeueEvent } = require("./platform/webhooks");
+const { makeWebhookRepository, deliverPending, buildDeliveryHealth, requeueEvent, listDeliveries, requeueDelivery } = require("./platform/webhooks");
 const { makeProgressClaimRepository, computeClaimTotals } = require("./platform/progress-claims");
 const paymentsModule = require("./platform/payments");
 const { makeEmployeeRepository, rateOn, availabilityOn, expiringCertificates } = require("./platform/employees");
@@ -3042,6 +3042,29 @@ const httpServer = http.createServer(async (req, res) => {
         assertInteractiveUser(user);
         const report = await deliverPending(store, { transport: webhookTransport, tenantId, limit: 50 });
         sendJson(res, 200, { ok: true, ...report });
+        return;
+      }
+      // Deliveryrecords per event × endpoint (P0-04): traceerbaar per abonnee.
+      if (action === "webhooks/deliveries" && req.method === "GET") {
+        assertCan(user, "integrations");
+        sendJson(res, 200, { ok: true, deliveries: listDeliveries(store, tenantId, {
+          endpointId: url.searchParams.get("endpointId") || undefined,
+          eventId: url.searchParams.get("eventId") || undefined,
+          status: url.searchParams.get("status") || undefined,
+          limit: url.searchParams.get("limit") || undefined,
+        }) });
+        return;
+      }
+      // Eén delivery opnieuw proberen · bezorgde endpoints blijven met rust.
+      const deliveryRequeueMatch = action.match(/^webhooks\/deliveries\/([^/]+)\/requeue$/);
+      if (deliveryRequeueMatch && req.method === "POST") {
+        assertCan(user, "integrations");
+        assertInteractiveUser(user);
+        let d;
+        try { d = requeueDelivery(store, tenantId, deliveryRequeueMatch[1]); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "webhook_delivery_requeued", area: "integrations", detail: d.id });
+        sendJson(res, 200, { ok: true, delivery: d });
         return;
       }
       // Mislukt of dead-letter event opnieuw in de wachtrij (h41).
