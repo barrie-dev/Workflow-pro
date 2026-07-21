@@ -119,12 +119,14 @@ if [ $DBRC -ne 0 ]; then
 fi
 
 echo "-> firewall: Azure-diensten + je eigen IP"
-az postgres flexible-server firewall-rule create -g "$RG" -n "$PG" \
-  --rule-name allow-azure --start-ip-address 0.0.0.0 --end-ip-address 0.0.0.0 -o none || true
+# firewall-rule: --server-name is de server, --name is de REGELnaam.
+az postgres flexible-server firewall-rule create -g "$RG" --server-name "$PG" \
+  --name allow-azure --start-ip-address 0.0.0.0 --end-ip-address 0.0.0.0 -o none || true
 MYIP="$(curl -s https://api.ipify.org || true)"
 if [ -n "$MYIP" ]; then
-  az postgres flexible-server firewall-rule create -g "$RG" -n "$PG" \
-    --rule-name my-ip --start-ip-address "$MYIP" --end-ip-address "$MYIP" -o none || true
+  az postgres flexible-server firewall-rule create -g "$RG" --server-name "$PG" \
+    --name my-ip --start-ip-address "$MYIP" --end-ip-address "$MYIP" -o none || true
+  echo "   je IP ($MYIP) toegevoegd"
 fi
 
 echo "-> Storage Account + private container + herstelvangnet"
