@@ -96,11 +96,47 @@ jobs:
           fi
           echo "Alle database- en opslag-gebonden tests hebben echt gedraaid."
 
+  # ── E2E-scenario's (CTO DEV-02): verplicht ná unit/integratie, vóór de
+  # containersmoke/release. Elke smoke krijgt een verse, geïsoleerde dataset op
+  # de JSON-adapter. Faalt de suite, dan wordt er niet gebouwd of vrijgegeven.
+  e2e:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js 22 (enige runtime · CI = Docker = Azure)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install dependencies
+        run: npm install --omit=dev
+      - name: E2E-suite (verse dataset per scenario)
+        run: |
+          set -o pipefail
+          npm run test:e2e 2>&1 | tee /tmp/e2e-out.txt
+      - name: Roadmap-gate (DEV-01) · draai + matrix als evidence
+        # De gate is bewust ROOD tot de kern sluit (cutover/tx/e2e). We draaien
+        # hem zichtbaar en bewaren de matrix; hij wordt een HARDE gate zodra hij
+        # groen is. Daarom hier niet-blokkerend (|| true).
+        run: |
+          node scripts/generate-traceability.js
+          node scripts/check-roadmap-status.js || true
+      - name: Upload E2E- en traceability-evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-and-traceability
+          path: |
+            /tmp/e2e-out.txt
+            docs/traceability/matrix.json
+            docs/traceability/matrix.md
+
   # ── Containersmoke (CTO P0-01/P0-05): het gedocumenteerde standaardpad ─────
   # Bouw de echte image, start db + app via compose (incl. migratiestap in de
   # container) en bewijs health + readiness vanaf een LEGE database.
   container-smoke:
     runs-on: ubuntu-latest
+    needs: e2e
     steps:
       - uses: actions/checkout@v4
       - name: Compose build + start (leeg → migraties → app)

@@ -375,6 +375,7 @@ const {
 const { listErrorEvents } = require("./modules/errors");
 const { homeSuggestion, recordSuggestionEvent } = require("./modules/suggestions");
 const { roadmapStatus } = require("./modules/roadmap");
+const { buildTraceability } = require("./modules/traceability");
 const { openApiSpec } = require("./modules/openapi");
 const {
   listStock, getStockItem, createStockItem,
@@ -2185,6 +2186,18 @@ const httpServer = http.createServer(async (req, res) => {
       if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
       assertSuperAdmin(user);
       sendJson(res, 200, { ok: true, migration: migrationOrchestrator.status() });
+      return;
+    }
+    // DEV-01 · Traceability-matrix (R0-R7/E01-E22/DoD) uit één bron van waarheid.
+    // Dezelfde afleiding die de CLI-gate en het releaseverslag gebruiken, zodat
+    // CLI, admin-UI en rapport nooit uit elkaar lopen.
+    if (url.pathname === "/api/admin/traceability" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertSuperAdmin(user);
+      const matrix = buildTraceability({ repoRoot: process.cwd(), commitSha: config.commitSha || "unknown" });
+      matrix.generatedAt = new Date().toISOString();
+      sendJson(res, 200, { ok: true, traceability: matrix });
       return;
     }
     if (url.pathname === "/api/admin/migration/reconcile" && req.method === "POST") {

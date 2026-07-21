@@ -1,0 +1,1281 @@
+{
+  "generatedAt": "2026-07-21T16:23:01.672Z",
+  "commitSha": "52f429d",
+  "gateIssue": "https://github.com/barrie-dev/Workflow-pro/issues/40",
+  "summary": {
+    "releases": 8,
+    "releasesGreen": 0,
+    "releasesEvidenceGreen": 7,
+    "epics": 22,
+    "epicsVerified": 22,
+    "epicsMissingEvidence": 0,
+    "epicsUnmapped": 0,
+    "requirements": 761,
+    "requirementsCovered": 693,
+    "dodTotal": 9,
+    "dodGreen": 9
+  },
+  "gate": {
+    "ok": false,
+    "p0ReleasesGreen": false,
+    "dodGreen": true,
+    "blocking": [
+      {
+        "type": "condition",
+        "id": "R0.identity_cutover",
+        "reason": "cutover-identity.json ontbreekt · read source staat standaard op legacy (DEV-03)."
+      },
+      {
+        "type": "condition",
+        "id": "R0.company_cutover",
+        "reason": "cutover-company.json ontbreekt (DEV-03)."
+      },
+      {
+        "type": "condition",
+        "id": "R0.crm_cutover",
+        "reason": "cutover-crm.json ontbreekt (DEV-03)."
+      },
+      {
+        "type": "release",
+        "id": "R1",
+        "reason": "geblokkeerd door R0 (dependencyvolgorde)"
+      },
+      {
+        "type": "release",
+        "id": "R2",
+        "reason": "geblokkeerd door R0 (dependencyvolgorde)"
+      }
+    ]
+  },
+  "releases": [
+    {
+      "id": "R0",
+      "title": "Architecture foundation",
+      "priority": "P0",
+      "detail": "Company, normalized identity and CRM tables, policy service, outbox, file storage, API conventions, compatibility repositories.",
+      "epicCount": 4,
+      "verified": 4,
+      "evidenceGreen": true,
+      "conditions": [
+        {
+          "key": "identity_cutover",
+          "label": "Identity read-cutover naar pg bewezen",
+          "ok": false,
+          "detail": "cutover-identity.json ontbreekt · read source staat standaard op legacy (DEV-03)."
+        },
+        {
+          "key": "company_cutover",
+          "label": "Company read-cutover naar pg bewezen",
+          "ok": false,
+          "detail": "cutover-company.json ontbreekt (DEV-03)."
+        },
+        {
+          "key": "crm_cutover",
+          "label": "CRM read-cutover naar pg bewezen",
+          "ok": false,
+          "detail": "cutover-crm.json ontbreekt (DEV-03)."
+        }
+      ],
+      "blockedBy": [],
+      "gateGreen": false,
+      "epics": [
+        "E01",
+        "E02",
+        "E03",
+        "E10"
+      ],
+      "note": ""
+    },
+    {
+      "id": "R1",
+      "title": "Complete horizontal flow",
+      "priority": "P0",
+      "detail": "Customer, quote versions, project, job, planning, work order, time, invoice, Peppol, credit and basic project actuals.",
+      "epicCount": 7,
+      "verified": 7,
+      "evidenceGreen": true,
+      "conditions": [
+        {
+          "key": "horizontal_e2e",
+          "label": "9 verplichte E2E-scenario's volledig",
+          "ok": false,
+          "detail": "e2e-scenarios.json ontbreekt · doorlopende klant→betaling-flow nog niet als één scenario (DEV-02)."
+        },
+        {
+          "key": "finance_tx",
+          "label": "Finance-mutaties via pg TransactionManager",
+          "ok": false,
+          "detail": "finance-source/pg-finance-repository gebruikt de pg TransactionManager nog niet (DEV-04)."
+        },
+        {
+          "key": "finance_cutover",
+          "label": "Finance read-cutover naar pg bewezen",
+          "ok": false,
+          "detail": "cutover-finance.json ontbreekt (DEV-03)."
+        }
+      ],
+      "blockedBy": [
+        "R0"
+      ],
+      "gateGreen": false,
+      "epics": [
+        "E04",
+        "E05",
+        "E06",
+        "E07",
+        "E08",
+        "E09",
+        "E22"
+      ],
+      "note": ""
+    },
+    {
+      "id": "R2",
+      "title": "Construction Core",
+      "priority": "P0/P1",
+      "detail": "Worksites, project parties, change orders, construction forms, compliance, material usage and basic stock.",
+      "epicCount": 1,
+      "verified": 1,
+      "evidenceGreen": true,
+      "conditions": [],
+      "blockedBy": [
+        "R0"
+      ],
+      "gateGreen": false,
+      "epics": [
+        "E12"
+      ],
+      "note": ""
+    },
+    {
+      "id": "R3",
+      "title": "Service & Assets",
+      "priority": "P1",
+      "detail": "Assets, installations, maintenance plans, service contracts and history.",
+      "epicCount": 1,
+      "verified": 1,
+      "evidenceGreen": true,
+      "conditions": [],
+      "blockedBy": [
+        "R0"
+      ],
+      "gateGreen": false,
+      "epics": [
+        "E16"
+      ],
+      "note": ""
+    },
+    {
+      "id": "R4",
+      "title": "Project finance and contracts",
+      "priority": "P1",
+      "detail": "Budget, actual, commitments, forecast, customer contracts and recurring rules.",
+      "epicCount": 2,
+      "verified": 2,
+      "evidenceGreen": true,
+      "conditions": [
+        {
+          "key": "pfi_tx",
+          "label": "Projectfinance database-native transactioneel",
+          "ok": false,
+          "detail": "commitments/actuals/forecast nog niet database-native transactioneel (DEV-04)."
+        }
+      ],
+      "blockedBy": [
+        "R0"
+      ],
+      "gateGreen": false,
+      "epics": [
+        "E14",
+        "E15"
+      ],
+      "note": ""
+    },
+    {
+      "id": "R5",
+      "title": "Procurement and inventory",
+      "priority": "P2",
+      "detail": "Suppliers, purchase orders, receipts, reservations and deeper stock.",
+      "epicCount": 3,
+      "verified": 3,
+      "evidenceGreen": true,
+      "conditions": [],
+      "blockedBy": [
+        "R0"
+      ],
+      "gateGreen": false,
+      "epics": [
+        "E13",
+        "E17",
+        "E18"
+      ],
+      "note": ""
+    },
+    {
+      "id": "R6",
+      "title": "Switcher and ecosystem",
+      "priority": "P1/P2",
+      "detail": "Robaws importer, accounting connectors, integration health, customer and supplier portal.",
+      "epicCount": 4,
+      "verified": 4,
+      "evidenceGreen": true,
+      "conditions": [],
+      "blockedBy": [
+        "R0"
+      ],
+      "gateGreen": false,
+      "epics": [
+        "E11",
+        "E19",
+        "E20",
+        "E21"
+      ],
+      "note": ""
+    },
+    {
+      "id": "R7",
+      "title": "Construction Advanced",
+      "priority": "P3",
+      "detail": "Advanced calculation, price requests, wholesaler integrations, progress claims and price revision.",
+      "epicCount": 0,
+      "verified": 0,
+      "evidenceGreen": false,
+      "conditions": [],
+      "blockedBy": [
+        "R0"
+      ],
+      "gateGreen": false,
+      "epics": [],
+      "note": "Geen epics gekoppeld · bewust gated tot R0-R6 voldoen."
+    }
+  ],
+  "epics": [
+    {
+      "id": "E01",
+      "title": "Canonical Company and tenant context",
+      "priority": "P0",
+      "domain": "PLT",
+      "release": "R0",
+      "status": "verified",
+      "evidence": {
+        "impl": [
+          {
+            "file": "src/platform/companies.js",
+            "ok": true
+          }
+        ],
+        "tests": [
+          {
+            "file": "test/companies.test.js",
+            "ok": true
+          },
+          {
+            "file": "test/pg-company.test.js",
+            "ok": true
+          }
+        ],
+        "e2e": [
+          {
+            "file": "test/e2e/company-smoke.js",
+            "ok": true
+          }
+        ],
+        "migrations": [
+          {
+            "file": "001_core.sql",
+            "ok": true
+          },
+          {
+            "file": "007_company_fingerprint.sql",
+            "ok": true
+          }
+        ],
+        "missing": []
+      },
+      "reqDomains": [
+        "PLT"
+      ],
+      "risk": "platform_state-singleton nog leidend voor schrijven"
+    },
+    {
+      "id": "E02",
+      "title": "Policy engine",
+      "priority": "P0",
+      "domain": "IAM",
+      "release": "R0",
+      "status": "verified",
+      "evidence": {
+        "impl": [
+          {
+            "file": "src/platform/policy.js",
+            "ok": true
+          }
+        ],
+        "tests": [
+          {
+            "file": "test/policy.test.js",
+            "ok": true
+          },
+          {
+            "file": "test/nav-gating.test.js",
+            "ok": true
+          }
+        ],
+        "e2e": [
+          {
+            "file": "test/e2e/policy-smoke.js",
+            "ok": true
+          }
+        ],
+        "migrations": [],
+        "missing": []
+      },
+      "reqDomains": [
+        "SEC"
+      ],
+      "risk": "volledige padenscan (UI/API/export/search) nog niet uitputtend"
+    },
+    {
+      "id": "E03",
+      "title": "Normalized CRM",
+      "priority": "P0",
+      "domain": "CRM",
+      "release": "R0",
+      "status": "verified",
+      "evidence": {
+        "impl": [
+          {
+            "file": "src/platform/crm.js",
+            "ok": true
+          },
+          {
+            "file": "src/infrastructure/crm-source.js",
+            "ok": true
+          },
+          {
+            "file": "src/infrastructure/postgres/pg-customer-repository.js",
+            "ok": true
+          }
+        ],
+        "tests": [
+          {
+            "file": "test/crm.test.js",
+            "ok": true
+          },
+          {
+            "file": "test/pg-crm.test.js",
+            "ok": true
+          },
+          {
+            "file": "test/crm-source.test.js",
+            "ok": true
+          }
+        ],
+        "e2e": [
+          {
+            "file": "test/e2e/crm-smoke.js",
+            "ok": true
+          }
+        ],
+        "migrations": [
+          {
+            "file": "002_crm.sql",
+            "ok": true
+          }
+        ],
+        "missing": []
+      },
+      "reqDomains": [
+        "CRM",
+        "SUP"
+      ],
+      "risk": "read source staat standaard op legacy; cutover nog niet vrijgegeven"
+    },
+    {
+      "id": "E04",
+      "title": "Project aggregate",
+      "priority": "P0",
+      "domain": "PRJ",
+      "release": "R1",
+      "status": "verified",
+      "evidence": {
+        "impl": [
+          {
+            "file": "src/platform/projects.js",
+            "ok": true
+          }
+        ],
+        "tests": [
+          {
+            "file": "test/projects.test.js",
+            "ok": true
+          }
+        ],
+        "e2e": [
+          {
+            "file": "test/e2e/projects-smoke.js",
+            "ok": true
+          }
+        ],
+        "migrations": [],
+        "missing": []
+      },
+      "reqDomains": [
+        "PRJ"
+      ],
+      "risk": "project nog niet genormaliseerd als primaire runtime"
+    },
+    {
+      "id": "E05",
+      "title": "Quote versioning",
+      "priority": "P0",
+      "domain": "QTE",
+      "release": "R1",
+      "status": "verified",
+      "evidence": {
+        "impl": [
+          {
+            "file": "src/platform/quote-versions.js",
+            "ok": true
+          },
+          {
+            "file": "src/modules/quote-signing.js",
+            "ok": true
+          }
+        ],
+        "tests": [
+          {
+            "file": "test/quote-versions.test.js",
+            "ok": true
+          },
+          {
+            "file": "test/quote-signing.test.js",
+            "ok": true
+          }
+        ],
+        "e2e": [
+          {
+            "file": "test/e2e/quoteversion-smoke.js",
+            "ok": true
+          },
+          {
+            "file": "test/e2e/signing-smoke.js",
+            "ok": true
+          }
+        ],
+        "migrations": [],
+        "missing": []
+      },
+      "reqDomains": [
+        "QOT"
+      ],
+      "risk": ""
+    },
+    {
+      "id": "E06",
+      "title": "Unified planning",
+      "priority": "P0",
+      "domain": "PLN",
+      "release": "R1",
+      "status": "verified",
+      "evidence": {
+        "impl": [
+          {
+            "file": "src/platform/planning.js",
+            "ok": true
+          },
+          {
+            "file": "src/modules/planning-rules.js",
+            "ok": true
+          }
+        ],
+        "tests": [
+          {
+            "file": "test/planning-unified.test.js",
+            "ok": true
+          }
+        ],
+        "e2e": [
+          {
+            "file": "test/e2e/planning-smoke.js",
+            "ok": true
+          }
+        ],
+        "migrations": [],
+        "missing": []
+      },
+      "reqDomains": [
+        "CAL"
+      ],
+      "risk": ""
+    },
+    {
+      "id": "E07",
+      "title": "Mobile work order v2",
+      "priority": "P0",
+      "domain": "JOB",
+      "release": "R1",
+      "status": "verified",
+      "evidence": {
+        "impl": [
+          {
+            "file": "src/platform/work-orders.js",
+            "ok": true
+          },
+          {
+            "file": "src/modules/workorder-rules.js",
+            "ok": true
+          },
+          {
+            "file": "src/modules/mobile.js",
+            "ok": true
+          }
+        ],
+        "tests": [
+          {
+            "file": "test/work-orders.test.js",
+            "ok": true
+          }
+        ],
+        "e2e": [
+          {
+            "file": "test/e2e/workorder-smoke.js",
+            "ok": true
+          },
+          {
+            "file": "test/e2e/mobile-offline-smoke.js",
+            "ok": true
+          }
+        ],
+        "migrations": [
+          {
+            "file": "003_jobs.sql",
+            "ok": true
+          }
+        ],
+        "missing": []
+      },
+      "reqDomains": [
+        "WBO",
+        "DOC"
+      ],
+      "risk": "offline foto-upload/duplicaat/conflict nog niet volledig E2E bewezen"
+    },
+    {
+      "id": "E08",
+      "title": "Invoice v2",
+      "priority": "P0",
+      "domain": "FIN",
+      "release": "R1",
+      "status": "verified",
+      "evidence": {
+        "impl": [
+          {
+            "file": "src/modules/customer-invoicing.js",
+            "ok": true
+          },
+          {
+            "file": "src/infrastructure/finance-source.js",
+            "ok": true
+          },
+          {
+            "file": "src/infrastructure/postgres/pg-finance-repository.js",
+            "ok": true
+          },
+          {
+            "file": "src/modules/payments.js",
+            "ok": true
+          }
+        ],
+        "tests": [
+          {
+            "file": "test/pg-finance.test.js",
+            "ok": true
+          },
+          {
+            "file": "test/payments.test.js",
+            "ok": true
+          },
+          {
+            "file": "test/financial-reconciliation.test.js",
+            "ok": true
+          },
+          {
+            "file": "test/credit-notes.test.js",
+            "ok": true
+          }
+        ],
+        "e2e": [
+          {
+            "file": "test/e2e/finance-smoke.js",
+            "ok": true
+          },
+          {
+            "file": "test/e2e/payments-smoke.js",
+            "ok": true
+          },
+          {
+            "file": "test/e2e/credit-smoke.js",
+            "ok": true
+          },
+          {
+            "file": "test/e2e/reconciliation-smoke.js",
+            "ok": true
+          }
+        ],
+        "migrations": [
+          {
+            "file": "006_finance.sql",
+            "ok": true
+          }
+        ],
+        "missing": []
+      },
+      "reqDomains": [
+        "SIV",
+        "PIV",
+        "PPL"
+      ],
+      "risk": "kritieke financiële mutaties nog niet aantoonbaar via pg TransactionManager (DEV-04)"
+    },
+    {
+      "id": "E09",
+      "title": "Work Inbox",
+      "priority": "P1",
+      "domain": "GRID",
+      "release": "R1",
+      "status": "verified",
+      "evidence": {
+        "impl": [
+          {
+            "file": "src/platform/work-inbox.js",
+            "ok": true
+          },
+          {
+            "file": "src/platform/grid.js",
+            "ok": true
+          },
+          {
+            "file": "src/modules/inbox.js",
+            "ok": true
+          }
+        ],
+        "tests": [
+          {
+            "file": "test/work-inbox.test.js",
+            "ok": true
+          },
+          {
+            "file": "test/inbox.test.js",
+            "ok": true
+          },
+          {
+            "file": "test/grid.test.js",
+            "ok": true
+          }
+        ],
+        "e2e": [
+          {
+            "file": "test/e2e/grid-smoke.js",
+            "ok": true
+          }
+        ],
+        "migrations": [],
+        "missing": []
+      },
+      "reqDomains": [
+        "GRD"
+      ],
+      "risk": ""
+    },
+    {
+      "id": "E10",
+      "title": "Configuration platform",
+      "priority": "P0",
+      "domain": "CFG",
+      "release": "R0",
+      "status": "verified",
+      "evidence": {
+        "impl": [
+          {
+            "file": "src/platform/config-platform.js",
+            "ok": true
+          }
+        ],
+        "tests": [
+          {
+            "file": "test/config-platform.test.js",
+            "ok": true
+          }
+        ],
+        "e2e": [],
+        "migrations": [],
+        "missing": []
+      },
+      "reqDomains": [
+        "CFG",
+        "SET"
+      ],
+      "risk": ""
+    },
+    {
+      "id": "E11",
+      "title": "Automation engine",
+      "priority": "P1",
+      "domain": "AUT",
+      "release": "R6",
+      "status": "verified",
+      "evidence": {
+        "impl": [
+          {
+            "file": "src/platform/automation.js",
+            "ok": true
+          }
+        ],
+        "tests": [
+          {
+            "file": "test/automation.test.js",
+            "ok": true
+          }
+        ],
+        "e2e": [],
+        "migrations": [],
+        "missing": []
+      },
+      "reqDomains": [
+        "AUT"
+      ],
+      "risk": ""
+    },
+    {
+      "id": "E12",
+      "title": "Construction Core",
+      "priority": "P0/P1",
+      "domain": "CST",
+      "release": "R2",
+      "status": "verified",
+      "evidence": {
+        "impl": [
+          {
+            "file": "src/platform/worksites.js",
+            "ok": true
+          },
+          {
+            "file": "src/platform/change-orders.js",
+            "ok": true
+          },
+          {
+            "file": "src/platform/progress-claims.js",
+            "ok": true
+          },
+          {
+            "file": "src/platform/compliance.js",
+            "ok": true
+          }
+        ],
+        "tests": [
+          {
+            "file": "test/construction.test.js",
+            "ok": true
+          },
+          {
+            "file": "test/progress-claims.test.js",
+            "ok": true
+          },
+          {
+            "file": "test/compliance-overview.test.js",
+            "ok": true
+          }
+        ],
+        "e2e": [
+          {
+            "file": "test/e2e/construction-smoke.js",
+            "ok": true
+          },
+          {
+            "file": "test/e2e/claims-smoke.js",
+            "ok": true
+          }
+        ],
+        "migrations": [],
+        "missing": []
+      },
+      "reqDomains": [
+        "PRG",
+        "NAC"
+      ],
+      "risk": "mobiele bewijsflow en project-financekoppeling verder te bewijzen"
+    },
+    {
+      "id": "E13",
+      "title": "Catalog and material",
+      "priority": "P1",
+      "domain": "CAT",
+      "release": "R5",
+      "status": "verified",
+      "evidence": {
+        "impl": [
+          {
+            "file": "src/platform/catalog.js",
+            "ok": true
+          },
+          {
+            "file": "src/modules/catalog.js",
+            "ok": true
+          }
+        ],
+        "tests": [
+          {
+            "file": "test/catalog.test.js",
+            "ok": true
+          }
+        ],
+        "e2e": [
+          {
+            "file": "test/e2e/catalog-smoke.js",
+            "ok": true
+          }
+        ],
+        "migrations": [],
+        "missing": []
+      },
+      "reqDomains": [
+        "ART"
+      ],
+      "risk": ""
+    },
+    {
+      "id": "E14",
+      "title": "Project financials",
+      "priority": "P1",
+      "domain": "PFI",
+      "release": "R4",
+      "status": "verified",
+      "evidence": {
+        "impl": [
+          {
+            "file": "src/platform/project-finance.js",
+            "ok": true
+          },
+          {
+            "file": "src/platform/portfolio.js",
+            "ok": true
+          }
+        ],
+        "tests": [
+          {
+            "file": "test/project-finance.test.js",
+            "ok": true
+          },
+          {
+            "file": "test/portfolio.test.js",
+            "ok": true
+          }
+        ],
+        "e2e": [
+          {
+            "file": "test/e2e/portfolio-smoke.js",
+            "ok": true
+          }
+        ],
+        "migrations": [],
+        "missing": []
+      },
+      "reqDomains": [
+        "PRG"
+      ],
+      "risk": "commitments/actuals/forecast nog niet genormaliseerd transactioneel"
+    },
+    {
+      "id": "E15",
+      "title": "Contracts and recurring",
+      "priority": "P1",
+      "domain": "CTR",
+      "release": "R4",
+      "status": "verified",
+      "evidence": {
+        "impl": [
+          {
+            "file": "src/platform/contracts.js",
+            "ok": true
+          }
+        ],
+        "tests": [
+          {
+            "file": "test/contracts.test.js",
+            "ok": true
+          }
+        ],
+        "e2e": [
+          {
+            "file": "test/e2e/contracts-smoke.js",
+            "ok": true
+          }
+        ],
+        "migrations": [],
+        "missing": []
+      },
+      "reqDomains": [
+        "RNT",
+        "SUB"
+      ],
+      "risk": ""
+    },
+    {
+      "id": "E16",
+      "title": "Assets and maintenance",
+      "priority": "P1",
+      "domain": "SRV",
+      "release": "R3",
+      "status": "verified",
+      "evidence": {
+        "impl": [
+          {
+            "file": "src/platform/assets.js",
+            "ok": true
+          }
+        ],
+        "tests": [
+          {
+            "file": "test/assets.test.js",
+            "ok": true
+          }
+        ],
+        "e2e": [
+          {
+            "file": "test/e2e/assets-smoke.js",
+            "ok": true
+          }
+        ],
+        "migrations": [],
+        "missing": []
+      },
+      "reqDomains": [
+        "AST",
+        "SRV"
+      ],
+      "risk": ""
+    },
+    {
+      "id": "E17",
+      "title": "Inventory foundation",
+      "priority": "P2",
+      "domain": "STK",
+      "release": "R5",
+      "status": "verified",
+      "evidence": {
+        "impl": [
+          {
+            "file": "src/platform/inventory.js",
+            "ok": true
+          },
+          {
+            "file": "src/modules/stock.js",
+            "ok": true
+          }
+        ],
+        "tests": [
+          {
+            "file": "test/inventory-procurement.test.js",
+            "ok": true
+          },
+          {
+            "file": "test/inventory-reads.test.js",
+            "ok": true
+          }
+        ],
+        "e2e": [],
+        "migrations": [],
+        "missing": []
+      },
+      "reqDomains": [
+        "STK",
+        "DLV"
+      ],
+      "risk": "immutable stock nog niet volledig database-native"
+    },
+    {
+      "id": "E18",
+      "title": "Procurement foundation",
+      "priority": "P2",
+      "domain": "PUR",
+      "release": "R5",
+      "status": "verified",
+      "evidence": {
+        "impl": [
+          {
+            "file": "src/platform/procurement.js",
+            "ok": true
+          }
+        ],
+        "tests": [
+          {
+            "file": "test/inventory-procurement.test.js",
+            "ok": true
+          }
+        ],
+        "e2e": [
+          {
+            "file": "test/e2e/proc-smoke.js",
+            "ok": true
+          }
+        ],
+        "migrations": [],
+        "missing": []
+      },
+      "reqDomains": [
+        "PUR",
+        "PRQ",
+        "ORD"
+      ],
+      "risk": "purchase-to-project-cost nog niet volledig database-native"
+    },
+    {
+      "id": "E19",
+      "title": "Integration runtime",
+      "priority": "P1",
+      "domain": "API",
+      "release": "R6",
+      "status": "verified",
+      "evidence": {
+        "impl": [
+          {
+            "file": "src/platform/events.js",
+            "ok": true
+          },
+          {
+            "file": "src/platform/webhooks.js",
+            "ok": true
+          },
+          {
+            "file": "src/modules/integrations.js",
+            "ok": true
+          }
+        ],
+        "tests": [
+          {
+            "file": "test/events.test.js",
+            "ok": true
+          },
+          {
+            "file": "test/webhooks.test.js",
+            "ok": true
+          },
+          {
+            "file": "test/outbox-durable.test.js",
+            "ok": true
+          }
+        ],
+        "e2e": [
+          {
+            "file": "test/e2e/events-smoke.js",
+            "ok": true
+          },
+          {
+            "file": "test/e2e/webhook-smoke.js",
+            "ok": true
+          }
+        ],
+        "migrations": [
+          {
+            "file": "004_outbox.sql",
+            "ok": true
+          }
+        ],
+        "missing": []
+      },
+      "reqDomains": [
+        "API"
+      ],
+      "risk": "echte connectorhealth en parallel run nog af te ronden"
+    },
+    {
+      "id": "E20",
+      "title": "Robaws importer",
+      "priority": "P1",
+      "domain": "API",
+      "release": "R6",
+      "status": "verified",
+      "evidence": {
+        "impl": [
+          {
+            "file": "src/platform/robaws-import.js",
+            "ok": true
+          },
+          {
+            "file": "src/modules/imports.js",
+            "ok": true
+          }
+        ],
+        "tests": [
+          {
+            "file": "test/robaws-import.test.js",
+            "ok": true
+          }
+        ],
+        "e2e": [
+          {
+            "file": "test/e2e/robaws-smoke.js",
+            "ok": true
+          }
+        ],
+        "migrations": [],
+        "missing": []
+      },
+      "reqDomains": [
+        "API"
+      ],
+      "risk": ""
+    },
+    {
+      "id": "E21",
+      "title": "Mona governance",
+      "priority": "P1",
+      "domain": "MONA",
+      "release": "R6",
+      "status": "verified",
+      "evidence": {
+        "impl": [
+          {
+            "file": "src/modules/boden.js",
+            "ok": true
+          },
+          {
+            "file": "src/platform/mona-prepare.js",
+            "ok": true
+          },
+          {
+            "file": "src/platform/mona-signals.js",
+            "ok": true
+          }
+        ],
+        "tests": [
+          {
+            "file": "test/boden.test.js",
+            "ok": true
+          },
+          {
+            "file": "test/mona-prepare.test.js",
+            "ok": true
+          },
+          {
+            "file": "test/mona-signals.test.js",
+            "ok": true
+          }
+        ],
+        "e2e": [
+          {
+            "file": "test/e2e/mona-prepare-smoke.js",
+            "ok": true
+          },
+          {
+            "file": "test/e2e/signals-smoke.js",
+            "ok": true
+          }
+        ],
+        "migrations": [],
+        "missing": []
+      },
+      "reqDomains": [],
+      "risk": "AI-governance (bron/confidence/confirmatie) verder te hardenen (DEV-12)"
+    },
+    {
+      "id": "E22",
+      "title": "Insights read models",
+      "priority": "P1",
+      "domain": "BI",
+      "release": "R1",
+      "status": "verified",
+      "evidence": {
+        "impl": [
+          {
+            "file": "src/platform/insights.js",
+            "ok": true
+          },
+          {
+            "file": "src/modules/dashboards.js",
+            "ok": true
+          },
+          {
+            "file": "src/modules/reports.js",
+            "ok": true
+          }
+        ],
+        "tests": [
+          {
+            "file": "test/insights.test.js",
+            "ok": true
+          }
+        ],
+        "e2e": [],
+        "migrations": [],
+        "missing": []
+      },
+      "reqDomains": [
+        "BI"
+      ],
+      "risk": ""
+    }
+  ],
+  "definitionOfDone": [
+    {
+      "key": "spec_baseline",
+      "label": "Spec-baseline aanwezig",
+      "ok": true,
+      "detail": "developer-requirements.json bevat de DoD-lijst."
+    },
+    {
+      "key": "migrations",
+      "label": "Migratiepad geïmplementeerd",
+      "ok": true,
+      "detail": "7 SQL-migraties in migrations/sql/."
+    },
+    {
+      "key": "policy_enforced",
+      "label": "Server-side permissies getest",
+      "ok": true,
+      "detail": "test/policy.test.js aanwezig."
+    },
+    {
+      "key": "audit_events",
+      "label": "Audit + domeinevents getest",
+      "ok": true,
+      "detail": "test/audit-log.test.js + test/events.test.js aanwezig."
+    },
+    {
+      "key": "architecture",
+      "label": "Cloudblinde architectuurtest",
+      "ok": true,
+      "detail": "test/architecture.test.js bewaakt de poort/adapter-grenzen."
+    },
+    {
+      "key": "e2e_in_ci",
+      "label": "E2E draait in CI",
+      "ok": true,
+      "detail": "ci.yml roept test:e2e aan."
+    },
+    {
+      "key": "i18n",
+      "label": "NL/FR/EN aanwezig",
+      "ok": true,
+      "detail": "public/js/i18n.js met de drie taalblokken."
+    },
+    {
+      "key": "runbook",
+      "label": "Deploy-runbook aanwezig",
+      "ok": true,
+      "detail": "docs/DEPLOY-RUNBOOK.md aanwezig."
+    },
+    {
+      "key": "all_epics_verified",
+      "label": "Alle epics evidence-verified",
+      "ok": true,
+      "detail": "Elke E01-E22 heeft bestaande impl + test."
+    }
+  ],
+  "requirements": {
+    "total": 761,
+    "covered": 693,
+    "byDomainUnmapped": "Geen genormaliseerd epic; dekking via legacy-module, niet individueel bewezen."
+  }
+}
