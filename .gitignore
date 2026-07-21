@@ -20,3 +20,8 @@ coverage/
 
 .DS_Store
 Thumbs.db
+
+# Traceability-evidence wordt per commit door executing jobs gegenereerd (CTO-regel),
+# niet als broncode gecommit. De map blijft bestaan via .gitkeep.
+docs/traceability/evidence/*.json
+!docs/traceability/evidence/.gitkeep

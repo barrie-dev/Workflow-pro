@@ -95,6 +95,19 @@ jobs:
             echo "::error::Blob-opslagtests werden overgeslagen terwijl de emulator draait"; exit 1;
           fi
           echo "Alle database- en opslag-gebonden tests hebben echt gedraaid."
+      - name: Finance multi-write atomiciteit (DEV-06 · executing evidence-job)
+        # CTO-regel: bewijs = de OUTPUT van een draaiende job. Deze job commit een
+        # volledige finance-flow en laat drie varianten middenin falen; is een
+        # rollback niet volledig (state + nummer + outbox), dan exit 1 → CI faalt.
+        # Schrijft docs/traceability/evidence/finance-tx.json, gebonden aan HEAD.
+        run: node scripts/check-finance-tx.js
+      - name: Upload finance-tx evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: finance-tx-evidence
+          path: docs/traceability/evidence/finance-tx.json
+          if-no-files-found: warn
 
   # ── E2E-scenario's (CTO DEV-02): verplicht ná unit/integratie, vóór de
   # containersmoke/release. Elke smoke krijgt een verse, geïsoleerde dataset op
