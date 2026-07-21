@@ -449,6 +449,32 @@ const customerSource = (() => {
   return makeCustomerSource({ mode, legacyRepo: customerRepo, pgRepo, mirror, telemetry });
 })();
 /**
+ * Identity-bronschakelaar (P0-01 · tweede domein langs de CRM-route). De
+ * spiegel-lus draait zodra er een pg-pool is, ook in legacy-stand: zo bouwt
+ * het reconciliatiebewijs zich op vóór de cutover, zonder gedragsverandering.
+ */
+const identitySource = (() => {
+  const mode = config.identity.readSource;
+  let pool = storeAdapter && storeAdapter.name === "postgres" ? storeAdapter.pool : null;
+  if (!pool && mode !== "legacy") {
+    if (!/^postgres(ql)?:\/\//.test(config.database.url)) {
+      throw new Error(`IDENTITY_READ_SOURCE=${mode} vereist DATABASE_URL (of STORAGE_ADAPTER=postgres)`);
+    }
+    const { Pool } = require("pg");
+    pool = new Pool({ connectionString: config.database.url, ssl: config.database.ssl ? { rejectUnauthorized: false } : undefined, max: 3 });
+  }
+  const { makeIdentitySource } = require("./infrastructure/identity-source");
+  const source = makeIdentitySource({ mode, store, pool, telemetry });
+  if (pool) {
+    // Eerste sync kort na de start (migraties zijn dan zeker toegepast door de
+    // startvolgorde), daarna op interval; snapshot-gepoort dus goedkoop.
+    setTimeout(() => source.syncNow().catch(() => {}), 15 * 1000).unref();
+    setInterval(() => source.syncNow().catch(() => {}), config.identity.syncIntervalMs).unref();
+    console.log(`  Identity  : ${mode}${mode === "legacy" ? " (spiegel-lus bouwt bewijs op)" : mode === "shadow" ? " (legacy leidend, pg leest mee)" : " (pg-leesbron · legacy blijft write-owner)"}`);
+  }
+  return source;
+})();
+/**
  * Persistent verzendlog (F-09). Was een proceslokale ring-buffer: die verdween
  * bij elke herstart en verschilde per replica, dus de superadmin zag maar een
  * fractie. Nu in de store, met een eigen bovengrens zodat het log niet
@@ -937,6 +963,7 @@ const httpServer = http.createServer(async (req, res) => {
         // database-transactie (P0-01), anders de lokale store-variant.
         txAdapter: (pgTxManager || txManager).adapter,
         objectStorageAdapter: objectStorage.name,
+        identitySource: identitySource.mode,   // P0-01-migratiestand
         storeReady: storeStatus?.ok !== false,
         modules: modules.length,
         uptime: Math.floor(process.uptime()),
@@ -1211,6 +1238,9 @@ const httpServer = http.createServer(async (req, res) => {
       resetLoginFailures(store, result.user);
       store.update("users", result.user.id, { lastLoginAt: new Date().toISOString() });
       store.audit({ actor: result.user.email, tenantId: result.user.tenantId, action: "login", area: "auth" });
+      // P0-01 schaduwlezing: vergelijk deze gebruiker met de genormaliseerde
+      // tabel (na sync) · bouwt cutover-bewijs op, breekt de login nooit.
+      identitySource.shadowCompareByEmail(body.email);
       sendJson(res, 200, { ok: true, token: result.token, user: safeUser(result.user) });
       return;
     }
@@ -1983,8 +2013,31 @@ const httpServer = http.createServer(async (req, res) => {
       const safe = (u) => { const { passwordHash, mfaSecret, mfaPendingSecret, recoveryCodes, ...s } = u; return s; };
       // GDPR/dataminimalisatie: de console toont enkel platform-accounts, geen
       // persoonsgegevens van tenant-medewerkers. Die raadpleeg je via consent-impersonatie.
-      const users = store.data.users.filter(u => u.role === "super_admin").map(safe);
+      // P0-01: geschakelde leesroute · in pg-stand komt deze lijst uit de
+      // genormaliseerde tabellen; in shadow leest pg mee (telemetrie).
+      const users = (await identitySource.listPlatformUsers()).map(safe);
       sendJson(res, 200, { ok: true, users });
+      return;
+    }
+
+    // ── P0-01 · identity-migratiestatus + reconciliatiebewijs (ops) ──────────
+    if (url.pathname === "/api/admin/identity/status" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertSuperAdmin(user);
+      sendJson(res, 200, { ok: true, identity: identitySource.status() });
+      return;
+    }
+    if (url.pathname === "/api/admin/identity/reconcile" && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertSuperAdmin(user);
+      // Bewust: eerst syncen, dan reconciliëren. Het antwoord toont daardoor
+      // of de PIJPLIJN klopt; blijvende afwijkingen zijn echte bugs.
+      await identitySource.syncNow({ force: true });
+      const result = await identitySource.reconcile();
+      store.audit({ actor: user.email, tenantId: null, action: "identity_reconcile", area: "platform", details: { ok: result.ok, checked: result.checked } });
+      sendJson(res, 200, { ok: true, reconcile: result, status: identitySource.status() });
       return;
     }
 

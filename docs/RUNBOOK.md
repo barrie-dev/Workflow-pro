@@ -222,6 +222,33 @@ herstelt het.
 Afgeleide naam-lookups in andere domeinen (contract, asset) lezen bewust nog
 legacy tot hun eigen domein migreert; dat is de per-domein-strangler, geen bug.
 
+### Identity-cutover (P0-01 · IDENTITY_READ_SOURCE)
+
+Tweede domein langs dezelfde route (na CRM): tenants + gebruikers. Verschil met
+CRM: schrijven blijft in ALLE standen bij de legacy-store (de write-owner voor
+authenticatie). In plaats van dual-write draait een **spiegel-lus** die het
+volledige platform-snapshot idempotent naar de tabellen projecteert · zo worden
+álle verspreide schrijfpaden (wachtwoordreset, MFA, login-tellers) in één keer
+gevangen. De lus draait zodra de pg-adapter actief is, óók in legacy-stand, dus
+het reconciliatiebewijs bouwt zich vanzelf op.
+
+1. Draai op `postgres` met de standaard `IDENTITY_READ_SOURCE=legacy`. De
+   spiegel-lus vult de tabellen. Controleer met
+   `POST /api/admin/identity/reconcile` (superadmin): `reconcile.ok` moet true
+   zijn, `mismatches`/`missingInPg`/`extraInPg` leeg.
+2. **`IDENTITY_READ_SOURCE=shadow`** en herstart. De login-lookup en de
+   platform-gebruikerslijst vergelijken legacy met pg; afwijkingen gaan naar
+   `identity.shadow.mismatch`. Bewaak `GET /api/admin/identity/status`.
+3. Reconciliatie opnieuw groen → **`IDENTITY_READ_SOURCE=pg`**. De geschakelde
+   leesroutes (`/api/admin/users`) lezen nu uit de tabellen; login-verificatie
+   blijft bewust op legacy (fase 1).
+4. **Rollback = flag terug naar `shadow` of `legacy`** en herstarten. Er gaat
+   niets verloren, want legacy is en blijft de write-owner.
+
+Een pg-leesfout in pg-stand faalt eerlijk met 503 `IDENTITY_SOURCE_UNAVAILABLE`
+in plaats van stil terug te vallen. De sync is snapshot-gepoort: een
+ongewijzigd platform levert geen schrijfwerk op.
+
 ### Datamigratie (CRM naar genormaliseerde tabellen)
 
 ```

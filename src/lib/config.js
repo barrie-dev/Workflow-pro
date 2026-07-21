@@ -71,6 +71,13 @@ const config = {
   crm: {
     readSource: (process.env.CRM_READ_SOURCE || "legacy").toLowerCase()
   },
+  // Identity-bronschakelaar (P0-01 · zelfde route als CRM): legacy | shadow | pg.
+  // De spiegel-lus draait zodra de pg-adapter actief is, ongeacht de stand ·
+  // zo bouwt het reconciliatiebewijs zich vanzelf op vóór de cutover.
+  identity: {
+    readSource: (process.env.IDENTITY_READ_SOURCE || "legacy").toLowerCase(),
+    syncIntervalMs: Number(process.env.IDENTITY_SYNC_INTERVAL_MS) || 10000
+  },
   // AI achter een port (handover 4.5 · F-07). Modelnamen staan HIER, nooit in
   // business rules. De super-admin kan dit per platform overschrijven via de
   // Integraties-console; zonder geldige sleutel draait de mock-adapter.
