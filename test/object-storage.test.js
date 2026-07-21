@@ -186,4 +186,33 @@ test("local-filesystem: signingKey is verplicht", () => {
   assert.throws(() => new LocalObjectStorage({ basePath: os.tmpdir() }), e => e.code === "SIGNING_KEY_MISSING");
 });
 
+// ── Productie-guardrail: geen efemere lokale opslag in productie (DEV-05) ─────
+const { config } = require("../src/lib/config");
+const { createObjectStorage } = require("../src/infrastructure/object-storage-factory");
+
+test("guardrail: lokale opslag geblokkeerd in productie, tenzij expliciete override", () => {
+  const orig = config.isProduction;
+  const origEnv = process.env.OBJECT_STORAGE_ALLOW_LOCAL;
+  try {
+    config.isProduction = true;
+    delete process.env.OBJECT_STORAGE_ALLOW_LOCAL;
+    assert.throws(() => createObjectStorage({ adapter: "local" }), e => e.code === "OBJECT_STORAGE_LOCAL_IN_PROD",
+      "lokaal in productie moet hard falen");
+    process.env.OBJECT_STORAGE_ALLOW_LOCAL = "true";
+    assert.doesNotThrow(() => createObjectStorage({ adapter: "local", signingKey: "x".repeat(16) }),
+      "expliciete override laat het toe (met waarschuwing)");
+  } finally {
+    config.isProduction = orig;
+    if (origEnv === undefined) delete process.env.OBJECT_STORAGE_ALLOW_LOCAL; else process.env.OBJECT_STORAGE_ALLOW_LOCAL = origEnv;
+  }
+});
+
+test("guardrail: lokale opslag prima buiten productie", () => {
+  const orig = config.isProduction;
+  try {
+    config.isProduction = false;
+    assert.doesNotThrow(() => createObjectStorage({ adapter: "local", signingKey: "x".repeat(16) }));
+  } finally { config.isProduction = orig; }
+});
+
 module.exports = { objectStorageContract };

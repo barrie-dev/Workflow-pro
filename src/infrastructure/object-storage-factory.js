@@ -22,6 +22,23 @@ function createObjectStorage(overrides = {}) {
   const settings = { ...config.objectStorage, ...overrides };
   const kind = String(settings.adapter || "local").toLowerCase();
 
+  // Productie-guardrail (CTO DEV-05): lokale opslag zet bestanden op de
+  // containerdisk · op efemere hosts (Render, Container Apps) verdwijnen ze bij
+  // elke herstart. In productie dus geblokkeerd, tenzij een expliciete
+  // nood-override (met luide waarschuwing). Zo kan deze misconfiguratie geen
+  // stil bestandsverlies meer veroorzaken.
+  if (kind === "local" && config.isProduction && !overrides.allowLocal) {
+    if (process.env.OBJECT_STORAGE_ALLOW_LOCAL === "true") {
+      console.warn("[object-storage] WAARSCHUWING: lokale opslag in PRODUCTIE via OBJECT_STORAGE_ALLOW_LOCAL · bestanden staan op efemere containerdisk en gaan verloren bij herstart.");
+    } else {
+      const e = new Error(
+        "Lokale objectopslag is niet toegestaan in productie (efemere disk = bestandsverlies). " +
+        "Zet OBJECT_STORAGE_ADAPTER=s3 of azure-blob, of forceer met OBJECT_STORAGE_ALLOW_LOCAL=true.");
+      e.status = 500; e.code = "OBJECT_STORAGE_LOCAL_IN_PROD";
+      throw e;
+    }
+  }
+
   if (kind === "local") {
     return new LocalObjectStorage({
       basePath: settings.path || path.join(config.root, "data", "files"),
