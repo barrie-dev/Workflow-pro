@@ -1,0 +1,56 @@
+{
+  "generatedAt": "2026-07-21T09:58:43.160Z",
+  "commit": {
+    "sha": "6237a1c774e6cd08c00fd77dc8ea52b85aad9330",
+    "branch": "main",
+    "dirty": false,
+    "subject": "Azure-adapterset: Blob-opslag achter dezelfde poort + concreet Azure-runbook"
+  },
+  "runtime": {
+    "node": "v24.16.0",
+    "platform": "win32"
+  },
+  "tests": {
+    "ran": true,
+    "exitCode": 0,
+    "total": 921,
+    "pass": 921,
+    "fail": 0,
+    "skipped": 0,
+    "databaseTestsIncluded": true,
+    "objectStorageTestsIncluded": true,
+    "blobStorageTestsIncluded": true
+  },
+  "migrations": {
+    "files": [
+      "001_core.sql",
+      "002_crm.sql",
+      "003_jobs.sql",
+      "004_outbox.sql"
+    ],
+    "count": 4,
+    "database": {
+      "applied": 4,
+      "pending": [],
+      "total": 4
+    }
+  },
+  "posture": {
+    "appEnv": "development",
+    "storageAdapter": "(standaard)",
+    "objectStorageAdapter": "local",
+    "crmReadSource": "(standaard)",
+    "databaseConfigured": true
+  },
+  "artifacts": {
+    "Dockerfile": true,
+    "docker-compose.yml": true,
+    ".github/workflows/ci.yml": true,
+    "render.yaml": true,
+    "docs/RUNBOOK.md": true,
+    "docs/DEPLOY-RUNBOOK.md": true,
+    "docs/PERFORMANCE-BASELINE.md": true,
+    "docs/LIVE-SECURITY-CHECKLIST.md": true,
+    "migrations/sql": true
+  }
+}
