@@ -273,6 +273,38 @@ test("crm: integratie tegen echte PostgreSQL (schema, RLS, locking, backfill)",
       await backfillCustomers(pool, tenantA, legacy);
       assert.equal(await repo.count(tenantA), 1, "tweemaal draaien maakt geen duplicaat");
 
+      // ── P0-07: KINDEREN migreren mee en de reconciliatie ziet inhoudsdrift ──
+      const metKinderen = [{
+        id: gemaakt.id, name: "Gewijzigd", email: "i@x.be", vatNumber: "BE0999",
+        contacts: [
+          { id: "ct_bf_1", name: "Jan Peeters", email: "jan@x.be", phone: "0470", role: "zaakvoerder", isPrimary: true },
+          { id: "ct_bf_2", name: "An", email: "an@x.be" },
+        ],
+        addresses: [
+          { id: "ad_bf_1", type: "billing", line: "Dorpstraat 1", zip: "9000", city: "Gent", country: "BE" },
+          { id: "ad_bf_2", type: "site", line: "Werfweg 7", city: "Aalst" },
+        ],
+      }];
+      const bf = await backfillCustomers(pool, tenantA, metKinderen);
+      assert.equal(bf.contactRows, 2, "beide contacten gemigreerd");
+      assert.equal(bf.addressRows, 2, "beide adressen gemigreerd");
+      let rec = await reconcileCustomers(pool, tenantA, metKinderen);
+      assert.equal(rec.readyForCutover, true, `kinderen sluitend: ${JSON.stringify(rec.differences)}`);
+
+      // Inhoudsdrift op een KIND blokkeert de cutover (aantallen kloppen dan nog).
+      const drift = JSON.parse(JSON.stringify(metKinderen));
+      drift[0].contacts[0].email = "ander@x.be";
+      rec = await reconcileCustomers(pool, tenantA, drift);
+      assert.equal(rec.readyForCutover, false, "kind-inhoudsdrift moet opvallen");
+      assert.equal(rec.differences.length, 1);
+
+      // Kind geschrapt in legacy → set-sync ruimt de genormaliseerde rij op.
+      const minder = JSON.parse(JSON.stringify(metKinderen));
+      minder[0].contacts = [minder[0].contacts[0]];
+      await backfillCustomers(pool, tenantA, minder);
+      rec = await reconcileCustomers(pool, tenantA, minder);
+      assert.equal(rec.readyForCutover, true, "na set-sync weer sluitend");
+
       // Archiveren verbergt maar bewaart.
       await repo.archive(tenantA, gemaakt.id, "test");
       assert.equal((await repo.search(tenantA, {})).rows.length, 0);
