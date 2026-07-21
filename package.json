@@ -36,6 +36,8 @@
     "production:backups": "node scripts/check-backup-readiness.js",
     "production:backups:json": "node scripts/check-backup-readiness.js --json",
     "production:backups:apply": "node scripts/check-backup-readiness.js --apply",
+    "cloud:check": "node scripts/check-cloud-connection.js",
+    "cloud:check:json": "node scripts/check-cloud-connection.js --json",
     "production:externals": "node scripts/check-live-services.js",
     "production:externals:json": "node scripts/check-live-services.js --json",
     "production:externals:strict": "node scripts/check-live-services.js --strict",

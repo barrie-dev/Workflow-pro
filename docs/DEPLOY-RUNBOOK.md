@@ -116,7 +116,12 @@ is de generieke stap uit §3 met een Azure-dienst ingevuld:
    Startcommando laten staan (migratie zit in het image-startpad) of de
    migratie als init-stap draaien.
 5. **Probes**: liveness → `/api/health`, readiness → `/api/ready` (§3 stap 4).
-6. **Verifieer**: `/api/health` toont `storageAdapter: "postgres"`,
+6. **Koppeling verifiëren**: draai in de omgeving met de echte env-secrets
+   `npm run cloud:check`. Dit verbindt met de PostgreSQL (SELECT 1 +
+   migratiestatus, TLS autogedetecteerd) en de Blob-container (aanmaken, PUT,
+   GET, een SAS-URL over HTTP ophalen, opruimen) en print daarbij nooit een
+   connectiestring of sleutel. Exit 0 = de koppeling staat.
+7. **Verifieer verder**: `/api/health` toont `storageAdapter: "postgres"`,
    `txAdapter: "postgres"` en `objectStorageAdapter: "azure-blob"`; draai
    daarna het restore-bewijs uit §5 stap 5 en `npm run evidence`.
 
