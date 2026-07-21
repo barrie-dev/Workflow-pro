@@ -514,8 +514,14 @@ async function webhookTransport({ url, body, headers }) {
 const configRepo = makeConfigRepository(store);
 const automationRepo = makeAutomationRepository(store);
 // Unit-of-work port (E1 · ADR-003): atomaire multi-writes, adapter-onafhankelijk.
-// Lokaal nu (JSON/geheugen); productie zal de PostgreSQL-adapter injecteren.
+// De lokale manager dekt de store-flows; op PostgreSQL bestaat daarnaast de
+// échte database-unit-of-work (P0-01): repository-calls die binnen één
+// pgTxManager.run(...) lopen, joinen automatisch dezelfde transactie
+// (BEGIN/COMMIT/ROLLBACK op één connectie) zonder dat repositorycode wijzigt.
 const txManager = makeLocalTransactionManager(store);
+const pgTxManager = storeAdapter && storeAdapter.name === "postgres"
+  ? require("./infrastructure/postgres/pg-transaction-manager").makePgTransactionManager(storeAdapter.pool)
+  : null;
 // Automation-engine (E11) luistert op alle domain events (best-effort).
 registerEventListener(makeDispatcher(store));
 
@@ -927,7 +933,10 @@ const httpServer = http.createServer(async (req, res) => {
         releaseChannel: config.releaseChannel,
         commitSha: config.commitSha,
         storageAdapter: config.storageAdapter,
-        txAdapter: txManager.adapter,   // unit-of-work-adapter (E1 · ADR-003)
+        // Unit-of-work-adapter (E1 · ADR-003): op PostgreSQL de echte
+        // database-transactie (P0-01), anders de lokale store-variant.
+        txAdapter: (pgTxManager || txManager).adapter,
+        objectStorageAdapter: objectStorage.name,
         storeReady: storeStatus?.ok !== false,
         modules: modules.length,
         uptime: Math.floor(process.uptime()),
@@ -970,7 +979,7 @@ const httpServer = http.createServer(async (req, res) => {
         checks: {
           storage: storeStatus?.ok !== false,
           storageAdapter: config.storageAdapter,
-          txAdapter: txManager.adapter,
+          txAdapter: (pgTxManager || txManager).adapter,
           // Openstaande schrijfacties: een orchestrator kan hierop wachten
           // vóór hij een replica uit rotatie haalt.
           pendingWrites: store.isDirty(),

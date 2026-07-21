@@ -19,6 +19,7 @@
  */
 
 const { newUlid } = require("../../platform/events");
+const { ambientClient } = require("./pg-transaction-manager");
 
 function clean(v) { return String(v == null ? "" : v).trim(); }
 function nullable(v) { const s = clean(v); return s || null; }
@@ -61,10 +62,23 @@ function rowToCustomer(row, contacts = [], addresses = []) {
  * Voer werk uit binnen één transactie MET tenantcontext, zodat de RLS-policies
  * grijpen. SET LOCAL geldt alleen binnen de transactie en lekt dus nooit naar
  * een volgende query op dezelfde pooled connectie.
+ *
+ * Unit-of-work (P0-01): loopt er in deze asynchrone keten al een transactie
+ * (gestart via de TransactionManager), dan JOINT deze call die transactie in
+ * plaats van een eigen BEGIN/COMMIT te doen. Meerdere repository-calls binnen
+ * één manager.run(...) worden zo alles-of-niets zonder dat repositorycode
+ * wijzigt · exact de poort-belofte uit ADR-003.
  */
 async function withTenant(pool, tenantId, work) {
   const t = clean(tenantId);
   if (!t) { const e = new Error("tenantId is verplicht"); e.status = 400; e.code = "TENANT_REQUIRED"; throw e; }
+  const joined = ambientClient();
+  if (joined) {
+    // De buitenste transactie beslist over commit/rollback; wij zetten alleen
+    // de tenantcontext (SET LOCAL-semantiek, geldt tot het einde van die tx).
+    await joined.query("SELECT set_config('app.tenant_id', $1, true)", [t]);
+    return work(joined);
+  }
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
