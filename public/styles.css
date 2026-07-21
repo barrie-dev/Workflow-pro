@@ -12,16 +12,16 @@
   --wf-sidebar-dim: #8fa3bf;
   --wf-orange:      #f47c1b;
   --wf-orange-l:    #fef3e8;
-  --wf-blue:        #5b5ce2;   /* Monargo Iris — primaire workspacekleur */
-  --wf-blue-l:      #f0f0ff;
+  --wf-blue:        #0f46ff;   /* Monargo Apex Blue */
+  --wf-blue-l:      #edf2ff;
   --wf-green:       #16a34a;
   --wf-green-l:     #dcfce7;
   --wf-red:         #dc2626;
   --wf-red-l:       #fee2e2;
   --wf-yellow:      #f59e0b;   /* Monargo warning */
   --wf-yellow-l:    #fef3c7;
-  --wf-purple:      #5b5ce2;
-  --wf-purple-l:    #f0f0ff;
+  --wf-purple:      #315efb;
+  --wf-purple-l:    #edf2ff;
 
   --gray-50:  #f8fafc;
   --gray-100: #f1f5f9;
@@ -35,15 +35,15 @@
   --gray-900: #0f172a;
 
   --surface:  #ffffff;
-  --bg:       #f6f6f9;   /* rustige workspace-achtergrond */
-  --ink:      #24263a;   /* Monargo Ink — kern-donker */
-  --text:     #505266;
-  --muted:    #8b8d9e;
-  --line:     #e2e3ea;
-  --wf-blue-d:      #4b4cc8;
-  --radius-sm: 0.625rem; /* 10px */
-  --radius:   0.875rem;  /* 14px */
-  --radius-lg: 1.25rem;  /* 20px */
+  --bg:       #f7f8fa;
+  --ink:      #17191f;
+  --text:     #3f434d;
+  --muted:    #717784;
+  --line:     #e2e5e9;
+  --wf-blue-d:      #0b39d3;
+  --radius-sm: 0.5rem;
+  --radius:   0.625rem;
+  --radius-lg: 0.875rem;
   --shadow-xs: 0 1px 2px rgba(0,0,0,.04);
   --shadow:   0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.05);
   --shadow-m: 0 12px 40px rgba(0,0,0,.10);
@@ -51,9 +51,9 @@
 
   /* ── Monargo One UI System v1 — canonieke tokens (bron van waarheid) ──────── */
   /* Kleur: primair blauw + interacties */
-  --blue-hover:   #5051cf;   /* button hover */
-  --blue-active:  #4546bd;   /* button active */
-  --blue-soft:    #f5f5ff;   /* geselecteerde kaart / radio-card achtergrond */
+  --blue-hover:   #0b3fe8;
+  --blue-active:  #0937cc;
+  --blue-soft:    #f3f6ff;
   /* Oppervlakken + randen */
   --surface-subtle: #fafafb;
   --line-strong:  #d1d5db;   /* sterke rand: inputs, secondary button */
@@ -64,16 +64,16 @@
   --placeholder:    #9ca3af;
   /* Radius-schaal */
   --radius-xs:    8px;    /* kleine controls */
-  --radius-card:  12px;   /* compacte workspace-kaarten */
-  --radius-modal: 20px;
-  --radius-xl:    24px;   /* grote marketingkaarten */
+  --radius-card:  10px;
+  --radius-modal: 14px;
+  --radius-xl:    16px;
   /* Schaduwen (Ink-getint, zeer subtiel) */
   --shadow-card:     0 1px 2px rgba(11,19,32,.04);
   --shadow-elevated: 0 12px 30px rgba(11,19,32,.08);
   --shadow-modal:    0 24px 80px rgba(11,19,32,.18);
   /* Focus-rings per controltype */
-  --ring-input:   0 0 0 3px rgba(91,92,226,.14);
-  --ring-control: 0 0 0 3px rgba(91,92,226,.16);
+  --ring-input:   0 0 0 3px rgba(15,70,255,.12);
+  --ring-control: 0 0 0 3px rgba(15,70,255,.14);
   --ring-danger:  0 0 0 3px rgba(220,38,38,.12);
   /* Motion */
   --ease:     cubic-bezier(.2,0,0,1);

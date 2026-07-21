@@ -104,11 +104,17 @@
     const content = document.getElementById("admContent");
     if (!content || !content.parentElement) return;
     const bar = document.createElement("div");
+    const language = (window.wfpI18n && window.wfpI18n.lang) || "nl";
+    const copy = ({
+      nl: { text:"Je bedrijfsgegevens zijn nog niet volledig. Die zijn nodig voor correcte facturen.", action:"Nu afwerken", hide:"Verbergen" },
+      fr: { text:"Les données de votre entreprise ne sont pas encore complètes. Elles sont nécessaires pour établir des factures correctes.", action:"Terminer", hide:"Masquer" },
+      en: { text:"Your company details are not complete yet. They are required for correct invoices.", action:"Complete now", hide:"Hide" }
+    })[language] || { text:"Je bedrijfsgegevens zijn nog niet volledig. Die zijn nodig voor correcte facturen.", action:"Nu afwerken", hide:"Verbergen" };
     bar.id = "admObNudge";
-    bar.style.cssText = "margin:10px 18px 0;padding:9px 14px;background:var(--wf-blue-l);color:var(--wf-blue-d);border:1px solid rgba(0,113,227,.25);border-radius:10px;font-size:12.5px;display:flex;align-items:center;gap:10px;";
-    bar.innerHTML = `<span style="flex:1">Je bedrijfsgegevens zijn nog niet volledig. Die zijn nodig voor correcte facturen.</span>
-      <button id="admObNudgeOpen" class="adm-btn adm-btn-primary adm-btn-sm">Nu afwerken</button>
-      <button id="admObNudgeX" class="adm-btn adm-btn-ghost adm-btn-sm" title="Verbergen">×</button>`;
+    bar.className = "adm-onboarding-nudge";
+    bar.innerHTML = `<span>${esc(copy.text)}</span>
+      <button id="admObNudgeOpen" class="adm-btn adm-btn-primary adm-btn-sm">${esc(copy.action)}</button>
+      <button id="admObNudgeX" class="adm-btn adm-btn-ghost adm-btn-sm" title="${esc(copy.hide)}">×</button>`;
     content.parentElement.insertBefore(bar, content);
     bar.querySelector("#admObNudgeOpen").addEventListener("click", () => { bar.remove(); showOnboardingWizard(); });
     bar.querySelector("#admObNudgeX").addEventListener("click", () => bar.remove());
@@ -130,11 +136,11 @@
     ov.innerHTML = `
       <div class="adm-onboarding-dialog" role="dialog" aria-modal="true" aria-labelledby="admObTitle">
         <div class="adm-onboarding-head">
-          <span class="adm-onboarding-mark">M</span>
+          <span class="adm-onboarding-mark"><img src="/brand/one-symbol.svg" alt=""></span>
           <div>
-            <span class="adm-eyebrow">Welkom in je werkruimte</span>
-            <h2 id="admObTitle">Maak Monargo One van jou</h2>
-            <p>Drie korte stappen. Daarna kun je meteen je eerste klant of team toevoegen.</p>
+            <span class="adm-eyebrow">Werkruimte instellen</span>
+            <h2 id="admObTitle">Rond je bedrijfsgegevens af</h2>
+            <p>Controleer de basisgegevens voor je dagelijkse werking en documenten.</p>
           </div>
         </div>
         <div class="adm-onboarding-progress" aria-label="Onboarding voortgang">
@@ -392,11 +398,9 @@
   <aside class="adm-sidebar" id="admSidebar">
     <!-- Brand -->
     <div class="adm-brand">
-      <div class="adm-brand-icon">
-        <span aria-hidden="true">M</span>
-      </div>
+      <div class="adm-brand-icon"><img src="/brand/one-symbol.svg" alt=""></div>
       <div class="adm-brand-text">
-        <div class="adm-brand-name">Monargo <span>One</span></div>
+        <div class="adm-brand-name"><span>One</span><small>by Monargo</small></div>
         <div class="adm-brand-tenant" id="admCompanyName">Workspace laden…</div>
       </div>
       <button class="adm-sidebar-collapse" id="admSidebarCollapse" type="button" aria-label="Navigatie inklappen" title="Navigatie inklappen">
@@ -619,7 +623,6 @@
         <svg viewBox="0 0 24 24"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
       </button>
     </div>
-    <div style="padding:8px 16px 12px;font-size:10.5px;color:rgba(255,255,255,.4);text-align:center">Powered by <strong style="color:rgba(255,255,255,.65)">Monargo</strong></div>
   </aside>
 
   <!-- Main -->
@@ -632,7 +635,7 @@
       <!-- Search -->
       <div class="adm-search-box">
         <svg class="adm-search-icon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-        <input type="text" class="adm-search-input" id="admGlobalSearch" data-i18n-ph="nav.searchPh" placeholder="Zoek of vraag Mona om iets te doen…" autocomplete="off">
+        <input type="text" class="adm-search-input" id="admGlobalSearch" data-i18n-ph="nav.searchPh" placeholder="Zoek klant, werkbon, factuur of medewerker…" autocomplete="off">
         <span class="adm-search-kbd">⌘K</span>
         <div class="adm-search-results" id="admSearchResults"></div>
       </div>
@@ -1186,18 +1189,25 @@
     const hasPersonal = !!(b.personal && (b.personal.widgets || []).length);
     if (_dashMode === "org" && !hasOrg) _dashMode = "standaard";
     const chip = (mode, label) => `<button class="adm-btn ${_dashMode === mode ? "adm-btn-primary" : "adm-btn-secondary"} adm-btn-sm" data-dashmode="${mode}">${label}</button>`;
+    const language = (window.wfpI18n && window.wfpI18n.lang) || "nl";
+    const copy = ({
+      nl:{ locale:"nl-BE", greetings:["Goedemorgen","Goedemiddag","Goedenavond"], eyebrow:"Vandaag", title:"Operationeel overzicht", state:"Live werkruimte", stateSub:"Planning, uitvoering en omzet verbonden", quick:"Snel aanmaken", quickSub:"Open een nieuwe workflow", planning:"Nieuwe planning", workorder:"Nieuwe werkbon", customer:"Nieuwe klant", planningSub:"Plan een medewerker in", workorderSub:"Maak en plan meteen", customerSub:"Start het klanttraject" },
+      fr:{ locale:"fr-BE", greetings:["Bonjour","Bon après-midi","Bonsoir"], eyebrow:"Aujourd’hui", title:"Vue opérationnelle", state:"Espace en direct", stateSub:"Planning, exécution et chiffre d’affaires reliés", quick:"Créer rapidement", quickSub:"Démarrez un nouveau flux", planning:"Nouveau planning", workorder:"Nouveau bon de travail", customer:"Nouveau client", planningSub:"Planifiez un collaborateur", workorderSub:"Créez et planifiez", customerSub:"Démarrez le parcours client" },
+      en:{ locale:"en-BE", greetings:["Good morning","Good afternoon","Good evening"], eyebrow:"Today", title:"Operational overview", state:"Live workspace", stateSub:"Planning, delivery and revenue connected", quick:"Quick create", quickSub:"Start a new workflow", planning:"New planning", workorder:"New work order", customer:"New customer", planningSub:"Schedule a team member", workorderSub:"Create and schedule", customerSub:"Start the customer flow" }
+    })[language] || null;
+    const c = copy || ({ locale:"nl-BE", greetings:["Goedemorgen","Goedemiddag","Goedenavond"], eyebrow:"Vandaag", title:"Operationeel overzicht", state:"Live werkruimte", stateSub:"Planning, uitvoering en omzet verbonden", quick:"Snel aanmaken", quickSub:"Open een nieuwe workflow", planning:"Nieuwe planning", workorder:"Nieuwe werkbon", customer:"Nieuwe klant", planningSub:"Plan een medewerker in", workorderSub:"Maak en plan meteen", customerSub:"Start het klanttraject" });
     const hour = new Date().getHours();
-    const greeting = hour < 12 ? "Goedemorgen" : hour < 18 ? "Goedemiddag" : "Goedenavond";
+    const greeting = hour < 12 ? c.greetings[0] : hour < 18 ? c.greetings[1] : c.greetings[2];
     const person = (document.getElementById("admTopbarName")?.textContent || "").trim().split(" ")[0];
-    const dateLabel = new Intl.DateTimeFormat("nl-BE", { weekday:"long", day:"numeric", month:"long" }).format(new Date());
+    const dateLabel = new Intl.DateTimeFormat(c.locale, { weekday:"long", day:"numeric", month:"long" }).format(new Date());
     content.innerHTML = `
       <section class="adm-workspace-head" aria-label="Dagstart">
         <div>
-          <span class="adm-eyebrow">Werkruimte · ${esc(dateLabel)}</span>
-          <h2>Operationeel overzicht</h2>
-          <p>${greeting}${person && person !== "Admin" ? `, ${esc(person)}` : ""}. Alles wat vandaag beweegt, staat hier samen.</p>
+          <span class="adm-eyebrow">${esc(c.eyebrow)} · ${esc(dateLabel)}</span>
+          <h2>${esc(c.title)}</h2>
+          <p>${greeting}${person && person !== "Admin" ? `, ${esc(person)}` : ""}.</p>
         </div>
-        <div class="adm-workspace-state"><span><i></i> Live werkruimte</span><small>Planning, uitvoering en omzet verbonden</small></div>
+        <div class="adm-workspace-state"><span><i></i> ${esc(c.state)}</span><small>${esc(c.stateSub)}</small></div>
       </section>
       <section class="adm-guided-entry" aria-label="Klantflow">
         <span class="adm-guided-icon">M</span>
@@ -1210,12 +1220,11 @@
         <button type="button" class="adm-btn adm-btn-primary adm-guided-start" id="admStartFlow">Start klantflow <span aria-hidden="true">→</span></button>
       </section>
       <section class="adm-command-strip" aria-label="Snelle acties">
-        <div class="adm-command-intro"><span class="adm-command-spark">+</span><span><strong>Wat wil je in beweging zetten?</strong><small>Start direct vanuit je dagelijkse flow</small></span></div>
+        <div class="adm-command-intro"><span class="adm-command-spark">+</span><span><strong>${esc(c.quick)}</strong><small>${esc(c.quickSub)}</small></span></div>
         <div class="adm-quick-actions">
-          <button type="button" class="adm-quick-action" data-quick-view="planning" data-quick-click="admAddShift"><span class="adm-quick-icon">+</span><span><strong>Nieuwe planning</strong><small>Plan een medewerker in</small></span><b aria-hidden="true">→</b></button>
-          <button type="button" class="adm-quick-action" data-quick-view="workorders" data-quick-click="admNewWO"><span class="adm-quick-icon">+</span><span><strong>Nieuwe werkbon</strong><small>Maak en plan meteen</small></span><b aria-hidden="true">→</b></button>
-          <button type="button" class="adm-quick-action" data-quick-view="customers" data-quick-drawer="customer"><span class="adm-quick-icon">+</span><span><strong>Nieuwe klant</strong><small>Start het klanttraject</small></span><b aria-hidden="true">→</b></button>
-          <button type="button" class="adm-quick-action" id="admQuickAi"><span class="adm-quick-icon">M</span><span><strong>Vraag Mona</strong><small>Bekijk wat aandacht vraagt</small></span><b aria-hidden="true">→</b></button>
+          <button type="button" class="adm-quick-action" data-quick-view="planning" data-quick-click="admAddShift"><span class="adm-quick-icon">+</span><span><strong>${esc(c.planning)}</strong><small>${esc(c.planningSub)}</small></span><b aria-hidden="true">→</b></button>
+          <button type="button" class="adm-quick-action" data-quick-view="workorders" data-quick-click="admNewWO"><span class="adm-quick-icon">+</span><span><strong>${esc(c.workorder)}</strong><small>${esc(c.workorderSub)}</small></span><b aria-hidden="true">→</b></button>
+          <button type="button" class="adm-quick-action" data-quick-view="customers" data-quick-drawer="customer"><span class="adm-quick-icon">+</span><span><strong>${esc(c.customer)}</strong><small>${esc(c.customerSub)}</small></span><b aria-hidden="true">→</b></button>
         </div>
       </section>
       <div class="adm-dashboard-toolbar">
@@ -1233,7 +1242,6 @@
         drawer:btn.dataset.quickDrawer || undefined
       });
     }));
-    document.getElementById("admQuickAi")?.addEventListener("click", () => admAskBoden("Geef me een korte samenvatting van wat vandaag mijn aandacht nodig heeft."));
     document.getElementById("admStartFlow")?.addEventListener("click", () => openCustomerDrawer(null));
     content.querySelectorAll("[data-dashmode]").forEach(btn => btn.addEventListener("click", () => { _dashMode = btn.dataset.dashmode; renderDashboard(); }));
     document.getElementById("dashConfigToggle")?.addEventListener("click", () => {
@@ -1349,6 +1357,13 @@
     const dow = (new Date().getDay() + 6) % 7; // maandag = 0
     const lastDays = n => Array.from({ length: n }, (_, i) => new Date(Date.now() - (n - 1 - i) * 864e5).toISOString().slice(0, 10));
     const weekStartIso = lastDays(dow + 1)[0];
+    const dashLanguage = (window.wfpI18n && window.wfpI18n.lang) || "nl";
+    const boardCopy = ({
+      nl:{ locale:"nl-BE", eyebrow:"Live werkbord", title:"Operationele flow", today:"Vandaag", week:"Deze week", newWork:"Nieuwe opdracht", active:"Actief", item:"item", items:"items", task:"Opdracht", customer:"Klant", status:"Status", owner:"Verantwoordelijke", planning:"Planning", noActive:"Geen actieve items in deze periode.", notPlanned:"Niet gepland", noCustomer:"Geen klant", finance:"Financieel", invoice:"Factuur", scheduled:"Gepland", inProgress:"In uitvoering", toInvoice:"Te factureren", overdue:"Vervallen", paid:"Betaald", open:"Open", collapse:"Werkbord inklappen", expand:"Werkbord uitklappen", openWorkOrders:"Open werkbonnen" },
+      fr:{ locale:"fr-BE", eyebrow:"Tableau en direct", title:"Flux opérationnel", today:"Aujourd’hui", week:"Cette semaine", newWork:"Nouvelle mission", active:"Actif", item:"élément", items:"éléments", task:"Mission", customer:"Client", status:"Statut", owner:"Responsable", planning:"Planning", noActive:"Aucun élément actif pour cette période.", notPlanned:"Non planifié", noCustomer:"Aucun client", finance:"Finance", invoice:"Facture", scheduled:"Planifié", inProgress:"En cours", toInvoice:"À facturer", overdue:"En retard", paid:"Payé", open:"Ouvert", collapse:"Réduire le tableau", expand:"Développer le tableau", openWorkOrders:"Bons de travail ouverts" },
+      en:{ locale:"en-BE", eyebrow:"Live workboard", title:"Operational flow", today:"Today", week:"This week", newWork:"New work item", active:"Active", item:"item", items:"items", task:"Work item", customer:"Customer", status:"Status", owner:"Owner", planning:"Schedule", noActive:"No active items in this period.", notPlanned:"Not scheduled", noCustomer:"No customer", finance:"Finance", invoice:"Invoice", scheduled:"Scheduled", inProgress:"In progress", toInvoice:"Ready to invoice", overdue:"Overdue", paid:"Paid", open:"Open", collapse:"Collapse workboard", expand:"Expand workboard", openWorkOrders:"Open work orders" }
+    })[dashLanguage] || null;
+    const bc = boardCopy || { locale:"nl-BE", eyebrow:"Live werkbord", title:"Operationele flow", today:"Vandaag", week:"Deze week", newWork:"Nieuwe opdracht", active:"Actief", item:"item", items:"items", task:"Opdracht", customer:"Klant", status:"Status", owner:"Verantwoordelijke", planning:"Planning", noActive:"Geen actieve items in deze periode.", notPlanned:"Niet gepland", noCustomer:"Geen klant", finance:"Financieel", invoice:"Factuur", scheduled:"Gepland", inProgress:"In uitvoering", toInvoice:"Te factureren", overdue:"Vervallen", paid:"Betaald", open:"Open", collapse:"Werkbord inklappen", expand:"Werkbord uitklappen", openWorkOrders:"Open werkbonnen" };
 
     const [dash, pending, factData, expData, gpData, woData, planData, clockData] = await Promise.all([
       api("GET", "/manager/dashboard"),
@@ -1361,7 +1376,7 @@
       viewEnabled("clocking") ? api("GET", `/clocks?from=${weekStartIso}&to=${todayIso}`).catch(() => ({ clocks: [] })) : { clocks: [] }
     ]);
 
-    const eur0 = new Intl.NumberFormat("nl-BE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
+    const eur0 = new Intl.NumberFormat(bc.locale, { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
     const invoices = factData.invoices || [];
     const workorders = woData.workorders || [];
     const todayShifts = (planData.shifts || []).slice().sort((a, b) => (a.start || "").localeCompare(b.start || ""));
@@ -1394,7 +1409,7 @@
 
     // KPI · uren deze week
     const weekMin = weekClocks.reduce((s, c) => s + Number(c.durationMinutes || 0), 0);
-    const weekUren = (Math.round(weekMin / 6) / 10).toLocaleString("nl-BE");
+    const weekUren = (Math.round(weekMin / 6) / 10).toLocaleString(bc.locale);
     const urenSerie = lastDays(dow + 1).map(d => weekClocks.filter(c => c.date === d).reduce((s, c) => s + Number(c.durationMinutes || 0), 0));
     const clockedUsers = new Set(weekClocks.map(c => c.userId)).size;
 
@@ -1417,7 +1432,7 @@
     }
     if (viewEnabled("workorders")) kpiCards.push(`
   <div class="adm-kpi adm-kpi-link" data-goto="workorders" title="Naar werkbonnen">
-    <div class="adm-kpi-label">${(window.wfpTerms && window.wfpTerms.t("jobPlural")) ? window.wfpTerms.t("jobPlural") : tA("dash.openWo","Open werkbonnen")}</div>
+    <div class="adm-kpi-label">${dashLanguage === "nl" && window.wfpTerms && window.wfpTerms.t("jobPlural") ? window.wfpTerms.t("jobPlural") : tA("dash.openWo", bc.openWorkOrders)}</div>
     <div class="adm-kpi-value">${activeWos.length}</div>
     <div class="adm-kpi-sub">${lateWos.length ? `<span class="adm-trend down">${lateWos.length} ${tA("dash.late","te laat")}</span>` : tA("dash.onSchedule","Alles op schema")}</div>
     <div class="adm-kpi-spark">${admSpark(woSerie, "var(--wf-blue)")}</div>
@@ -1492,28 +1507,17 @@
       ${acts.map(a => `<div class="adm-act-row adm-act-link" data-view="${a.view}"><span class="adm-legend-dot" style="background:${a.color}"></span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(a.text)}</span><span class="adm-act-time">${esc(admTimeAgo(a.t))}</span></div>`).join("") || `<div class="adm-empty" style="padding:28px 16px"><div class="adm-empty-text">${tA("dash.noActivity","Nog geen activiteit.")}</div></div>`}
     </div>
   </div>`;
-    const aiCard = document.getElementById("bodenFab") ? `
-  <div class="adm-ai-card">
-    <div class="adm-ai-head"><span class="adm-ai-badge">AI</span> ${tA("dash.aiTitle","Mona · slimme assistent")}</div>
-    <p class="adm-ai-text">${tA("dash.aiText","Stel een vraag over je cijfers, planning of klanten. Mona kijkt enkel naar gegevens waar jij rechten op hebt.")}</p>
-    <div class="adm-ai-chips">
-      <button class="adm-ai-chip" data-q="${tA("dash.aiQ1","Welke facturen zijn vervallen?")}">${tA("dash.aiQ1","Welke facturen zijn vervallen?")}</button>
-      <button class="adm-ai-chip" data-q="${tA("dash.aiQ2","Wat staat er vandaag gepland?")}">${tA("dash.aiQ2","Wat staat er vandaag gepland?")}</button>
-      <button class="adm-ai-chip" data-q="${tA("dash.aiQ3","Hoeveel werkbonnen staan open?")}">${tA("dash.aiQ3","Hoeveel werkbonnen staan open?")}</button>
-    </div>
-    <div style="margin-top:auto"><button class="adm-btn adm-btn-primary adm-btn-sm" id="admAiOpen">${tA("dash.aiOpen","Open Mona")}</button></div>
-  </div>` : "";
     const cockpitRows = `
 ${planCard || donutCard ? `<div class="adm-grid-2" style="margin-bottom:18px">${planCard}${donutCard}</div>` : ""}
-<div class="adm-grid-2" style="margin-bottom:18px">${actCard}${aiCard}</div>`;
+<div style="margin-bottom:18px">${actCard}</div>`;
 
     // Live werkbord op basis van echte operationele data. De tijdsfilter werkt
     // lokaal zodat een beheerder zonder extra wachttijd tussen vandaag en week
     // kan schakelen.
     const boardStatus = status => ({
-      open: "Gepland", in_progress: "In uitvoering", Voltooid: "Te factureren",
-      Afgewerkt: "Te factureren", overdue: "Vervallen", paid: "Betaald"
-    }[status] || status || "Open");
+      open: bc.scheduled, in_progress: bc.inProgress, Voltooid: bc.toInvoice,
+      Afgewerkt: bc.toInvoice, overdue: bc.overdue, paid: bc.paid
+    }[status] || status || bc.open);
     const boardClass = status => String(status || "open").toLowerCase().replace(/[^a-z0-9]+/g, "-");
     const weekEndIso = new Date(Date.now() + (6 - dow) * 864e5).toISOString().slice(0, 10);
     const workBoardRows = workorders
@@ -1522,32 +1526,32 @@ ${planCard || donutCard ? `<div class="adm-grid-2" style="margin-bottom:18px">${
         const date = w.scheduledDate || String(w.createdAt || "").slice(0, 10);
         const owner = nameById[w.userId] || uName(w) || tA("dash.employee", "Medewerker");
         const title = w.title || w.description || w.number || tA("dash.act.workorder", "Werkbon");
-        return { id:w.id, view:"workorders", date, title, code:w.number || String(w.id || "").slice(-8), customer:w.clientName || w.customerName || "Geen klant", status:boardStatus(w.status), rawStatus:w.status, owner };
+        return { id:w.id, view:"workorders", date, title, code:w.number || String(w.id || "").slice(-8), customer:w.clientName || w.customerName || bc.noCustomer, status:boardStatus(w.status), rawStatus:w.status, owner };
       });
     const invoiceBoardRows = invoices
       .filter(i => ["open", "overdue"].includes(i.status))
-      .map(i => ({ id:i.id, view:"facturen", date:i.dueDate || i.invoiceDate || "", title:`Factuur ${i.number || ""}`.trim(), code:eur0.format(Number(i.total || 0)), customer:i.customerName || "Geen klant", status:boardStatus(i.status), rawStatus:i.status, owner:"Financieel" }));
+      .map(i => ({ id:i.id, view:"facturen", date:i.dueDate || i.invoiceDate || "", title:`${bc.invoice} ${i.number || ""}`.trim(), code:eur0.format(Number(i.total || 0)), customer:i.customerName || bc.noCustomer, status:boardStatus(i.status), rawStatus:i.status, owner:bc.finance }));
     const boardRows = [...workBoardRows, ...invoiceBoardRows]
       .sort((a, b) => String(a.date || "9999").localeCompare(String(b.date || "9999")))
       .slice(0, 12);
     const boardMarkup = `
-<section class="adm-operations-board" aria-label="Operationele flow">
+<section class="adm-operations-board" aria-label="${esc(bc.title)}">
   <div class="adm-board-head">
-    <div><span class="adm-eyebrow">Live werkbord</span><h3>Operationele flow</h3></div>
+    <div><span class="adm-eyebrow">${esc(bc.eyebrow)}</span><h3>${esc(bc.title)}</h3></div>
     <div class="adm-board-tools">
-      <button type="button" class="adm-board-filter active" data-board-period="today">Vandaag</button>
-      <button type="button" class="adm-board-filter" data-board-period="week">Deze week</button>
-      <button type="button" class="adm-board-add" id="admBoardNew">+ Nieuwe opdracht</button>
+      <button type="button" class="adm-board-filter active" data-board-period="today">${esc(bc.today)}</button>
+      <button type="button" class="adm-board-filter" data-board-period="week">${esc(bc.week)}</button>
+      <button type="button" class="adm-board-add" id="admBoardNew">+ ${esc(bc.newWork)}</button>
     </div>
   </div>
-  <div class="adm-board-group"><div><i></i><b>Actief</b><span id="admBoardCount">${boardRows.filter(r => r.date === todayIso).length} items</span></div><button type="button" id="admBoardCollapse" aria-label="Werkbord inklappen">⌃</button></div>
+  <div class="adm-board-group"><div><i></i><b>${esc(bc.active)}</b><span id="admBoardCount">${boardRows.filter(r => r.date === todayIso).length} ${esc(boardRows.filter(r => r.date === todayIso).length === 1 ? bc.item : bc.items)}</span></div><button type="button" id="admBoardCollapse" aria-label="${esc(bc.collapse)}">⌃</button></div>
   <div id="admBoardBody">
     <div class="adm-board-table">
-      <div class="adm-board-row adm-board-labels"><span>Opdracht</span><span>Klant</span><span>Status</span><span>Verantwoordelijke</span><span>Planning</span><span></span></div>
+      <div class="adm-board-row adm-board-labels"><span>${esc(bc.task)}</span><span>${esc(bc.customer)}</span><span>${esc(bc.status)}</span><span>${esc(bc.owner)}</span><span>${esc(bc.planning)}</span><span></span></div>
       ${boardRows.map(r => {
         const inWeek = r.date >= weekStartIso && r.date <= weekEndIso;
         const initials = r.owner.split(/\s+/).filter(Boolean).slice(0,2).map(part => part[0]).join("").toUpperCase();
-        const planning = r.date ? (r.date === todayIso ? "Vandaag" : new Date(`${r.date}T12:00:00`).toLocaleDateString("nl-BE", { weekday:"short", day:"numeric", month:"short" })) : "Niet gepland";
+        const planning = r.date ? (r.date === todayIso ? bc.today : new Date(`${r.date}T12:00:00`).toLocaleDateString(bc.locale, { weekday:"short", day:"numeric", month:"short" })) : bc.notPlanned;
         return `<button type="button" class="adm-board-row adm-board-item" data-board-view="${r.view}" data-board-id="${esc(r.id || "")}" data-board-today="${r.date === todayIso ? "1" : "0"}" data-board-week="${inWeek ? "1" : "0"}">
           <span class="adm-board-task"><b>${esc(r.title)}</b><small>${esc(r.code || "")}</small></span>
           <span>${esc(r.customer)}</span>
@@ -1556,7 +1560,7 @@ ${planCard || donutCard ? `<div class="adm-grid-2" style="margin-bottom:18px">${
           <span>${esc(planning)}</span><span aria-hidden="true">→</span>
         </button>`;
       }).join("")}
-      <div class="adm-board-empty" id="admBoardEmpty" style="display:none">Geen actieve items in deze periode.</div>
+      <div class="adm-board-empty" id="admBoardEmpty" style="display:none">${esc(bc.noActive)}</div>
     </div>
   </div>
 </section>`;
@@ -1673,7 +1677,7 @@ ${(() => {
         if (show) visible += 1;
       });
       document.querySelectorAll(".adm-board-filter").forEach(btn => btn.classList.toggle("active", btn.dataset.boardPeriod === period));
-      const count = document.getElementById("admBoardCount"); if (count) count.textContent = `${visible} ${visible === 1 ? "item" : "items"}`;
+      const count = document.getElementById("admBoardCount"); if (count) count.textContent = `${visible} ${visible === 1 ? bc.item : bc.items}`;
       const empty = document.getElementById("admBoardEmpty"); if (empty) empty.style.display = visible ? "none" : "block";
     };
     document.querySelectorAll(".adm-board-filter").forEach(btn => btn.addEventListener("click", () => filterBoard(btn.dataset.boardPeriod)));
@@ -1681,7 +1685,7 @@ ${(() => {
       const body = document.getElementById("admBoardBody");
       const collapsed = body?.classList.toggle("hidden");
       event.currentTarget.textContent = collapsed ? "⌄" : "⌃";
-      event.currentTarget.setAttribute("aria-label", collapsed ? "Werkbord uitklappen" : "Werkbord inklappen");
+      event.currentTarget.setAttribute("aria-label", collapsed ? bc.expand : bc.collapse);
     });
     document.getElementById("admBoardNew")?.addEventListener("click", () => openWorkorderDrawer(null, workorders, { planAfterSave:true }));
     document.querySelectorAll(".adm-board-item").forEach(row => row.addEventListener("click", () => {
@@ -1693,11 +1697,9 @@ ${(() => {
     }));
     filterBoard("today");
 
-    // Cockpit-widgets: planning, activiteit en Mona
+    // Cockpit-widgets: planning en activiteit
     document.getElementById("admDashPlanning")?.addEventListener("click", e => { e.preventDefault(); switchView("planning"); });
     document.querySelectorAll(".adm-act-link").forEach(el => el.addEventListener("click", () => switchView(el.dataset.view)));
-    document.getElementById("admAiOpen")?.addEventListener("click", () => admAskBoden());
-    document.querySelectorAll(".adm-ai-chip").forEach(ch => ch.addEventListener("click", () => admAskBoden(ch.dataset.q)));
 
     // Golden path widget injection
     if (gpData?.readiness) {
