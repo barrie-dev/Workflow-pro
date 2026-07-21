@@ -216,7 +216,7 @@ const { normalizeAppointment, runAppointmentReminders } = require("./modules/app
 const { normalizeIncident, incidentsToCsv, incidentDeadline } = require("./modules/incidents");
 const { INQUIRY_STATUSES, ensureIntake, intakeAddress, newIntakeToken, parseInboundPayload, resolveIntakeTenant, createInquiry } = require("./modules/inbox");
 const { estimateFromQuestion } = require("./modules/estimator");
-const { emitDomainEvent, listOutbox } = require("./platform/events");
+const { emitDomainEvent, listOutbox, registerOutboxSink } = require("./platform/events");
 const { ensureDefaultCompany, issueNumber } = require("./platform/companies");
 const { applyScope, redactSensitive } = require("./platform/policy");
 const { makeCustomerRepository } = require("./platform/crm");
@@ -374,6 +374,16 @@ const storeAdapter = createDataAdapter();
 // zelfde duurzaamheidscontract als de pg-adapter). Losse scripts laten de
 // adapter synchroon zodat "script klaar" ook "geschreven" blijft.
 if (storeAdapter.name === "json") storeAdapter.buffered = true;
+// Transactionele outbox (CTO P0-05): op de pg-adapter gaat elk domeinevent
+// óók naar de duurzame outbox_events-tabel, in DEZELFDE transactie als de
+// staat. De in-memory cap van 2.000 kan het werkgeheugen knippen; de tabel
+// is de blijvende log met retentie en replay.
+if (storeAdapter.name === "postgres" && typeof storeAdapter.queueOutboxAppend === "function") {
+  registerOutboxSink({
+    append: ev => storeAdapter.queueOutboxAppend(ev),
+    status: up => storeAdapter.queueOutboxStatus(up),
+  });
+}
 // Insights-dashboardcache (per gebruiker, TTL 10s · zie de insights-route).
 const insightsCache = new Map();
 const storeNeedsAsyncLoad = typeof storeAdapter.loadAsync === "function";
@@ -1981,6 +1991,57 @@ const httpServer = http.createServer(async (req, res) => {
         limit: url.searchParams.get("limit") || 50,
       });
       sendJson(res, 200, { ok: true, events });
+      return;
+    }
+
+    // Duurzame outbox (P0-05): de blijvende log in PostgreSQL, ook voorbij de
+    // in-memory cap · inspectie + replay voor de superadmin.
+    if (url.pathname === "/api/admin/outbox" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "system");
+      if (typeof storeAdapter.listOutboxEvents !== "function") {
+        return sendJson(res, 409, { ok: false, error: "Duurzame outbox vereist de PostgreSQL-adapter", code: "OUTBOX_NOT_DURABLE" });
+      }
+      const rows = await storeAdapter.listOutboxEvents({
+        tenantId: url.searchParams.get("tenantId") || undefined,
+        status: url.searchParams.get("status") || undefined,
+        eventType: url.searchParams.get("eventType") || undefined,
+        limit: url.searchParams.get("limit") || undefined,
+      });
+      sendJson(res, 200, { ok: true, events: rows });
+      return;
+    }
+    // Replay uit de duurzame log: zet het event terug als pending in het
+    // werkgeheugen zodat de bezorgcyclus het opnieuw uitlevert (h46: event
+    // replay binnen de retentie).
+    const outboxReplayMatch = url.pathname.match(/^\/api\/admin\/outbox\/([^/]+)\/replay$/);
+    if (outboxReplayMatch && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "system");
+      if (typeof storeAdapter.listOutboxEvents !== "function") {
+        return sendJson(res, 409, { ok: false, error: "Duurzame outbox vereist de PostgreSQL-adapter", code: "OUTBOX_NOT_DURABLE" });
+      }
+      const { rows: replayRows } = await storeAdapter.pool.query(`SELECT * FROM outbox_events WHERE id = $1`, [outboxReplayMatch[1]]);
+      const row = replayRows[0];
+      if (!row) return sendJson(res, 404, { ok: false, error: "Event niet gevonden in de duurzame outbox" });
+      const inMemory = (store.data.outbox || []).find(e => e.id === row.id);
+      if (inMemory) {
+        inMemory.delivery = { ...inMemory.delivery, status: "pending", attempts: 0, nextAttemptAt: null, lastError: null };
+      } else {
+        store.data.outbox = store.data.outbox || [];
+        store.data.outbox.push({
+          id: row.id, eventType: row.event_type, tenantId: row.tenant_id, companyId: row.company_id,
+          aggregateType: row.aggregate_type, aggregateId: row.aggregate_id,
+          occurredAt: new Date(row.occurred_at).toISOString(), correlationId: row.correlation_id,
+          version: row.version, data: row.data || {}, actor: "outbox-replay",
+          delivery: { status: "pending", attempts: 0, nextAttemptAt: null, lastError: null },
+        });
+      }
+      store.save();
+      store.audit({ actor: user.email, tenantId: row.tenant_id, action: "outbox_event_replayed", area: "integrations", detail: row.id });
+      sendJson(res, 200, { ok: true, replayed: row.id });
       return;
     }
 
@@ -7272,6 +7333,18 @@ function startServer() {
   };
   setTimeout(runAuditRetention, 120 * 1000).unref();
   setInterval(runAuditRetention, 24 * 60 * 60 * 1000).unref();
+
+  // Duurzame outbox-retentie (P0-05): bezorgde events ouder dan 30 dagen.
+  if (storeAdapter.name === "postgres" && typeof storeAdapter.pruneOutbox === "function") {
+    const runOutboxPrune = async () => {
+      try {
+        const r = await storeAdapter.pruneOutbox({ keepDays: 30 });
+        if (r.removed) console.log(`  Outbox    : ${r.removed} bezorgde event(s) ouder dan 30 dagen opgeruimd`);
+      } catch (e) { console.error("[outbox] opruimen mislukt:", e.message); }
+    };
+    setTimeout(runOutboxPrune, 240 * 1000).unref();
+    setInterval(runOutboxPrune, 24 * 60 * 60 * 1000).unref();
+  }
 
   // Idempotency-sleutels (h41) verlopen na 24u; ruim ze dagelijks op.
   const runIdempotencyPrune = () => {

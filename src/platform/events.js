@@ -63,6 +63,23 @@ function notifyListeners(store, event) {
   }
 }
 
+// ── Duurzame outbox-sink (CTO P0-05) ────────────────────────────────────────
+// De server injecteert hier de pg-adapter-koppeling: elk nieuw event en elke
+// statuswijziging gaat óók naar de duurzame outbox-tabel, die in DEZELFDE
+// transactie als de staat commit. Deze module blijft cloudblind: alleen een
+// callback-contract, geen SQL of adapterkennis. Zonder sink (json-adapter,
+// tests) verandert er niets.
+let outboxSink = null;
+function registerOutboxSink(sink) {
+  outboxSink = sink && typeof sink.append === "function" && typeof sink.status === "function" ? sink : null;
+}
+function sinkAppend(event) {
+  if (outboxSink) { try { outboxSink.append(event); } catch (_) { /* sink mag de write nooit breken */ } }
+}
+function sinkStatus(update) {
+  if (outboxSink) { try { outboxSink.status(update); } catch (_) { /* idem */ } }
+}
+
 /**
  * Emit een domeinevent naar de outbox.
  * @param {object} store
@@ -101,6 +118,9 @@ function emitDomainEvent(store, input) {
   outbox.push(event);
   if (outbox.length > OUTBOX_LIMIT) store.data.outbox = outbox.slice(-OUTBOX_LIMIT);
   if (typeof store.save === "function") store.save();
+  // Duurzame kopie: commit samen met de staat (of helemaal niet). De cap
+  // hierboven kan oude events uit het WERKGEHEUGEN knippen; de tabel niet.
+  sinkAppend(event);
   notifyListeners(store, event);
   return event;
 }
@@ -122,6 +142,7 @@ function markEventDelivered(store, eventId) {
   if (!e) return null;
   e.delivery = { ...e.delivery, status: "delivered", deliveredAt: new Date().toISOString(), lastError: null };
   if (typeof store.save === "function") store.save();
+  sinkStatus({ id: eventId, status: "delivered", attempts: e.delivery.attempts });
   return e;
 }
 
@@ -141,7 +162,8 @@ function markEventFailed(store, eventId, error, maxAttempts = 8) {
     lastError: String(error || "").slice(0, 300),
   };
   if (typeof store.save === "function") store.save();
+  if (dead) sinkStatus({ id: eventId, status: "dead_letter", attempts, lastError: e.delivery.lastError });
   return e;
 }
 
-module.exports = { newUlid, emitDomainEvent, listOutbox, markEventDelivered, markEventFailed, registerEventListener };
+module.exports = { newUlid, emitDomainEvent, listOutbox, markEventDelivered, markEventFailed, registerEventListener, registerOutboxSink };

@@ -12,17 +12,21 @@ const { PostgresDataAdapter, STATE_TABLE } = require("../src/infrastructure/post
 /** Minimale pg-pool-dubbel die de queries registreert en antwoorden teruggeeft. */
 function fakePool(handlers = {}) {
   const calls = [];
+  const runQuery = async (sql, params) => {
+    calls.push({ sql: String(sql).replace(/\s+/g, " ").trim(), params });
+    if (/CREATE TABLE/i.test(sql)) return { rows: [] };
+    if (/^BEGIN|^COMMIT|^ROLLBACK/i.test(String(sql).trim())) return { rows: [] };
+    if (/^SELECT/i.test(sql.trim())) return handlers.select ? handlers.select(params) : { rows: [] };
+    if (/^INSERT/i.test(sql.trim())) return handlers.insert ? handlers.insert(params) : { rows: [{ revision: 1 }] };
+    if (/^UPDATE/i.test(sql.trim())) return handlers.update ? handlers.update(params) : { rows: [{ revision: 2 }] };
+    return { rows: [] };
+  };
   return {
     calls,
     totalCount: 1, idleCount: 1, waitingCount: 0,
-    async query(sql, params) {
-      calls.push({ sql: String(sql).replace(/\s+/g, " ").trim(), params });
-      if (/CREATE TABLE/i.test(sql)) return { rows: [] };
-      if (/^SELECT/i.test(sql.trim())) return handlers.select ? handlers.select(params) : { rows: [] };
-      if (/^INSERT/i.test(sql.trim())) return handlers.insert ? handlers.insert(params) : { rows: [{ revision: 1 }] };
-      if (/^UPDATE/i.test(sql.trim())) return handlers.update ? handlers.update(params) : { rows: [{ revision: 2 }] };
-      return { rows: [] };
-    },
+    query: runQuery,
+    // De transactionele flush (P0-05) werkt op een uitgecheckte client.
+    async connect() { return { query: runQuery, release() {} }; },
     async end() { this.ended = true; },
   };
 }

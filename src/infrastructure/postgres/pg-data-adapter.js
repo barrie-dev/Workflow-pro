@@ -74,6 +74,8 @@ class PostgresDataAdapter {
     this.lastError = null;
     this.lastFlushAt = null;
     this.ready = false;
+    this.outboxAppend = [];     // events die met de volgende flush mee-committen
+    this.outboxStatus = [];     // deliverystatus-updates voor de duurzame log
   }
 
   /**
@@ -145,7 +147,21 @@ class PostgresDataAdapter {
 
   /** True zolang er niet-bewaarde wijzigingen zijn. */
   isDirty() {
-    return this.pending !== null;
+    return this.pending !== null || this.outboxAppend.length > 0 || this.outboxStatus.length > 0;
+  }
+
+  /**
+   * Transactionele outbox (CTO P0-05): nieuwe events en statuswijzigingen
+   * worden hier in de wachtrij gezet en committen in DEZELFDE transactie als
+   * de staat. Faalt de flush, dan blijven ze staan voor de volgende poging ·
+   * een commit bevat de domeinwijziging én zijn events, of geen van beide.
+   */
+  queueOutboxAppend(event) {
+    if (event && event.id) this.outboxAppend.push(event);
+  }
+
+  queueOutboxStatus(update) {
+    if (update && update.id) this.outboxStatus.push(update);
   }
 
   /**
@@ -163,35 +179,94 @@ class PostgresDataAdapter {
     if (!this.isDirty()) return { written: false };
     const data = this.pending;
     this.pending = null;
+    const appendBatch = this.outboxAppend.splice(0);
+    const statusBatch = this.outboxStatus.splice(0);
+    const requeue = () => {
+      // Niets weggooien bij een fout: staat én events wachten samen op retry.
+      if (this.pending === null && data !== null) this.pending = data;
+      this.outboxAppend.unshift(...appendBatch);
+      this.outboxStatus.unshift(...statusBatch);
+    };
     this.flushing = (async () => {
+      const client = await this.pool.connect();
       try {
-        const { rows } = await this.pool.query(
-          `UPDATE ${STATE_TABLE}
-              SET data = $2, revision = revision + 1, updated_at = now()
-            WHERE id = $1 AND revision = $3
-        RETURNING revision`,
-          [STATE_ID, data, this.revision]);
-        if (!rows.length) {
-          // Een andere instantie schreef tussentijds. De aanroeper moet
-          // herladen; stil doorschrijven zou werk van iemand anders wissen.
-          const e = new Error("De opslag is door een andere instantie gewijzigd (revisieconflict)");
-          e.code = "STATE_REVISION_CONFLICT";
-          this.pending = data;      // niet weggooien: bewaar voor een retry
-          throw e;
+        // ÉÉN transactie: staat + outbox-events + statusupdates committen
+        // samen of helemaal niet (CTO P0-05 · transactionele outbox).
+        await client.query("BEGIN");
+        if (data !== null) {
+          const { rows } = await client.query(
+            `UPDATE ${STATE_TABLE}
+                SET data = $2, revision = revision + 1, updated_at = now()
+              WHERE id = $1 AND revision = $3
+          RETURNING revision`,
+            [STATE_ID, data, this.revision]);
+          if (!rows.length) {
+            // Een andere instantie schreef tussentijds. De aanroeper moet
+            // herladen; stil doorschrijven zou werk van iemand anders wissen.
+            await client.query("ROLLBACK");
+            const e = new Error("De opslag is door een andere instantie gewijzigd (revisieconflict)");
+            e.code = "STATE_REVISION_CONFLICT";
+            requeue();
+            throw e;
+          }
+          this.revision = Number(rows[0].revision);
         }
-        this.revision = Number(rows[0].revision);
+        for (const ev of appendBatch) {
+          // Idempotent op id: een her-flush na een netwerkfout dupliceert niets.
+          await client.query(
+            `INSERT INTO outbox_events (id, tenant_id, company_id, event_type, aggregate_type, aggregate_id,
+               occurred_at, correlation_id, version, data)
+             VALUES ($1,$2,$3,$4,$5,$6,coalesce($7::timestamptz, now()),$8,$9,$10)
+             ON CONFLICT (id) DO NOTHING`,
+            [ev.id, ev.tenantId, ev.companyId || null, ev.eventType, ev.aggregateType || "unknown", String(ev.aggregateId || ""),
+              ev.occurredAt || null, ev.correlationId || null, Number(ev.version) || 1, JSON.stringify(ev.data || {})]);
+        }
+        for (const up of statusBatch) {
+          await client.query(
+            `UPDATE outbox_events
+                SET delivery_status = $2, attempts = coalesce($3, attempts),
+                    last_error = $4, delivered_at = CASE WHEN $2 = 'delivered' THEN now() ELSE delivered_at END
+              WHERE id = $1`,
+            [up.id, up.status, up.attempts == null ? null : Number(up.attempts), up.lastError || null]);
+        }
+        await client.query("COMMIT");
         this.lastFlushAt = new Date().toISOString();
         this.lastError = null;
-        return { written: true, revision: this.revision };
+        return { written: true, revision: this.revision, outboxAppended: appendBatch.length, outboxUpdated: statusBatch.length };
       } catch (err) {
+        if (err.code !== "STATE_REVISION_CONFLICT") {
+          await client.query("ROLLBACK").catch(() => {});
+          requeue();
+        }
         this.lastError = String((err && err.message) || err).slice(0, 300);
-        if (this.pending === null) this.pending = data;   // schrijffout → opnieuw proberen
         throw err;
       } finally {
+        client.release();
         this.flushing = null;
       }
     })();
     return this.flushing;
+  }
+
+  /** Retentie duurzame outbox: bezorgde events ouder dan N dagen opruimen. */
+  async pruneOutbox({ keepDays = 30 } = {}) {
+    const { rowCount } = await this.pool.query(
+      `DELETE FROM outbox_events
+        WHERE delivery_status = 'delivered' AND occurred_at < now() - ($1 || ' days')::interval`,
+      [String(Math.max(1, Number(keepDays) || 30))]);
+    return { removed: rowCount || 0 };
+  }
+
+  /** Duurzame log lezen (replay/inspectie · superadmin). */
+  async listOutboxEvents({ tenantId, status, eventType, limit = 100 } = {}) {
+    const cond = ["1=1"], params = [];
+    if (tenantId) { params.push(tenantId); cond.push(`tenant_id = $${params.length}`); }
+    if (status) { params.push(status); cond.push(`delivery_status = $${params.length}`); }
+    if (eventType) { params.push(eventType); cond.push(`event_type = $${params.length}`); }
+    params.push(Math.min(Number(limit) || 100, 500));
+    const { rows } = await this.pool.query(
+      `SELECT * FROM outbox_events WHERE ${cond.join(" AND ")} ORDER BY occurred_at DESC LIMIT $${params.length}`, params);
+    return rows;
   }
 
   /** Herlaad na een revisieconflict, zodat de aanroeper kan hersynchroniseren. */
