@@ -1,0 +1,57 @@
+{
+  "generatedAt": "2026-07-21T10:29:26.093Z",
+  "commit": {
+    "sha": "82a2e864c41a53c5ed6abb0ea61962f24ab9361d",
+    "branch": "main",
+    "dirty": false,
+    "subject": "CTO P0-01 fase 2: tenant + identity naar genormaliseerde tabellen in runtime"
+  },
+  "runtime": {
+    "node": "v24.16.0",
+    "platform": "win32"
+  },
+  "tests": {
+    "ran": true,
+    "exitCode": 0,
+    "total": 934,
+    "pass": 934,
+    "fail": 0,
+    "skipped": 0,
+    "databaseTestsIncluded": true,
+    "objectStorageTestsIncluded": true,
+    "blobStorageTestsIncluded": true
+  },
+  "migrations": {
+    "files": [
+      "001_core.sql",
+      "002_crm.sql",
+      "003_jobs.sql",
+      "004_outbox.sql",
+      "005_identity.sql"
+    ],
+    "count": 5,
+    "database": {
+      "applied": 5,
+      "pending": [],
+      "total": 5
+    }
+  },
+  "posture": {
+    "appEnv": "development",
+    "storageAdapter": "(standaard)",
+    "objectStorageAdapter": "local",
+    "crmReadSource": "(standaard)",
+    "databaseConfigured": true
+  },
+  "artifacts": {
+    "Dockerfile": true,
+    "docker-compose.yml": true,
+    ".github/workflows/ci.yml": true,
+    "render.yaml": true,
+    "docs/RUNBOOK.md": true,
+    "docs/DEPLOY-RUNBOOK.md": true,
+    "docs/PERFORMANCE-BASELINE.md": true,
+    "docs/LIVE-SECURITY-CHECKLIST.md": true,
+    "migrations/sql": true
+  }
+}
