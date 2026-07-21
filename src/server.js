@@ -253,7 +253,7 @@ const {
 const { httpsRequest } = require("./lib/http-client");
 const inventory = require("./platform/inventory");
 const { buildMonaSignals } = require("./platform/mona-signals");
-const { buildPreparedWork, prepareProject } = require("./platform/mona-prepare");
+const { buildPreparedWork, prepareProject, buildDailyDigest } = require("./platform/mona-prepare");
 const robawsImport = require("./platform/robaws-import");
 const { buildWorkInbox } = require("./platform/work-inbox");
 const { makeConfigRepository } = require("./platform/config-platform");
@@ -2796,6 +2796,28 @@ const httpServer = http.createServer(async (req, res) => {
         sendJson(res, 200, { ok: true, ...buildPreparedWork(store, tenant, user) });
         return;
       }
+      // Dagelijkse digest: samenvatting van het voorbereide werk. GET geeft
+      // enkel de samenvatting; POST maakt (idempotent per dag) de melding aan.
+      if (action === "mona/digest" && (req.method === "GET" || req.method === "POST")) {
+        assertInteractiveUser(user);
+        const digest = buildDailyDigest(store, tenant, user);
+        let notified = false;
+        if (req.method === "POST" && digest.actionable > 0) {
+          const sourceRef = `mona:digest:${new Date().toISOString().slice(0, 10)}`;
+          const already = (store.data.notifications || []).some(n => n.tenantId === tenantId && n.sourceRef === sourceRef);
+          if (!already) {
+            createNotification(store, tenant, {
+              type: "mona", audience: "admins", title: `${digest.actionable} ding(en) voorbereid`,
+              body: `Mona heeft ${digest.actionable} ding(en) voor je klaargezet: ${digest.titles.join(" · ")}. Open "Voorbereid voor jou" om ze te bevestigen.`,
+              priority: "normal", sourceRef,
+            }, user);
+            notified = true;
+          }
+        }
+        sendJson(res, 200, { ok: true, digest, notified });
+        return;
+      }
+
       // Op verzoek een volledig project voorbereiden (dossier + kickoff-afspraak).
       if (action === "mona/prepare-project" && req.method === "POST") {
         assertInteractiveUser(user);
@@ -7608,6 +7630,33 @@ function startServer() {
   };
   setTimeout(runReminderCycle, 60 * 1000).unref();
   setInterval(runReminderCycle, 6 * 60 * 60 * 1000).unref();
+
+  // Mona Prepare · proactieve dagelijkse digest (h48). Per tenant berekent Mona
+  // het VOORBEREIDE werk en maakt één in-app melding ("X dingen klaargezet"),
+  // zodat de gebruiker het niet eens hoeft te vragen. Idempotent per dag via
+  // sourceRef; alleen actionable werk telt (anders is de melding ruis). De
+  // digest draait op het rechtenniveau van een echte tenant-admin.
+  const runMonaDigest = () => {
+    try {
+      const day = new Date().toISOString().slice(0, 10);
+      for (const tenant of store.data.tenants || []) {
+        const admin = (store.data.users || []).find(u => u.tenantId === tenant.id && u.role === "tenant_admin" && u.active !== false);
+        if (!admin) continue;
+        const sourceRef = `mona:digest:${day}`;
+        const already = (store.data.notifications || []).some(n => n.tenantId === tenant.id && n.sourceRef === sourceRef);
+        if (already) continue;
+        const digest = buildDailyDigest(store, tenant, admin);
+        if (digest.actionable < 1) continue;
+        const body = `Mona heeft ${digest.actionable} ding(en) voor je klaargezet: ${digest.titles.join(" · ")}. Open "Voorbereid voor jou" om ze te bevestigen.`;
+        createNotification(store, tenant, {
+          type: "mona", audience: "admins", title: `${digest.actionable} ding(en) voorbereid`,
+          body, priority: "normal", sourceRef,
+        }, { email: "mona" });
+      }
+    } catch (_) { /* een digest mag nooit het proces breken */ }
+  };
+  setTimeout(runMonaDigest, 90 * 1000).unref();
+  setInterval(runMonaDigest, 24 * 60 * 60 * 1000).unref();
 
   // Webhook-bezorging (E19/h41), gecoördineerd via de JobQueue (4.6): elke
   // minuut één cyclus over ALLE replicas samen. De idempotencyKey is het

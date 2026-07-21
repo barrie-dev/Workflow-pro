@@ -6,7 +6,7 @@
 const { test } = require("node:test");
 const assert = require("node:assert");
 
-const { buildPreparedWork, prepareProject } = require("../src/platform/mona-prepare");
+const { buildPreparedWork, prepareProject, buildDailyDigest, workorderLines } = require("../src/platform/mona-prepare");
 const { runTool } = require("../src/modules/boden");
 const { seedDefaults } = require("../src/modules/bundles");
 
@@ -163,4 +163,35 @@ test("propose_action: create_invoice vereist de add-on én volledig facturatiere
   // Met add-on maar employee zonder facturatierecht → geweigerd.
   const emp = runTool(store, TENANT_AI, EMPLOYEE, "propose_action", { action: "create_invoice", params: {} }, []);
   assert.ok(emp.error && /toegang/i.test(emp.error));
+});
+
+// ── Sprint 2: rijkere werkbonregels + dagelijkse digest ─────────────────────
+test("workorderLines: uren × bevroren uurtarief wordt een correcte factuurregel", () => {
+  const vast = workorderLines({ number: "WB-9", fixedPrice: 1500 });
+  assert.equal(vast.lines[0].unitPrice, 1500);
+  assert.equal(vast.total, 1500);
+
+  const uren = workorderLines({ number: "WB-10", title: "Onderhoud", billableHours: 8, hourlyRate: 65 });
+  assert.equal(uren.lines[0].qty, 8);
+  assert.equal(uren.lines[0].unitPrice, 65);
+  assert.equal(uren.total, 520, "8 × 65 = 520");
+  assert.match(uren.lines[0].description, /8 u × €65/);
+
+  // Geen bedrag én geen tarief → uren met tarief 0 (gebruiker vult aan).
+  const open = workorderLines({ number: "WB-11", clockedHours: 3 });
+  assert.equal(open.lines[0].qty, 3);
+  assert.equal(open.lines[0].unitPrice, 0);
+  assert.equal(open.total, 0);
+});
+
+test("digest: vat enkel ACTIONABLE voorbereid werk samen (rechten-gescoped)", () => {
+  const store = mkStore(); seedDefaults(store);
+  const d = buildDailyDigest(store, TENANT_AI, ADMIN, TODAY);
+  assert.ok(d.actionable >= 2, "aanvaarde offerte + werkbon + herinneringen zijn actionable");
+  assert.ok(d.titles.length >= 1 && d.titles.length <= 5);
+  assert.ok(d.total >= d.actionable, "total telt ook navigate-plannen mee");
+
+  // Employee zonder facturatierecht → niets actionable om te melden.
+  const empD = buildDailyDigest(store, TENANT_AI, EMPLOYEE, TODAY);
+  assert.equal(empD.actionable, 0, "geen digest-ruis voor wie niets mag uitvoeren");
 });

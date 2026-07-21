@@ -75,14 +75,29 @@ function planFromAcceptedQuote(store, tenant, user, signal) {
     signal, [step]);
 }
 
-/** Afgewerkte werkbon zonder factuur → factuur voorbereiden met ingevulde klant + regel. */
+/**
+ * Bouw factuurregels uit de factureerbare inhoud van een werkbon. Voorkeur:
+ * een handmatig bedrag/vaste prijs → één regel; anders uren × bevroren
+ * uurtarief (het tarief dat bij afronding op de werkbon is vastgezet, h16/E07);
+ * als laatste terugval enkel de uren (tarief 0, gebruiker vult aan).
+ */
+function workorderLines(wo) {
+  const label = `Werkbon ${wo.number || wo.id}${wo.title ? " · " + wo.title : ""}`;
+  const amount = Number(wo.billableAmount ?? wo.fixedPrice ?? wo.amount ?? 0);
+  if (amount > 0) return { lines: [{ description: label, qty: 1, unitPrice: amount, vatRate: 21 }], total: amount };
+  const hours = Number(wo.billableHours ?? wo.clockedHours ?? wo.hours ?? 0) || 0;
+  const rate = Number(wo.hourlyRate ?? 0) || 0;
+  if (hours > 0 && rate > 0) {
+    return { lines: [{ description: `${label} · ${hours} u × ${money(rate)}`, qty: hours, unitPrice: rate, vatRate: 21 }], total: Math.round(hours * rate * 100) / 100 };
+  }
+  return { lines: [{ description: label, qty: hours || 1, unitPrice: 0, vatRate: 21 }], total: 0 };
+}
+
+/** Afgewerkte werkbon zonder factuur → factuur voorbereiden met ingevulde klant + regels. */
 function planFromWorkorder(store, tenant, user, signal) {
   const wo = store.get("workorders", signal.refId);
   if (!wo) return null;
-  const amount = Number(wo.billableAmount ?? wo.fixedPrice ?? 0);
-  const lines = amount > 0
-    ? [{ description: `Werkbon ${wo.number || wo.id}${wo.title ? " · " + wo.title : ""}`, qty: 1, unitPrice: amount, vatRate: 21 }]
-    : [{ description: `Werkbon ${wo.number || wo.id}${wo.title ? " · " + wo.title : ""}`, qty: Number(wo.billableHours ?? wo.clockedHours ?? wo.hours ?? 1) || 1, unitPrice: 0, vatRate: 21 }];
+  const { lines, total } = workorderLines(wo);
   const step = buildStep(store, tenant, user, {
     action: "create_invoice", label: `Factuur opmaken voor ${wo.number || wo.id}`,
     perm: "billing", full: true, method: "POST", path: "facturen",
@@ -90,7 +105,7 @@ function planFromWorkorder(store, tenant, user, signal) {
     navigateTo: "workorders",
   });
   return plan("invoice_from_workorder", `Factuur klaar voor werkbon ${wo.number || wo.id}`,
-    `Afgewerkt en factureerbaar${amount > 0 ? ` · ${money(amount)}` : ""}. Klant en regel zijn al ingevuld.`,
+    `Afgewerkt en factureerbaar${total > 0 ? ` · ${money(total)}` : ""}. Klant en regels zijn al ingevuld${lines[0].unitPrice === 0 ? " (bedrag nog aan te vullen)" : ""}.`,
     signal, [step]);
 }
 
@@ -204,4 +219,22 @@ function prepareProject(store, tenant, user, { customerId = null, customerName =
   };
 }
 
-module.exports = { buildPreparedWork, prepareProject };
+/**
+ * Dagelijkse digest (proactief): vat het VOORBEREIDE werk samen voor een
+ * melding, zodat de gebruiker het niet eens hoeft te vragen. Alleen
+ * ACTIONABLE plannen tellen (echte stappen, geen navigate) · anders zou de
+ * melding ruis zijn. Rechten-gescoped via de meegegeven (admin)gebruiker.
+ * @returns {{ actionable:number, total:number, titles:string[], addonRequired:number }}
+ */
+function buildDailyDigest(store, tenant, user, now = new Date()) {
+  const { plans } = buildPreparedWork(store, tenant, user, now);
+  const actionable = plans.filter(p => p.steps.some(s => s.action !== "navigate"));
+  return {
+    actionable: actionable.length,
+    total: plans.length,
+    titles: actionable.slice(0, 5).map(p => p.title),
+    addonRequired: actionable.filter(p => p.addonRequired).length,
+  };
+}
+
+module.exports = { buildPreparedWork, prepareProject, buildDailyDigest, workorderLines };

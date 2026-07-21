@@ -59,6 +59,20 @@ const past = new Date(today.getTime() - 10 * 86400000).toISOString().slice(0, 10
   const projExec = await j(projStep.endpoint.method, `/api/tenants/${tid}/${projStep.endpoint.path}`, projStep.params, tok);
   check("prepare-project: projectstap uitvoerbaar", projExec.status === 201 && !!projExec.data.project, projExec.status);
 
+  // ── Proactieve dagelijkse digest → in-app melding (idempotent) ────────────
+  // Nog een vervallen factuur zodat er zeker actionable werk overblijft.
+  await j("POST", `/api/tenants/${tid}/facturen`, { customerName: "Voorbereid BV", dueDate: past, lines: [{ description: "Nog ouder werk", qty: 1, unitPrice: 250, vatRate: 21 }] }, tok);
+  const dg = await j("POST", `/api/tenants/${tid}/mona/digest`, {}, tok);
+  check("digest: samenvatting met actionable werk", dg.status === 200 && dg.data.digest.actionable >= 1, dg.data.digest && dg.data.digest.actionable);
+  check("digest: melding aangemaakt", dg.data.notified === true, dg.data.notified);
+  // Tweede keer dezelfde dag → geen dubbele melding (idempotent).
+  const dg2 = await j("POST", `/api/tenants/${tid}/mona/digest`, {}, tok);
+  check("digest: idempotent per dag (geen dubbele melding)", dg2.data.notified === false, dg2.data.notified);
+  // De melding staat in de notificatielijst.
+  const notifs = await j("GET", `/api/tenants/${tid}/notifications`, null, tok);
+  const monaNote = (notifs.data.notifications || notifs.data.rows || []).find(n => n.type === "mona" || /voorbereid/i.test(n.title || ""));
+  check("digest: melding zichtbaar in notificaties", !!monaNote, monaNote && monaNote.title);
+
   // ── Mona-chat (mock-modus) surface't proactief het voorbereide werk ───────
   const chat = await j("POST", `/api/tenants/${tid}/boden`, { messages: [{ role: "user", content: "wat kan je voor me klaarzetten?" }] }, tok);
   check("chat: mock-modus meldt voorbereid werk", chat.status === 200 && /voorbereid|klaargezet/i.test(chat.data.reply || ""), (chat.data.reply || "").slice(0, 60));
