@@ -49,7 +49,15 @@ PWRAW="$(head -c 4096 /dev/urandom | LC_ALL=C tr -dc 'A-Za-z0-9')"
 PGPASS="Aa1${PWRAW:0:24}"
 
 echo "-> resource group"
-az group create -n "$RG" -l "$LOC" -o none
+# Een resource group is enkel metadata; resources mogen in een ANDERE regio dan
+# de group staan. Bestaat de group al (bv. in westeurope van een vorige poging),
+# hergebruik hem dan · `az group create` met een andere -l zou anders falen.
+if az group show -n "$RG" -o none 2>/dev/null; then
+  RG_LOC="$(az group show -n "$RG" --query location -o tsv)"
+  echo "   bestaat al in $RG_LOC · hergebruiken (data komt in $LOC, dat is wat telt voor residentie)"
+else
+  az group create -n "$RG" -l "$LOC" -o none
+fi
 
 echo "-> PostgreSQL Flexible Server (burstable) + database (kan enkele minuten duren)"
 # Sommige EU-regio's weigeren tijdelijk nieuwe servers (capaciteit). Probeer een
