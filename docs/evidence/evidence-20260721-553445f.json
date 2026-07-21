@@ -1,0 +1,55 @@
+{
+  "generatedAt": "2026-07-21T05:48:28.373Z",
+  "commit": {
+    "sha": "553445ff7a04470db33509f72dbba2fa610a67af",
+    "branch": "main",
+    "dirty": false,
+    "subject": "CTO P0-09/P0-10: provider-neutraal deploy-runbook + go-live evidence bundle"
+  },
+  "runtime": {
+    "node": "v24.16.0",
+    "platform": "win32"
+  },
+  "tests": {
+    "ran": true,
+    "exitCode": 0,
+    "total": 910,
+    "pass": 910,
+    "fail": 0,
+    "skipped": 0,
+    "databaseTestsIncluded": true,
+    "objectStorageTestsIncluded": true
+  },
+  "migrations": {
+    "files": [
+      "001_core.sql",
+      "002_crm.sql",
+      "003_jobs.sql",
+      "004_outbox.sql"
+    ],
+    "count": 4,
+    "database": {
+      "applied": 4,
+      "pending": [],
+      "total": 4
+    }
+  },
+  "posture": {
+    "appEnv": "development",
+    "storageAdapter": "(standaard)",
+    "objectStorageAdapter": "local",
+    "crmReadSource": "(standaard)",
+    "databaseConfigured": true
+  },
+  "artifacts": {
+    "Dockerfile": true,
+    "docker-compose.yml": true,
+    ".github/workflows/ci.yml": true,
+    "render.yaml": true,
+    "docs/RUNBOOK.md": true,
+    "docs/DEPLOY-RUNBOOK.md": true,
+    "docs/PERFORMANCE-BASELINE.md": true,
+    "docs/LIVE-SECURITY-CHECKLIST.md": true,
+    "migrations/sql": true
+  }
+}
