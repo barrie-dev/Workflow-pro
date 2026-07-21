@@ -36,7 +36,7 @@ const SCENARIOS = [
   { n: 5, title: "Inkooporder deelontvangst + projectverplichting zonder dubbele kost", smokes: ["proc-smoke.js"], fullChain: true },
   { n: 6, title: "Factuurnummering + UBL-reconciliatie + Peppol-fout/retry", smokes: ["credit-smoke.js", "finance-smoke.js", "reconciliation-smoke.js"], fullChain: false },
   { n: 7, title: "Tenant A probeert elk pad naar data van tenant B", smokes: ["policy-smoke.js"], fullChain: false },
-  { n: 8, title: "Rol zonder kostprijsrecht: UI, API, export, zoeken, Mona", smokes: ["policy-smoke.js", "grid-smoke.js", "signals-smoke.js"], fullChain: false },
+  { n: 8, title: "Rol zonder kostprijsrecht: UI, API, export, zoeken, Mona", smokes: ["roles-smoke.js", "policy-smoke.js", "grid-smoke.js", "signals-smoke.js"], fullChain: false },
   { n: 9, title: "Legacy-migratie klant/project/werkbon met external ID + bestanden", smokes: ["robaws-smoke.js"], fullChain: false },
 ];
 

@@ -116,7 +116,13 @@ const SENSITIVE_FIELDS = {
 };
 
 function canSeeSensitive(user) {
-  return !!user && ["tenant_admin", "super_admin"].includes(user.role);
+  if (!user) return false;
+  if (["tenant_admin", "super_admin"].includes(user.role)) return true;
+  // Samenstelbaar profiel (#75): een expliciet 'costs.view'-recht ontsluit
+  // kostprijzen/marges, zodat een organisatie een financieel profiel kan
+  // samenstellen zonder het de beheerdersrol te geven. De permissions-set is de
+  // EFFECTIEVE set (rol + directe rechten), ingevuld door authenticate().
+  return (user.permissions || []).some(p => String(p).replace(/^(read:|team:|own:)/, "") === "costs.view");
 }
 
 /** Strip gevoelige velden voor niet-beheerders; accepteert record of array. */

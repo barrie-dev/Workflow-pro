@@ -47,6 +47,7 @@ const {
   isManager,
   isAdmin,
   canWrite,
+  assertCanWrite,
   ownScopeOnly
 } = require("./lib/auth");
 const {
@@ -58,6 +59,7 @@ const { modules } = require("./modules/registry");
 const { MODULE_CATALOG, CORE_MODULES, moduleByKey, listAddons } = require("./modules/catalog");
 const { listBundles, getBundle, saveBundle, deleteBundle } = require("./modules/bundles");
 const { resolveTenantModules, isModuleEnabled, assertModuleEnabled, assertSubmoduleEnabled, grantablePermissions, OPERATIONAL_KEYS, ALWAYS_PERMISSIONS } = require("./modules/entitlements");
+const rolesMod = require("./modules/roles");
 const { bodenChat } = require("./modules/boden");
 const { workingDaysBetween, round2, isValidBelgianVat } = require("./modules/be-locale");
 
@@ -6949,6 +6951,51 @@ const httpServer = http.createServer(async (req, res) => {
         sendJson(res, 200, { ok: true, date, availability: availabilityOn(row, date, { leaves: store.list("leaves", tenantId) || [] }) });
         return;
       }
+      // ── Samenstelbare profielen · custom rollen (#75) ─────────────────────────
+      // Rechten-gedreven rolbeheer: de tenant-admin stelt zelf profielen samen uit
+      // de granulaire rechtencatalogus. Lezen vraagt 'settings'; wijzigen vraagt
+      // schrijfrecht op 'settings' (+ admin-MFA) en wordt geaudit in de module.
+      if (action === "permission-catalog" && req.method === "GET") {
+        assertCan(user, "settings");
+        sendJson(res, 200, { ok: true, catalog: rolesMod.permissionCatalog(store, tenant) });
+        return;
+      }
+      if (action === "roles" && req.method === "GET") {
+        assertCan(user, "settings");
+        sendJson(res, 200, { ok: true, ...rolesMod.listRoles(store, tenantId) });
+        return;
+      }
+      if (action === "roles" && req.method === "POST") {
+        assertCanWrite(user, "settings");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        try {
+          const role = rolesMod.createRole(store, tenant, user.email, body);
+          sendJson(res, 201, { ok: true, role });
+        } catch (e) { sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code || "ROLE_INVALID" }); }
+        return;
+      }
+      const roleItemMatch = action.match(/^roles\/([^/]+)$/);
+      if (roleItemMatch && req.method === "PATCH") {
+        assertCanWrite(user, "settings");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req);
+        try {
+          const role = rolesMod.updateRole(store, tenant, user.email, roleItemMatch[1], body);
+          sendJson(res, 200, { ok: true, role });
+        } catch (e) { sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code || "ROLE_INVALID" }); }
+        return;
+      }
+      if (roleItemMatch && req.method === "DELETE") {
+        assertCanWrite(user, "settings");
+        assertApiKeyWriteAllowed(user, req);
+        try {
+          rolesMod.deleteRole(store, tenant, user.email, roleItemMatch[1]);
+          sendJson(res, 200, { ok: true });
+        } catch (e) { sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code || "ROLE_INVALID" }); }
+        return;
+      }
+
       if (action === "employees" && req.method === "GET") {
         assertCan(user, "employees");
         const includeInactive = url.searchParams.get("includeInactive") === "true";
@@ -6966,7 +7013,7 @@ const httpServer = http.createServer(async (req, res) => {
         assertCan(user, "employees");
         assertApiKeyWriteAllowed(user, req);
         const body = await readBody(req);
-        const { passwordHash, mfaSecret, mfaPendingSecret, recoveryCodes, newPassword, role: bodyRole, permissions: bodyPerms, ...safe } = body;
+        const { passwordHash, mfaSecret, mfaPendingSecret, recoveryCodes, newPassword, role: bodyRole, permissions: bodyPerms, roleId: bodyRoleId, ...safe } = body;
         const existing = store.getUserById(employeePatchMatch[1]);
         // PLT-BR-002: nooit toegang enkel op basis van een record-ID. Het doelwit
         // moet van deze tenant zijn en employee/manager (admins wijzig je niet
@@ -6986,6 +7033,12 @@ const httpServer = http.createServer(async (req, res) => {
           const requested = Array.isArray(bodyPerms) ? bodyPerms : (existing && existing.permissions) || [];
           safe.permissions = sanitizeEmployeePermissions(store, tenant, effRole, requested);
         }
+        // Samengesteld profiel toewijzen/losmaken (#75): valideer dat het profiel
+        // van deze tenant is; "" of null maakt het profiel los.
+        if (bodyRoleId !== undefined) {
+          if (bodyRoleId) { try { rolesMod.resolveAssignableRole(store, tenantId, bodyRoleId); } catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code || "ROLE_NOT_ASSIGNABLE" }); } safe.roleId = bodyRoleId; }
+          else safe.roleId = null;
+        }
         const row = store.update("users", employeePatchMatch[1], { ...safe, updatedAt: new Date().toISOString() });
         const { passwordHash: _ph, mfaSecret: _ms, ...safeRow } = row;
         sendJson(res, 200, { ok: true, user: safeRow });
@@ -7004,6 +7057,9 @@ const httpServer = http.createServer(async (req, res) => {
         const permissions = body.permissions !== undefined
           ? sanitizeEmployeePermissions(store, tenant, role, body.permissions)
           : (role === "manager" ? MANAGER_PERMISSIONS : EMPLOYEE_PERMISSIONS);
+        // Optioneel samengesteld profiel (#75): valideer dat het van deze tenant is.
+        let roleId = null;
+        if (body.roleId) { try { rolesMod.resolveAssignableRole(store, tenantId, body.roleId); roleId = body.roleId; } catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code || "ROLE_NOT_ASSIGNABLE" }); } }
         // Geen wachtwoord door de aanmaker: de medewerker ontvangt een activatiemail
         // en stelt binnen de geldigheidsperiode zelf zijn wachtwoord in.
         const { user: newUser, activationLink } = provisionPendingUser({
@@ -7013,6 +7069,7 @@ const httpServer = http.createServer(async (req, res) => {
           email,
           role,
           permissions,
+          roleId,
           mfaEnabled: false,
           mfaEnforced: false,
           function: body.function || null,

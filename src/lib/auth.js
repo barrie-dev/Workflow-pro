@@ -168,6 +168,10 @@ function authenticate(req, store) {
   const token = header.startsWith("Bearer ") ? header.slice(7) : "";
   const payload = verify(token);
   if (!payload) return null;
+  // Samenstelbare profielen (#75): vul de effectieve rechten in vanuit een
+  // toegewezen custom-rol, zodat de policy-engine ze meeneemt. Lazy require om
+  // een module-cyclus (auth ↔ roles/entitlements) te vermijden.
+  const { withEffectivePermissions } = require("../modules/roles");
 
   // Support-impersonatie: valideer tegen de tenant-grant + schuif de vervaltijd.
   if (payload.support === true) {
@@ -182,17 +186,17 @@ function authenticate(req, store) {
     const slid = slideSupportGrant(grant);
     tenant.supportSession = slid;
     if (typeof store.save === "function") { try { store.save(); } catch (_) {} }
-    return {
+    return withEffectivePermissions(store, {
       ...user,
       session: payload,
       isSupportSession: true,
       support: { agent: payload.agent, grantId: payload.grantId, scope: payload.scope, tenantId: tenant.id }
-    };
+    });
   }
 
   const user = store.getUserById(payload.sub);
   if (!user || !user.active) return null;
-  return { ...user, session: payload };
+  return withEffectivePermissions(store, { ...user, session: payload });
 }
 
 function lockError(user) {
