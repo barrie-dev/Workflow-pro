@@ -89,7 +89,15 @@ const config = {
     path: process.env.OBJECT_STORAGE_PATH || "",
     urlTtlSeconds: Number(process.env.OBJECT_STORAGE_URL_TTL_SECONDS) || 900,
     // Valt terug op de app-secret zodat dev werkt zonder extra configuratie.
-    signingKey: process.env.OBJECT_STORAGE_SIGNING_KEY || process.env.JWT_SECRET || "dev_only_replace_this_secret"
+    signingKey: process.env.OBJECT_STORAGE_SIGNING_KEY || process.env.JWT_SECRET || "dev_only_replace_this_secret",
+    // s3-compatibele adapter (P0-08): generieke variabelen, geen providernaam.
+    // Werkt op elke s3-compatibele opslag; de aanbieder zit alleen in de URL.
+    endpoint: process.env.OBJECT_STORAGE_ENDPOINT || "",
+    bucket: process.env.OBJECT_STORAGE_BUCKET || "",
+    region: process.env.OBJECT_STORAGE_REGION || "us-east-1",
+    accessKeyId: process.env.OBJECT_STORAGE_ACCESS_KEY_ID || "",
+    secretAccessKey: process.env.OBJECT_STORAGE_SECRET_ACCESS_KEY || "",
+    forcePathStyle: process.env.OBJECT_STORAGE_PATH_STYLE !== "false"
   },
   // LEGACY · uitsluitend voor een eenmalige migratie van bestaande data.
   // De normale runtime gebruikt deze waarden niet meer (F-01/F-02).

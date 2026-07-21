@@ -29,8 +29,23 @@ jobs:
           --health-retries 20
     env:
       DATABASE_URL: postgresql://monargo:monargo@localhost:5432/monargo
+      # s3-compatibele opslag (P0-08): de live contracttest draait tegen een
+      # zelfgehoste server · zelfde protocol als elke aanbieder, nul lock-in.
+      S3_TEST_ENDPOINT: http://localhost:9000
+      S3_TEST_ACCESS_KEY: monargo
+      S3_TEST_SECRET_KEY: monargo123
     steps:
       - uses: actions/checkout@v4
+      - name: Start s3-compatibele opslag (zelfgehost, voor de live objectopslag-tests)
+        run: |
+          docker run -d --name storage -p 9000:9000 \
+            -e MINIO_ROOT_USER=monargo -e MINIO_ROOT_PASSWORD=monargo123 \
+            quay.io/minio/minio server /data
+          for i in $(seq 1 20); do
+            if curl -sf http://localhost:9000/minio/health/live > /dev/null; then echo "opslag gezond"; exit 0; fi
+            sleep 2
+          done
+          echo "::error::Objectopslag werd niet gezond"; exit 1
       - name: Setup Node.js 22 (enige runtime · CI = Docker = Azure)
         uses: actions/setup-node@v4
         with:
@@ -56,12 +71,15 @@ jobs:
         run: |
           set -o pipefail
           npm test 2>&1 | tee /tmp/test-out.txt
-      - name: Bewijs · geen overgeslagen database-tests
+      - name: Bewijs · geen overgeslagen database- of opslagtests
         run: |
           if grep -q "DATABASE_URL niet gezet" /tmp/test-out.txt; then
             echo "::error::Database-tests werden overgeslagen terwijl DATABASE_URL gezet is"; exit 1;
           fi
-          echo "Alle database-gebonden tests hebben echt gedraaid."
+          if grep -q "S3_TEST_ENDPOINT niet gezet" /tmp/test-out.txt; then
+            echo "::error::Objectopslag-tests werden overgeslagen terwijl de opslag draait"; exit 1;
+          fi
+          echo "Alle database- en opslag-gebonden tests hebben echt gedraaid."
 
   # ── Containersmoke (CTO P0-01/P0-05): het gedocumenteerde standaardpad ─────
   # Bouw de echte image, start db + app via compose (incl. migratiestap in de

@@ -123,8 +123,10 @@ function objectStorageContract(name, setup) {
     const down = await storage.createDownloadUrl({ tenantId: "t1", key: stored.key });
     const sig = /sig=([0-9a-f]+)/.exec(down.url)[1];
     assert.equal(storage.verifySignature({ key: stored.key, op: "get", expiresAt: down.expiresAt, signature: sig }), true);
-    // Gemanipuleerde handtekening of key → geweigerd.
-    assert.throws(() => storage.verifySignature({ key: stored.key, op: "get", expiresAt: down.expiresAt, signature: sig.replace(/.$/, "0") }), e => e.code === "INVALID_SIGNATURE");
+    // Gemanipuleerde handtekening of key → geweigerd. Het laatste teken ECHT
+    // wijzigen: blind "0" plakken is geen manipulatie als er al een 0 staat.
+    const tampered = sig.slice(0, -1) + (sig.endsWith("0") ? "1" : "0");
+    assert.throws(() => storage.verifySignature({ key: stored.key, op: "get", expiresAt: down.expiresAt, signature: tampered }), e => e.code === "INVALID_SIGNATURE");
     assert.throws(() => storage.verifySignature({ key: "t/t1/invoice/anders.pdf", op: "get", expiresAt: down.expiresAt, signature: sig }), e => e.code === "INVALID_SIGNATURE");
     // Verlopen link → 410, niet stil toestaan.
     assert.throws(() => storage.verifySignature({ key: stored.key, op: "get", expiresAt: down.expiresAt, signature: sig, now: down.expiresAt + 1 }), e => e.code === "URL_EXPIRED" && e.status === 410);

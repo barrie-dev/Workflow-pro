@@ -101,6 +101,34 @@ services:
     volumes:
       - monargo-files:/app/data
 
+  # Zelfgehoste s3-compatibele objectopslag (P0-08). Zelfde protocol als elke
+  # grote aanbieder, dus dev/test bewijzen hier exact wat productie doet.
+  #   docker compose --profile storage up -d storage
+  # App-kant:  OBJECT_STORAGE_ADAPTER=s3
+  #            OBJECT_STORAGE_ENDPOINT=http://storage:9000  (of localhost:9000)
+  #            OBJECT_STORAGE_BUCKET=monargo-files
+  #            OBJECT_STORAGE_ACCESS_KEY_ID / OBJECT_STORAGE_SECRET_ACCESS_KEY
+  storage:
+    profiles: ["storage"]
+    image: quay.io/minio/minio:latest
+    restart: unless-stopped
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: "${STORAGE_ACCESS_KEY:-monargo}"
+      MINIO_ROOT_PASSWORD: "${STORAGE_SECRET_KEY:-monargo123}"
+    ports:
+      - "${STORAGE_PORT:-9000}:9000"
+      - "${STORAGE_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - monargo-objects:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:9000/minio/health/live || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
 volumes:
   monargo-db:
   monargo-files:
+  monargo-objects:

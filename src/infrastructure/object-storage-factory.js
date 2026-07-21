@@ -16,6 +16,7 @@
 const path = require("path");
 const { config } = require("../lib/config");
 const { LocalObjectStorage } = require("./local/object-storage");
+const { S3CompatibleObjectStorage } = require("./s3/object-storage");
 
 function createObjectStorage(overrides = {}) {
   const settings = { ...config.objectStorage, ...overrides };
@@ -29,9 +30,24 @@ function createObjectStorage(overrides = {}) {
     });
   }
 
+  // "s3" = het s3-compatibele PROTOCOL, niet één leverancier: hetzelfde
+  // contract draait bij elke grote cloud en zelfgehost (MinIO). De aanbieder
+  // wisselen is de endpoint-URL wisselen · precies de bedoeling van ADR-001.
+  if (kind === "s3" || kind === "s3-compatible") {
+    return new S3CompatibleObjectStorage({
+      endpoint: settings.endpoint,
+      bucket: settings.bucket,
+      region: settings.region,
+      accessKeyId: settings.accessKeyId,
+      secretAccessKey: settings.secretAccessKey,
+      forcePathStyle: settings.forcePathStyle,
+      urlTtlSeconds: settings.urlTtlSeconds,
+    });
+  }
+
   const e = new Error(
-    `Onbekende objectopslag-adapter '${kind}'. Beschikbaar: local. ` +
-    "azure-blob en s3 implementeren hetzelfde contract en worden hier aangesloten zodra ze bestaan.");
+    `Onbekende objectopslag-adapter '${kind}'. Beschikbaar: local, s3. ` +
+    "Elke adapter implementeert exact hetzelfde poortcontract.");
   e.status = 500; e.code = "UNKNOWN_OBJECT_STORAGE_ADAPTER";
   throw e;
 }
