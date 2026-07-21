@@ -42,7 +42,11 @@ read -r -p "Deze resources aanmaken? (y/N) " CONFIRM
 [ "$CONFIRM" = "y" ] || [ "$CONFIRM" = "Y" ] || { echo "Afgebroken."; exit 0; }
 
 # Sterk, URL-veilig DB-wachtwoord (upper+lower+digit = 3 Azure-categorieën).
-PGPASS="$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 24)Aa1"
+# Let op: lees een EINDIGE hoeveelheid urandom en snijd met bash-slicing.
+# `tr </dev/urandom | head` zou onder pipefail een SIGPIPE geven en het script
+# stil afbreken (klassieke valkuil).
+PWRAW="$(head -c 4096 /dev/urandom | LC_ALL=C tr -dc 'A-Za-z0-9')"
+PGPASS="Aa1${PWRAW:0:24}"
 
 echo "-> resource group"
 az group create -n "$RG" -l "$LOC" -o none
