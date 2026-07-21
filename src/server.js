@@ -120,6 +120,24 @@ function assertNotReadOnly(user, action, method) {
   // geen enkel recht → laat het endpoint zelf de juiste 403 geven
 }
 
+// Trial-to-paid schrijf-gate: zodra proef + respijt voorbij zijn en er niet
+// betaald is, blokkeren we muteren tenant-breed (402). Lezen blijft altijd
+// werken en de billing/subscription-routes blijven schrijfbaar zodat upgraden
+// nooit vastloopt. Tenants zonder trialEndsAt worden nooit geblokkeerd.
+const UPGRADE_EXEMPT_HEADS = ["billing", "subscription"];
+function assertTrialActive(user, tenant, action, method) {
+  if (["GET", "HEAD", "OPTIONS"].includes(method)) return;
+  if (!user || user.role === "super_admin") return;    // ops/support niet blokkeren
+  const head = String(action).split("/")[0];
+  if (UPGRADE_EXEMPT_HEADS.includes(head)) return;      // laat betalen/upgraden toe
+  const access = billingAccess(tenant);
+  if (!access.writeBlocked) return;
+  const e = new Error("Je proefperiode is verlopen. Kies een abonnement om verder te werken.");
+  e.status = 402;
+  e.code = "TRIAL_EXPIRED";
+  throw e;
+}
+
 // ── Prikklok-helpers: canoniek schema (date + HH:MM) ─────────────────────────
 // Valide "HH:MM" of null; knipt seconden weg ("07:00:00" → "07:00").
 function hhmm(v) {
@@ -336,6 +354,7 @@ const { setPlanPriceOverrides, planPricing } = require("./modules/billing");
 const { loadPlatformConfig, publicPlatformConfig, savePlatformConfig } = require("./modules/platform-config");
 const { createPaymentLink, markInvoicePaidById } = require("./modules/payments");
 const { createSubscriptionCheckout, createBillingPortalSession, applySubscriptionEvent, TRIAL_DAYS } = require("./modules/subscriptions");
+const { billingAccess, trialNudge } = require("./modules/billing-access");
 const { pushConfigured, publicKey: pushPublicKey, saveSubscription: savePushSubscription, removeSubscription: removePushSubscription } = require("./modules/push");
 const { verifyStripeSignature } = require("./modules/stripe-webhook");
 const { seedDemoData, clearDemoData } = require("./modules/demo-seed");
@@ -1371,6 +1390,10 @@ const httpServer = http.createServer(async (req, res) => {
       if (!bundle || bundle.active === false) return sendJson(res, 400, { ok: false, error: "Kies een geldig pakket" });
       if (bundle.custom) return sendJson(res, 400, { ok: false, error: "Dit pakket is op aanvraag · neem contact op." });
       const now = new Date().toISOString();
+      // Trial-to-paid: de proefklok start bij aanmaak. Zonder deze deadline zou
+      // een self-signup nooit door de conversietrechter lopen (gratis voor
+      // altijd). Bestaande tenants zonder trialEndsAt blijven bewust ongemoeid.
+      const trialEndsAt = new Date(Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000).toISOString();
       // KBO-gegevens meteen in het facturatieprofiel zetten (volledige onboarding-start).
       const invoiceProfile = kbo
         ? { vat: kbo.vat, companyNumber: kbo.companyNumber, name: kbo.name, street: kbo.street || "", zip: kbo.zip || "", city: kbo.city || "" }
@@ -1378,6 +1401,7 @@ const httpServer = http.createServer(async (req, res) => {
       const tenant = store.insert("tenants", {
         id: `tenant_${Date.now()}_${Math.random().toString(16).slice(2)}`,
         name: companyName, plan: bundle.key, status: "trial", billingEmail: email,
+        trialStartedAt: now, trialEndsAt,
         // Voorkeur uit de registratie (jaarlijks = standaard, ~17% voordeliger);
         // gebruikt bij het opzetten van het abonnement na de proefperiode.
         billingPeriod: body.billingPeriod === "month" ? "month" : "year",
@@ -1624,7 +1648,14 @@ const httpServer = http.createServer(async (req, res) => {
       // Capabilities (backend-handoff): de UI mag nooit over maildelivery liegen ·
       // mail=false betekent dat verzendknoppen een setup-uitleg tonen.
       const capabilities = { mail: isMailLive() };
-      sendJson(res, 200, { ok: true, user: safeUser(user), entitlements, supportSession, platform, onboarding, terminology, capabilities });
+      // Trial-to-paid: de conversietrechter-banner leest hierop (dagen over,
+      // respijt, geblokkeerd). Enkel voor tenant-gebruikers, niet superadmin.
+      let billing = null;
+      if (user.tenantId && user.role !== "super_admin") {
+        const myTenant = store.data.tenants.find(t => t.id === user.tenantId);
+        if (myTenant) billing = billingAccess(myTenant);
+      }
+      sendJson(res, 200, { ok: true, user: safeUser(user), entitlements, supportSession, platform, onboarding, terminology, capabilities, billing });
       return;
     }
 
@@ -2723,6 +2754,8 @@ const httpServer = http.createServer(async (req, res) => {
       assertModuleEnabled(store, user, tenant, action);
       // Alleen-lezen-handhaving: read:X-gebruikers kunnen niets muteren.
       assertNotReadOnly(user, action, req.method);
+      // Trial-to-paid-handhaving: verlopen proef (na respijt) blokkeert muteren.
+      assertTrialActive(user, tenant, action, req.method);
 
       // ── Idempotency-Key (h41): herhaalde mutatie met dezelfde sleutel
       //    creëert geen duplicaat maar krijgt de eerdere response terug ──
@@ -7675,6 +7708,30 @@ function startServer() {
   };
   setTimeout(runIdempotencyPrune, 180 * 1000).unref();
   setInterval(runIdempotencyPrune, 24 * 60 * 60 * 1000).unref();
+
+  // Trial-to-paid conversie-nudges: één keer per dag kijken welke tenant een
+  // proef-mijlpaal bereikt (dag 7/3/1, verlopen, geblokkeerd) en de admins een
+  // in-app melding geven. Idempotent per mijlpaal via sourceRef, dus nooit spam.
+  const runTrialNudges = () => {
+    try {
+      let sent = 0;
+      for (const tenant of store.data.tenants || []) {
+        const nudge = trialNudge(tenant);
+        if (!nudge) continue;
+        const sourceRef = `trial:nudge:${nudge.stage}`;
+        if ((store.data.notifications || []).some(n => n.tenantId === tenant.id && n.sourceRef === sourceRef)) continue;
+        createNotification(store, tenant, {
+          type: "billing", audience: "admins", title: nudge.title, body: nudge.body,
+          priority: nudge.stage === "blocked" || nudge.stage === "d1" ? "high" : "normal",
+          sourceRef,
+        }, { email: "trial-nudge" });
+        sent++;
+      }
+      if (sent > 0) console.log(`  Trial     : ${sent} conversie-nudge(s) verstuurd`);
+    } catch (e) { console.error("[trial] nudges mislukt:", e.message); }
+  };
+  setTimeout(runTrialNudges, 150 * 1000).unref();
+  setInterval(runTrialNudges, 24 * 60 * 60 * 1000).unref();
 
   // Metrics periodiek uitschrijven (handover 4.7). Eén regel per venster met
   // count/avg/min/max, zodat een collector of logdrain ze kan oppikken zonder

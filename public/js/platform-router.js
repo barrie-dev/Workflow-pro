@@ -27,12 +27,17 @@
     }
     // Platform-aankondiging / onderhoudsbanner tonen (best-effort).
     if (window.wfpCore && window.wfpCore.showAnnouncementBanner) window.wfpCore.showAnnouncementBanner();
+    // Trial-to-paid proefbanner verversen na login (SPA-transitie, geen reload).
+    if (window.WfpTrialBanner) window.WfpTrialBanner.refresh();
   }
 
   function showLogin() {
     document.querySelectorAll(".wfp-platform").forEach(el => el.classList.add("hidden"));
     const legacyShell = document.getElementById("legacyShell");
     if (legacyShell) legacyShell.classList.remove("hidden");
+    // Proefbanner weg bij uitloggen/loginscherm.
+    const trial = document.getElementById("wfpTrialBanner");
+    if (trial) trial.remove();
   }
 
   // Verlaat een support-sessie: herstel het eigen agent-token, beëindig de

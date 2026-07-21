@@ -13,6 +13,12 @@
 (function () {
   const DICT = {
     nl: {
+      "trial.banner.daysLeft": "Nog {d} dagen in je proefperiode.",
+      "trial.banner.lastDay": "Je proefperiode eindigt morgen.",
+      "trial.banner.grace": "Je proefperiode is afgelopen · nog {d} dag(en) volledige toegang.",
+      "trial.banner.expired": "Je proefperiode is voorbij. Je gegevens blijven bewaard; kies een abonnement om weer te bewerken.",
+      "trial.banner.choosePlan": "Kies een abonnement",
+      "trial.banner.reactivate": "Abonnement kiezen",
       "hero.l1": "Plan slimmer.",
       "hero.l2": "Werk efficiënter.",
       "hero.l3": "Factureer sneller.",
@@ -1481,6 +1487,12 @@
       "nav.incidents": "Werkongevallen"
     },
     fr: {
+      "trial.banner.daysLeft": "Encore {d} jours dans votre période d'essai.",
+      "trial.banner.lastDay": "Votre période d'essai se termine demain.",
+      "trial.banner.grace": "Votre période d'essai est terminée · encore {d} jour(s) d'accès complet.",
+      "trial.banner.expired": "Votre période d'essai est terminée. Vos données sont conservées; choisissez un abonnement pour modifier à nouveau.",
+      "trial.banner.choosePlan": "Choisir un abonnement",
+      "trial.banner.reactivate": "Choisir un abonnement",
       "hero.l1": "Planifiez plus malin.",
       "hero.l2": "Travaillez plus efficacement.",
       "hero.l3": "Facturez plus vite.",
@@ -2949,6 +2961,12 @@
       "nav.incidents": "Accidents du travail"
     },
     en: {
+      "trial.banner.daysLeft": "{d} days left in your trial.",
+      "trial.banner.lastDay": "Your trial ends tomorrow.",
+      "trial.banner.grace": "Your trial has ended · {d} day(s) of full access left.",
+      "trial.banner.expired": "Your trial has ended. Your data is kept; choose a plan to edit again.",
+      "trial.banner.choosePlan": "Choose a plan",
+      "trial.banner.reactivate": "Choose a plan",
       "hero.l1": "Plan smarter.",
       "hero.l2": "Work more efficiently.",
       "hero.l3": "Invoice faster.",
