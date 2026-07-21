@@ -74,6 +74,12 @@ async function main() {
         // (veilig gedrag). De smokes loggen in met het demo-wachtwoord, dus de
         // runner zet het expliciet · alleen hier, nooit in een echte omgeving.
         WORKFLOWPRO_INITIAL_ADMIN_PASSWORD: "Demo2026!",
+        // MFA expliciet UIT voor de smokes · anders geeft assertAdminMfa 403 op
+        // elke admin/superadmin-schrijfactie. We pinnen dit hier zodat de suite
+        // deterministisch is, ongeacht of de lokale .env het zet (CI heeft geen
+        // .env → zonder deze pin faalt bijna elke smoke). Nooit in een echte
+        // omgeving; daar blijft MFA verplicht.
+        REQUIRE_ADMIN_MFA: "false",
         // De webhook-smoke draait een lokale self-signed https-ontvanger.
         NODE_TLS_REJECT_UNAUTHORIZED: smoke.startsWith("webhook") ? "0" : process.env.NODE_TLS_REJECT_UNAUTHORIZED || "1",
       },
