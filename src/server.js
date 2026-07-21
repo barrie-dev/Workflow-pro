@@ -342,6 +342,7 @@ const { seedDemoData, clearDemoData } = require("./modules/demo-seed");
 const { buildUbl, validatePeppol, sendPeppolInvoice, peppolTransportReadiness } = require("./modules/peppol-invoice");
 const quoteSigning = require("./modules/quote-signing");
 const { normalizeDimonaRecord, dimonaRegister } = require("./modules/dimona");
+const { buildPayrollExport, toCsv: payrollToCsv, payrollReadiness, KNOWN_PROVIDERS: payrollProviders } = require("./platform/social-secretariat");
 const { submitCheckin, buildPresenceRegister } = require("./modules/ciaw");
 const { listPostedWorkers, createPostedWorker, updatePostedWorker, deletePostedWorker, submitLimosa } = require("./modules/posted-workers");
 const tpl = require("./modules/templates");
@@ -6756,6 +6757,52 @@ const httpServer = http.createServer(async (req, res) => {
       if (action === "dimona/declarations" && req.method === "GET") {
         assertCan(user, "employees");
         sendJson(res, 200, { ok: true, ...dimonaRegister(store, tenantId) });
+        return;
+      }
+
+      // ── Sociaal secretariaat · PRESTATIE-EXPORT (geen RSZ-aangifte) ──────────
+      // Levert de gewerkte uren + goedgekeurde afwezigheden per periode aan zodat
+      // het secretariaat kan verlonen. Monargo geeft zelf NIETS aan bij de RSZ.
+      if (action === "payroll/config" && req.method === "GET") {
+        assertCan(user, "employees");
+        sendJson(res, 200, { ok: true, readiness: payrollReadiness(tenant), providers: payrollProviders });
+        return;
+      }
+      if (action === "payroll/config" && req.method === "POST") {
+        assertCan(user, "settings");
+        assertApiKeyWriteAllowed(user, req);
+        const body = await readBody(req).catch(() => ({}));
+        const compliance = { ...(tenant.compliance || {}) };
+        const provider = payrollProviders.includes(String(body.provider || "").toLowerCase()) ? String(body.provider).toLowerCase() : "generic";
+        compliance.socialSecretariat = {
+          provider,
+          affiliateNumber: String(body.affiliateNumber || "").trim(),
+          codeMap: (body.codeMap && typeof body.codeMap === "object") ? body.codeMap : ((tenant.compliance || {}).socialSecretariat || {}).codeMap || {},
+        };
+        store.updateTenant(tenant.id, { compliance });
+        tenant.compliance = compliance;
+        store.audit({ actor: user.email, tenantId, action: "payroll_config_updated", area: "employees", detail: `secretariaat=${provider}` });
+        sendJson(res, 200, { ok: true, readiness: payrollReadiness(tenant) });
+        return;
+      }
+      if (action === "payroll/prestaties" && req.method === "GET") {
+        assertCan(user, "employees");
+        const from = url.searchParams.get("from") || "";
+        const to = url.searchParams.get("to") || "";
+        let data;
+        try { data = buildPayrollExport(store, tenant, { from, to }); }
+        catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+        store.audit({ actor: user.email, tenantId, action: "payroll_export", area: "employees", detail: `${data.period.from}..${data.period.to} · ${data.totals.employees} werknemer(s)` });
+        if (url.searchParams.get("format") === "csv") {
+          const csv = payrollToCsv(data);
+          res.writeHead(200, {
+            "Content-Type": "text/csv; charset=utf-8",
+            "Content-Disposition": `attachment; filename="prestaties-${data.period.from}_${data.period.to}.csv"`,
+          });
+          res.end(csv);
+          return;
+        }
+        sendJson(res, 200, { ok: true, export: data });
         return;
       }
 
