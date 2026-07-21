@@ -84,6 +84,11 @@ const config = {
     readSource: (process.env.FINANCE_READ_SOURCE || "legacy").toLowerCase(),
     syncIntervalMs: Number(process.env.FINANCE_SYNC_INTERVAL_MS) || 10000
   },
+  // Company-bronschakelaar (P0-01 · vierde domein: ondernemingen + nummerreeksen).
+  company: {
+    readSource: (process.env.COMPANY_READ_SOURCE || "legacy").toLowerCase(),
+    syncIntervalMs: Number(process.env.COMPANY_SYNC_INTERVAL_MS) || 10000
+  },
   // AI achter een port (handover 4.5 · F-07). Modelnamen staan HIER, nooit in
   // business rules. De super-admin kan dit per platform overschrijven via de
   // Integraties-console; zonder geldige sleutel draait de mock-adapter.

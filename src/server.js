@@ -499,6 +499,30 @@ const financeSource = (() => {
   return source;
 })();
 /**
+ * Company-bronschakelaar (P0-01 fase 4 · ondernemingen + nummerreeksen). Zodra
+ * companies genormaliseerd meelopen, kunnen de finance-FK's naar companies
+ * later echte database-FK's worden (samen met customers).
+ */
+const companySource = (() => {
+  const mode = config.company.readSource;
+  let pool = storeAdapter && storeAdapter.name === "postgres" ? storeAdapter.pool : null;
+  if (!pool && mode !== "legacy") {
+    if (!/^postgres(ql)?:\/\//.test(config.database.url)) {
+      throw new Error(`COMPANY_READ_SOURCE=${mode} vereist DATABASE_URL (of STORAGE_ADAPTER=postgres)`);
+    }
+    const { Pool } = require("pg");
+    pool = new Pool({ connectionString: config.database.url, ssl: config.database.ssl ? { rejectUnauthorized: false } : undefined, max: 3 });
+  }
+  const { makeCompanySource } = require("./infrastructure/company-source");
+  const source = makeCompanySource({ mode, store, pool, telemetry });
+  if (pool) {
+    setTimeout(() => source.syncNow().catch(() => {}), 21 * 1000).unref();
+    setInterval(() => source.syncNow().catch(() => {}), config.company.syncIntervalMs).unref();
+    console.log(`  Company   : ${mode}${mode === "legacy" ? " (spiegel-lus bouwt bewijs op)" : mode === "shadow" ? " (legacy leidend, pg leest mee)" : " (pg-leesbron · legacy blijft write-owner)"}`);
+  }
+  return source;
+})();
+/**
  * Persistent verzendlog (F-09). Was een proceslokale ring-buffer: die verdween
  * bij elke herstart en verschilde per replica, dus de superadmin zag maar een
  * fractie. Nu in de store, met een eigen bovengrens zodat het log niet
@@ -989,6 +1013,7 @@ const httpServer = http.createServer(async (req, res) => {
         objectStorageAdapter: objectStorage.name,
         identitySource: identitySource.mode,   // P0-01-migratiestand
         financeSource: financeSource.mode,
+        companySource: companySource.mode,
         storeReady: storeStatus?.ok !== false,
         modules: modules.length,
         uptime: Math.floor(process.uptime()),
@@ -2082,6 +2107,25 @@ const httpServer = http.createServer(async (req, res) => {
       const result = await financeSource.reconcile();
       store.audit({ actor: user.email, tenantId: null, action: "finance_reconcile", area: "platform", details: { ok: result.ok } });
       sendJson(res, 200, { ok: true, reconcile: result, status: financeSource.status() });
+      return;
+    }
+
+    // ── P0-01 · company-migratiestatus + reconciliatiebewijs (ops) ───────────
+    if (url.pathname === "/api/admin/company/status" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertSuperAdmin(user);
+      sendJson(res, 200, { ok: true, company: companySource.status() });
+      return;
+    }
+    if (url.pathname === "/api/admin/company/reconcile" && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertSuperAdmin(user);
+      await companySource.syncNow({ force: true });
+      const result = await companySource.reconcile();
+      store.audit({ actor: user.email, tenantId: null, action: "company_reconcile", area: "platform", details: { ok: result.ok } });
+      sendJson(res, 200, { ok: true, reconcile: result, status: companySource.status() });
       return;
     }
 
@@ -6003,7 +6047,9 @@ const httpServer = http.createServer(async (req, res) => {
       // ── Onderneming (E01): default-company van deze tenant ──────────────
       if (action === "company" && req.method === "GET") {
         assertCan(user, "settings");
-        const company = ensureDefaultCompany(store, tenant);
+        // P0-01: geschakelde leesroute · in pg-stand komt de default-company uit
+        // de tabel; schrijven (ensureDefaultCompany) blijft de write-owner.
+        const company = await companySource.readDefaultCompany(tenantId, () => ensureDefaultCompany(store, tenant));
         sendJson(res, 200, { ok: true, company });
         return;
       }

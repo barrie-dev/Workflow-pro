@@ -277,6 +277,27 @@ die domeinen co-migreren; tenant-FK + RLS gelden onverkort. De sync plaatst
 zelf een minimaal tenant-anker zodat finance niet afhangt van de
 migratievolgorde van identity.
 
+### Company-cutover (P0-01 · COMPANY_READ_SOURCE)
+
+Vierde domein: ondernemingen + nummerreeksen (de tabellen bestaan al sinds
+migratie 001; migratie 007 voegde de fingerprint- en attributes-kolommen toe).
+Zelfde route en spiegel-lus; schrijven blijft bij legacy (default-logica en de
+definitieve nummeruitgifte, PLT-BR-005).
+
+1. Op `postgres` met `COMPANY_READ_SOURCE=legacy` vult de spiegel-lus de
+   tabellen. `POST /api/admin/company/reconcile` (superadmin) moet
+   `reconcile.ok` geven; let vooral op `numberSequences` · een verkeerde reeks
+   zou dubbele documentnummers geven.
+2. **`COMPANY_READ_SOURCE=shadow`** → de default-company-lookup vergelijkt
+   legacy met pg (`company.shadow.mismatch`).
+3. Groen → **`COMPANY_READ_SOURCE=pg`**: de default-company komt uit de tabel.
+4. Rollback = flag terug. Zelfde tenant-anker en verwijderen-eerst-set-sync als
+   finance; de partiële unieke index (één default per tenant) en de
+   nummerreeks-uniciteit worden door de database bewaakt.
+
+Met companies genormaliseerd kunnen de finance-FK's naar companies later echte
+database-FK's worden (samen met customers, zodra ook CRM in pg-stand draait).
+
 ### Datamigratie (CRM naar genormaliseerde tabellen)
 
 ```
