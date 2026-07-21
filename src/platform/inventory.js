@@ -104,7 +104,9 @@ function listMovements(store, tenantId, { articleId, locationId, limit = 100 } =
     .filter(m => m.tenantId === tenantId
       && (!articleId || m.articleId === articleId)
       && (!locationId || m.locationId === locationId))
-    .sort((a, b) => String(b.at || "").localeCompare(String(a.at || "")))
+    // Tiebreak op id (ULID = tijd-geordend): twee boekingen binnen dezelfde
+    // milliseconde hebben hetzelfde `at` en zouden anders onstabiel sorteren.
+    .sort((a, b) => String(b.at || "").localeCompare(String(a.at || "")) || String(b.id || "").localeCompare(String(a.id || "")))
     .slice(0, Math.min(Math.max(1, Number(limit) || 100), 500));
 }
 
@@ -116,7 +118,7 @@ function listReservations(store, tenantId, { articleId, locationId, status = "ac
       && (!articleId || r.articleId === articleId)
       && (!locationId || r.locationId === locationId)
       && (status === "all" || r.status === status))
-    .sort((a, b) => String(b.at || b.createdAt || "").localeCompare(String(a.at || a.createdAt || "")));
+    .sort((a, b) => String(b.at || b.createdAt || "").localeCompare(String(a.at || a.createdAt || "")) || String(b.id || "").localeCompare(String(a.id || "")));
 }
 
 /** Geaggregeerde voorraad per artikel+locatie (uit de ledger). */
