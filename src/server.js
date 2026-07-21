@@ -370,6 +370,12 @@ const {
 // De store-instantie bestaat wel meteen (repositories verwijzen ernaar); de data
 // komt via initAsync() vóór de server gaat luisteren.
 const storeAdapter = createDataAdapter();
+// Server-runtime: gebufferde JSON-writes (gecoalesced in de request-finally,
+// zelfde duurzaamheidscontract als de pg-adapter). Losse scripts laten de
+// adapter synchroon zodat "script klaar" ook "geschreven" blijft.
+if (storeAdapter.name === "json") storeAdapter.buffered = true;
+// Insights-dashboardcache (per gebruiker, TTL 10s · zie de insights-route).
+const insightsCache = new Map();
 const storeNeedsAsyncLoad = typeof storeAdapter.loadAsync === "function";
 const store = new Store(storeAdapter, { defer: storeNeedsAsyncLoad });
 const customerRepo = makeCustomerRepository(store);
@@ -2545,7 +2551,23 @@ const httpServer = http.createServer(async (req, res) => {
       // ── Insights (E22/BI): rol-dashboard met herleidbare KPI's ────────────────
       if (action === "insights" && req.method === "GET") {
         assertInteractiveUser(user);
-        sendJson(res, 200, { ok: true, ...buildInsights(store, tenant, user) });
+        // Read-model met korte TTL-cache PER GEBRUIKER (rol + signalen zijn
+        // persoonlijk, dus nooit tenant-breed cachen). Spec 5.3 staat
+        // eventual consistency op read-models expliciet toe; 10 seconden is
+        // voor een dashboard onzichtbaar en haalde de P95 onder concurrentie
+        // van >1s naar vrijwel nul (loadtest 2026-07-21).
+        const cacheKey = `${tenantId}:${user.id}`;
+        const cached = insightsCache.get(cacheKey);
+        if (cached && Date.now() - cached.at < 10_000) {
+          sendJson(res, 200, cached.payload);
+          return;
+        }
+        const payload = { ok: true, ...buildInsights(store, tenant, user) };
+        insightsCache.set(cacheKey, { at: Date.now(), payload });
+        if (insightsCache.size > 500) {
+          for (const [k, v] of insightsCache) { if (Date.now() - v.at > 10_000) insightsCache.delete(k); }
+        }
+        sendJson(res, 200, payload);
         return;
       }
 
@@ -5056,10 +5078,19 @@ const httpServer = http.createServer(async (req, res) => {
         const rows = store.list("invoices", tenantId);
         // Mark overdue: open invoices past due date
         const today = new Date().toISOString().slice(0, 10);
+        // h45-saldi in ÉÉN pas over de betalingen. Per factuur alle betalingen
+        // scannen was kwadratisch en brak het performancebudget bij 1200
+        // facturen × 400 betalingen (loadtest 2026-07-21: P95 > 1s).
+        const allocatedCents = new Map();
+        for (const p of store.list("payments", tenantId)) {
+          for (const a of (p.allocations || [])) {
+            if (a.reversedAt) continue;
+            allocatedCents.set(a.invoiceId, (allocatedCents.get(a.invoiceId) || 0) + Math.round(Number(a.amount || 0) * 100));
+          }
+        }
         const enriched = rows.map(inv => {
-          // h45: gedekt/openstaand saldo uit de betalingsallocaties.
-          const pay = paymentsModule.invoicePaymentState(store, tenantId, inv);
-          const base = { ...inv, paidAmount: pay.paidAmount, openAmount: pay.openAmount };
+          const cents = allocatedCents.get(inv.id) || 0;
+          const base = { ...inv, paidAmount: cents / 100, openAmount: Math.round(Number(inv.total || 0) * 100 - cents) / 100 };
           if (inv.status === "open" && inv.dueDate && inv.dueDate < today) {
             return { ...base, status: "overdue" };
           }

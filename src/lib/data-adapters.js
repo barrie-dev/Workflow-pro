@@ -12,6 +12,15 @@ class JsonDataAdapter {
   constructor(filePath = dbPath) {
     this.name = "json";
     this.filePath = filePath;
+    // Gebufferde modus (alleen door de SERVER aangezet): save() markeert dan
+    // enkel vuil en flush() schrijft gecoalesced. Losse scripts blijven
+    // synchroon schrijven zodat "script klaar" ook "bestand geschreven" blijft.
+    // Loadtest-bevinding 2026-07-21: met een grote dataset kostte de
+    // synchrone volledige-staat-write per mutatie 300-460 ms en stapelden
+    // 10 gelijktijdige schrijvers op tot 3-4 s.
+    this.buffered = false;
+    this.pending = null;
+    this.flushing = null;
   }
 
   exists() {
@@ -23,9 +32,43 @@ class JsonDataAdapter {
     return JSON.parse(fs.readFileSync(this.filePath, "utf8"));
   }
 
+  serialize(data) {
+    // Compact zodra het bestand groot wordt: pretty-print maakt de staat
+    // 2-3x groter en de stringify evenredig trager. Kleine (dev-)bestanden
+    // blijven leesbaar.
+    const compact = JSON.stringify(data);
+    return compact.length < 2_000_000 ? JSON.stringify(data, null, 2) : compact;
+  }
+
   save(data) {
+    if (this.buffered) { this.pending = data; return; }
     fs.mkdirSync(path.dirname(this.filePath), { recursive: true });
-    fs.writeFileSync(this.filePath, JSON.stringify(data, null, 2));
+    fs.writeFileSync(this.filePath, this.serialize(data));
+  }
+
+  isDirty() {
+    return this.pending !== null;
+  }
+
+  /** Gecoalescede flush: één schrijfactie voor alle mutaties tot nu toe. */
+  async flush() {
+    if (!this.pending) return { written: false };
+    if (this.flushing) {
+      await this.flushing;
+      if (!this.pending) return { written: true };
+    }
+    const run = async () => {
+      while (this.pending) {
+        const data = this.pending;
+        this.pending = null;
+        const text = this.serialize(data);
+        fs.mkdirSync(path.dirname(this.filePath), { recursive: true });
+        await fs.promises.writeFile(this.filePath, text);
+      }
+    };
+    this.flushing = run().finally(() => { this.flushing = null; });
+    await this.flushing;
+    return { written: true };
   }
 
   status() {
