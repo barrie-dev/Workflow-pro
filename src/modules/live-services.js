@@ -28,19 +28,16 @@ function item(key, label, ok, value, action, priority = "P0") {
   };
 }
 
-function validSupabaseUrl(value) {
-  return /^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(String(value || ""));
+// Elke geldige PostgreSQL-connectiestring (provider-neutraal · sinds P0-01
+// draaien we op de generieke pg-adapter, niet meer op Supabase-specifieke vars).
+function validDatabaseUrl(value) {
+  return /^postgres(ql)?:\/\/.+@.+\/.+/.test(String(value || ""));
 }
-
-function validSupabaseServiceRole(value) {
-  const raw = String(value || "");
-  return raw.length >= 100 && raw.split(".").length >= 3 && !isPlaceholder(raw);
-}
-
+// Een pooler-endpoint is aanbevolen (veel replica's), niet vereist.
 function validPoolerUrl(value) {
   const raw = String(value || "");
   if (!raw) return false;
-  return /^postgres(ql)?:\/\//i.test(raw) && /pooler\.supabase\.com|:6543\//i.test(raw);
+  return /^postgres(ql)?:\/\//i.test(raw) && /pooler\.|:6543(\/|$)/i.test(raw);
 }
 
 function validLiveStripeSecret(value) {
@@ -123,8 +120,11 @@ function emailReadinessItems(platformConfig = {}) {
 function liveServiceReadiness(platformConfig = config) {
   const groups = [
     {
-      key: "supabase",
-      label: "Supabase PostgreSQL",
+      // Provider-neutraal sinds P0-01: de runtime draait op de generieke
+      // pg-adapter met DATABASE_URL. De Supabase-specifieke variabelen zijn
+      // legacy (enkel voor een eenmalige datamigratie) en dus geen go-live-eis.
+      key: "database",
+      label: "PostgreSQL database",
       items: [
         item(
           "storage_adapter",
@@ -134,25 +134,18 @@ function liveServiceReadiness(platformConfig = config) {
           "Zet STORAGE_ADAPTER=postgres."
         ),
         item(
-          "supabase_url",
-          "Supabase URL",
-          validSupabaseUrl(platformConfig.supabase.url),
-          platformConfig.supabase.url ? "configured" : "missing",
-          "Gebruik de project URL in vorm https://<project-ref>.supabase.co."
-        ),
-        item(
-          "supabase_service_role",
-          "Service role key",
-          validSupabaseServiceRole(platformConfig.supabase.serviceRoleKey),
-          maskedState(platformConfig.supabase.serviceRoleKey),
-          "Gebruik de server-only service_role JWT. Log deze key nooit in frontend of client bundels."
-        ),
-        item(
           "database_url",
-          "Database pooler URL",
-          validPoolerUrl(platformConfig.databaseUrl),
+          "DATABASE_URL",
+          validDatabaseUrl(platformConfig.databaseUrl),
           platformConfig.databaseUrl ? "configured" : "missing",
-          "Zet DATABASE_URL naar de Supabase pooler op poort 6543 voor productieconnecties.",
+          "Zet DATABASE_URL naar de PostgreSQL-connectiestring van je omgeving (postgresql://…)."
+        ),
+        item(
+          "database_pooling",
+          "Connection pooling",
+          !platformConfig.databaseUrl || validPoolerUrl(platformConfig.databaseUrl),
+          validPoolerUrl(platformConfig.databaseUrl) ? "pooler" : "direct",
+          "Aanbevolen bij veel replica's: gebruik een pooler-endpoint (bv. poort 6543).",
           "P1"
         )
       ]

@@ -367,12 +367,13 @@ test("live-services: externe productieafhankelijkheden zijn expliciet gegated", 
   assert.ok(blocked.blockers.some(row => row.key === "email_provider"));
   assert.ok(blocked.blockers.some(row => row.key === "peppol_provider"));
 
+  // Sinds de P0-01-cutover is de database-gereedheid provider-neutraal: enkel
+  // STORAGE_ADAPTER=postgres + een geldige DATABASE_URL. GEEN Supabase-vars meer
+  // (die zijn legacy). Dit bewijst dat de go-live-gate productie niet langer
+  // vals blokkeert op ontbrekende SUPABASE_URL.
   const ready = liveServiceReadiness({
     storageAdapter: "postgres",
-    supabase: {
-      url: "https://workflowpro.supabase.co",
-      serviceRoleKey: `${"a".repeat(40)}.${"b".repeat(40)}.${"c".repeat(40)}`
-    },
+    supabase: { url: "", serviceRoleKey: "" },   // bewust leeg · niet meer vereist
     databaseUrl: "postgresql://user:pass@aws-0-eu-west-1.pooler.supabase.com:6543/postgres",
     stripe: { secretKey: "sk_live_12345678901234567890", webhookSecret: "whsec_12345678901234567890" },
     email: { provider: "resend", apiKey: "re_live_12345678901234567890", from: "WorkFlow Pro <noreply@workflowpro.be>" },
@@ -381,9 +382,26 @@ test("live-services: externe productieafhankelijkheden zijn expliciet gegated", 
     releaseChannel: "production",
     commitSha: "b2f721cc0ffee"
   });
-  assert.equal(ready.ok, true);
+  assert.equal(ready.ok, true, "postgres + DATABASE_URL volstaat, zonder Supabase-vars");
   assert.equal(ready.blockers.length, 0);
   assert.equal(ready.warnings.length, 0);
+
+  // Een provider-neutrale (niet-Supabase) productie-URL, bv. Azure, is óók klaar.
+  const azureReady = liveServiceReadiness({
+    storageAdapter: "postgres",
+    supabase: { url: "", serviceRoleKey: "" },
+    databaseUrl: "postgresql://mon:pw@monargo.postgres.database.azure.com:5432/monargo?sslmode=require",
+    stripe: { secretKey: "sk_live_12345678901234567890", webhookSecret: "whsec_12345678901234567890" },
+    email: { provider: "resend", apiKey: "re_live_12345678901234567890", from: "Monargo <noreply@monargo.one>" },
+    peppol: { provider: "billit", apiKey: "live_peppol_secret_123456789" },
+    appUrl: "https://app.monargo.one",
+    releaseChannel: "production",
+    commitSha: "b2f721cc0ffee"
+  });
+  const dbBlocker = azureReady.blockers.find(r => r.key === "database_url" || r.key === "storage_adapter");
+  assert.equal(dbBlocker, undefined, "Azure-Postgres zonder pooler blokkeert de database-gereedheid niet");
+  const poolWarn = azureReady.warnings.find(r => r.key === "database_pooling");
+  assert.ok(poolWarn, "directe (niet-pooler) verbinding geeft enkel een P1-aanbeveling, geen blocker");
 });
 
 test("employee-import: nieuwe gebruikers krijgen activatieflow zonder gedeeld wachtwoord", () => {

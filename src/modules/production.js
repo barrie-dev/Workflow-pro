@@ -61,23 +61,19 @@ function productionConfigRisk() {
       required: "STORAGE_ADAPTER=postgres",
       ok: config.storageAdapter === "postgres",
       value: config.storageAdapter || "json",
-      action: "Zet STORAGE_ADAPTER=postgres voor Supabase PostgreSQL."
+      action: "Zet STORAGE_ADAPTER=postgres voor de PostgreSQL-adapter."
     },
     {
-      key: "supabase_url",
-      label: "Supabase URL",
-      required: "SUPABASE_URL",
-      ok: !!config.supabase.url,
-      value: config.supabase.url ? "configured" : "missing",
-      action: "Vul SUPABASE_URL in vanuit het Supabase project."
-    },
-    {
-      key: "supabase_service_role",
-      label: "Supabase service role",
-      required: "SUPABASE_SERVICE_ROLE_KEY",
-      ok: !!config.supabase.serviceRoleKey,
-      value: config.supabase.serviceRoleKey ? "configured" : "missing",
-      action: "Vul SUPABASE_SERVICE_ROLE_KEY in als server-only secret."
+      // Sinds de P0-01-cutover draait de runtime op de generieke pg-adapter met
+      // DATABASE_URL · NIET meer op de Supabase-specifieke variabelen (die zijn
+      // legacy, enkel voor een eenmalige datamigratie). De go-live-gate toetst
+      // daarom de standaard connectiestring, niet SUPABASE_URL.
+      key: "database_url",
+      label: "PostgreSQL DATABASE_URL",
+      required: "DATABASE_URL (postgresql://…)",
+      ok: /^postgres(ql)?:\/\/.+@.+\/.+/.test(String(config.database.url || "")),
+      value: config.database.url ? "configured" : "missing",
+      action: "Vul DATABASE_URL in met de PostgreSQL-connectiestring van je omgeving."
     },
     {
       key: "jwt_secret",
@@ -162,7 +158,13 @@ function productionConfigRisk() {
 }
 
 function sqlMigrationCount() {
-  const dir = path.join(config.root, "database", "migrations");
+  // De runtime-migraties leven in migrations/sql (uitgevoerd door de
+  // migration-runner, geregistreerd in schema_migrations). database/migrations
+  // is de oude Supabase-era SQL · voor de telling nemen we de actuele map, met
+  // de legacy-map als terugval.
+  const current = path.join(config.root, "migrations", "sql");
+  const legacy = path.join(config.root, "database", "migrations");
+  const dir = fs.existsSync(current) ? current : legacy;
   if (!fs.existsSync(dir)) return 0;
   return fs.readdirSync(dir).filter(name => /^\d+_.*\.sql$/.test(name)).length;
 }
@@ -239,20 +241,25 @@ function productionReadiness(store) {
     ),
     check(
       "database",
-      "Supabase PostgreSQL adapter",
-      storage.adapter === "postgres" && !!config.supabase.url && !!config.supabase.serviceRoleKey,
+      "PostgreSQL-adapter (DATABASE_URL)",
+      // Sinds P0-01 draait de runtime op de generieke pg-adapter met DATABASE_URL,
+      // NIET op de Supabase-specifieke variabelen (die zijn legacy · enkel voor
+      // een eenmalige datamigratie). Toets dus de standaard connectiestring.
+      storage.adapter === "postgres" && /^postgres(ql)?:\/\//.test(String(config.database.url || "")),
       storage.adapter === "postgres"
-        ? "Supabase adapter geselecteerd."
-        : "Nog lokale JSON adapter. Zet STORAGE_ADAPTER=postgres, SUPABASE_URL en SUPABASE_SERVICE_ROLE_KEY.",
+        ? "PostgreSQL-adapter actief op DATABASE_URL."
+        : "Nog lokale JSON adapter. Zet STORAGE_ADAPTER=postgres en DATABASE_URL (postgresql://…).",
       "P0"
     ),
     check(
       "database_pooling",
-      "Supabase connection pooling",
-      storage.adapter !== "postgres" || storage.bridge === "supabase-rest" || storage.pooled,
-      storage.bridge === "supabase-rest"
-        ? "Supabase REST bridge actief; pooling loopt via Supabase API."
-        : storage.pooled ? "Pooler endpoint gedetecteerd." : "Gebruik bij productie bij voorkeur de Supabase pooler connection string.",
+      "Connection pooling",
+      // De pg-adapter poolt altijd via pg.Pool; een pooler-endpoint is bij een
+      // beheerde database aanbevolen voor veel replica's, geen harde eis.
+      storage.adapter !== "postgres" || /:6543\b|pooler/i.test(String(config.database.url || "")) || storage.adapter === "postgres",
+      /:6543\b|pooler/i.test(String(config.database.url || ""))
+        ? "Pooler-endpoint gedetecteerd in DATABASE_URL."
+        : "De pg-adapter poolt lokaal; overweeg bij veel replica's een pooler-endpoint (bv. poort 6543).",
       "P1"
     ),
     check(
@@ -263,10 +270,10 @@ function productionReadiness(store) {
       "P0"
     ),
     check(
-      "supabase_sql_migrations",
-      "Supabase SQL migraties",
+      "sql_migrations",
+      "SQL migraties",
       sqlMigrations >= 3,
-      `${sqlMigrations} SQL migratiebestanden beschikbaar in database/migrations.`,
+      `${sqlMigrations} SQL migratiebestanden beschikbaar in migrations/sql.`,
       "P1"
     ),
     check(
