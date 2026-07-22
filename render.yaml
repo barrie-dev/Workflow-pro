@@ -64,3 +64,25 @@ services:
         sync: false
       - key: WORKFLOWPRO_INITIAL_ADMIN_NAME
         sync: false
+      # ── Managed object storage (CTO2-11) · Supabase Storage is S3-compatibel,
+      # dus de generieke s3-adapter werkt zonder codewijziging. Structurele
+      # waarden staan hier vast; de project-specifieke waarden en de S3-secrets
+      # vul je in het Render-dashboard in (sync: false → dashboard is de bron).
+      # 'local' is in productie verboden (de boot faalt hard) · bestanden moeten
+      # een deploy overleven. Zie docs/DEPLOY-RUNBOOK.md §CTO2.
+      - key: OBJECT_STORAGE_ADAPTER
+        value: s3
+      - key: OBJECT_STORAGE_PATH_STYLE
+        value: "true"
+      # https://<project-ref>.storage.supabase.co/storage/v1/s3
+      - key: OBJECT_STORAGE_ENDPOINT
+        sync: false
+      # Private bucket (nooit public · toegang via ondertekende URL).
+      - key: OBJECT_STORAGE_BUCKET
+        sync: false
+      - key: OBJECT_STORAGE_REGION
+        sync: false
+      - key: OBJECT_STORAGE_ACCESS_KEY_ID
+        sync: false
+      - key: OBJECT_STORAGE_SECRET_ACCESS_KEY
+        sync: false
