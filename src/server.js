@@ -7735,6 +7735,14 @@ const httpServer = http.createServer(async (req, res) => {
 // een verzoek op een half-geïnitialiseerde store.
 (async () => {
   if (storeNeedsAsyncLoad) {
+    // Schema vóór data (CTO-review 4.3-vondst): de transactionele flush schrijft
+    // óók naar outbox_events · op een VERSE database bestond die tabel pas na
+    // een handmatige migratie, waardoor de eerste muterende request faalde.
+    // De migratie-runner is idempotent en draait daarom altijd bij boot.
+    if (storeAdapter.name === "postgres" && storeAdapter.pool) {
+      const { runMigrations } = require("./infrastructure/postgres/migration-runner");
+      await runMigrations(storeAdapter.pool);
+    }
     await store.initAsync();
     console.log(`  Database  : verbonden (${config.storageAdapter})`);
   }
