@@ -299,25 +299,64 @@ function makePgFormsRepository(pool, { domainCommands = null } = {}) {
     });
   }
 
-  // Goedkeuringsactie met segregation of duties.
-  async function actOnApproval(tenantId, instId, { stepNo = 1, decision, note = null }, actor) {
+  // Goedkeuringsactie met segregation of duties én het h26-beleid: serial,
+  // parallel en any-of/all-of via attributes.approval_policy op de definitie.
+  // Zonder beleid: één goedkeuring volstaat (ongewijzigd gedrag).
+  async function actOnApproval(tenantId, instId, { stepNo = 1, decision, note = null, actorRole = null }, actor) {
     return withTenant(pool, tenantId, async client => {
       const inst = (await q(client, `SELECT * FROM form_instances WHERE tenant_id=$1 AND id=$2`, [tenantId, instId])).rows[0];
       if (!inst) throw err(404, "INSTANCE_NOT_FOUND", "instance niet gevonden");
-      const prior = (await q(client, `SELECT actor FROM form_approval_actions WHERE tenant_id=$1 AND instance_id=$2 AND step_no=$3`, [tenantId, instId, stepNo])).rows.map(r => r.actor);
+      const def = (await q(client, `SELECT attributes FROM form_definitions WHERE tenant_id=$1 AND id=$2`, [tenantId, inst.definition_id])).rows[0];
+      const policy = (def && def.attributes && def.attributes.approval_policy) || null;
+      const existing = (await q(client, `SELECT step_no, actor, decision FROM form_approval_actions WHERE tenant_id=$1 AND instance_id=$2`, [tenantId, instId])).rows;
+
+      // De effectieve stap is de eerst nog-openstaande stap uit het beleid; de
+      // client kan geen stap overslaan (serial). Zonder beleid telt stepNo.
+      let effectiveStep = stepNo;
+      let stepDef = null;
+      if (policy) {
+        const state = engine.evaluateApprovals(policy, existing);
+        if (state.status !== "pending") throw err(409, "APPROVALS_ALREADY_DECIDED", `De goedkeuringsflow is al ${state.status}.`);
+        effectiveStep = state.pendingStep;
+        stepDef = (policy.steps || []).find(s => Number(s.step_no) === Number(effectiveStep)) || null;
+        if (!engine.actorAllowedForStep(stepDef, actor, actorRole)) {
+          throw err(403, "APPROVER_NOT_ALLOWED", "Je staat niet in de goedkeurderslijst voor deze stap.");
+        }
+      }
+      const prior = existing.filter(a => Number(a.step_no) === Number(effectiveStep)).map(a => a.actor);
       engine.assertSegregationOfDuties({ actor, submitter: inst.created_by, priorActors: prior });
       await q(client, `INSERT INTO form_approval_actions (id, tenant_id, instance_id, step_no, actor, decision, note)
-                       VALUES ($1,$2,$3,$4,$5,$6,$7)`, [id("faca"), tenantId, instId, stepNo, actor, decision, note]);
-      const toStatus = decision === "approved" ? "approved" : decision === "rejected" ? "rejected" : "changes_requested";
+                       VALUES ($1,$2,$3,$4,$5,$6,$7)`, [id("faca"), tenantId, instId, effectiveStep, actor, decision, note]);
+
+      // changes_requested kortsluit het beleid (terug naar de indiener).
+      if (decision === "changes_requested") {
+        engine.assertTransition(inst.status, "changes_requested");
+        await q(client, `UPDATE form_instances SET status='changes_requested', version=version+1, updated_by=$3 WHERE tenant_id=$1 AND id=$2`, [tenantId, instId, actor || null]);
+        await appendEvent(client, tenantId, { instanceId: instId, eventType: "changes_requested", actor, data: { stepNo: effectiveStep, decision } });
+        return { id: instId, status: "changes_requested", decision, step: effectiveStep };
+      }
+
+      // Evalueer het volledige beleid mét deze actie erbij.
+      const after = engine.evaluateApprovals(policy, [...existing, { step_no: effectiveStep, actor, decision }]);
+      if (after.status === "pending") {
+        // Stap (nog) niet voldaan of volgende stap wacht → in_review, geen finale status.
+        if (inst.status !== "in_review") {
+          engine.assertTransition(inst.status, "in_review");
+          await q(client, `UPDATE form_instances SET status='in_review', version=version+1, updated_by=$3 WHERE tenant_id=$1 AND id=$2`, [tenantId, instId, actor || null]);
+        }
+        await appendEvent(client, tenantId, { instanceId: instId, eventType: "approval.step", actor, data: { stepNo: effectiveStep, decision, pendingStep: after.pendingStep } });
+        return { id: instId, status: "in_review", decision, step: effectiveStep, pendingStep: after.pendingStep };
+      }
+      const toStatus = after.status; // approved | rejected
       engine.assertTransition(inst.status, toStatus);
       await q(client, `UPDATE form_instances SET status=$3, version=version+1, updated_by=$4 WHERE tenant_id=$1 AND id=$2`, [tenantId, instId, toStatus, actor || null]);
-      await appendEvent(client, tenantId, { instanceId: instId, eventType: toStatus, actor, data: { stepNo, decision } });
-      // F4 · workflowformulier: pas ná goedkeuring naar het domeinobject
+      await appendEvent(client, tenantId, { instanceId: instId, eventType: toStatus, actor, data: { stepNo: effectiveStep, decision } });
+      // F4 · workflowformulier: pas ná finale goedkeuring naar het domeinobject
       // ("form instance tot goedkeuring, daarna domeinobject").
       const domain = toStatus === "approved"
         ? await dispatchDomain(client, tenantId, { instance: inst, moment: "approve", actor })
         : null;
-      return { id: instId, status: toStatus, decision, domain: domain || undefined };
+      return { id: instId, status: toStatus, decision, step: effectiveStep, domain: domain || undefined };
     });
   }
 

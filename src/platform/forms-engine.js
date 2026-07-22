@@ -98,6 +98,44 @@ function assertSegregationOfDuties({ actor, submitter, priorActors = [] }) {
   }
 }
 
+// ── h26 · goedkeuringsbeleid: serial, parallel en any-of/all-of ──────────────
+// Beleid staat op de definitie: attributes.approval_policy =
+//   { steps: [{ step_no, mode: "any_of"|"all_of", approvers?: [email|rol], min?: n }] }
+// Stappen zijn serieel (stap 2 pas na stap 1); binnen een stap beslissen de
+// goedkeurders parallel. any_of = één goedkeuring volstaat (of `min`);
+// all_of = alle genoemde approvers (of `min`). Zonder beleid: één goedkeuring.
+
+/** Mag deze actor op deze stap beslissen volgens het beleid? */
+function actorAllowedForStep(step, actor, actorRole) {
+  if (!step || !Array.isArray(step.approvers) || step.approvers.length === 0) return true;
+  return step.approvers.includes(actor) || (actorRole && step.approvers.includes(actorRole));
+}
+
+/**
+ * Evalueer het volledige beleid tegen de al genomen acties.
+ * @param {object|null} policy   attributes.approval_policy (of null)
+ * @param {Array} actions        [{ step_no, actor, decision }]
+ * @returns {{status:"approved"|"rejected"|"pending", pendingStep:number|null}}
+ */
+function evaluateApprovals(policy, actions = []) {
+  const steps = policy && Array.isArray(policy.steps) && policy.steps.length
+    ? [...policy.steps].sort((a, b) => (a.step_no || 0) - (b.step_no || 0))
+    : [{ step_no: 1, mode: "any_of" }];
+  for (const step of steps) {
+    const acts = actions.filter(a => Number(a.step_no) === Number(step.step_no));
+    if (acts.some(a => a.decision === "rejected")) return { status: "rejected", pendingStep: step.step_no };
+    const approvals = acts.filter(a => a.decision === "approved");
+    const mode = step.mode === "all_of" ? "all_of" : "any_of";
+    const need = step.min != null
+      ? Number(step.min)
+      : mode === "all_of"
+        ? Math.max((step.approvers || []).length, 1)
+        : 1;
+    if (approvals.length < need) return { status: "pending", pendingStep: step.step_no };
+  }
+  return { status: "approved", pendingStep: null };
+}
+
 // ── FORM-03/FORM-05 · veld- en classificatierechten (server-side, één poort) ──
 // Gedelegeerd aan het gedeelde veldrechten-register (field-permissions.js), zodat
 // het scherm, de API, search, export en AI EXACT dezelfde beslissing nemen (h3).
@@ -191,4 +229,5 @@ module.exports = {
   assertVersionEditable, nextVersionNumber, assertIfMatch,
   assertSegregationOfDuties, canViewField, canEditField, redactAnswers,
   validateAnswers, buildAnswerIndex, userHasPermission,
+  actorAllowedForStep, evaluateApprovals,
 };

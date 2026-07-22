@@ -162,7 +162,7 @@ async function handleFormsRoute(repo, { user, tenantId, method, action, body = {
     }
     const iApprove = action.match(/^form-instances\/([^/]+)\/approve$/);
     if (iApprove && method === "POST") {
-      const r = await repo.actOnApproval(tenantId, iApprove[1], { stepNo: body.stepNo || 1, decision: body.decision, note: body.note || null }, actor);
+      const r = await repo.actOnApproval(tenantId, iApprove[1], { stepNo: body.stepNo || 1, decision: body.decision, note: body.note || null, actorRole: (user && user.role) || null }, actor);
       return ok(200, { result: r });
     }
     const iSign = action.match(/^form-instances\/([^/]+)\/sign$/);
