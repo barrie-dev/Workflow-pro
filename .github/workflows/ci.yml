@@ -116,6 +116,10 @@ jobs:
         # Draait de negen verplichte horizontale scenario's (verse server per
         # smoke); één rode smoke → exit 1. Schrijft het eerlijke manifest.
         run: node scripts/check-e2e-scenarios.js
+      - name: Tenant-isolatie-matrix (DoD #11 · tenant_isolation)
+        # Bewijst isolatie op vier lagen: DB/RLS + repository + policy-engine +
+        # HTTP. Eén laag rood → exit 1. Schrijft security-matrix.json.
+        run: node scripts/check-security-matrix.js
       - name: Roadmap-gate (DEV-01/07) · harde regressiegate op de commit
         # HARD (geen || true, CTO PR #41): valideert alle zojuist gegenereerde
         # evidence INHOUDELIJK op de HUIDIGE commit-SHA en faalt op elke
