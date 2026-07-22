@@ -442,6 +442,18 @@ const objectStorage = createObjectStorage();
 // zodat reserveringen een herstart en meerdere replicas overleven.
 const jobQueue = createJobQueue(storeAdapter);
 
+// Canonieke Forms-capability (Forms-handover F1 · finale CTO-directive: één
+// platformbrede engine). Genormaliseerd + RLS-geïsoleerd op PostgreSQL, achter
+// de distincte paden form-definitions/* en form-instances/*. Vereist pg; in pure
+// JSON-dev is hij null en antwoorden de routes met 503 (geen tweede engine).
+const formsApi = require("./modules/forms-api");
+const formsRepo = (() => {
+  const pool = storeAdapter && storeAdapter.name === "postgres" ? storeAdapter.pool : null;
+  if (!pool) return null;
+  const { makePgFormsRepository } = require("./infrastructure/postgres/pg-forms-repository");
+  return makePgFormsRepository(pool);
+})();
+
 /**
  * CRM-bronschakelaar (5.4 stap 5-7). Buiten legacy-modus is een PostgreSQL-
  * verbinding nodig: gedeeld met de data-adapter als die op pg draait, anders
@@ -6424,6 +6436,27 @@ const httpServer = http.createServer(async (req, res) => {
         if (!project) return sendJson(res, 404, { ok: false, error: "Project niet gevonden" });
         sendJson(res, 200, { ok: true, history: project.forecastHistory || [], current: currentForecast(project) });
         return;
+      }
+
+      // ── Canonieke Forms-capability (Forms-handover F1) ──────────────────────
+      // Genormaliseerde, versie-onveranderlijke, RLS-geïsoleerde formulieren met
+      // veld-/classificatierechten en segregation of duties. Distincte paden
+      // (form-definitions/*, form-instances/*) naast de legacy work-os forms/* ;
+      // de strangler unificeert die later. De handler bezit rechten + veldredactie.
+      if (formsApi.isFormsAction(action)) {
+        if (!formsRepo) return sendJson(res, 503, { ok: false, code: "FORMS_REQUIRES_PG", error: "De canonieke Forms-capability vereist PostgreSQL." });
+        if (action.startsWith("form-definitions") && req.method !== "GET") { assertCan(user, "settings"); assertInteractiveUser(user); }
+        if (action.startsWith("form-instances") && req.method !== "GET") assertApiKeyWriteAllowed(user, req);
+        const needsBody = req.method === "POST" || req.method === "PATCH" || req.method === "PUT";
+        const body = needsBody ? await readBody(req) : {};
+        const r = await formsApi.handleFormsRoute(formsRepo, { user, tenantId, method: req.method, action, body, req });
+        if (r) {
+          if (r.headers) for (const [k, v] of Object.entries(r.headers)) res.setHeader(k, v);
+          if (r.status >= 200 && r.status < 300 && req.method !== "GET") {
+            store.audit({ actor: user.email, tenantId, action: "forms_" + req.method.toLowerCase(), area: "forms", detail: action });
+          }
+          return sendJson(res, r.status, r.payload);
+        }
       }
 
       // ── Work OS-kern · formulieren, taken, bestanden, communicatie (h39/DOC) ──
