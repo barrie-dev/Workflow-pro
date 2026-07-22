@@ -44,9 +44,17 @@ before(async () => {
   throw new Error("server kwam niet op binnen 20s:\n" + bootLog);
 });
 
-after(() => {
-  if (server && server.exitCode === null) server.kill();
-  if (smokeDir) fs.rmSync(smokeDir, { recursive: true, force: true });
+after(async () => {
+  // Exit afwachten vóór de tempmap weggaat: een stervende server kan nog een
+  // gebufferde flush schrijven → ENOTEMPTY-race op rmSync (Linux/CI).
+  if (server && server.exitCode === null) {
+    await new Promise(resolve => {
+      server.once("exit", resolve);
+      server.kill();
+      setTimeout(() => { try { server.kill("SIGKILL"); } catch (_) {} }, 3000).unref();
+    });
+  }
+  if (smokeDir) { try { fs.rmSync(smokeDir, { recursive: true, force: true }); } catch (_) { /* tmp · OS ruimt op */ } }
 });
 
 test("health endpoint geeft ok", async () => {

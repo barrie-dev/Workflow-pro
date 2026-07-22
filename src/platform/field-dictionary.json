@@ -1,0 +1,4451 @@
+{
+ "source": "Monargo_One_Forms_Information_Fields_Development_Handover_v1.1_Reseller_2026-07-22",
+ "chapters": [
+  {
+   "chapter": 6,
+   "title": "Tenant, onderneming en onboarding",
+   "domain": "tenant",
+   "forms": [
+    "Tenantregistratie",
+    "Ondernemingsprofiel",
+    "Facturatieprofiel",
+    "Module- en entitlementkeuze",
+    "Data-importaanvraag",
+    "Supportcontacten",
+    "Onboardingchecklist"
+   ],
+   "fields": [
+    {
+     "field_key": "tenant_name",
+     "label": "tenant_name",
+     "required": "required",
+     "field_type": "Text",
+     "data_classification": "internal",
+     "visible_to": "Tenant admin; platform read",
+     "usage": "Commerciële SaaS-klantnaam.",
+     "view_permission": null
+    },
+    {
+     "field_key": "tenant_slug",
+     "label": "tenant_slug",
+     "required": "required",
+     "field_type": "Slug",
+     "data_classification": "internal",
+     "visible_to": "Platform/system",
+     "usage": "Uniek; gebruikt in URLs waar van toepassing.",
+     "view_permission": null
+    },
+    {
+     "field_key": "tenant_status",
+     "label": "tenant_status",
+     "required": "required",
+     "field_type": "Enum",
+     "data_classification": "internal",
+     "visible_to": "Platform billing/admin",
+     "usage": "trial, active, suspended, canceled, archived.",
+     "view_permission": null
+    },
+    {
+     "field_key": "plan_entitlements",
+     "label": "plan / entitlements",
+     "required": "required",
+     "field_type": "Reference/list",
+     "data_classification": "financial",
+     "visible_to": "Tenant admin view; platform modify",
+     "usage": "Bron van module- en usage-rechten.",
+     "view_permission": null
+    },
+    {
+     "field_key": "trial_start_trial_end",
+     "label": "trial_start / trial_end",
+     "required": "conditional",
+     "field_type": "Datetime",
+     "data_classification": "financial",
+     "visible_to": "Tenant admin/billing",
+     "usage": "Alleen bij trial.",
+     "view_permission": null
+    },
+    {
+     "field_key": "billing_email",
+     "label": "billing_email",
+     "required": "required",
+     "field_type": "Email",
+     "data_classification": "personal",
+     "visible_to": "Tenant admin/finance",
+     "usage": "Facturen en contractcommunicatie.",
+     "view_permission": null
+    },
+    {
+     "field_key": "legal_company_name",
+     "label": "legal_company_name",
+     "required": "required",
+     "field_type": "Text",
+     "data_classification": "public",
+     "visible_to": "Company admin",
+     "usage": "Officiële statutaire naam.",
+     "view_permission": null
+    },
+    {
+     "field_key": "enterprise_number",
+     "label": "enterprise_number",
+     "required": "conditional",
+     "field_type": "Identifier",
+     "data_classification": "public",
+     "visible_to": "Company admin/finance",
+     "usage": "KBO-validatie en uniek per land.",
+     "view_permission": null
+    },
+    {
+     "field_key": "vat_number",
+     "label": "vat_number",
+     "required": "conditional",
+     "field_type": "Identifier",
+     "data_classification": "financial",
+     "visible_to": "Finance/admin",
+     "usage": "Landprefix en checksumvalidatie.",
+     "view_permission": null
+    },
+    {
+     "field_key": "legal_form",
+     "label": "legal_form",
+     "required": "optional",
+     "field_type": "Enum/Text",
+     "data_classification": "public",
+     "visible_to": "Company admin",
+     "usage": "NV, BV, vzw, eenmanszaak enz.",
+     "view_permission": null
+    },
+    {
+     "field_key": "registered_address",
+     "label": "registered_address",
+     "required": "required",
+     "field_type": "Address",
+     "data_classification": "public",
+     "visible_to": "Company admin",
+     "usage": "Straat, nummer, bus, postcode, gemeente, land.",
+     "view_permission": null
+    },
+    {
+     "field_key": "operational_address",
+     "label": "operational_address",
+     "required": "optional",
+     "field_type": "Address",
+     "data_classification": "internal",
+     "visible_to": "Company admin",
+     "usage": "Kan afwijken van zetel.",
+     "view_permission": null
+    },
+    {
+     "field_key": "default_language",
+     "label": "default_language",
+     "required": "required",
+     "field_type": "Enum",
+     "data_classification": "internal",
+     "visible_to": "Tenant admin",
+     "usage": "NL/FR/EN.",
+     "view_permission": null
+    },
+    {
+     "field_key": "timezone",
+     "label": "timezone",
+     "required": "required",
+     "field_type": "IANA timezone",
+     "data_classification": "internal",
+     "visible_to": "Tenant admin",
+     "usage": "Default Europe/Brussels.",
+     "view_permission": null
+    },
+    {
+     "field_key": "currency",
+     "label": "currency",
+     "required": "required",
+     "field_type": "ISO currency",
+     "data_classification": "financial",
+     "visible_to": "Finance/admin",
+     "usage": "Default EUR.",
+     "view_permission": null
+    },
+    {
+     "field_key": "fiscal_year_start",
+     "label": "fiscal_year_start",
+     "required": "optional",
+     "field_type": "Month/day",
+     "data_classification": "financial",
+     "visible_to": "Finance",
+     "usage": "Voor rapportering.",
+     "view_permission": null
+    },
+    {
+     "field_key": "invoice_number_sequence",
+     "label": "invoice_number_sequence",
+     "required": "conditional",
+     "field_type": "Reference",
+     "data_classification": "financial",
+     "visible_to": "Finance admin",
+     "usage": "Company-scoped en concurrency-safe.",
+     "view_permission": null
+    },
+    {
+     "field_key": "bank_accounts",
+     "label": "bank_accounts",
+     "required": "optional",
+     "field_type": "Repeating IBAN/BIC",
+     "data_classification": "financial",
+     "visible_to": "Finance restricted",
+     "usage": "IBAN-validatie, primary flag.",
+     "view_permission": null
+    },
+    {
+     "field_key": "logo_brand_assets",
+     "label": "logo / brand assets",
+     "required": "optional",
+     "field_type": "File",
+     "data_classification": "public",
+     "visible_to": "Tenant admin/marketing",
+     "usage": "Object storage, type/size limits.",
+     "view_permission": null
+    },
+    {
+     "field_key": "support_contacts",
+     "label": "support_contacts",
+     "required": "optional",
+     "field_type": "Repeating contact",
+     "data_classification": "personal",
+     "visible_to": "Tenant admin/support",
+     "usage": "Primair en escalatiecontact.",
+     "view_permission": null
+    },
+    {
+     "field_key": "data_region",
+     "label": "data_region",
+     "required": "required",
+     "field_type": "Enum",
+     "data_classification": "security_sensitive",
+     "visible_to": "Platform/security",
+     "usage": "Locatie van primaire data.",
+     "view_permission": null
+    },
+    {
+     "field_key": "onboarding_status",
+     "label": "onboarding_status",
+     "required": "required",
+     "field_type": "Enum",
+     "data_classification": "internal",
+     "visible_to": "Tenant admin/customer success",
+     "usage": "Checklistgedreven.",
+     "view_permission": null
+    }
+   ]
+  },
+  {
+   "chapter": 7,
+   "title": "Gebruiker, medewerker, team en HR",
+   "domain": "employee",
+   "forms": [
+    "Gebruikersuitnodiging",
+    "Medewerkerregistratie",
+    "Medewerkeronboarding",
+    "Rollen- en rechtenconfiguratie",
+    "Teamtoewijzing",
+    "Certificaatregistratie",
+    "Medewerkeroffboarding",
+    "Toegangsreview"
+   ],
+   "fields": [
+    {
+     "field_key": "user_email",
+     "label": "user_email",
+     "required": "required",
+     "field_type": "Email",
+     "data_classification": "personal",
+     "visible_to": "User admin; user self",
+     "usage": "Uniek binnen platform of identity provider.",
+     "view_permission": null
+    },
+    {
+     "field_key": "user_status",
+     "label": "user_status",
+     "required": "required",
+     "field_type": "Enum",
+     "data_classification": "internal",
+     "visible_to": "User admin",
+     "usage": "invited, active, locked, disabled, archived.",
+     "view_permission": null
+    },
+    {
+     "field_key": "display_name",
+     "label": "display_name",
+     "required": "required",
+     "field_type": "Text",
+     "data_classification": "personal",
+     "visible_to": "User self/admin",
+     "usage": "Voor UI en auditweergave.",
+     "view_permission": null
+    },
+    {
+     "field_key": "preferred_language",
+     "label": "preferred_language",
+     "required": "required",
+     "field_type": "Enum",
+     "data_classification": "personal",
+     "visible_to": "User self",
+     "usage": "NL/FR/EN.",
+     "view_permission": null
+    },
+    {
+     "field_key": "mfa_state",
+     "label": "mfa_state",
+     "required": "system",
+     "field_type": "Enum",
+     "data_classification": "security_sensitive",
+     "visible_to": "User self/security",
+     "usage": "Geen secretwaarden tonen.",
+     "view_permission": null
+    },
+    {
+     "field_key": "last_login_failed_logins",
+     "label": "last_login / failed_logins",
+     "required": "system",
+     "field_type": "Datetime/integer",
+     "data_classification": "security_sensitive",
+     "visible_to": "Security/admin",
+     "usage": "Audit en lockout.",
+     "view_permission": null
+    },
+    {
+     "field_key": "role_ids",
+     "label": "role_ids",
+     "required": "required",
+     "field_type": "References",
+     "data_classification": "security_sensitive",
+     "visible_to": "Tenant admin",
+     "usage": "Geen client-side autorisatiebron.",
+     "view_permission": null
+    },
+    {
+     "field_key": "employee_number",
+     "label": "employee_number",
+     "required": "conditional",
+     "field_type": "Text",
+     "data_classification": "personal",
+     "visible_to": "HR/admin",
+     "usage": "Uniek per company.",
+     "view_permission": null
+    },
+    {
+     "field_key": "first_name",
+     "label": "first_name",
+     "required": "required",
+     "field_type": "Text",
+     "data_classification": "personal",
+     "visible_to": "HR; self beperkt",
+     "usage": "Wettelijke of operationele naam.",
+     "view_permission": null
+    },
+    {
+     "field_key": "last_name",
+     "label": "last_name",
+     "required": "required",
+     "field_type": "Text",
+     "data_classification": "personal",
+     "visible_to": "HR; self beperkt",
+     "usage": "Inclusief officiële schrijfwijze.",
+     "view_permission": null
+    },
+    {
+     "field_key": "preferred_name",
+     "label": "preferred_name",
+     "required": "optional",
+     "field_type": "Text",
+     "data_classification": "personal",
+     "visible_to": "Self/HR",
+     "usage": "Voor dagelijkse communicatie.",
+     "view_permission": null
+    },
+    {
+     "field_key": "date_of_birth",
+     "label": "date_of_birth",
+     "required": "conditional",
+     "field_type": "Date",
+     "data_classification": "personal",
+     "visible_to": "HR restricted",
+     "usage": "Alleen indien noodzakelijk.",
+     "view_permission": null
+    },
+    {
+     "field_key": "nationality",
+     "label": "nationality",
+     "required": "conditional",
+     "field_type": "Country",
+     "data_classification": "personal",
+     "visible_to": "HR/compliance",
+     "usage": "Voor A1/Limosa of arbeidscontext.",
+     "view_permission": null
+    },
+    {
+     "field_key": "national_register_number",
+     "label": "national_register_number",
+     "required": "conditional",
+     "field_type": "Identifier",
+     "data_classification": "special_category",
+     "visible_to": "HR highly restricted",
+     "usage": "Alleen wettelijke noodzaak, versleuteld/masked.",
+     "view_permission": null
+    },
+    {
+     "field_key": "private_email",
+     "label": "private_email",
+     "required": "optional",
+     "field_type": "Email",
+     "data_classification": "personal",
+     "visible_to": "HR/self",
+     "usage": "Niet standaard voor managers.",
+     "view_permission": null
+    },
+    {
+     "field_key": "work_email",
+     "label": "work_email",
+     "required": "conditional",
+     "field_type": "Email",
+     "data_classification": "personal",
+     "visible_to": "Team/company",
+     "usage": "Operationele communicatie.",
+     "view_permission": null
+    },
+    {
+     "field_key": "phone_mobile",
+     "label": "phone_mobile",
+     "required": "optional",
+     "field_type": "Phone",
+     "data_classification": "personal",
+     "visible_to": "Volgens directory policy",
+     "usage": "Landcodevalidatie.",
+     "view_permission": null
+    },
+    {
+     "field_key": "home_address",
+     "label": "home_address",
+     "required": "conditional",
+     "field_type": "Address",
+     "data_classification": "personal",
+     "visible_to": "HR restricted",
+     "usage": "Niet zichtbaar voor projectrollen.",
+     "view_permission": null
+    },
+    {
+     "field_key": "emergency_contact",
+     "label": "emergency_contact",
+     "required": "optional",
+     "field_type": "Name/phone/relation",
+     "data_classification": "personal",
+     "visible_to": "HR restricted",
+     "usage": "Alleen noodsituaties.",
+     "view_permission": null
+    },
+    {
+     "field_key": "employment_type",
+     "label": "employment_type",
+     "required": "required",
+     "field_type": "Enum",
+     "data_classification": "personal",
+     "visible_to": "HR/manager limited",
+     "usage": "employee, contractor, flexi, interim, self-employed.",
+     "view_permission": null
+    },
+    {
+     "field_key": "start_date_end_date",
+     "label": "start_date / end_date",
+     "required": "conditional",
+     "field_type": "Date",
+     "data_classification": "personal",
+     "visible_to": "HR/manager limited",
+     "usage": "Toegang en planning koppelen aan geldigheid.",
+     "view_permission": null
+    },
+    {
+     "field_key": "job_title",
+     "label": "job_title",
+     "required": "optional",
+     "field_type": "Text",
+     "data_classification": "internal",
+     "visible_to": "HR/manager",
+     "usage": "Operationele functie.",
+     "view_permission": null
+    },
+    {
+     "field_key": "team_id_manager_id",
+     "label": "team_id / manager_id",
+     "required": "conditional",
+     "field_type": "References",
+     "data_classification": "internal",
+     "visible_to": "HR/admin",
+     "usage": "Hiërarchie en approvals.",
+     "view_permission": null
+    },
+    {
+     "field_key": "skills",
+     "label": "skills",
+     "required": "optional",
+     "field_type": "Multi-reference",
+     "data_classification": "internal",
+     "visible_to": "Manager/HR",
+     "usage": "Met niveau en geldigheid.",
+     "view_permission": null
+    },
+    {
+     "field_key": "certificates",
+     "label": "certificates",
+     "required": "optional",
+     "field_type": "Repeating + files",
+     "data_classification": "personal",
+     "visible_to": "HR/compliance/manager",
+     "usage": "Type, issuer, number, issue/expiry.",
+     "view_permission": null
+    },
+    {
+     "field_key": "work_schedule",
+     "label": "work_schedule",
+     "required": "conditional",
+     "field_type": "Reference",
+     "data_classification": "personal",
+     "visible_to": "HR/planning",
+     "usage": "Geldigheidsdatums.",
+     "view_permission": null
+    },
+    {
+     "field_key": "cost_rate",
+     "label": "cost_rate",
+     "required": "conditional",
+     "field_type": "Money/date range",
+     "data_classification": "financial",
+     "visible_to": "HR/finance restricted",
+     "usage": "Nooit zichtbaar voor medewerker/project zonder recht.",
+     "view_permission": null
+    },
+    {
+     "field_key": "salary_data",
+     "label": "salary_data",
+     "required": "optional",
+     "field_type": "Structured",
+     "data_classification": "financial",
+     "visible_to": "HR highly restricted",
+     "usage": "Monargo is geen loonpakket; alleen noodzakelijke metadata.",
+     "view_permission": null
+    },
+    {
+     "field_key": "bank_account_employee",
+     "label": "bank_account_employee",
+     "required": "conditional",
+     "field_type": "IBAN",
+     "data_classification": "financial",
+     "visible_to": "HR/finance restricted",
+     "usage": "Alleen voor reimbursements indien gebruikt.",
+     "view_permission": null
+    },
+    {
+     "field_key": "medical_restrictions",
+     "label": "medical_restrictions",
+     "required": "optional",
+     "field_type": "Restricted note",
+     "data_classification": "special_category",
+     "visible_to": "HR highly restricted",
+     "usage": "Alleen functionele beperking, geen overmatige diagnose.",
+     "view_permission": null
+    }
+   ]
+  },
+  {
+   "chapter": 8,
+   "title": "Klant, contactpersoon, adres en locatie",
+   "domain": "customer",
+   "forms": [
+    "Snelle klantaanmaak",
+    "Volledig klantprofiel",
+    "Contactpersoon toevoegen",
+    "Adres of locatie toevoegen",
+    "Klantbezoekverslag",
+    "Klachtregistratie",
+    "Kredietbeoordeling",
+    "Gegevenscorrectieverzoek"
+   ],
+   "fields": [
+    {
+     "field_key": "customer_type",
+     "label": "customer_type",
+     "required": "required",
+     "field_type": "Enum",
+     "data_classification": "internal",
+     "visible_to": "CRM users",
+     "usage": "company, person, public_body, association.",
+     "view_permission": null
+    },
+    {
+     "field_key": "legal_name",
+     "label": "legal_name / full_name",
+     "required": "required",
+     "field_type": "Text",
+     "data_classification": "personal",
+     "visible_to": "CRM users",
+     "usage": "Afhankelijk van type.",
+     "view_permission": null
+    },
+    {
+     "field_key": "trade_name",
+     "label": "trade_name",
+     "required": "optional",
+     "field_type": "Text",
+     "data_classification": "public",
+     "visible_to": "CRM users",
+     "usage": "Commerciële naam.",
+     "view_permission": null
+    },
+    {
+     "field_key": "enterprise_number",
+     "label": "enterprise_number",
+     "required": "conditional",
+     "field_type": "Identifier",
+     "data_classification": "public",
+     "visible_to": "CRM/finance",
+     "usage": "Verplicht voor Belgische onderneming indien bekend.",
+     "view_permission": null
+    },
+    {
+     "field_key": "vat_number",
+     "label": "vat_number",
+     "required": "conditional",
+     "field_type": "Identifier",
+     "data_classification": "financial",
+     "visible_to": "CRM/finance",
+     "usage": "Checksum en country.",
+     "view_permission": null
+    },
+    {
+     "field_key": "customer_number",
+     "label": "customer_number",
+     "required": "system",
+     "field_type": "Sequence",
+     "data_classification": "internal",
+     "visible_to": "Read-only",
+     "usage": "Company-scoped uniek.",
+     "view_permission": null
+    },
+    {
+     "field_key": "status",
+     "label": "status",
+     "required": "required",
+     "field_type": "Enum",
+     "data_classification": "internal",
+     "visible_to": "CRM users",
+     "usage": "prospect, active, blocked, inactive, archived.",
+     "view_permission": null
+    },
+    {
+     "field_key": "language",
+     "label": "language",
+     "required": "required",
+     "field_type": "Enum",
+     "data_classification": "personal",
+     "visible_to": "CRM users",
+     "usage": "Communicatie en documenten.",
+     "view_permission": null
+    },
+    {
+     "field_key": "website",
+     "label": "website",
+     "required": "optional",
+     "field_type": "URL",
+     "data_classification": "public",
+     "visible_to": "CRM users",
+     "usage": "URL-validatie.",
+     "view_permission": null
+    },
+    {
+     "field_key": "general_email",
+     "label": "general_email",
+     "required": "optional",
+     "field_type": "Email",
+     "data_classification": "public",
+     "visible_to": "CRM users",
+     "usage": "Geen contactpersoonvervanging.",
+     "view_permission": null
+    },
+    {
+     "field_key": "general_phone",
+     "label": "general_phone",
+     "required": "optional",
+     "field_type": "Phone",
+     "data_classification": "public",
+     "visible_to": "CRM users",
+     "usage": "Landcode.",
+     "view_permission": null
+    },
+    {
+     "field_key": "billing_email",
+     "label": "billing_email",
+     "required": "conditional",
+     "field_type": "Email",
+     "data_classification": "personal",
+     "visible_to": "Finance/CRM",
+     "usage": "Factuurcommunicatie.",
+     "view_permission": null
+    },
+    {
+     "field_key": "payment_terms",
+     "label": "payment_terms",
+     "required": "optional",
+     "field_type": "Reference/days",
+     "data_classification": "financial",
+     "visible_to": "Finance",
+     "usage": "Snapshot op factuur.",
+     "view_permission": null
+    },
+    {
+     "field_key": "credit_limit",
+     "label": "credit_limit",
+     "required": "optional",
+     "field_type": "Money",
+     "data_classification": "financial",
+     "visible_to": "Finance restricted",
+     "usage": "Goedkeuringsflow bij wijziging.",
+     "view_permission": null
+    },
+    {
+     "field_key": "credit_status",
+     "label": "credit_status",
+     "required": "optional",
+     "field_type": "Enum",
+     "data_classification": "financial",
+     "visible_to": "Finance/CRM limited",
+     "usage": "ok, watch, blocked.",
+     "view_permission": null
+    },
+    {
+     "field_key": "price_list_id",
+     "label": "price_list_id",
+     "required": "optional",
+     "field_type": "Reference",
+     "data_classification": "financial",
+     "visible_to": "Sales/finance",
+     "usage": "Geldige prijslijst.",
+     "view_permission": null
+    },
+    {
+     "field_key": "tax_profile",
+     "label": "tax_profile",
+     "required": "conditional",
+     "field_type": "Structured",
+     "data_classification": "financial",
+     "visible_to": "Finance",
+     "usage": "Btw-regime, vrijstelling, reverse charge.",
+     "view_permission": null
+    },
+    {
+     "field_key": "primary_address",
+     "label": "primary_address",
+     "required": "conditional",
+     "field_type": "Address",
+     "data_classification": "personal",
+     "visible_to": "CRM users",
+     "usage": "Type billing/registered/visit/delivery.",
+     "view_permission": null
+    },
+    {
+     "field_key": "address_coordinates",
+     "label": "address_coordinates",
+     "required": "optional",
+     "field_type": "Geo",
+     "data_classification": "personal",
+     "visible_to": "Planning/field roles",
+     "usage": "Alleen voor route/locatiegebruik.",
+     "view_permission": null
+    },
+    {
+     "field_key": "contact_first_name",
+     "label": "contact_first_name",
+     "required": "required",
+     "field_type": "Text",
+     "data_classification": "personal",
+     "visible_to": "CRM users",
+     "usage": "Contactobject.",
+     "view_permission": null
+    },
+    {
+     "field_key": "contact_last_name",
+     "label": "contact_last_name",
+     "required": "required",
+     "field_type": "Text",
+     "data_classification": "personal",
+     "visible_to": "CRM users",
+     "usage": "Contactobject.",
+     "view_permission": null
+    },
+    {
+     "field_key": "contact_role",
+     "label": "contact_role/title",
+     "required": "optional",
+     "field_type": "Text/enum",
+     "data_classification": "personal",
+     "visible_to": "CRM users",
+     "usage": "Beslisser, finance, technical, site contact.",
+     "view_permission": null
+    },
+    {
+     "field_key": "contact_email",
+     "label": "contact_email",
+     "required": "optional",
+     "field_type": "Email",
+     "data_classification": "personal",
+     "visible_to": "CRM users",
+     "usage": "Consent/communication rules.",
+     "view_permission": null
+    },
+    {
+     "field_key": "contact_phone",
+     "label": "contact_phone",
+     "required": "optional",
+     "field_type": "Phone",
+     "data_classification": "personal",
+     "visible_to": "CRM users",
+     "usage": "Landcode.",
+     "view_permission": null
+    },
+    {
+     "field_key": "contact_preferences",
+     "label": "contact_preferences",
+     "required": "optional",
+     "field_type": "Structured",
+     "data_classification": "personal",
+     "visible_to": "CRM/marketing restricted",
+     "usage": "Channels, opt-in, do-not-contact.",
+     "view_permission": null
+    },
+    {
+     "field_key": "location_name",
+     "label": "location_name",
+     "required": "required",
+     "field_type": "Text",
+     "data_classification": "internal",
+     "visible_to": "CRM/project/service",
+     "usage": "Bijv. magazijn, werf, vestiging.",
+     "view_permission": null
+    },
+    {
+     "field_key": "location_address",
+     "label": "location_address",
+     "required": "required",
+     "field_type": "Address",
+     "data_classification": "personal",
+     "visible_to": "CRM/project/service",
+     "usage": "Operationele locatie.",
+     "view_permission": null
+    },
+    {
+     "field_key": "access_instructions",
+     "label": "access_instructions",
+     "required": "optional",
+     "field_type": "Long text",
+     "data_classification": "confidential",
+     "visible_to": "Assigned field roles",
+     "usage": "Poort, sleutel, contact, veiligheidsinfo.",
+     "view_permission": null
+    },
+    {
+     "field_key": "opening_hours",
+     "label": "opening_hours",
+     "required": "optional",
+     "field_type": "Structured",
+     "data_classification": "internal",
+     "visible_to": "Planning/service",
+     "usage": "Voor afspraken.",
+     "view_permission": null
+    },
+    {
+     "field_key": "customer_owner_id",
+     "label": "customer_owner_id",
+     "required": "optional",
+     "field_type": "User reference",
+     "data_classification": "internal",
+     "visible_to": "Sales management",
+     "usage": "Account owner.",
+     "view_permission": null
+    },
+    {
+     "field_key": "source",
+     "label": "source / acquisition",
+     "required": "optional",
+     "field_type": "Enum/reference",
+     "data_classification": "internal",
+     "visible_to": "Sales/marketing",
+     "usage": "Leadbron.",
+     "view_permission": null
+    }
+   ]
+  },
+  {
+   "chapter": 9,
+   "title": "Lead, prospect en sales",
+   "domain": "lead",
+   "forms": [
+    "Leadregistratie",
+    "Prospectintake",
+    "Discoveryformulier",
+    "Klantkwalificatie",
+    "Opportunityreview",
+    "Verliesreden",
+    "Salesbezoekverslag"
+   ],
+   "fields": [
+    {
+     "field_key": "lead_name",
+     "label": "lead_name",
+     "required": "required",
+     "field_type": "Text",
+     "data_classification": "internal",
+     "visible_to": "Sales",
+     "usage": "Naam prospect of opportuniteit.",
+     "view_permission": null
+    },
+    {
+     "field_key": "company_customer_id",
+     "label": "company/customer_id",
+     "required": "conditional",
+     "field_type": "Reference",
+     "data_classification": "internal",
+     "visible_to": "Sales",
+     "usage": "Koppel zodra bekend.",
+     "view_permission": null
+    },
+    {
+     "field_key": "contact_id",
+     "label": "contact_id",
+     "required": "optional",
+     "field_type": "Reference",
+     "data_classification": "personal",
+     "visible_to": "Sales",
+     "usage": "Primair contact.",
+     "view_permission": null
+    },
+    {
+     "field_key": "source",
+     "label": "source",
+     "required": "optional",
+     "field_type": "Enum/Text",
+     "data_classification": "internal",
+     "visible_to": "Sales/marketing",
+     "usage": "Referral, website, outbound, partner.",
+     "view_permission": null
+    },
+    {
+     "field_key": "campaign_id",
+     "label": "campaign_id",
+     "required": "optional",
+     "field_type": "Reference",
+     "data_classification": "internal",
+     "visible_to": "Marketing/sales",
+     "usage": "Geen verplichting.",
+     "view_permission": null
+    },
+    {
+     "field_key": "stage",
+     "label": "stage",
+     "required": "required",
+     "field_type": "Enum",
+     "data_classification": "internal",
+     "visible_to": "Sales",
+     "usage": "new, contacted, qualified, proposal, won, lost.",
+     "view_permission": null
+    },
+    {
+     "field_key": "estimated_value",
+     "label": "estimated_value",
+     "required": "optional",
+     "field_type": "Money",
+     "data_classification": "financial",
+     "visible_to": "Sales/management",
+     "usage": "Valuta verplicht.",
+     "view_permission": null
+    },
+    {
+     "field_key": "probability",
+     "label": "probability",
+     "required": "optional",
+     "field_type": "Percentage",
+     "data_classification": "internal",
+     "visible_to": "Sales",
+     "usage": "0-100.",
+     "view_permission": null
+    },
+    {
+     "field_key": "expected_close_date",
+     "label": "expected_close_date",
+     "required": "optional",
+     "field_type": "Date",
+     "data_classification": "internal",
+     "visible_to": "Sales",
+     "usage": "Forecasting.",
+     "view_permission": null
+    },
+    {
+     "field_key": "need_problem",
+     "label": "need/problem",
+     "required": "optional",
+     "field_type": "Long text",
+     "data_classification": "confidential",
+     "visible_to": "Sales",
+     "usage": "Discovery.",
+     "view_permission": null
+    },
+    {
+     "field_key": "decision_process",
+     "label": "decision_process",
+     "required": "optional",
+     "field_type": "Long text",
+     "data_classification": "confidential",
+     "visible_to": "Sales",
+     "usage": "Stakeholders en timing.",
+     "view_permission": null
+    },
+    {
+     "field_key": "competitors",
+     "label": "competitors",
+     "required": "optional",
+     "field_type": "Repeating text",
+     "data_classification": "confidential",
+     "visible_to": "Sales/management",
+     "usage": "Niet publiek.",
+     "view_permission": null
+    },
+    {
+     "field_key": "next_action_due_date",
+     "label": "next_action / due_date",
+     "required": "conditional",
+     "field_type": "Text/date",
+     "data_classification": "internal",
+     "visible_to": "Owner/manager",
+     "usage": "Geen open lead zonder next step.",
+     "view_permission": null
+    },
+    {
+     "field_key": "loss_reason",
+     "label": "loss_reason",
+     "required": "conditional",
+     "field_type": "Enum/Text",
+     "data_classification": "internal",
+     "visible_to": "Sales",
+     "usage": "Verplicht bij lost.",
+     "view_permission": null
+    },
+    {
+     "field_key": "consent_basis",
+     "label": "consent_basis",
+     "required": "conditional",
+     "field_type": "Enum/date/source",
+     "data_classification": "personal",
+     "visible_to": "Sales/marketing restricted",
+     "usage": "Voor marketingcommunicatie.",
+     "view_permission": null
+    }
+   ]
+  },
+  {
+   "chapter": 10,
+   "title": "Offerte, contract en digitale acceptatie",
+   "domain": "quote",
+   "forms": [
+    "Offerte aanmaken",
+    "Opmeting/plaatsbezoek",
+    "Interne offertecontrole",
+    "Prijsafwijking",
+    "Offertegoedkeuring",
+    "Digitale aanvaarding",
+    "Contractinformatie",
+    "Wijzigingsaanvraag"
+   ],
+   "fields": [
+    {
+     "field_key": "quote_number",
+     "label": "quote_number",
+     "required": "system",
+     "field_type": "Sequence",
+     "data_classification": "financial",
+     "visible_to": "Read-only",
+     "usage": "Company-scoped, concurrency-safe.",
+     "view_permission": null
+    },
+    {
+     "field_key": "customer_id",
+     "label": "customer_id",
+     "required": "required",
+     "field_type": "Reference",
+     "data_classification": "confidential",
+     "visible_to": "Sales/finance",
+     "usage": "Bestaande klant of gecontroleerde inline create.",
+     "view_permission": null
+    },
+    {
+     "field_key": "contact_id",
+     "label": "contact_id",
+     "required": "optional",
+     "field_type": "Reference",
+     "data_classification": "personal",
+     "visible_to": "Sales",
+     "usage": "Ontvanger.",
+     "view_permission": null
+    },
+    {
+     "field_key": "project_id",
+     "label": "project_id",
+     "required": "optional",
+     "field_type": "Reference",
+     "data_classification": "internal",
+     "visible_to": "Sales/project",
+     "usage": "Kan later ontstaan.",
+     "view_permission": null
+    },
+    {
+     "field_key": "quote_date",
+     "label": "quote_date",
+     "required": "required",
+     "field_type": "Date",
+     "data_classification": "financial",
+     "visible_to": "Sales",
+     "usage": "Default vandaag.",
+     "view_permission": null
+    },
+    {
+     "field_key": "valid_until",
+     "label": "valid_until",
+     "required": "required",
+     "field_type": "Date",
+     "data_classification": "financial",
+     "visible_to": "Sales",
+     "usage": "Na quote_date.",
+     "view_permission": null
+    },
+    {
+     "field_key": "currency",
+     "label": "currency",
+     "required": "required",
+     "field_type": "ISO currency",
+     "data_classification": "financial",
+     "visible_to": "Sales/finance",
+     "usage": "Snapshot.",
+     "view_permission": null
+    },
+    {
+     "field_key": "language",
+     "label": "language",
+     "required": "required",
+     "field_type": "Enum",
+     "data_classification": "personal",
+     "visible_to": "Sales",
+     "usage": "Documenttaal.",
+     "view_permission": null
+    },
+    {
+     "field_key": "lines",
+     "label": "lines",
+     "required": "required",
+     "field_type": "Repeating lines",
+     "data_classification": "financial",
+     "visible_to": "Sales; cost restricted",
+     "usage": "Omschrijving, qty, unit, unit price, VAT, discount, totals.",
+     "view_permission": null
+    },
+    {
+     "field_key": "cost_price",
+     "label": "cost_price",
+     "required": "conditional",
+     "field_type": "Money",
+     "data_classification": "financial",
+     "visible_to": "field.cost_price.view",
+     "usage": "Nooit extern.",
+     "view_permission": "field.cost_price.view"
+    },
+    {
+     "field_key": "margin",
+     "label": "margin",
+     "required": "system",
+     "field_type": "Money/%",
+     "data_classification": "financial",
+     "visible_to": "field.margin.view",
+     "usage": "Server calculated.",
+     "view_permission": "field.margin.view"
+    },
+    {
+     "field_key": "discount",
+     "label": "discount",
+     "required": "optional",
+     "field_type": "Money/%",
+     "data_classification": "financial",
+     "visible_to": "Volgens prijsrecht",
+     "usage": "Goedkeuring boven limiet.",
+     "view_permission": null
+    },
+    {
+     "field_key": "options_alternatives",
+     "label": "options / alternatives",
+     "required": "optional",
+     "field_type": "Grouped lines",
+     "data_classification": "financial",
+     "visible_to": "Sales/customer",
+     "usage": "Selecteerbaar bij aanvaarding.",
+     "view_permission": null
+    },
+    {
+     "field_key": "terms_template_id",
+     "label": "terms_template_id",
+     "required": "required",
+     "field_type": "Reference",
+     "data_classification": "confidential",
+     "visible_to": "Sales/admin",
+     "usage": "Versie snapshotten.",
+     "view_permission": null
+    },
+    {
+     "field_key": "internal_approval_status",
+     "label": "internal_approval_status",
+     "required": "conditional",
+     "field_type": "Enum",
+     "data_classification": "internal",
+     "visible_to": "Approvers",
+     "usage": "Op bedrag/marge/risico.",
+     "view_permission": null
+    },
+    {
+     "field_key": "sent_at_channel",
+     "label": "sent_at / channel",
+     "required": "system",
+     "field_type": "Datetime/enum",
+     "data_classification": "internal",
+     "visible_to": "Read-only",
+     "usage": "Audit.",
+     "view_permission": null
+    },
+    {
+     "field_key": "acceptance_status",
+     "label": "acceptance_status",
+     "required": "system",
+     "field_type": "Enum",
+     "data_classification": "confidential",
+     "visible_to": "Sales/customer",
+     "usage": "pending, accepted, rejected, expired.",
+     "view_permission": null
+    },
+    {
+     "field_key": "accepted_by_accepted_at",
+     "label": "accepted_by / accepted_at",
+     "required": "system",
+     "field_type": "Identity/datetime",
+     "data_classification": "confidential",
+     "visible_to": "Audit/customer",
+     "usage": "Immutable evidence.",
+     "view_permission": null
+    },
+    {
+     "field_key": "signature_evidence",
+     "label": "signature_evidence",
+     "required": "conditional",
+     "field_type": "Signature metadata",
+     "data_classification": "confidential",
+     "visible_to": "Authorized roles",
+     "usage": "IP/device/token/hash waar rechtmatig.",
+     "view_permission": null
+    },
+    {
+     "field_key": "contract_start_end",
+     "label": "contract_start/end",
+     "required": "conditional",
+     "field_type": "Date",
+     "data_classification": "confidential",
+     "visible_to": "Contract roles",
+     "usage": "Bij contractconversie.",
+     "view_permission": null
+    },
+    {
+     "field_key": "renewal_notice",
+     "label": "renewal / notice",
+     "required": "optional",
+     "field_type": "Structured",
+     "data_classification": "confidential",
+     "visible_to": "Contract roles",
+     "usage": "Termijnen en auto-renew.",
+     "view_permission": null
+    }
+   ]
+  },
+  {
+   "chapter": 11,
+   "title": "Project, werf en projectfinanciën",
+   "domain": "project",
+   "forms": [
+    "Projectaanmaak",
+    "Projectkick-off",
+    "Projectscope",
+    "Werfgegevens",
+    "Risicoanalyse",
+    "Veiligheidsplan",
+    "Projectteamtoewijzing",
+    "Werfdagboek",
+    "Voortgangsrapport",
+    "Meer-/minderwerk",
+    "Projectreview",
+    "Oplevering",
+    "Projectafsluiting"
+   ],
+   "fields": [
+    {
+     "field_key": "project_number",
+     "label": "project_number",
+     "required": "system",
+     "field_type": "Sequence",
+     "data_classification": "internal",
+     "visible_to": "Read-only",
+     "usage": "Company-scoped uniek.",
+     "view_permission": null
+    },
+    {
+     "field_key": "project_name",
+     "label": "project_name",
+     "required": "required",
+     "field_type": "Text",
+     "data_classification": "internal",
+     "visible_to": "Project roles",
+     "usage": "Duidelijke herkenbare naam.",
+     "view_permission": null
+    },
+    {
+     "field_key": "customer_id",
+     "label": "customer_id",
+     "required": "required",
+     "field_type": "Reference",
+     "data_classification": "confidential",
+     "visible_to": "Project/sales",
+     "usage": "Geen vrije tekst.",
+     "view_permission": null
+    },
+    {
+     "field_key": "customer_location_id",
+     "label": "customer_location_id",
+     "required": "optional",
+     "field_type": "Reference",
+     "data_classification": "personal",
+     "visible_to": "Project roles",
+     "usage": "Uitvoeringslocatie.",
+     "view_permission": null
+    },
+    {
+     "field_key": "project_type",
+     "label": "project_type",
+     "required": "required",
+     "field_type": "Reference/enum",
+     "data_classification": "internal",
+     "visible_to": "Project admin",
+     "usage": "Stuurt templates en forms.",
+     "view_permission": null
+    },
+    {
+     "field_key": "status",
+     "label": "status",
+     "required": "required",
+     "field_type": "Enum",
+     "data_classification": "internal",
+     "visible_to": "Project roles",
+     "usage": "draft, planned, active, on_hold, completed, canceled, archived.",
+     "view_permission": null
+    },
+    {
+     "field_key": "project_manager_id",
+     "label": "project_manager_id",
+     "required": "required",
+     "field_type": "User reference",
+     "data_classification": "internal",
+     "visible_to": "Project admin",
+     "usage": "Owner.",
+     "view_permission": null
+    },
+    {
+     "field_key": "team_ids",
+     "label": "team_ids",
+     "required": "optional",
+     "field_type": "References",
+     "data_classification": "internal",
+     "visible_to": "Project manager",
+     "usage": "Resources.",
+     "view_permission": null
+    },
+    {
+     "field_key": "start_date_planned_end",
+     "label": "start_date / planned_end",
+     "required": "conditional",
+     "field_type": "Date",
+     "data_classification": "internal",
+     "visible_to": "Project manager",
+     "usage": "Planningvalidatie.",
+     "view_permission": null
+    },
+    {
+     "field_key": "actual_end",
+     "label": "actual_end",
+     "required": "conditional",
+     "field_type": "Date",
+     "data_classification": "internal",
+     "visible_to": "Project manager",
+     "usage": "Bij afsluiting.",
+     "view_permission": null
+    },
+    {
+     "field_key": "scope_description",
+     "label": "scope_description",
+     "required": "optional",
+     "field_type": "Long text",
+     "data_classification": "confidential",
+     "visible_to": "Project/customer limited",
+     "usage": "Snapshot van afgesproken scope.",
+     "view_permission": null
+    },
+    {
+     "field_key": "contract_id_quote_id",
+     "label": "contract_id / quote_id",
+     "required": "optional",
+     "field_type": "References",
+     "data_classification": "financial",
+     "visible_to": "Project/sales",
+     "usage": "Traceability.",
+     "view_permission": null
+    },
+    {
+     "field_key": "budget_revenue",
+     "label": "budget_revenue",
+     "required": "optional",
+     "field_type": "Money",
+     "data_classification": "financial",
+     "visible_to": "Project finance rights",
+     "usage": "Goedgekeurde omzet.",
+     "view_permission": null
+    },
+    {
+     "field_key": "budget_cost",
+     "label": "budget_cost",
+     "required": "optional",
+     "field_type": "Money",
+     "data_classification": "financial",
+     "visible_to": "Cost/margin rights",
+     "usage": "Goedgekeurde kost.",
+     "view_permission": null
+    },
+    {
+     "field_key": "committed_cost",
+     "label": "committed_cost",
+     "required": "system",
+     "field_type": "Money",
+     "data_classification": "financial",
+     "visible_to": "Cost rights",
+     "usage": "Uit purchase commitments.",
+     "view_permission": null
+    },
+    {
+     "field_key": "actual_cost",
+     "label": "actual_cost",
+     "required": "system",
+     "field_type": "Money",
+     "data_classification": "financial",
+     "visible_to": "Cost rights",
+     "usage": "Uren, materiaal, onkosten, aankopen.",
+     "view_permission": null
+    },
+    {
+     "field_key": "forecast_at_completion",
+     "label": "forecast_at_completion",
+     "required": "optional",
+     "field_type": "Money",
+     "data_classification": "financial",
+     "visible_to": "Project finance",
+     "usage": "Versioned forecast.",
+     "view_permission": null
+    },
+    {
+     "field_key": "progress_percent",
+     "label": "progress_percent",
+     "required": "optional",
+     "field_type": "Percentage",
+     "data_classification": "internal",
+     "visible_to": "Project manager",
+     "usage": "Onderbouwd of calculated.",
+     "view_permission": null
+    },
+    {
+     "field_key": "worksite_details",
+     "label": "worksite_details",
+     "required": "conditional",
+     "field_type": "Structured",
+     "data_classification": "confidential",
+     "visible_to": "Assigned roles",
+     "usage": "Adres, toegang, werkuren, site contact.",
+     "view_permission": null
+    },
+    {
+     "field_key": "risk_level",
+     "label": "risk_level",
+     "required": "optional",
+     "field_type": "Enum",
+     "data_classification": "confidential",
+     "visible_to": "Project/security/compliance",
+     "usage": "Stuurt controles.",
+     "view_permission": null
+    },
+    {
+     "field_key": "safety_requirements",
+     "label": "safety_requirements",
+     "required": "optional",
+     "field_type": "Structured",
+     "data_classification": "confidential",
+     "visible_to": "Assigned/compliance",
+     "usage": "PPE, permits, toolbox.",
+     "view_permission": null
+    },
+    {
+     "field_key": "milestones",
+     "label": "milestones",
+     "required": "optional",
+     "field_type": "Repeating",
+     "data_classification": "internal",
+     "visible_to": "Project team",
+     "usage": "Due dates en status.",
+     "view_permission": null
+    },
+    {
+     "field_key": "closeout_status",
+     "label": "closeout_status",
+     "required": "conditional",
+     "field_type": "Checklist",
+     "data_classification": "internal",
+     "visible_to": "Project manager",
+     "usage": "Blokkeert afsluiting bij open items.",
+     "view_permission": null
+    }
+   ]
+  },
+  {
+   "chapter": 12,
+   "title": "Planning, afspraak, shift en beschikbaarheid",
+   "domain": "planning",
+   "forms": [
+    "Afspraak maken",
+    "Shift plannen",
+    "Beschikbaarheid doorgeven",
+    "Shift ruilen",
+    "Planningwijziging",
+    "Overwerk aanvragen",
+    "Resource reserveren",
+    "Planningconflict overrulen"
+   ],
+   "fields": [
+    {
+     "field_key": "planning_type",
+     "label": "planning_type",
+     "required": "required",
+     "field_type": "Enum",
+     "data_classification": "internal",
+     "visible_to": "Planning roles",
+     "usage": "appointment, shift, work_order, intervention, reservation.",
+     "view_permission": null
+    },
+    {
+     "field_key": "title",
+     "label": "title",
+     "required": "required",
+     "field_type": "Text",
+     "data_classification": "internal",
+     "visible_to": "Planning roles",
+     "usage": "Kort en herkenbaar.",
+     "view_permission": null
+    },
+    {
+     "field_key": "start_at_end_at",
+     "label": "start_at / end_at",
+     "required": "required",
+     "field_type": "Datetime",
+     "data_classification": "internal",
+     "visible_to": "Planning roles",
+     "usage": "Timezone-aware; end > start.",
+     "view_permission": null
+    },
+    {
+     "field_key": "all_day",
+     "label": "all_day",
+     "required": "optional",
+     "field_type": "Boolean",
+     "data_classification": "internal",
+     "visible_to": "Planning roles",
+     "usage": "Consistente datumlogica.",
+     "view_permission": null
+    },
+    {
+     "field_key": "timezone",
+     "label": "timezone",
+     "required": "required",
+     "field_type": "IANA timezone",
+     "data_classification": "internal",
+     "visible_to": "System/admin",
+     "usage": "Bij cross-region.",
+     "view_permission": null
+    },
+    {
+     "field_key": "assigned_users_teams",
+     "label": "assigned_users/teams",
+     "required": "conditional",
+     "field_type": "References",
+     "data_classification": "personal",
+     "visible_to": "Planning roles",
+     "usage": "Beschikbaarheid en rechten.",
+     "view_permission": null
+    },
+    {
+     "field_key": "project_id_workorder_id",
+     "label": "project_id / workorder_id",
+     "required": "optional",
+     "field_type": "References",
+     "data_classification": "internal",
+     "visible_to": "Planning roles",
+     "usage": "Geen vrije tekstrelatie.",
+     "view_permission": null
+    },
+    {
+     "field_key": "customer_location_id",
+     "label": "customer/location_id",
+     "required": "optional",
+     "field_type": "References",
+     "data_classification": "personal",
+     "visible_to": "Assigned roles",
+     "usage": "Context.",
+     "view_permission": null
+    },
+    {
+     "field_key": "resource_ids",
+     "label": "resource_ids",
+     "required": "optional",
+     "field_type": "References",
+     "data_classification": "internal",
+     "visible_to": "Planning roles",
+     "usage": "Voertuig, asset, ruimte.",
+     "view_permission": null
+    },
+    {
+     "field_key": "recurrence_rule",
+     "label": "recurrence_rule",
+     "required": "optional",
+     "field_type": "RRULE",
+     "data_classification": "internal",
+     "visible_to": "Planning admin",
+     "usage": "Versieerbaar.",
+     "view_permission": null
+    },
+    {
+     "field_key": "status",
+     "label": "status",
+     "required": "required",
+     "field_type": "Enum",
+     "data_classification": "internal",
+     "visible_to": "Planning roles",
+     "usage": "proposed, confirmed, in_progress, completed, canceled.",
+     "view_permission": null
+    },
+    {
+     "field_key": "confirmation_required",
+     "label": "confirmation_required",
+     "required": "optional",
+     "field_type": "Boolean",
+     "data_classification": "internal",
+     "visible_to": "Planner",
+     "usage": "Gebruikersbevestiging.",
+     "view_permission": null
+    },
+    {
+     "field_key": "travel_time_route",
+     "label": "travel_time / route",
+     "required": "optional",
+     "field_type": "Duration/geo",
+     "data_classification": "personal",
+     "visible_to": "Planner/assigned",
+     "usage": "Geen permanente tracking zonder grondslag.",
+     "view_permission": null
+    },
+    {
+     "field_key": "notes_internal",
+     "label": "notes_internal",
+     "required": "optional",
+     "field_type": "Long text",
+     "data_classification": "confidential",
+     "visible_to": "Assigned internal roles",
+     "usage": "Niet extern.",
+     "view_permission": null
+    },
+    {
+     "field_key": "customer_instructions",
+     "label": "customer_instructions",
+     "required": "optional",
+     "field_type": "Long text",
+     "data_classification": "personal",
+     "visible_to": "Assigned roles/customer",
+     "usage": "Extern deelbaar.",
+     "view_permission": null
+    },
+    {
+     "field_key": "conflict_override",
+     "label": "conflict_override",
+     "required": "conditional",
+     "field_type": "Reason + actor",
+     "data_classification": "internal",
+     "visible_to": "Manager",
+     "usage": "Audit verplicht.",
+     "view_permission": null
+    }
+   ]
+  },
+  {
+   "chapter": 13,
+   "title": "Werkbon, uitvoering en service",
+   "domain": "workorder",
+   "forms": [
+    "Werkbonaanmaak",
+    "Pre-startcontrole",
+    "Veiligheidscheck",
+    "Uitvoering en uren",
+    "Materiaalverbruik",
+    "Foto- en meetbewijs",
+    "Afwijking/probleem",
+    "Klantbevestiging",
+    "Interne review",
+    "Facturatiegereedmelding",
+    "Onderhoudschecklist",
+    "Herinterventie"
+   ],
+   "fields": [
+    {
+     "field_key": "workorder_number",
+     "label": "workorder_number",
+     "required": "system",
+     "field_type": "Sequence",
+     "data_classification": "internal",
+     "visible_to": "Read-only",
+     "usage": "Company-scoped.",
+     "view_permission": null
+    },
+    {
+     "field_key": "workorder_type",
+     "label": "workorder_type",
+     "required": "required",
+     "field_type": "Reference/enum",
+     "data_classification": "internal",
+     "visible_to": "Workorder admin",
+     "usage": "Stuurt formulier en workflow.",
+     "view_permission": null
+    },
+    {
+     "field_key": "customer_id_location_id",
+     "label": "customer_id / location_id",
+     "required": "conditional",
+     "field_type": "References",
+     "data_classification": "personal",
+     "visible_to": "Assigned/service roles",
+     "usage": "Uitvoeringscontext.",
+     "view_permission": null
+    },
+    {
+     "field_key": "project_id",
+     "label": "project_id",
+     "required": "optional",
+     "field_type": "Reference",
+     "data_classification": "internal",
+     "visible_to": "Project/service",
+     "usage": "Voor projectwerk.",
+     "view_permission": null
+    },
+    {
+     "field_key": "asset_id",
+     "label": "asset_id",
+     "required": "optional",
+     "field_type": "Reference",
+     "data_classification": "internal",
+     "visible_to": "Service roles",
+     "usage": "Voor service/maintenance.",
+     "view_permission": null
+    },
+    {
+     "field_key": "assigned_users",
+     "label": "assigned_users",
+     "required": "conditional",
+     "field_type": "References",
+     "data_classification": "personal",
+     "visible_to": "Planner/manager",
+     "usage": "Minstens één owner bij gepland.",
+     "view_permission": null
+    },
+    {
+     "field_key": "scheduled_start_end",
+     "label": "scheduled_start/end",
+     "required": "conditional",
+     "field_type": "Datetime",
+     "data_classification": "internal",
+     "visible_to": "Planning roles",
+     "usage": "Koppeling planning.",
+     "view_permission": null
+    },
+    {
+     "field_key": "status",
+     "label": "status",
+     "required": "required",
+     "field_type": "Enum",
+     "data_classification": "internal",
+     "visible_to": "Volgens transition rights",
+     "usage": "draft, planned, accepted, in_progress, paused, completed, reviewed, invoice_ready, closed.",
+     "view_permission": null
+    },
+    {
+     "field_key": "problem_description",
+     "label": "problem_description",
+     "required": "optional",
+     "field_type": "Long text",
+     "data_classification": "confidential",
+     "visible_to": "Customer/internal",
+     "usage": "Bron en melder vastleggen.",
+     "view_permission": null
+    },
+    {
+     "field_key": "work_performed",
+     "label": "work_performed",
+     "required": "conditional",
+     "field_type": "Long text",
+     "data_classification": "internal",
+     "visible_to": "Assigned user",
+     "usage": "Niet leeg bij completed.",
+     "view_permission": null
+    },
+    {
+     "field_key": "checklist_answers",
+     "label": "checklist_answers",
+     "required": "conditional",
+     "field_type": "Structured",
+     "data_classification": "internal",
+     "visible_to": "Assigned/reviewer",
+     "usage": "Templateversie snapshot.",
+     "view_permission": null
+    },
+    {
+     "field_key": "time_entries",
+     "label": "time_entries",
+     "required": "conditional",
+     "field_type": "Repeating",
+     "data_classification": "personal",
+     "visible_to": "Assigned/manager",
+     "usage": "Start/end/duration/activity/billable.",
+     "view_permission": null
+    },
+    {
+     "field_key": "material_usage",
+     "label": "material_usage",
+     "required": "optional",
+     "field_type": "Repeating",
+     "data_classification": "financial",
+     "visible_to": "Assigned; cost restricted",
+     "usage": "Artikel, qty, unit, warehouse, price snapshot.",
+     "view_permission": null
+    },
+    {
+     "field_key": "measurements",
+     "label": "measurements",
+     "required": "optional",
+     "field_type": "Repeating typed",
+     "data_classification": "internal",
+     "visible_to": "Assigned/reviewer",
+     "usage": "Eenheid en grenswaarden.",
+     "view_permission": null
+    },
+    {
+     "field_key": "attachments",
+     "label": "attachments",
+     "required": "conditional",
+     "field_type": "Files",
+     "data_classification": "confidential",
+     "visible_to": "Assigned/customer according policy",
+     "usage": "Foto/video/document; metadata en malwarecheck.",
+     "view_permission": null
+    },
+    {
+     "field_key": "gps_evidence",
+     "label": "gps_evidence",
+     "required": "optional",
+     "field_type": "Geo/time",
+     "data_classification": "personal",
+     "visible_to": "Assigned/manager restricted",
+     "usage": "Alleen tenantpolicy en grondslag.",
+     "view_permission": null
+    },
+    {
+     "field_key": "customer_comment",
+     "label": "customer_comment",
+     "required": "optional",
+     "field_type": "Long text",
+     "data_classification": "personal",
+     "visible_to": "Customer/assigned",
+     "usage": "Extern bewijs.",
+     "view_permission": null
+    },
+    {
+     "field_key": "customer_signature",
+     "label": "customer_signature",
+     "required": "conditional",
+     "field_type": "Signature",
+     "data_classification": "confidential",
+     "visible_to": "Customer/authorized roles",
+     "usage": "Hash, timestamp, signer identity.",
+     "view_permission": null
+    },
+    {
+     "field_key": "warranty_classification",
+     "label": "warranty_classification",
+     "required": "optional",
+     "field_type": "Enum",
+     "data_classification": "financial",
+     "visible_to": "Service/finance",
+     "usage": "warranty, contract, billable, goodwill.",
+     "view_permission": null
+    },
+    {
+     "field_key": "review_status_reviewer",
+     "label": "review_status / reviewer",
+     "required": "conditional",
+     "field_type": "Enum/reference",
+     "data_classification": "internal",
+     "visible_to": "Reviewer",
+     "usage": "Wijziging na completion via reviewflow.",
+     "view_permission": null
+    },
+    {
+     "field_key": "invoice_ready_reason",
+     "label": "invoice_ready_reason",
+     "required": "conditional",
+     "field_type": "Structured",
+     "data_classification": "financial",
+     "visible_to": "Reviewer/finance",
+     "usage": "Blokkades en override audit.",
+     "view_permission": null
+    }
+   ]
+  },
+  {
+   "chapter": 14,
+   "title": "Tijdregistratie, verlof en onkosten",
+   "domain": "timesheet",
+   "forms": [
+    "Prikklok",
+    "Timesheet",
+    "Tijdcorrectie",
+    "Verlofaanvraag",
+    "Ziektemelding",
+    "Overwerk",
+    "Onkostenaanvraag",
+    "Bonnetje upload",
+    "Onkostgoedkeuring"
+   ],
+   "fields": [
+    {
+     "field_key": "time_entry_user",
+     "label": "time_entry_user",
+     "required": "required",
+     "field_type": "User reference",
+     "data_classification": "personal",
+     "visible_to": "Self/manager/HR",
+     "usage": "Server bepaalt own-context.",
+     "view_permission": null
+    },
+    {
+     "field_key": "clock_in_clock_out",
+     "label": "clock_in / clock_out",
+     "required": "conditional",
+     "field_type": "Datetime",
+     "data_classification": "personal",
+     "visible_to": "Self/manager",
+     "usage": "Chronologie, timezone.",
+     "view_permission": null
+    },
+    {
+     "field_key": "breaks",
+     "label": "breaks",
+     "required": "optional",
+     "field_type": "Repeating duration",
+     "data_classification": "personal",
+     "visible_to": "Self/manager",
+     "usage": "Geen overlap.",
+     "view_permission": null
+    },
+    {
+     "field_key": "project_workorder_activity",
+     "label": "project/workorder/activity",
+     "required": "conditional",
+     "field_type": "References",
+     "data_classification": "internal",
+     "visible_to": "Self/manager",
+     "usage": "Volgens tenantpolicy.",
+     "view_permission": null
+    },
+    {
+     "field_key": "billable",
+     "label": "billable",
+     "required": "optional",
+     "field_type": "Boolean",
+     "data_classification": "financial",
+     "visible_to": "Manager/finance",
+     "usage": "Medewerker mogelijk read-only.",
+     "view_permission": null
+    },
+    {
+     "field_key": "correction_reason",
+     "label": "correction_reason",
+     "required": "conditional",
+     "field_type": "Text",
+     "data_classification": "personal",
+     "visible_to": "Self/manager",
+     "usage": "Verplicht bij wijziging.",
+     "view_permission": null
+    },
+    {
+     "field_key": "approval_status",
+     "label": "approval_status",
+     "required": "conditional",
+     "field_type": "Enum",
+     "data_classification": "personal",
+     "visible_to": "Manager/HR",
+     "usage": "Timesheet approval.",
+     "view_permission": null
+    },
+    {
+     "field_key": "leave_type",
+     "label": "leave_type",
+     "required": "required",
+     "field_type": "Reference",
+     "data_classification": "personal",
+     "visible_to": "Self/manager/HR",
+     "usage": "Ziekte kan aparte privacyweergave hebben.",
+     "view_permission": null
+    },
+    {
+     "field_key": "leave_start_end",
+     "label": "leave_start/end",
+     "required": "required",
+     "field_type": "Date/datetime",
+     "data_classification": "personal",
+     "visible_to": "Self/manager/HR",
+     "usage": "Overlap en saldo.",
+     "view_permission": null
+    },
+    {
+     "field_key": "leave_reason",
+     "label": "leave_reason",
+     "required": "optional",
+     "field_type": "Text",
+     "data_classification": "special_category",
+     "visible_to": "HR restricted",
+     "usage": "Manager ziet niet noodzakelijk detail.",
+     "view_permission": null
+    },
+    {
+     "field_key": "leave_balance_impact",
+     "label": "leave_balance_impact",
+     "required": "system",
+     "field_type": "Decimal",
+     "data_classification": "personal",
+     "visible_to": "Self/HR",
+     "usage": "Calculated.",
+     "view_permission": null
+    },
+    {
+     "field_key": "expense_date",
+     "label": "expense_date",
+     "required": "required",
+     "field_type": "Date",
+     "data_classification": "financial",
+     "visible_to": "Self/manager/finance",
+     "usage": "Niet toekomstig zonder policy.",
+     "view_permission": null
+    },
+    {
+     "field_key": "expense_category",
+     "label": "expense_category",
+     "required": "required",
+     "field_type": "Reference",
+     "data_classification": "financial",
+     "visible_to": "Self/finance",
+     "usage": "Btw/account mapping.",
+     "view_permission": null
+    },
+    {
+     "field_key": "merchant",
+     "label": "merchant",
+     "required": "optional",
+     "field_type": "Text",
+     "data_classification": "financial",
+     "visible_to": "Self/finance",
+     "usage": "OCR suggestion, user confirms.",
+     "view_permission": null
+    },
+    {
+     "field_key": "amount_currency",
+     "label": "amount / currency",
+     "required": "required",
+     "field_type": "Money",
+     "data_classification": "financial",
+     "visible_to": "Self/finance",
+     "usage": "Positive, FX policy.",
+     "view_permission": null
+    },
+    {
+     "field_key": "vat_amount_rate",
+     "label": "vat_amount/rate",
+     "required": "conditional",
+     "field_type": "Money/%",
+     "data_classification": "financial",
+     "visible_to": "Finance",
+     "usage": "Consistency validation.",
+     "view_permission": null
+    },
+    {
+     "field_key": "receipt",
+     "label": "receipt",
+     "required": "conditional",
+     "field_type": "File",
+     "data_classification": "financial",
+     "visible_to": "Self/finance",
+     "usage": "Required above threshold.",
+     "view_permission": null
+    },
+    {
+     "field_key": "project_customer_id",
+     "label": "project/customer_id",
+     "required": "optional",
+     "field_type": "References",
+     "data_classification": "financial",
+     "visible_to": "Self/manager/finance",
+     "usage": "Cost allocation.",
+     "view_permission": null
+    },
+    {
+     "field_key": "reimbursement_account",
+     "label": "reimbursement_account",
+     "required": "conditional",
+     "field_type": "Reference",
+     "data_classification": "financial",
+     "visible_to": "HR/finance restricted",
+     "usage": "Geen IBAN dupliceren op instance.",
+     "view_permission": null
+    },
+    {
+     "field_key": "approval_chain",
+     "label": "approval_chain",
+     "required": "system",
+     "field_type": "References/statuses",
+     "data_classification": "internal",
+     "visible_to": "Approvers",
+     "usage": "Segregation of duties.",
+     "view_permission": null
+    }
+   ]
+  },
+  {
+   "chapter": 15,
+   "title": "Factuur, betaling en financiële goedkeuringen",
+   "domain": "invoice",
+   "forms": [
+    "Factuur aanmaken",
+    "Facturatiecontrole",
+    "Factuurgoedkeuring",
+    "Creditnota-aanvraag",
+    "Betaling registreren",
+    "Betalingsverschil",
+    "Terugbetaling",
+    "Factuurbetwisting",
+    "Afboeking"
+   ],
+   "fields": [
+    {
+     "field_key": "invoice_number",
+     "label": "invoice_number",
+     "required": "system",
+     "field_type": "Sequence",
+     "data_classification": "financial",
+     "visible_to": "Read-only",
+     "usage": "Pas toewijzen bij posting volgens policy.",
+     "view_permission": null
+    },
+    {
+     "field_key": "invoice_type",
+     "label": "invoice_type",
+     "required": "required",
+     "field_type": "Enum",
+     "data_classification": "financial",
+     "visible_to": "Finance",
+     "usage": "invoice, credit_note, advance, progress, final.",
+     "view_permission": null
+    },
+    {
+     "field_key": "customer_id_billing_address",
+     "label": "customer_id / billing_address",
+     "required": "required",
+     "field_type": "Reference + snapshot",
+     "data_classification": "financial",
+     "visible_to": "Finance",
+     "usage": "Adres snapshot blijft behouden.",
+     "view_permission": null
+    },
+    {
+     "field_key": "invoice_date_due_date",
+     "label": "invoice_date / due_date",
+     "required": "required",
+     "field_type": "Date",
+     "data_classification": "financial",
+     "visible_to": "Finance",
+     "usage": "Payment terms validation.",
+     "view_permission": null
+    },
+    {
+     "field_key": "currency",
+     "label": "currency",
+     "required": "required",
+     "field_type": "ISO currency",
+     "data_classification": "financial",
+     "visible_to": "Finance",
+     "usage": "Snapshot.",
+     "view_permission": null
+    },
+    {
+     "field_key": "lines",
+     "label": "lines",
+     "required": "required",
+     "field_type": "Repeating",
+     "data_classification": "financial",
+     "visible_to": "Finance; cost restricted",
+     "usage": "Omschrijving, qty, unit, unit price, VAT, discount, totals.",
+     "view_permission": null
+    },
+    {
+     "field_key": "tax_summary",
+     "label": "tax_summary",
+     "required": "system",
+     "field_type": "Structured",
+     "data_classification": "financial",
+     "visible_to": "Finance/customer",
+     "usage": "Calculated and validated.",
+     "view_permission": null
+    },
+    {
+     "field_key": "subtotal_total_balance",
+     "label": "subtotal / total / balance",
+     "required": "system",
+     "field_type": "Money",
+     "data_classification": "financial",
+     "visible_to": "Finance/customer",
+     "usage": "Integer cents internally.",
+     "view_permission": null
+    },
+    {
+     "field_key": "project_workorder_references",
+     "label": "project/workorder references",
+     "required": "optional",
+     "field_type": "References",
+     "data_classification": "internal",
+     "visible_to": "Finance/project",
+     "usage": "Traceability.",
+     "view_permission": null
+    },
+    {
+     "field_key": "posting_status",
+     "label": "posting_status",
+     "required": "required",
+     "field_type": "Enum",
+     "data_classification": "financial",
+     "visible_to": "Finance",
+     "usage": "draft, approved, posted, sent, paid, void.",
+     "view_permission": null
+    },
+    {
+     "field_key": "approval_status",
+     "label": "approval_status",
+     "required": "conditional",
+     "field_type": "Enum",
+     "data_classification": "financial",
+     "visible_to": "Approvers",
+     "usage": "Threshold and SoD.",
+     "view_permission": null
+    },
+    {
+     "field_key": "delivery_channel",
+     "label": "delivery_channel",
+     "required": "optional",
+     "field_type": "Enum",
+     "data_classification": "personal",
+     "visible_to": "Finance",
+     "usage": "email, Peppol, portal.",
+     "view_permission": null
+    },
+    {
+     "field_key": "peppol_status_message_id",
+     "label": "peppol_status / message_id",
+     "required": "conditional",
+     "field_type": "Enum/Text",
+     "data_classification": "financial",
+     "visible_to": "Finance/integration",
+     "usage": "Provider evidence.",
+     "view_permission": null
+    },
+    {
+     "field_key": "payment_id",
+     "label": "payment_id",
+     "required": "system",
+     "field_type": "Reference",
+     "data_classification": "financial",
+     "visible_to": "Finance",
+     "usage": "Allocations separately modeled.",
+     "view_permission": null
+    },
+    {
+     "field_key": "payment_date_amount",
+     "label": "payment_date / amount",
+     "required": "required",
+     "field_type": "Date/Money",
+     "data_classification": "financial",
+     "visible_to": "Finance",
+     "usage": "Amount positive.",
+     "view_permission": null
+    },
+    {
+     "field_key": "payment_method_reference",
+     "label": "payment_method / reference",
+     "required": "optional",
+     "field_type": "Enum/Text",
+     "data_classification": "financial",
+     "visible_to": "Finance",
+     "usage": "Bank/Stripe/manual.",
+     "view_permission": null
+    },
+    {
+     "field_key": "allocations",
+     "label": "allocations",
+     "required": "required",
+     "field_type": "Repeating references",
+     "data_classification": "financial",
+     "visible_to": "Finance",
+     "usage": "Sum cannot exceed payment.",
+     "view_permission": null
+    },
+    {
+     "field_key": "credit_note_reason",
+     "label": "credit_note_reason",
+     "required": "conditional",
+     "field_type": "Enum/Text",
+     "data_classification": "financial",
+     "visible_to": "Finance/approver",
+     "usage": "Mandatory.",
+     "view_permission": null
+    },
+    {
+     "field_key": "write_off_reason",
+     "label": "write_off_reason",
+     "required": "conditional",
+     "field_type": "Text",
+     "data_classification": "financial",
+     "visible_to": "Finance manager",
+     "usage": "Approval and audit.",
+     "view_permission": null
+    }
+   ]
+  },
+  {
+   "chapter": 16,
+   "title": "Leverancier, aankoop en ontvangst",
+   "domain": "supplier",
+   "forms": [
+    "Leverancier toevoegen",
+    "Leveranciersbeoordeling",
+    "Aankoopaanvraag",
+    "Budgetgoedkeuring",
+    "Bestelbon",
+    "Ontvangstregistratie",
+    "Ontvangstafwijking",
+    "Aankoopfactuurcontrole",
+    "Retour leverancier"
+   ],
+   "fields": [
+    {
+     "field_key": "supplier_name",
+     "label": "supplier_name",
+     "required": "required",
+     "field_type": "Text",
+     "data_classification": "internal",
+     "visible_to": "Procurement",
+     "usage": "Officiële naam.",
+     "view_permission": null
+    },
+    {
+     "field_key": "enterprise_vat_number",
+     "label": "enterprise/vat_number",
+     "required": "conditional",
+     "field_type": "Identifier",
+     "data_classification": "financial",
+     "visible_to": "Procurement/finance",
+     "usage": "Validatie.",
+     "view_permission": null
+    },
+    {
+     "field_key": "supplier_number",
+     "label": "supplier_number",
+     "required": "system",
+     "field_type": "Sequence",
+     "data_classification": "internal",
+     "visible_to": "Read-only",
+     "usage": "Company-scoped.",
+     "view_permission": null
+    },
+    {
+     "field_key": "address_contact",
+     "label": "address / contact",
+     "required": "conditional",
+     "field_type": "Address/reference",
+     "data_classification": "personal",
+     "visible_to": "Procurement",
+     "usage": "Primair contact.",
+     "view_permission": null
+    },
+    {
+     "field_key": "payment_terms_currency",
+     "label": "payment_terms / currency",
+     "required": "optional",
+     "field_type": "Structured",
+     "data_classification": "financial",
+     "visible_to": "Finance/procurement",
+     "usage": "Defaults.",
+     "view_permission": null
+    },
+    {
+     "field_key": "bank_account",
+     "label": "bank_account",
+     "required": "optional",
+     "field_type": "IBAN/BIC",
+     "data_classification": "financial",
+     "visible_to": "Finance restricted",
+     "usage": "Wijziging met fraudecontrole.",
+     "view_permission": null
+    },
+    {
+     "field_key": "risk_status",
+     "label": "risk_status",
+     "required": "optional",
+     "field_type": "Enum",
+     "data_classification": "confidential",
+     "visible_to": "Procurement/security",
+     "usage": "approved, watch, blocked.",
+     "view_permission": null
+    },
+    {
+     "field_key": "contract_documents",
+     "label": "contract_documents",
+     "required": "optional",
+     "field_type": "Files",
+     "data_classification": "confidential",
+     "visible_to": "Authorized roles",
+     "usage": "Versioned.",
+     "view_permission": null
+    },
+    {
+     "field_key": "purchase_request_number",
+     "label": "purchase_request_number",
+     "required": "system",
+     "field_type": "Sequence",
+     "data_classification": "internal",
+     "visible_to": "Read-only",
+     "usage": "Traceability.",
+     "view_permission": null
+    },
+    {
+     "field_key": "requester_department",
+     "label": "requester / department",
+     "required": "required",
+     "field_type": "References",
+     "data_classification": "internal",
+     "visible_to": "Requester/manager",
+     "usage": "Budget owner.",
+     "view_permission": null
+    },
+    {
+     "field_key": "requested_items",
+     "label": "requested_items",
+     "required": "required",
+     "field_type": "Repeating",
+     "data_classification": "financial",
+     "visible_to": "Requester/procurement",
+     "usage": "Description, qty, needed date, estimate.",
+     "view_permission": null
+    },
+    {
+     "field_key": "project_cost_center",
+     "label": "project/cost_center",
+     "required": "conditional",
+     "field_type": "References",
+     "data_classification": "financial",
+     "visible_to": "Requester/finance",
+     "usage": "Allocation.",
+     "view_permission": null
+    },
+    {
+     "field_key": "approval_chain",
+     "label": "approval_chain",
+     "required": "system",
+     "field_type": "Workflow",
+     "data_classification": "internal",
+     "visible_to": "Approvers",
+     "usage": "Threshold and SoD.",
+     "view_permission": null
+    },
+    {
+     "field_key": "purchase_order_number",
+     "label": "purchase_order_number",
+     "required": "system",
+     "field_type": "Sequence",
+     "data_classification": "financial",
+     "visible_to": "Read-only",
+     "usage": "Company-scoped.",
+     "view_permission": null
+    },
+    {
+     "field_key": "supplier_id",
+     "label": "supplier_id",
+     "required": "required",
+     "field_type": "Reference",
+     "data_classification": "financial",
+     "visible_to": "Procurement",
+     "usage": "Approved supplier.",
+     "view_permission": null
+    },
+    {
+     "field_key": "order_lines",
+     "label": "order_lines",
+     "required": "required",
+     "field_type": "Repeating",
+     "data_classification": "financial",
+     "visible_to": "Procurement",
+     "usage": "Price, qty, VAT, delivery.",
+     "view_permission": null
+    },
+    {
+     "field_key": "delivery_address_date",
+     "label": "delivery_address/date",
+     "required": "conditional",
+     "field_type": "Address/date",
+     "data_classification": "internal",
+     "visible_to": "Procurement/project",
+     "usage": "Operational.",
+     "view_permission": null
+    },
+    {
+     "field_key": "receipt_lines",
+     "label": "receipt_lines",
+     "required": "conditional",
+     "field_type": "Repeating",
+     "data_classification": "financial",
+     "visible_to": "Warehouse/requester",
+     "usage": "Accepted/rejected/damaged.",
+     "view_permission": null
+    },
+    {
+     "field_key": "invoice_match_status",
+     "label": "invoice_match_status",
+     "required": "conditional",
+     "field_type": "Enum",
+     "data_classification": "financial",
+     "visible_to": "Finance/procurement",
+     "usage": "2-way/3-way match.",
+     "view_permission": null
+    }
+   ]
+  },
+  {
+   "chapter": 17,
+   "title": "Artikel, voorraad en materiaal",
+   "domain": "article",
+   "forms": [
+    "Artikel aanmaken",
+    "Prijswijziging",
+    "Voorraadcorrectie",
+    "Stocktelling",
+    "Materiaaluitgifte",
+    "Materiaalteruggave",
+    "Reservatie",
+    "Magazijntransfer",
+    "Beschadigd/verloren materiaal"
+   ],
+   "fields": [
+    {
+     "field_key": "article_code",
+     "label": "article_code",
+     "required": "required",
+     "field_type": "Text",
+     "data_classification": "internal",
+     "visible_to": "Catalog admin",
+     "usage": "Uniek per company/catalog.",
+     "view_permission": null
+    },
+    {
+     "field_key": "article_type",
+     "label": "article_type",
+     "required": "required",
+     "field_type": "Enum",
+     "data_classification": "internal",
+     "visible_to": "Catalog admin",
+     "usage": "material, service, labor, equipment, fee.",
+     "view_permission": null
+    },
+    {
+     "field_key": "description_short_long",
+     "label": "description_short/long",
+     "required": "required",
+     "field_type": "Text",
+     "data_classification": "internal",
+     "visible_to": "Catalog users",
+     "usage": "Meertalig waar nodig.",
+     "view_permission": null
+    },
+    {
+     "field_key": "unit",
+     "label": "unit",
+     "required": "required",
+     "field_type": "Reference",
+     "data_classification": "internal",
+     "visible_to": "Catalog admin",
+     "usage": "ISO/controlled list.",
+     "view_permission": null
+    },
+    {
+     "field_key": "vat_code",
+     "label": "vat_code",
+     "required": "conditional",
+     "field_type": "Reference",
+     "data_classification": "financial",
+     "visible_to": "Finance/catalog",
+     "usage": "Voor verkoop/aankoop.",
+     "view_permission": null
+    },
+    {
+     "field_key": "sales_price",
+     "label": "sales_price",
+     "required": "optional",
+     "field_type": "Money/date range",
+     "data_classification": "financial",
+     "visible_to": "Sales/finance",
+     "usage": "Price list preferred.",
+     "view_permission": null
+    },
+    {
+     "field_key": "cost_price",
+     "label": "cost_price",
+     "required": "optional",
+     "field_type": "Money/date range",
+     "data_classification": "financial",
+     "visible_to": "Cost rights",
+     "usage": "Restricted.",
+     "view_permission": null
+    },
+    {
+     "field_key": "supplier_references",
+     "label": "supplier_references",
+     "required": "optional",
+     "field_type": "Repeating",
+     "data_classification": "financial",
+     "visible_to": "Procurement",
+     "usage": "Supplier code, lead time, price.",
+     "view_permission": null
+    },
+    {
+     "field_key": "barcode_qr",
+     "label": "barcode/qr",
+     "required": "optional",
+     "field_type": "Text",
+     "data_classification": "internal",
+     "visible_to": "Warehouse",
+     "usage": "Unique where required.",
+     "view_permission": null
+    },
+    {
+     "field_key": "serial_lot_tracking",
+     "label": "serial/lot_tracking",
+     "required": "optional",
+     "field_type": "Enum",
+     "data_classification": "internal",
+     "visible_to": "Warehouse",
+     "usage": "none, serial, lot.",
+     "view_permission": null
+    },
+    {
+     "field_key": "warehouse_id_location_bin",
+     "label": "warehouse_id / location_bin",
+     "required": "conditional",
+     "field_type": "References",
+     "data_classification": "internal",
+     "visible_to": "Warehouse",
+     "usage": "Physical storage.",
+     "view_permission": null
+    },
+    {
+     "field_key": "stock_movement_type",
+     "label": "stock_movement_type",
+     "required": "required",
+     "field_type": "Enum",
+     "data_classification": "internal",
+     "visible_to": "Warehouse/system",
+     "usage": "receipt, issue, return, transfer, correction, count.",
+     "view_permission": null
+    },
+    {
+     "field_key": "quantity",
+     "label": "quantity",
+     "required": "required",
+     "field_type": "Decimal",
+     "data_classification": "financial",
+     "visible_to": "Warehouse",
+     "usage": "Non-zero; sign from movement type.",
+     "view_permission": null
+    },
+    {
+     "field_key": "reference_object",
+     "label": "reference_object",
+     "required": "conditional",
+     "field_type": "Polymorphic reference",
+     "data_classification": "internal",
+     "visible_to": "Warehouse/system",
+     "usage": "Workorder, PO, project, correction.",
+     "view_permission": null
+    },
+    {
+     "field_key": "unit_cost_snapshot",
+     "label": "unit_cost_snapshot",
+     "required": "conditional",
+     "field_type": "Money",
+     "data_classification": "financial",
+     "visible_to": "Cost rights",
+     "usage": "Immutable movement valuation.",
+     "view_permission": null
+    },
+    {
+     "field_key": "serials_lots",
+     "label": "serials/lots",
+     "required": "conditional",
+     "field_type": "Repeating",
+     "data_classification": "internal",
+     "visible_to": "Warehouse",
+     "usage": "Count matches quantity.",
+     "view_permission": null
+    },
+    {
+     "field_key": "reason",
+     "label": "reason",
+     "required": "conditional",
+     "field_type": "Text",
+     "data_classification": "internal",
+     "visible_to": "Warehouse/manager",
+     "usage": "Required for correction/loss/damage.",
+     "view_permission": null
+    },
+    {
+     "field_key": "approved_by",
+     "label": "approved_by",
+     "required": "conditional",
+     "field_type": "User reference",
+     "data_classification": "internal",
+     "visible_to": "Manager",
+     "usage": "Threshold-based.",
+     "view_permission": null
+    }
+   ]
+  },
+  {
+   "chapter": 18,
+   "title": "Asset, installatie, voertuig en onderhoud",
+   "domain": "asset",
+   "forms": [
+    "Assetregistratie",
+    "Assettoewijzing",
+    "Inspectie",
+    "Onderhoud",
+    "Defectmelding",
+    "Schade",
+    "Assetoverdracht",
+    "Voertuigcontrole",
+    "Kilometerstand",
+    "Tank-/laadbeurt",
+    "Ongeval",
+    "Boete",
+    "Keuring"
+   ],
+   "fields": [
+    {
+     "field_key": "asset_number",
+     "label": "asset_number",
+     "required": "system",
+     "field_type": "Sequence",
+     "data_classification": "internal",
+     "visible_to": "Read-only",
+     "usage": "Uniek per company.",
+     "view_permission": null
+    },
+    {
+     "field_key": "asset_type_category",
+     "label": "asset_type/category",
+     "required": "required",
+     "field_type": "Reference",
+     "data_classification": "internal",
+     "visible_to": "Asset admin",
+     "usage": "Stuurt fields/forms.",
+     "view_permission": null
+    },
+    {
+     "field_key": "name_description",
+     "label": "name/description",
+     "required": "required",
+     "field_type": "Text",
+     "data_classification": "internal",
+     "visible_to": "Asset roles",
+     "usage": "Herkenbaar.",
+     "view_permission": null
+    },
+    {
+     "field_key": "owner_type_id",
+     "label": "owner_type/id",
+     "required": "required",
+     "field_type": "Reference",
+     "data_classification": "confidential",
+     "visible_to": "Asset roles",
+     "usage": "Tenant, customer, project or employee.",
+     "view_permission": null
+    },
+    {
+     "field_key": "location_id",
+     "label": "location_id",
+     "required": "optional",
+     "field_type": "Reference",
+     "data_classification": "personal",
+     "visible_to": "Assigned roles",
+     "usage": "Huidige locatie.",
+     "view_permission": null
+    },
+    {
+     "field_key": "manufacturer_model",
+     "label": "manufacturer/model",
+     "required": "optional",
+     "field_type": "Text",
+     "data_classification": "internal",
+     "visible_to": "Asset roles",
+     "usage": "Technische info.",
+     "view_permission": null
+    },
+    {
+     "field_key": "serial_number",
+     "label": "serial_number",
+     "required": "conditional",
+     "field_type": "Text",
+     "data_classification": "confidential",
+     "visible_to": "Asset roles",
+     "usage": "Unique where applicable.",
+     "view_permission": null
+    },
+    {
+     "field_key": "purchase_date_value",
+     "label": "purchase_date/value",
+     "required": "optional",
+     "field_type": "Date/Money",
+     "data_classification": "financial",
+     "visible_to": "Finance/asset restricted",
+     "usage": "Financial.",
+     "view_permission": null
+    },
+    {
+     "field_key": "warranty_start_end",
+     "label": "warranty_start/end",
+     "required": "optional",
+     "field_type": "Date",
+     "data_classification": "internal",
+     "visible_to": "Service",
+     "usage": "Warranty decisions.",
+     "view_permission": null
+    },
+    {
+     "field_key": "status",
+     "label": "status",
+     "required": "required",
+     "field_type": "Enum",
+     "data_classification": "internal",
+     "visible_to": "Asset roles",
+     "usage": "active, maintenance, defective, retired, lost.",
+     "view_permission": null
+    },
+    {
+     "field_key": "maintenance_plan_id",
+     "label": "maintenance_plan_id",
+     "required": "optional",
+     "field_type": "Reference",
+     "data_classification": "internal",
+     "visible_to": "Service",
+     "usage": "Intervals/tasks.",
+     "view_permission": null
+    },
+    {
+     "field_key": "meter_readings",
+     "label": "meter_readings",
+     "required": "optional",
+     "field_type": "Repeating number/date",
+     "data_classification": "internal",
+     "visible_to": "Assigned/service",
+     "usage": "Hours, km, cycles.",
+     "view_permission": null
+    },
+    {
+     "field_key": "documents",
+     "label": "documents",
+     "required": "optional",
+     "field_type": "Files",
+     "data_classification": "confidential",
+     "visible_to": "Authorized roles",
+     "usage": "Manuals, certificates, photos.",
+     "view_permission": null
+    },
+    {
+     "field_key": "vehicle_plate",
+     "label": "vehicle_plate",
+     "required": "conditional",
+     "field_type": "Text",
+     "data_classification": "personal",
+     "visible_to": "Fleet roles",
+     "usage": "Country format.",
+     "view_permission": null
+    },
+    {
+     "field_key": "vin",
+     "label": "vin",
+     "required": "conditional",
+     "field_type": "Text",
+     "data_classification": "confidential",
+     "visible_to": "Fleet restricted",
+     "usage": "17-char validation.",
+     "view_permission": null
+    },
+    {
+     "field_key": "driver_assignment",
+     "label": "driver_assignment",
+     "required": "optional",
+     "field_type": "User/date range",
+     "data_classification": "personal",
+     "visible_to": "Fleet/HR/driver",
+     "usage": "History retained.",
+     "view_permission": null
+    },
+    {
+     "field_key": "odometer",
+     "label": "odometer",
+     "required": "conditional",
+     "field_type": "Number/date",
+     "data_classification": "personal",
+     "visible_to": "Driver/fleet",
+     "usage": "Monotonic with correction flow.",
+     "view_permission": null
+    },
+    {
+     "field_key": "fuel_charge",
+     "label": "fuel/charge",
+     "required": "optional",
+     "field_type": "Structured",
+     "data_classification": "financial",
+     "visible_to": "Driver/fleet/finance",
+     "usage": "Amount, quantity, location.",
+     "view_permission": null
+    },
+    {
+     "field_key": "damage_incident",
+     "label": "damage/incident",
+     "required": "optional",
+     "field_type": "Structured + files",
+     "data_classification": "personal",
+     "visible_to": "Fleet/HR restricted",
+     "usage": "Separate incident record.",
+     "view_permission": null
+    }
+   ]
+  },
+  {
+   "chapter": 19,
+   "title": "Compliance, veiligheid en sociaal-juridische informatie",
+   "domain": "compliance",
+   "forms": [
+    "Veiligheidsintroductie",
+    "Toolboxmeeting",
+    "PPE-bevestiging",
+    "Risicoanalyse",
+    "Near miss",
+    "Arbeidsongeval",
+    "Checkin@Work-registratie/controle",
+    "Limosa",
+    "A1",
+    "Certificaatcontrole",
+    "Onderaannemercontrole",
+    "Non-conformiteit",
+    "Corrigerende maatregel"
+   ],
+   "fields": [
+    {
+     "field_key": "compliance_type",
+     "label": "compliance_type",
+     "required": "required",
+     "field_type": "Reference/enum",
+     "data_classification": "confidential",
+     "visible_to": "Compliance admin",
+     "usage": "Checkin@Work, Limosa, A1, safety, quality.",
+     "view_permission": null
+    },
+    {
+     "field_key": "subject_type_id",
+     "label": "subject_type/id",
+     "required": "required",
+     "field_type": "Reference",
+     "data_classification": "personal",
+     "visible_to": "Compliance roles",
+     "usage": "Employee, contractor, project, supplier, asset.",
+     "view_permission": null
+    },
+    {
+     "field_key": "country_jurisdiction",
+     "label": "country/jurisdiction",
+     "required": "required",
+     "field_type": "Country",
+     "data_classification": "internal",
+     "visible_to": "Compliance",
+     "usage": "Regels.",
+     "view_permission": null
+    },
+    {
+     "field_key": "valid_from_valid_until",
+     "label": "valid_from / valid_until",
+     "required": "conditional",
+     "field_type": "Date",
+     "data_classification": "personal",
+     "visible_to": "Compliance/manager limited",
+     "usage": "Expiry notifications.",
+     "view_permission": null
+    },
+    {
+     "field_key": "certificate_number",
+     "label": "certificate_number",
+     "required": "optional",
+     "field_type": "Text",
+     "data_classification": "personal",
+     "visible_to": "Compliance",
+     "usage": "Issuer validation where possible.",
+     "view_permission": null
+    },
+    {
+     "field_key": "issuer",
+     "label": "issuer",
+     "required": "optional",
+     "field_type": "Text",
+     "data_classification": "internal",
+     "visible_to": "Compliance",
+     "usage": "Authority/provider.",
+     "view_permission": null
+    },
+    {
+     "field_key": "document_file",
+     "label": "document_file",
+     "required": "conditional",
+     "field_type": "File",
+     "data_classification": "personal",
+     "visible_to": "Compliance restricted",
+     "usage": "Encrypted/object storage.",
+     "view_permission": null
+    },
+    {
+     "field_key": "verification_status",
+     "label": "verification_status",
+     "required": "required",
+     "field_type": "Enum",
+     "data_classification": "internal",
+     "visible_to": "Compliance reviewer",
+     "usage": "unverified, verified, rejected, expired.",
+     "view_permission": null
+    },
+    {
+     "field_key": "verified_by_at",
+     "label": "verified_by / at",
+     "required": "system",
+     "field_type": "Actor/datetime",
+     "data_classification": "internal",
+     "visible_to": "Read-only",
+     "usage": "Audit.",
+     "view_permission": null
+    },
+    {
+     "field_key": "submission_mode",
+     "label": "submission_mode",
+     "required": "required",
+     "field_type": "Enum",
+     "data_classification": "confidential",
+     "visible_to": "Compliance/admin",
+     "usage": "register, prepare, export, submit.",
+     "view_permission": null
+    },
+    {
+     "field_key": "external_submission_id",
+     "label": "external_submission_id",
+     "required": "conditional",
+     "field_type": "Text",
+     "data_classification": "confidential",
+     "visible_to": "Integration/compliance",
+     "usage": "Only if actually submitted.",
+     "view_permission": null
+    },
+    {
+     "field_key": "risk_assessment",
+     "label": "risk_assessment",
+     "required": "optional",
+     "field_type": "Structured",
+     "data_classification": "confidential",
+     "visible_to": "Safety roles",
+     "usage": "Hazards, controls, residual risk.",
+     "view_permission": null
+    },
+    {
+     "field_key": "incident_type_severity",
+     "label": "incident_type/severity",
+     "required": "conditional",
+     "field_type": "Enums",
+     "data_classification": "special_category",
+     "visible_to": "Safety/HR restricted",
+     "usage": "Near miss, accident, security.",
+     "view_permission": null
+    },
+    {
+     "field_key": "persons_involved",
+     "label": "persons_involved",
+     "required": "conditional",
+     "field_type": "References",
+     "data_classification": "personal",
+     "visible_to": "Safety/HR restricted",
+     "usage": "Need-to-know.",
+     "view_permission": null
+    },
+    {
+     "field_key": "medical_information",
+     "label": "medical_information",
+     "required": "optional",
+     "field_type": "Restricted",
+     "data_classification": "special_category",
+     "visible_to": "HR highly restricted",
+     "usage": "Only minimal necessary.",
+     "view_permission": null
+    },
+    {
+     "field_key": "corrective_actions",
+     "label": "corrective_actions",
+     "required": "optional",
+     "field_type": "Repeating tasks",
+     "data_classification": "internal",
+     "visible_to": "Owners/managers",
+     "usage": "Due date/status/evidence.",
+     "view_permission": null
+    }
+   ]
+  },
+  {
+   "chapter": 20,
+   "title": "Support, klachten en klantportaal",
+   "domain": "ticket",
+   "forms": [
+    "Supportticket",
+    "Bugmelding",
+    "Functionele vraag",
+    "Wijzigingsverzoek",
+    "Factuurvraag",
+    "Klacht",
+    "Escalatie",
+    "Supporttoegang",
+    "Accountopzegging",
+    "Data-export bij vertrek",
+    "Klanttevredenheid"
+   ],
+   "fields": [
+    {
+     "field_key": "requester_name_email",
+     "label": "requester_name/email",
+     "required": "required",
+     "field_type": "Text/email",
+     "data_classification": "personal",
+     "visible_to": "Requester/support",
+     "usage": "Token or account context.",
+     "view_permission": null
+    },
+    {
+     "field_key": "tenant_customer_id",
+     "label": "tenant/customer_id",
+     "required": "conditional",
+     "field_type": "Reference",
+     "data_classification": "confidential",
+     "visible_to": "Support",
+     "usage": "Server-derived for logged-in user.",
+     "view_permission": null
+    },
+    {
+     "field_key": "ticket_type",
+     "label": "ticket_type",
+     "required": "required",
+     "field_type": "Enum",
+     "data_classification": "internal",
+     "visible_to": "Requester/support",
+     "usage": "incident, question, change, billing, privacy, complaint.",
+     "view_permission": null
+    },
+    {
+     "field_key": "subject",
+     "label": "subject",
+     "required": "required",
+     "field_type": "Text",
+     "data_classification": "internal",
+     "visible_to": "Requester/support",
+     "usage": "Concise.",
+     "view_permission": null
+    },
+    {
+     "field_key": "description",
+     "label": "description",
+     "required": "required",
+     "field_type": "Long text",
+     "data_classification": "confidential",
+     "visible_to": "Requester/support",
+     "usage": "No secrets warning.",
+     "view_permission": null
+    },
+    {
+     "field_key": "priority",
+     "label": "priority",
+     "required": "required",
+     "field_type": "Enum",
+     "data_classification": "internal",
+     "visible_to": "Support; requester suggestion",
+     "usage": "Final priority policy-based.",
+     "view_permission": null
+    },
+    {
+     "field_key": "affected_module_object",
+     "label": "affected_module/object",
+     "required": "optional",
+     "field_type": "Reference",
+     "data_classification": "internal",
+     "visible_to": "Support",
+     "usage": "Context.",
+     "view_permission": null
+    },
+    {
+     "field_key": "environment_device_browser",
+     "label": "environment/device/browser",
+     "required": "optional",
+     "field_type": "Structured",
+     "data_classification": "internal",
+     "visible_to": "Support",
+     "usage": "Technical diagnostic.",
+     "view_permission": null
+    },
+    {
+     "field_key": "attachments",
+     "label": "attachments",
+     "required": "optional",
+     "field_type": "Files",
+     "data_classification": "confidential",
+     "visible_to": "Support/requester",
+     "usage": "Malware and PII warning.",
+     "view_permission": null
+    },
+    {
+     "field_key": "consent_support_access",
+     "label": "consent_support_access",
+     "required": "conditional",
+     "field_type": "Boolean/scope/expiry",
+     "data_classification": "security_sensitive",
+     "visible_to": "Tenant admin/support",
+     "usage": "Separate approved access.",
+     "view_permission": null
+    },
+    {
+     "field_key": "status",
+     "label": "status",
+     "required": "system",
+     "field_type": "Enum",
+     "data_classification": "internal",
+     "visible_to": "Support",
+     "usage": "new, triaged, waiting, in_progress, resolved, closed.",
+     "view_permission": null
+    },
+    {
+     "field_key": "assigned_team_user",
+     "label": "assigned_team/user",
+     "required": "system",
+     "field_type": "Reference",
+     "data_classification": "internal",
+     "visible_to": "Support manager",
+     "usage": "Routing.",
+     "view_permission": null
+    },
+    {
+     "field_key": "sla_target",
+     "label": "sla_target",
+     "required": "system",
+     "field_type": "Datetime",
+     "data_classification": "internal",
+     "visible_to": "Support/manager",
+     "usage": "Based on contract/priority.",
+     "view_permission": null
+    },
+    {
+     "field_key": "resolution",
+     "label": "resolution",
+     "required": "conditional",
+     "field_type": "Long text",
+     "data_classification": "internal",
+     "visible_to": "Support",
+     "usage": "Required before resolved.",
+     "view_permission": null
+    },
+    {
+     "field_key": "customer_confirmation",
+     "label": "customer_confirmation",
+     "required": "optional",
+     "field_type": "Boolean/comment",
+     "data_classification": "personal",
+     "visible_to": "Customer",
+     "usage": "Closure feedback.",
+     "view_permission": null
+    }
+   ]
+  },
+  {
+   "chapter": 21,
+   "title": "Security, privacy en governance",
+   "domain": "security",
+   "forms": [
+    "Securityincident",
+    "Vermoedelijk datalek",
+    "Toegangsaanvraag",
+    "Elevated access",
+    "Supportimpersonatie",
+    "Access review",
+    "Leveranciersreview",
+    "DPIA-screening",
+    "Privacyreview feature",
+    "Gegevensinzage/verwijdering",
+    "Kwetsbaarheidsmelding",
+    "Productiechange",
+    "Noodwijziging",
+    "Risicoaanvaarding"
+   ],
+   "fields": [
+    {
+     "field_key": "case_type",
+     "label": "case_type",
+     "required": "required",
+     "field_type": "Enum",
+     "data_classification": "security_sensitive",
+     "visible_to": "Security/privacy roles",
+     "usage": "incident, breach, access, DPIA, risk, change.",
+     "view_permission": null
+    },
+    {
+     "field_key": "reported_by",
+     "label": "reported_by",
+     "required": "system",
+     "field_type": "Actor",
+     "data_classification": "personal",
+     "visible_to": "Security/privacy",
+     "usage": "Can allow anonymous disclosure separately.",
+     "view_permission": null
+    },
+    {
+     "field_key": "reported_at",
+     "label": "reported_at",
+     "required": "system",
+     "field_type": "Datetime",
+     "data_classification": "internal",
+     "visible_to": "Read-only",
+     "usage": "Immutable.",
+     "view_permission": null
+    },
+    {
+     "field_key": "severity_likelihood_impact",
+     "label": "severity / likelihood / impact",
+     "required": "conditional",
+     "field_type": "Enums",
+     "data_classification": "security_sensitive",
+     "visible_to": "Security/risk roles",
+     "usage": "Risk matrix.",
+     "view_permission": null
+    },
+    {
+     "field_key": "affected_tenants_companies",
+     "label": "affected_tenants/companies",
+     "required": "conditional",
+     "field_type": "References",
+     "data_classification": "security_sensitive",
+     "visible_to": "Security only",
+     "usage": "Cross-tenant exposure.",
+     "view_permission": null
+    },
+    {
+     "field_key": "affected_data_categories",
+     "label": "affected_data_categories",
+     "required": "conditional",
+     "field_type": "Multi-select",
+     "data_classification": "personal",
+     "visible_to": "Privacy/security",
+     "usage": "Classification.",
+     "view_permission": null
+    },
+    {
+     "field_key": "affected_data_subjects_count",
+     "label": "affected_data_subjects/count",
+     "required": "conditional",
+     "field_type": "Structured",
+     "data_classification": "personal",
+     "visible_to": "Privacy/security",
+     "usage": "Estimate and confirmed count.",
+     "view_permission": null
+    },
+    {
+     "field_key": "incident_timeline",
+     "label": "incident_timeline",
+     "required": "conditional",
+     "field_type": "Repeating events",
+     "data_classification": "security_sensitive",
+     "visible_to": "Incident team",
+     "usage": "Immutable event log.",
+     "view_permission": null
+    },
+    {
+     "field_key": "containment_actions",
+     "label": "containment/actions",
+     "required": "conditional",
+     "field_type": "Tasks",
+     "data_classification": "security_sensitive",
+     "visible_to": "Incident team",
+     "usage": "Owners and timestamps.",
+     "view_permission": null
+    },
+    {
+     "field_key": "regulatory_deadline",
+     "label": "regulatory_deadline",
+     "required": "conditional",
+     "field_type": "Datetime",
+     "data_classification": "personal",
+     "visible_to": "Privacy/legal",
+     "usage": "Calculated, reviewable.",
+     "view_permission": null
+    },
+    {
+     "field_key": "notification_decision",
+     "label": "notification_decision",
+     "required": "conditional",
+     "field_type": "Enum/reason",
+     "data_classification": "personal",
+     "visible_to": "Privacy/legal",
+     "usage": "Document rationale.",
+     "view_permission": null
+    },
+    {
+     "field_key": "access_scope_duration",
+     "label": "access_scope / duration",
+     "required": "conditional",
+     "field_type": "Structured",
+     "data_classification": "security_sensitive",
+     "visible_to": "Approver/security",
+     "usage": "Least privilege.",
+     "view_permission": null
+    },
+    {
+     "field_key": "approver_approval",
+     "label": "approver / approval",
+     "required": "conditional",
+     "field_type": "Actor/status",
+     "data_classification": "security_sensitive",
+     "visible_to": "Authorized approver",
+     "usage": "SoD.",
+     "view_permission": null
+    },
+    {
+     "field_key": "dpia_screening_answers",
+     "label": "DPIA_screening_answers",
+     "required": "conditional",
+     "field_type": "Structured",
+     "data_classification": "personal",
+     "visible_to": "Privacy/product",
+     "usage": "Threshold rules.",
+     "view_permission": null
+    },
+    {
+     "field_key": "risk_owner_treatment",
+     "label": "risk_owner / treatment",
+     "required": "conditional",
+     "field_type": "References/enum",
+     "data_classification": "security_sensitive",
+     "visible_to": "Risk roles",
+     "usage": "avoid, mitigate, transfer, accept.",
+     "view_permission": null
+    },
+    {
+     "field_key": "acceptance_expiry",
+     "label": "acceptance_expiry",
+     "required": "conditional",
+     "field_type": "Date",
+     "data_classification": "security_sensitive",
+     "visible_to": "Management",
+     "usage": "No indefinite acceptance.",
+     "view_permission": null
+    },
+    {
+     "field_key": "evidence_files",
+     "label": "evidence_files",
+     "required": "optional",
+     "field_type": "Files",
+     "data_classification": "security_sensitive",
+     "visible_to": "Restricted",
+     "usage": "Encrypted and audited.",
+     "view_permission": null
+    }
+   ]
+  },
+  {
+   "chapter": 22,
+   "title": "Integraties, API-sleutels en webhooks",
+   "domain": "integration",
+   "forms": [
+    "Integratie activeren",
+    "API-sleutel aanmaken",
+    "API-sleutel roteren/intrekken",
+    "Webhook configureren",
+    "Data mapping",
+    "Connector health",
+    "Subprocessor review"
+   ],
+   "fields": [
+    {
+     "field_key": "integration_type_provider",
+     "label": "integration_type/provider",
+     "required": "required",
+     "field_type": "Enum/Text",
+     "data_classification": "internal",
+     "visible_to": "Integration admin",
+     "usage": "Provider behind port/adapter.",
+     "view_permission": null
+    },
+    {
+     "field_key": "display_name",
+     "label": "display_name",
+     "required": "required",
+     "field_type": "Text",
+     "data_classification": "internal",
+     "visible_to": "Integration admin",
+     "usage": "User-friendly.",
+     "view_permission": null
+    },
+    {
+     "field_key": "environment",
+     "label": "environment",
+     "required": "required",
+     "field_type": "Enum",
+     "data_classification": "security_sensitive",
+     "visible_to": "Integration admin",
+     "usage": "test, staging, production.",
+     "view_permission": null
+    },
+    {
+     "field_key": "status",
+     "label": "status",
+     "required": "required",
+     "field_type": "Enum",
+     "data_classification": "internal",
+     "visible_to": "Integration admin",
+     "usage": "inactive, configured, healthy, degraded, disabled.",
+     "view_permission": null
+    },
+    {
+     "field_key": "base_url_endpoint",
+     "label": "base_url / endpoint",
+     "required": "conditional",
+     "field_type": "URL",
+     "data_classification": "security_sensitive",
+     "visible_to": "Integration admin",
+     "usage": "Allowlist/SSRF validation.",
+     "view_permission": null
+    },
+    {
+     "field_key": "credential_reference",
+     "label": "credential_reference",
+     "required": "conditional",
+     "field_type": "Secret reference",
+     "data_classification": "security_sensitive",
+     "visible_to": "System/security",
+     "usage": "Never return secret value.",
+     "view_permission": null
+    },
+    {
+     "field_key": "scopes_permissions",
+     "label": "scopes/permissions",
+     "required": "conditional",
+     "field_type": "List",
+     "data_classification": "security_sensitive",
+     "visible_to": "Integration admin/security",
+     "usage": "Least privilege.",
+     "view_permission": null
+    },
+    {
+     "field_key": "api_key_name",
+     "label": "api_key_name",
+     "required": "optional",
+     "field_type": "Text",
+     "data_classification": "internal",
+     "visible_to": "Integration admin",
+     "usage": "Metadata.",
+     "view_permission": null
+    },
+    {
+     "field_key": "api_key_hash_prefix",
+     "label": "api_key_hash/prefix",
+     "required": "system",
+     "field_type": "Hash/text",
+     "data_classification": "security_sensitive",
+     "visible_to": "System/admin",
+     "usage": "Show prefix only.",
+     "view_permission": null
+    },
+    {
+     "field_key": "expires_at_rotated_at",
+     "label": "expires_at / rotated_at",
+     "required": "conditional",
+     "field_type": "Datetime",
+     "data_classification": "security_sensitive",
+     "visible_to": "Security/admin",
+     "usage": "Rotation alerts.",
+     "view_permission": null
+    },
+    {
+     "field_key": "webhook_url",
+     "label": "webhook_url",
+     "required": "conditional",
+     "field_type": "URL",
+     "data_classification": "security_sensitive",
+     "visible_to": "Integration admin",
+     "usage": "HTTPS, SSRF and DNS checks.",
+     "view_permission": null
+    },
+    {
+     "field_key": "event_types",
+     "label": "event_types",
+     "required": "conditional",
+     "field_type": "Multi-select",
+     "data_classification": "internal",
+     "visible_to": "Integration admin",
+     "usage": "Explicit subscription.",
+     "view_permission": null
+    },
+    {
+     "field_key": "signing_secret_reference",
+     "label": "signing_secret_reference",
+     "required": "conditional",
+     "field_type": "Secret reference",
+     "data_classification": "security_sensitive",
+     "visible_to": "System/security",
+     "usage": "Rotate and overlap window.",
+     "view_permission": null
+    },
+    {
+     "field_key": "health_check_last_success",
+     "label": "health_check / last_success",
+     "required": "system",
+     "field_type": "Structured",
+     "data_classification": "internal",
+     "visible_to": "Integration admin",
+     "usage": "No secret in logs.",
+     "view_permission": null
+    },
+    {
+     "field_key": "data_mapping_version",
+     "label": "data_mapping_version",
+     "required": "conditional",
+     "field_type": "Reference",
+     "data_classification": "internal",
+     "visible_to": "Integration admin",
+     "usage": "Versioned mapping.",
+     "view_permission": null
+    },
+    {
+     "field_key": "data_categories_shared",
+     "label": "data_categories_shared",
+     "required": "required",
+     "field_type": "Multi-select",
+     "data_classification": "personal",
+     "visible_to": "Privacy/integration",
+     "usage": "Supplier register and DPA.",
+     "view_permission": null
+    }
+   ]
+  },
+  {
+   "chapter": 23,
+   "title": "Reseller, partnerkanaal en commissiebeheer",
+   "domain": "reseller",
+   "forms": [
+    "Reselleraanvraag en kwalificatie",
+    "Reselleronboarding en contractacceptatie",
+    "Resellergebruiker uitnodigen of verwijderen",
+    "Dealregistratie en claim op commerciële oorsprong",
+    "Lead- of klantoverdracht naar Monargo",
+    "Tenantaanvraag voor een eindklant",
+    "Tenantprovisioning en activatiecontrole",
+    "Licentie-, module- en seatbestelling",
+    "Upgrade-, downgrade- en opzeggingsaanvraag",
+    "Prijs- of kortingsuitzondering",
+    "Trialverlenging of pilotgoedkeuring",
+    "Implementatie- en onboardingaanvraag voor klant",
+    "Supportticket of escalatie namens klant",
+    "Tijdelijke gedelegeerde toegang aanvragen",
+    "Commissieberekening en periodestaat",
+    "Commissieclaim, correctie en dispuut",
+    "Uitbetalingsgegevens en facturatie-instructie",
+    "Partnercertificering en trainingregistratie",
+    "Periodieke partnerreview",
+    "Suspensie, beëindiging en reseller-offboarding"
+   ],
+   "fields": [
+    {
+     "section": "23.2 Basisinformatievelden resellerorganisatie",
+     "field_key": "partner_name_legal_name",
+     "label": "partner_name/legal_name",
+     "required": "required",
+     "field_type": "Text",
+     "data_classification": "internal",
+     "visible_to": "Partner admin",
+     "usage": "Official and display.",
+     "view_permission": null
+    },
+    {
+     "section": "23.2 Basisinformatievelden resellerorganisatie",
+     "field_key": "enterprise_vat_number",
+     "label": "enterprise/vat_number",
+     "required": "conditional",
+     "field_type": "Identifier",
+     "data_classification": "financial",
+     "visible_to": "Partner finance",
+     "usage": "Validation.",
+     "view_permission": null
+    },
+    {
+     "section": "23.2 Basisinformatievelden resellerorganisatie",
+     "field_key": "partner_type",
+     "label": "partner_type",
+     "required": "required",
+     "field_type": "Enum",
+     "data_classification": "internal",
+     "visible_to": "Platform partner admin",
+     "usage": "referral, reseller, implementation, technology.",
+     "view_permission": null
+    },
+    {
+     "section": "23.2 Basisinformatievelden resellerorganisatie",
+     "field_key": "status",
+     "label": "status",
+     "required": "required",
+     "field_type": "Enum",
+     "data_classification": "internal",
+     "visible_to": "Partner admin",
+     "usage": "applicant, active, suspended, terminated.",
+     "view_permission": null
+    },
+    {
+     "section": "23.2 Basisinformatievelden resellerorganisatie",
+     "field_key": "primary_contact",
+     "label": "primary_contact",
+     "required": "required",
+     "field_type": "Contact reference",
+     "data_classification": "personal",
+     "visible_to": "Partner admin",
+     "usage": "Operational.",
+     "view_permission": null
+    },
+    {
+     "section": "23.2 Basisinformatievelden resellerorganisatie",
+     "field_key": "contract_id",
+     "label": "contract_id",
+     "required": "conditional",
+     "field_type": "Reference",
+     "data_classification": "confidential",
+     "visible_to": "Partner/legal",
+     "usage": "Current agreement.",
+     "view_permission": null
+    },
+    {
+     "section": "23.2 Basisinformatievelden resellerorganisatie",
+     "field_key": "territory_segment",
+     "label": "territory/segment",
+     "required": "optional",
+     "field_type": "Structured",
+     "data_classification": "confidential",
+     "visible_to": "Partner management",
+     "usage": "Rules.",
+     "view_permission": null
+    },
+    {
+     "section": "23.2 Basisinformatievelden resellerorganisatie",
+     "field_key": "commission_model",
+     "label": "commission_model",
+     "required": "conditional",
+     "field_type": "Structured",
+     "data_classification": "financial",
+     "visible_to": "Partner finance restricted",
+     "usage": "Percentage/fixed/recurring.",
+     "view_permission": null
+    },
+    {
+     "section": "23.2 Basisinformatievelden resellerorganisatie",
+     "field_key": "deal_registration",
+     "label": "deal_registration",
+     "required": "optional",
+     "field_type": "Structured",
+     "data_classification": "confidential",
+     "visible_to": "Partner/sales",
+     "usage": "Customer, value, dates, proof.",
+     "view_permission": null
+    },
+    {
+     "section": "23.2 Basisinformatievelden resellerorganisatie",
+     "field_key": "tenant_id",
+     "label": "tenant_id",
+     "required": "conditional",
+     "field_type": "Reference",
+     "data_classification": "confidential",
+     "visible_to": "Partner admin",
+     "usage": "Provisioned tenant.",
+     "view_permission": null
+    },
+    {
+     "section": "23.2 Basisinformatievelden resellerorganisatie",
+     "field_key": "commission_period_amount",
+     "label": "commission_period/amount",
+     "required": "conditional",
+     "field_type": "Date range/money",
+     "data_classification": "financial",
+     "visible_to": "Partner finance",
+     "usage": "Calculated and approved.",
+     "view_permission": null
+    },
+    {
+     "section": "23.2 Basisinformatievelden resellerorganisatie",
+     "field_key": "commission_status",
+     "label": "commission_status",
+     "required": "conditional",
+     "field_type": "Enum",
+     "data_classification": "financial",
+     "visible_to": "Partner finance",
+     "usage": "pending, approved, paid, disputed.",
+     "view_permission": null
+    },
+    {
+     "section": "23.2 Basisinformatievelden resellerorganisatie",
+     "field_key": "payout_account",
+     "label": "payout_account",
+     "required": "conditional",
+     "field_type": "IBAN",
+     "data_classification": "financial",
+     "visible_to": "Finance restricted",
+     "usage": "Fraud controls.",
+     "view_permission": null
+    },
+    {
+     "section": "23.2 Basisinformatievelden resellerorganisatie",
+     "field_key": "reseller_id",
+     "label": "reseller_id",
+     "required": "system",
+     "field_type": "UUID",
+     "data_classification": "internal",
+     "visible_to": "Platform",
+     "usage": "Immutable unique ID.",
+     "view_permission": null
+    },
+    {
+     "section": "23.2 Basisinformatievelden resellerorganisatie",
+     "field_key": "display_name",
+     "label": "display_name",
+     "required": "required",
+     "field_type": "Text",
+     "data_classification": "internal",
+     "visible_to": "Reseller admin",
+     "usage": "Naam zichtbaar in portal en klantcommunicatie.",
+     "view_permission": null
+    },
+    {
+     "section": "23.2 Basisinformatievelden resellerorganisatie",
+     "field_key": "legal_form",
+     "label": "legal_form",
+     "required": "conditional",
+     "field_type": "Enum",
+     "data_classification": "confidential",
+     "visible_to": "Reseller legal/finance",
+     "usage": "BV, NV, eenmanszaak, enz.",
+     "view_permission": null
+    },
+    {
+     "section": "23.2 Basisinformatievelden resellerorganisatie",
+     "field_key": "registered_address",
+     "label": "registered_address",
+     "required": "required",
+     "field_type": "Address",
+     "data_classification": "confidential",
+     "visible_to": "Reseller admin",
+     "usage": "Straat, nummer, postcode, gemeente, land.",
+     "view_permission": null
+    },
+    {
+     "section": "23.2 Basisinformatievelden resellerorganisatie",
+     "field_key": "invoice_address",
+     "label": "invoice_address",
+     "required": "conditional",
+     "field_type": "Address",
+     "data_classification": "financial",
+     "visible_to": "Reseller finance",
+     "usage": "Afwijkend facturatieadres.",
+     "view_permission": null
+    },
+    {
+     "section": "23.2 Basisinformatievelden resellerorganisatie",
+     "field_key": "billing_email",
+     "label": "billing_email",
+     "required": "required",
+     "field_type": "Email",
+     "data_classification": "financial",
+     "visible_to": "Reseller finance",
+     "usage": "Gevalideerd e-mailadres voor staten/facturen. (Status in spec: Verplicht actief)",
+     "view_permission": null
+    },
+    {
+     "section": "23.2 Basisinformatievelden resellerorganisatie",
+     "field_key": "phone_website",
+     "label": "phone / website",
+     "required": "optional",
+     "field_type": "Phone/URL",
+     "data_classification": "internal",
+     "visible_to": "Reseller admin",
+     "usage": "Contact- en profielinformatie.",
+     "view_permission": null
+    },
+    {
+     "section": "23.2 Basisinformatievelden resellerorganisatie",
+     "field_key": "preferred_language",
+     "label": "preferred_language",
+     "required": "required",
+     "field_type": "Enum",
+     "data_classification": "internal",
+     "visible_to": "Reseller admin",
+     "usage": "NL, FR of EN.",
+     "view_permission": null
+    },
+    {
+     "section": "23.2 Basisinformatievelden resellerorganisatie",
+     "field_key": "timezone_locale_currency",
+     "label": "timezone / locale / currency",
+     "required": "required",
+     "field_type": "Structured",
+     "data_classification": "internal",
+     "visible_to": "Platform/reseller admin",
+     "usage": "Voor data, bedragen en rapportering.",
+     "view_permission": null
+    },
+    {
+     "section": "23.2 Basisinformatievelden resellerorganisatie",
+     "field_key": "partner_tier",
+     "label": "partner_tier",
+     "required": "conditional",
+     "field_type": "Enum",
+     "data_classification": "confidential",
+     "visible_to": "Platform partner admin",
+     "usage": "Registered, Silver, Gold of custom.",
+     "view_permission": null
+    },
+    {
+     "section": "23.2 Basisinformatievelden resellerorganisatie",
+     "field_key": "accreditations",
+     "label": "accreditations",
+     "required": "optional",
+     "field_type": "Repeating structured",
+     "data_classification": "confidential",
+     "visible_to": "Partner admin",
+     "usage": "Certificaten en vervaldatums.",
+     "view_permission": null
+    },
+    {
+     "section": "23.2 Basisinformatievelden resellerorganisatie",
+     "field_key": "account_manager_id",
+     "label": "account_manager_id",
+     "required": "required",
+     "field_type": "User reference",
+     "data_classification": "confidential",
+     "visible_to": "Monargo partner management",
+     "usage": "Interne eigenaar relatie. (Status in spec: Verplicht actief)",
+     "view_permission": null
+    },
+    {
+     "section": "23.2 Basisinformatievelden resellerorganisatie",
+     "field_key": "onboarding_status",
+     "label": "onboarding_status",
+     "required": "required",
+     "field_type": "Enum",
+     "data_classification": "internal",
+     "visible_to": "Partner admin",
+     "usage": "Applied, screening, contracting, training, active.",
+     "view_permission": null
+    },
+    {
+     "section": "23.2 Basisinformatievelden resellerorganisatie",
+     "field_key": "risk_status",
+     "label": "risk_status",
+     "required": "conditional",
+     "field_type": "Enum/score",
+     "data_classification": "security_sensitive",
+     "visible_to": "Restricted",
+     "usage": "Supplier/channel due diligence.",
+     "view_permission": null
+    },
+    {
+     "section": "23.2 Basisinformatievelden resellerorganisatie",
+     "field_key": "dpa_accepted_at",
+     "label": "dpa_accepted_at",
+     "required": "conditional",
+     "field_type": "Datetime",
+     "data_classification": "confidential",
+     "visible_to": "Legal/partner admin",
+     "usage": "Indien verwerking klantdata mogelijk is.",
+     "view_permission": null
+    },
+    {
+     "section": "23.2 Basisinformatievelden resellerorganisatie",
+     "field_key": "nda_accepted_at",
+     "label": "nda_accepted_at",
+     "required": "conditional",
+     "field_type": "Datetime",
+     "data_classification": "confidential",
+     "visible_to": "Legal/partner admin",
+     "usage": "Voor toegang tot vertrouwelijke informatie.",
+     "view_permission": null
+    },
+    {
+     "section": "23.2 Basisinformatievelden resellerorganisatie",
+     "field_key": "agreement_version_accepted_at",
+     "label": "agreement_version / accepted_at",
+     "required": "required",
+     "field_type": "Version/date",
+     "data_classification": "confidential",
+     "visible_to": "Legal/partner admin",
+     "usage": "Exacte contractversie. (Status in spec: Verplicht actief)",
+     "view_permission": null
+    },
+    {
+     "section": "23.2 Basisinformatievelden resellerorganisatie",
+     "field_key": "service_scope",
+     "label": "service_scope",
+     "required": "conditional",
+     "field_type": "Multi-select",
+     "data_classification": "internal",
+     "visible_to": "Partner management",
+     "usage": "Sales, onboarding, implementation, support.",
+     "view_permission": null
+    },
+    {
+     "section": "23.2 Basisinformatievelden resellerorganisatie",
+     "field_key": "delegated_support_allowed",
+     "label": "delegated_support_allowed",
+     "required": "required",
+     "field_type": "Boolean",
+     "data_classification": "security_sensitive",
+     "visible_to": "Platform partner admin",
+     "usage": "Standaard false.",
+     "view_permission": null
+    },
+    {
+     "section": "23.2 Basisinformatievelden resellerorganisatie",
+     "field_key": "delegated_tenant_admin_allowed",
+     "label": "delegated_tenant_admin_allowed",
+     "required": "required",
+     "field_type": "Boolean",
+     "data_classification": "security_sensitive",
+     "visible_to": "Platform partner admin",
+     "usage": "Standaard false; per tenant extra toestemming.",
+     "view_permission": null
+    },
+    {
+     "section": "23.2 Basisinformatievelden resellerorganisatie",
+     "field_key": "max_managed_tenants",
+     "label": "max_managed_tenants",
+     "required": "optional",
+     "field_type": "Integer",
+     "data_classification": "confidential",
+     "visible_to": "Partner management",
+     "usage": "Contractueel of operationeel plafond.",
+     "view_permission": null
+    },
+    {
+     "section": "23.2 Basisinformatievelden resellerorganisatie",
+     "field_key": "suspension_reason_date",
+     "label": "suspension_reason / date",
+     "required": "conditional",
+     "field_type": "Text/date",
+     "data_classification": "confidential",
+     "visible_to": "Partner management/legal",
+     "usage": "Verplicht bij suspensie.",
+     "view_permission": null
+    },
+    {
+     "section": "23.2 Basisinformatievelden resellerorganisatie",
+     "field_key": "termination_date_exit_status",
+     "label": "termination_date / exit_status",
+     "required": "conditional",
+     "field_type": "Date/enum",
+     "data_classification": "confidential",
+     "visible_to": "Partner management/legal",
+     "usage": "Offboarding en behoud historische data.",
+     "view_permission": null
+    },
+    {
+     "section": "23.8 Dealregistratie en commerciële attributie",
+     "field_key": "deal_id",
+     "label": "deal_id",
+     "required": "system",
+     "field_type": null,
+     "data_classification": "internal",
+     "visible_to": "Reseller sales, Monargo partner/sales.",
+     "usage": "Immutable uniek.",
+     "view_permission": null
+    },
+    {
+     "section": "23.8 Dealregistratie en commerciële attributie",
+     "field_key": "reseller_id",
+     "label": "reseller_id",
+     "required": "required",
+     "field_type": null,
+     "data_classification": "internal",
+     "visible_to": "Reseller en Monargo.",
+     "usage": "Afgeleid uit ingelogde reseller; niet wijzigbaar.",
+     "view_permission": null
+    },
+    {
+     "section": "23.8 Dealregistratie en commerciële attributie",
+     "field_key": "prospect_company",
+     "label": "prospect_company",
+     "required": "required",
+     "field_type": null,
+     "data_classification": "confidential",
+     "visible_to": "Reseller sales/Monargo sales.",
+     "usage": "Naam + land; deduplicatie.",
+     "view_permission": null
+    },
+    {
+     "section": "23.8 Dealregistratie en commerciële attributie",
+     "field_key": "enterprise_or_vat_number",
+     "label": "enterprise_or_vat_number",
+     "required": "conditional",
+     "field_type": null,
+     "data_classification": "confidential",
+     "visible_to": "Commercial confidential.",
+     "usage": "Sterke deduplicatiesleutel.",
+     "view_permission": null
+    },
+    {
+     "section": "23.8 Dealregistratie en commerciële attributie",
+     "field_key": "primary_contact",
+     "label": "primary_contact",
+     "required": "conditional",
+     "field_type": null,
+     "data_classification": "personal",
+     "visible_to": "Assigned sales.",
+     "usage": "Toestemming en privacy notice waar nodig.",
+     "view_permission": null
+    },
+    {
+     "section": "23.8 Dealregistratie en commerciële attributie",
+     "field_key": "source_evidence",
+     "label": "source_evidence",
+     "required": "required",
+     "field_type": null,
+     "data_classification": "confidential",
+     "visible_to": "Restricted commercial.",
+     "usage": "E-mail, meeting, referral context of document.",
+     "view_permission": null
+    },
+    {
+     "section": "23.8 Dealregistratie en commerciële attributie",
+     "field_key": "estimated_value_currency",
+     "label": "estimated_value/currency",
+     "required": "optional",
+     "field_type": null,
+     "data_classification": "confidential",
+     "visible_to": "Sales/partner management.",
+     "usage": "Valide valuta en niet-negatief.",
+     "view_permission": null
+    },
+    {
+     "section": "23.8 Dealregistratie en commerciële attributie",
+     "field_key": "products_modules",
+     "label": "products/modules",
+     "required": "optional",
+     "field_type": null,
+     "data_classification": "internal",
+     "visible_to": "Sales.",
+     "usage": "Alleen actieve catalogusitems.",
+     "view_permission": null
+    },
+    {
+     "section": "23.8 Dealregistratie en commerciële attributie",
+     "field_key": "registered_at_expiry_at",
+     "label": "registered_at / expiry_at",
+     "required": "system",
+     "field_type": null,
+     "data_classification": "internal",
+     "visible_to": "Reseller/Monargo.",
+     "usage": "Claim heeft beperkte geldigheidsduur.",
+     "view_permission": null
+    },
+    {
+     "section": "23.8 Dealregistratie en commerciële attributie",
+     "field_key": "status",
+     "label": "status",
+     "required": "required",
+     "field_type": null,
+     "data_classification": "internal",
+     "visible_to": "Reseller/Monargo.",
+     "usage": "submitted, under_review, accepted, rejected, expired, converted.",
+     "view_permission": null
+    },
+    {
+     "section": "23.8 Dealregistratie en commerciële attributie",
+     "field_key": "rejection_reason",
+     "label": "rejection_reason",
+     "required": "conditional",
+     "field_type": null,
+     "data_classification": "internal",
+     "visible_to": "Reseller/Monargo.",
+     "usage": "Verplicht bij rejection.",
+     "view_permission": null
+    },
+    {
+     "section": "23.8 Dealregistratie en commerciële attributie",
+     "field_key": "attribution_percent",
+     "label": "attribution_percent",
+     "required": "conditional",
+     "field_type": null,
+     "data_classification": "financial",
+     "visible_to": "Partner finance/management.",
+     "usage": "0-100; vier-ogencontrole.",
+     "view_permission": null
+    },
+    {
+     "section": "23.8 Dealregistratie en commerciële attributie",
+     "field_key": "conflict_case_id",
+     "label": "conflict_case_id",
+     "required": "conditional",
+     "field_type": null,
+     "data_classification": "confidential",
+     "visible_to": "Restricted.",
+     "usage": "Bij dubbele claim of bestaand account.",
+     "view_permission": null
+    }
+   ]
+  },
+  {
+   "chapter": 24,
+   "title": "Documenten, bestanden en handtekeningen",
+   "domain": "document",
+   "forms": [
+    "Bestand uploaden",
+    "Document classificeren",
+    "Nieuwe documentversie",
+    "Handtekening aanvragen",
+    "Document intrekken",
+    "Legal hold",
+    "Data-exportpakket"
+   ],
+   "fields": [
+    {
+     "field_key": "file_name",
+     "label": "file_name",
+     "required": "required",
+     "field_type": "Text",
+     "data_classification": "personal",
+     "visible_to": "Uploader/authorized roles",
+     "usage": "Sanitize display name.",
+     "view_permission": null
+    },
+    {
+     "field_key": "storage_key",
+     "label": "storage_key",
+     "required": "system",
+     "field_type": "Text",
+     "data_classification": "security_sensitive",
+     "visible_to": "System only",
+     "usage": "Tenant-prefixed opaque key.",
+     "view_permission": null
+    },
+    {
+     "field_key": "mime_type_extension",
+     "label": "mime_type / extension",
+     "required": "system",
+     "field_type": "Text",
+     "data_classification": "internal",
+     "visible_to": "System",
+     "usage": "Content sniffing, not only extension.",
+     "view_permission": null
+    },
+    {
+     "field_key": "size_bytes",
+     "label": "size_bytes",
+     "required": "system",
+     "field_type": "Integer",
+     "data_classification": "internal",
+     "visible_to": "System",
+     "usage": "Limits by form/module.",
+     "view_permission": null
+    },
+    {
+     "field_key": "checksum",
+     "label": "checksum",
+     "required": "system",
+     "field_type": "Hash",
+     "data_classification": "security_sensitive",
+     "visible_to": "System/audit",
+     "usage": "Integrity and dedup guidance.",
+     "view_permission": null
+    },
+    {
+     "field_key": "classification",
+     "label": "classification",
+     "required": "required",
+     "field_type": "Enum",
+     "data_classification": "security_sensitive",
+     "visible_to": "Uploader/admin",
+     "usage": "Inherited minimum from parent.",
+     "view_permission": null
+    },
+    {
+     "field_key": "uploaded_by_at",
+     "label": "uploaded_by/at",
+     "required": "system",
+     "field_type": "Actor/datetime",
+     "data_classification": "internal",
+     "visible_to": "Read-only",
+     "usage": "Audit.",
+     "view_permission": null
+    },
+    {
+     "field_key": "parent_object",
+     "label": "parent_object",
+     "required": "required",
+     "field_type": "Reference",
+     "data_classification": "confidential",
+     "visible_to": "System",
+     "usage": "Customer/project/workorder/form etc.",
+     "view_permission": null
+    },
+    {
+     "field_key": "document_type",
+     "label": "document_type",
+     "required": "optional",
+     "field_type": "Reference",
+     "data_classification": "internal",
+     "visible_to": "Authorized roles",
+     "usage": "Invoice, contract, certificate, photo.",
+     "view_permission": null
+    },
+    {
+     "field_key": "version_number",
+     "label": "version_number",
+     "required": "conditional",
+     "field_type": "Integer",
+     "data_classification": "internal",
+     "visible_to": "Document roles",
+     "usage": "Immutable versions.",
+     "view_permission": null
+    },
+    {
+     "field_key": "virus_scan_status",
+     "label": "virus_scan_status",
+     "required": "system",
+     "field_type": "Enum",
+     "data_classification": "security_sensitive",
+     "visible_to": "Security/system",
+     "usage": "pending, clean, blocked.",
+     "view_permission": null
+    },
+    {
+     "field_key": "retention_policy",
+     "label": "retention_policy",
+     "required": "conditional",
+     "field_type": "Reference",
+     "data_classification": "personal",
+     "visible_to": "Governance",
+     "usage": "Inherited or explicit.",
+     "view_permission": null
+    },
+    {
+     "field_key": "legal_hold",
+     "label": "legal_hold",
+     "required": "optional",
+     "field_type": "Boolean/reason",
+     "data_classification": "confidential",
+     "visible_to": "Legal/privacy restricted",
+     "usage": "Blocks purge.",
+     "view_permission": null
+    },
+    {
+     "field_key": "signature_status",
+     "label": "signature_status",
+     "required": "conditional",
+     "field_type": "Enum",
+     "data_classification": "confidential",
+     "visible_to": "Authorized roles",
+     "usage": "unsigned, requested, signed, invalidated.",
+     "view_permission": null
+    },
+    {
+     "field_key": "signature_hash_timestamp",
+     "label": "signature_hash/timestamp",
+     "required": "conditional",
+     "field_type": "Hash/datetime",
+     "data_classification": "confidential",
+     "visible_to": "Audit",
+     "usage": "Immutable evidence.",
+     "view_permission": null
+    },
+    {
+     "field_key": "download_policy",
+     "label": "download_policy",
+     "required": "required",
+     "field_type": "Enum",
+     "data_classification": "security_sensitive",
+     "visible_to": "Admin/security",
+     "usage": "direct, signed_url, no_download.",
+     "view_permission": null
+    }
+   ]
+  }
+ ],
+ "totals": {
+  "chapters": 19,
+  "fields": 403
+ }
+}

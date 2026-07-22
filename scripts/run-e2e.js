@@ -94,7 +94,16 @@ async function main() {
     } catch (err) {
       result = { smoke, ok: false, ms: 0, out: String(err.message) };
     } finally {
-      server.kill();
+      // Wacht tot de server ECHT weg is vóór het volgende scenario boot: anders
+      // kan de opvolger op dezelfde poort botsen met de stervende voorganger en
+      // praat het scenario tegen een halfdode server ("fetch failed", wisselend
+      // per run · precies de flaky CI-e2e). SIGKILL-vangnet na 3 s.
+      await new Promise(resolve => {
+        if (server.exitCode !== null) return resolve();
+        server.once("exit", resolve);
+        server.kill();
+        setTimeout(() => { try { server.kill("SIGKILL"); } catch (_) {} }, 3000).unref();
+      });
       fs.rmSync(path.dirname(dataFile), { recursive: true, force: true });
     }
     results.push(result);

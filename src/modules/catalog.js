@@ -184,7 +184,9 @@ const CORE_MODULES = [
   // fiches zijn aparte entiteiten, maar allebei altijd beschikbaar.
   { key: "employees", label: "Medewerkers", group: "Kern", core: true, view: "employees", extraViews: ["employee_records"] },
   { key: "billing", label: "Abonnement & facturatie", group: "Kern", core: true, view: "billing" },
-  { key: "settings", label: "Instellingen", group: "Kern", core: true, view: "settings" },
+  // extraViews: het Formulieren-beheer (Forms-capability) is instellingen-kern ·
+  // de server handhaaft settings-recht op alle mutaties (form-definitions/*).
+  { key: "settings", label: "Instellingen", group: "Kern", core: true, view: "settings", extraViews: ["formulieren"] },
   { key: "audit", label: "Audittrail", group: "Kern", core: true, view: "audit" },
   { key: "roadmap", label: "Roadmap", group: "Kern", core: true, view: "roadmap" },
   // Configureerbare documentsjablonen (facturen/offertes/werkbonnen) met merge-velden.

@@ -3,6 +3,7 @@ const { config } = require("./config");
 const { hashPassword, assertStrongPassword } = require("./security");
 const { runMigrations, migrationStatus } = require("./migrations");
 const { createDataAdapter, dbPath } = require("./data-adapters");
+const { stampMetadata } = require("../platform/metadata");
 
 const BUSINESS_ADMIN_PERMISSIONS = [
   "tenants",
@@ -512,6 +513,9 @@ class Store {
   }
 
   insert(collection, row) {
+    // Universele beheer-metadata (h5 · FORM-05): additief, overschrijft nooit een
+    // bestaande waarde · elk nieuw object krijgt data_classification/source/version.
+    stampMetadata(collection, row);
     this.data[collection].push(row);
     this.save();
     return row;

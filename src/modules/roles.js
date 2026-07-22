@@ -33,6 +33,16 @@ const ADMIN_DELEGATABLE = [
   { key: "employees", label: "Medewerkers", group: "beheer", scopes: ["all", "team", "read"] },
   { key: "alerts", label: "Meldingen & signalen", group: "beheer", scopes: ["all", "read"] },
   { key: "costs.view", label: "Kostprijzen & marges zichtbaar", group: "financieel", scopes: ["all"], sensitive: true },
+  // Canonieke veld-zichtbaarheidsrechten (Forms h3 · FORM-03): granulaire toegang
+  // tot gevoelige velden, zodat een organisatie een finance- of HR-profiel kan
+  // samenstellen zonder de beheerdersrol. Bijzondere categorieën (salaris/medisch)
+  // en secrets zijn NOOIT automatisch zichtbaar - enkel via deze expliciete rechten.
+  { key: "field.cost_price.view", label: "Kostprijsveld zichtbaar", group: "financieel", scopes: ["all"], sensitive: true },
+  { key: "field.margin.view", label: "Margeveld zichtbaar", group: "financieel", scopes: ["all"], sensitive: true },
+  { key: "field.bank_account.view", label: "Bankrekeningveld zichtbaar", group: "financieel", scopes: ["all"], sensitive: true },
+  { key: "field.salary.view", label: "Salarisveld zichtbaar", group: "hr", scopes: ["all"], sensitive: true },
+  { key: "field.medical.view", label: "Medisch veld zichtbaar", group: "hr", scopes: ["all"], sensitive: true },
+  { key: "field.security_secret.view", label: "Beveiligingsgeheim zichtbaar", group: "beveiliging", scopes: ["all"], sensitive: true },
 ];
 const ADMIN_DELEGATABLE_KEYS = new Set(ADMIN_DELEGATABLE.map(a => a.key));
 
@@ -76,7 +86,7 @@ function permissionCatalog(store, tenant) {
   }));
   return {
     scopes: SCOPE_LABELS,
-    groups: ["operationeel", "beheer", "financieel"],
+    groups: ["operationeel", "beheer", "financieel", "hr", "beveiliging"],
     operational,
     admin: ADMIN_DELEGATABLE,
     forbidden: [...FORBIDDEN_KEYS],

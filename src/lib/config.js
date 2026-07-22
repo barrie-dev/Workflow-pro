@@ -108,6 +108,14 @@ const config = {
     readSource: (process.env.COMPANY_READ_SOURCE || "legacy").toLowerCase(),
     syncIntervalMs: Number(process.env.COMPANY_SYNC_INTERVAL_MS) || 10000
   },
+  // Forms-bronschakelaar (Forms-handover · finale CTO-directive: één engine).
+  // legacy = oude work-os JSON-engine blijft schrijfbaar (default, tot cutover);
+  // pg     = de canonieke engine is de waarheid en het legacy-schrijfpad is
+  //          BEVROREN (410 met verwijzing naar form-definitions/*); lezen blijft
+  //          voor historiek.
+  forms: {
+    source: (process.env.FORMS_SOURCE || "legacy").toLowerCase()
+  },
   // AI achter een port (handover 4.5 · F-07). Modelnamen staan HIER, nooit in
   // business rules. De super-admin kan dit per platform overschrijven via de
   // Integraties-console; zonder geldige sleutel draait de mock-adapter.

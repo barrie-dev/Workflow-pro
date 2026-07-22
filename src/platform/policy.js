@@ -28,7 +28,12 @@
  * bestaande signatures en gedrag blijven identiek; team:X komt erbij).
  */
 
-const SCOPE_RANK = { tenant: 3, team: 2, own: 1 };
+// De canonieke 7-scope-ladder (Forms handover h3): own < assigned < team <
+// project < company < tenant < platform. Oplopend in breedte; hoogste wint.
+// 'read:' blijft tenant-breed alleen-lezen (historisch, ongewijzigd gedrag).
+const fieldPerms = require("./field-permissions");
+
+const SCOPE_RANK = { own: 1, assigned: 2, team: 3, project: 4, company: 5, tenant: 6, platform: 7 };
 
 /** Ontleed één permissiestring naar { key, scope, write }. */
 function parsePermission(raw) {
@@ -36,6 +41,10 @@ function parsePermission(raw) {
   if (p.startsWith("read:")) return { key: p.slice(5), scope: "tenant", write: false };
   if (p.startsWith("team:")) return { key: p.slice(5), scope: "team", write: true };
   if (p.startsWith("own:")) return { key: p.slice(4), scope: "own", write: true };
+  if (p.startsWith("assigned:")) return { key: p.slice(9), scope: "assigned", write: true };
+  if (p.startsWith("project:")) return { key: p.slice(8), scope: "project", write: true };
+  if (p.startsWith("company:")) return { key: p.slice(8), scope: "company", write: true };
+  if (p.startsWith("platform:")) return { key: p.slice(9), scope: "platform", write: true };
   return { key: p, scope: "tenant", write: true };
 }
 
@@ -79,7 +88,10 @@ function canWrite(user, permissionKey) {
 function scopeOnly(user, permissionKey) {
   const a = resolveAccess(user, permissionKey);
   if (!a.visible) return null; // endpoint-asserts vangen dit; geen dubbele poort
-  return a.scope === "tenant" ? null : a.scope;
+  // tenant én platform = geen rij-beperking (volledige tenant-scope). De smallere
+  // scopes (own/assigned/team/project/company) beperken de dossierscope; project-
+  // en company-filtering volgt met hun aggregaten (applyScope dekt own/team nu).
+  return a.scope === "tenant" || a.scope === "platform" ? null : a.scope;
 }
 
 /** Ledenlijst van het team van deze gebruiker (incl. zichzelf). */
@@ -118,11 +130,12 @@ const SENSITIVE_FIELDS = {
 function canSeeSensitive(user) {
   if (!user) return false;
   if (["tenant_admin", "super_admin"].includes(user.role)) return true;
-  // Samenstelbaar profiel (#75): een expliciet 'costs.view'-recht ontsluit
-  // kostprijzen/marges, zodat een organisatie een financieel profiel kan
-  // samenstellen zonder het de beheerdersrol te geven. De permissions-set is de
-  // EFFECTIEVE set (rol + directe rechten), ingevuld door authenticate().
-  return (user.permissions || []).some(p => String(p).replace(/^(read:|team:|own:)/, "") === "costs.view");
+  // Samenstelbaar profiel (#75) + FORM-03-parity: 'costs.view' én de canonieke
+  // financiële veldrechten (field.cost_price.view, field.bank_account.view)
+  // ontsluiten kostprijzen/marges/bank, zodat forms en de rest van de app
+  // hetzelfde veldrecht respecteren. De permissions-set is de EFFECTIEVE set.
+  return ["costs.view", "field.cost_price.view", "field.bank_account.view"]
+    .some(perm => fieldPerms.hasFieldPermission(user, perm));
 }
 
 /** Strip gevoelige velden voor niet-beheerders; accepteert record of array. */

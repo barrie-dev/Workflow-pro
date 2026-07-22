@@ -443,6 +443,46 @@ const objectStorage = createObjectStorage();
 // zodat reserveringen een herstart en meerdere replicas overleven.
 const jobQueue = createJobQueue(storeAdapter);
 
+// Canonieke Forms-capability (Forms-handover F1 · finale CTO-directive: één
+// platformbrede engine). Genormaliseerd + RLS-geïsoleerd op PostgreSQL, achter
+// de distincte paden form-definitions/* en form-instances/*. Vereist pg; in pure
+// JSON-dev is hij null en antwoorden de routes met 503 (geen tweede engine).
+const formsApi = require("./modules/forms-api");
+const formsRepo = (() => {
+  const pool = storeAdapter && storeAdapter.name === "postgres" ? storeAdapter.pool : null;
+  if (!pool) return null;
+  const { makePgFormsRepository } = require("./infrastructure/postgres/pg-forms-repository");
+  // F4 · domeincommands: een domeinformulier schrijft transactioneel naar het
+  // canonieke domeinobject (zelfde pg-transactie als de submit/approve). De
+  // customer-handler voedt CRM-001/002 rechtstreeks in de genormaliseerde tabel.
+  const { makeDomainCommandRouter } = require("./platform/forms-domain-commands");
+  const domainCommands = makeDomainCommandRouter();
+  domainCommands.register("customer", async ({ client, tenantId, payload, actor }) => {
+    const cid = "cus_" + require("crypto").randomBytes(10).toString("hex");
+    await client.query(
+      `INSERT INTO customers (id, tenant_id, name, email, phone, vat_number, language, status, notes, custom_fields, created_by, updated_by)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,'prospect',$8,$9,$10,$10)`,
+      [cid, tenantId, String(payload.name || payload.customer_name || "").trim() || "Onbekend",
+       payload.email || null, payload.phone || null, payload.vat_number || null,
+       ["nl", "fr", "en"].includes(payload.language) ? payload.language : "nl",
+       payload.notes || null, JSON.stringify(payload.custom_fields || {}), actor || null]);
+    return { domainObject: "customer", domainId: cid };
+  });
+  // CRM-003 · contact hangt tenant-veilig aan zijn klant (pg-canoniek, 002_crm).
+  domainCommands.register("contact", async ({ client, tenantId, instance, payload, actor }) => {
+    const customerId = payload.customer_id || (instance.subject_type === "customer" ? instance.subject_id : null);
+    if (!customerId) { const e = new Error("customer_id is verplicht voor een contactformulier"); e.status = 422; e.code = "CONTACT_CUSTOMER_REQUIRED"; throw e; }
+    const cid = "ctc_" + require("crypto").randomBytes(10).toString("hex");
+    await client.query(
+      `INSERT INTO customer_contacts (id, tenant_id, customer_id, first_name, last_name, email, phone, role, is_primary, created_by, updated_by)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$10)`,
+      [cid, tenantId, customerId, payload.first_name || null, payload.last_name || null,
+       payload.email || null, payload.phone || null, payload.role || null, payload.is_primary === true, actor || null]);
+    return { domainObject: "contact", domainId: cid, customerId };
+  });
+  return makePgFormsRepository(pool, { domainCommands });
+})();
+
 /**
  * CRM-bronschakelaar (5.4 stap 5-7). Buiten legacy-modus is een PostgreSQL-
  * verbinding nodig: gedeeld met de data-adapter als die op pg draait, anders
@@ -640,6 +680,17 @@ const pgTxManager = storeAdapter && storeAdapter.name === "postgres"
   : null;
 // Automation-engine (E11) luistert op alle domain events (best-effort).
 registerEventListener(makeDispatcher(store));
+// h26 · Forms assignment-triggers: een domeinevent kan automatisch een
+// formulier toewijzen (objectaanmaak/statuswijziging/bedrag/...). Best-effort
+// en idempotent per (event, definitie) · een trigger mag een event nooit laten
+// falen; zonder pg (geen formsRepo) is er niets te triggeren.
+if (formsRepo) {
+  registerEventListener((event) => {
+    formsRepo.processDomainEvent(event.tenantId, event)
+      .then(r => { if (r.created.length) telemetry.metric("forms.trigger.assigned", r.created.length, { event: event.eventType }); })
+      .catch(() => { /* best-effort: nooit het event blokkeren */ });
+  });
+}
 
 function csvCell(value) {
   const text = value == null ? "" : Array.isArray(value) || typeof value === "object" ? JSON.stringify(value) : String(value);
@@ -6432,6 +6483,42 @@ const httpServer = http.createServer(async (req, res) => {
         if (!project) return sendJson(res, 404, { ok: false, error: "Project niet gevonden" });
         sendJson(res, 200, { ok: true, history: project.forecastHistory || [], current: currentForecast(project) });
         return;
+      }
+
+      // ── Canonieke Forms-capability (Forms-handover F1) ──────────────────────
+      // Genormaliseerde, versie-onveranderlijke, RLS-geïsoleerde formulieren met
+      // veld-/classificatierechten en segregation of duties. Distincte paden
+      // (form-definitions/*, form-instances/*) naast de legacy work-os forms/* ;
+      // de strangler unificeert die later. De handler bezit rechten + veldredactie.
+      if (formsApi.isFormsAction(action)) {
+        if (!formsRepo) return sendJson(res, 503, { ok: false, code: "FORMS_REQUIRES_PG", error: "De canonieke Forms-capability vereist PostgreSQL." });
+        // Definitie- en toewijzingsbeheer vraagt settings; instance-schrijven volgt
+        // de API-key-schrijfgate. Assignments zijn beheer, dus onder settings.
+        if ((action.startsWith("form-definitions") || action.startsWith("form-retention") || action.startsWith("form-reminders")) && req.method !== "GET") { assertCan(user, "settings"); assertInteractiveUser(user); }
+        if (action.startsWith("form-instances") && req.method !== "GET") assertApiKeyWriteAllowed(user, req);
+        const needsBody = req.method === "POST" || req.method === "PATCH" || req.method === "PUT";
+        const body = needsBody ? await readBody(req) : {};
+        const formsTenant = (store.data.tenants || []).find(t => t.id === tenantId) || null;
+        const entitlements = formsTenant ? resolveTenantModules(store, formsTenant) : [];
+        const r = await formsApi.handleFormsRoute(formsRepo, { user, tenantId, method: req.method, action, body, req, entitlements });
+        if (r) {
+          if (r.headers) for (const [k, v] of Object.entries(r.headers)) res.setHeader(k, v);
+          if (r.status >= 200 && r.status < 300 && req.method !== "GET") {
+            store.audit({ actor: user.email, tenantId, action: "forms_" + req.method.toLowerCase(), area: "forms", detail: action });
+          }
+          return sendJson(res, r.status, r.payload);
+        }
+      }
+
+      // Strangler (finale CTO-directive · één engine): met FORMS_SOURCE=pg is de
+      // canonieke engine de waarheid en is het legacy work-os SCHRIJFPAD bevroren.
+      // Lezen blijft toegestaan voor historiek; schrijven wijst naar de nieuwe paden.
+      if (config.forms.source === "pg" && req.method !== "GET" &&
+          (action.startsWith("forms/templates") || action.startsWith("forms/instances"))) {
+        return sendJson(res, 410, {
+          ok: false, code: "FORMS_LEGACY_FROZEN",
+          error: "Het legacy formulier-schrijfpad is bevroren. Gebruik form-definitions/* en form-instances/* (canonieke Forms-engine).",
+        });
       }
 
       // ── Work OS-kern · formulieren, taken, bestanden, communicatie (h39/DOC) ──
