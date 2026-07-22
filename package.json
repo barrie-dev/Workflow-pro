@@ -85,7 +85,11 @@
     "db:backfill:crm:dry": "node scripts/backfill-crm.js --dry-run",
     "db:reconcile:crm": "node scripts/backfill-crm.js --reconcile",
     "test:e2e": "node scripts/run-e2e.js",
-    "evidence": "node scripts/generate-evidence-bundle.js"
+    "evidence": "node scripts/generate-evidence-bundle.js",
+    "production:restore-drill": "node scripts/restore-drill.js",
+    "production:restore-drill:json": "node scripts/restore-drill.js --json",
+    "forms:cutover:reconcile": "node scripts/forms-cutover.js reconcile",
+    "forms:cutover:migrate": "node scripts/forms-cutover.js migrate"
   },
   "dependencies": {
     "@node-saml/node-saml": "^5.1.0",

@@ -135,3 +135,80 @@ services of extern; migratie als init-container respectievelijk pre-startstap.
 De toets blijft altijd: **geen enkele stap hierboven vereist een specifieke
 aanbieder**. Zodra een deploy-instructie dat wel doet, hoort hij in deze
 sectie als mapping, en moet het generieke pad blijven werken.
+
+---
+
+## CTO2 · productiehardening: Supabase Storage, restore-drill en Forms-cutover
+
+Deze sectie hoort bij de CTO Development Review v2 (2026-07-22). De code-guardrails
+staan al in main: productie weigert te booten met `OBJECT_STORAGE_ADAPTER=local`
+(bestanden overleven een deploy niet). Onderstaande stappen deblokkeren de
+productie-deploy en leveren het herstelbewijs.
+
+### 1. Managed object storage · Supabase Storage (S3-compatibel)
+
+Supabase Storage spreekt het S3-protocol, dus onze bestaande s3-adapter werkt
+zonder codewijziging. In het Supabase-project:
+
+1. **Storage → Buckets**: maak een *private* bucket, bv. `monargo-prod-files`
+   (nooit public · toegang loopt via ondertekende URL's).
+2. **Project Settings → Storage → S3 connection**: noteer het **S3-endpoint**
+   (`https://<project-ref>.storage.supabase.co/storage/v1/s3`) en de **regio**.
+3. **Storage access keys**: genereer een S3 **Access key ID** + **Secret access key**.
+
+Zet in de **Render**-service (Environment) exact deze variabelen:
+
+```
+OBJECT_STORAGE_ADAPTER=s3
+OBJECT_STORAGE_ENDPOINT=https://<project-ref>.storage.supabase.co/storage/v1/s3
+OBJECT_STORAGE_BUCKET=monargo-prod-files
+OBJECT_STORAGE_REGION=<regio, bv. eu-central-1>
+OBJECT_STORAGE_ACCESS_KEY_ID=<S3 access key id>
+OBJECT_STORAGE_SECRET_ACCESS_KEY=<S3 secret>
+OBJECT_STORAGE_PATH_STYLE=true
+```
+
+`OBJECT_STORAGE_SIGNING_KEY` valt terug op `JWT_SECRET` · zet hem enkel apart als
+je de download-URL-ondertekening van de app-secret wil scheiden.
+
+TLS-databasevalidatie staat sinds CTO-13 op `verify-full`. Weigert Supabase de
+certificaatketen, zet dan tijdelijk `DATABASE_SSL_MODE=require` of lever de CA via
+`DATABASE_CA_CERT`.
+
+### 2. Deploy + verificatie
+
+Na het zetten van de vars deployt Render `main` (guardrail laat nu door). Toets:
+
+- `/api/health` toont `objectStorageAdapter: "s3"` (niet meer `local`).
+- Upload/download/delete een bestand via een echte formulierbijlage of
+  `npm run production:restore-drill` (zie §3).
+
+### 3. Restore-drill (CTO2-12) · met gemeten RPO/RTO
+
+```bash
+STORAGE_ADAPTER=postgres DATABASE_URL=<prod-url> \
+OBJECT_STORAGE_ADAPTER=s3 OBJECT_STORAGE_ENDPOINT=... OBJECT_STORAGE_BUCKET=... \
+OBJECT_STORAGE_ACCESS_KEY_ID=... OBJECT_STORAGE_SECRET_ACCESS_KEY=... \
+npm run production:restore-drill
+```
+
+De drill (1) herstelt `platform_state` naar een verse **scratch-database** en
+verifieert byte-gelijkheid + meet **RPO** (leeftijd snapshot) en **RTO**
+(hersteltijd); (2) schrijft een sentinel-bestand en leest het terug via een
+**vers adapter-exemplaar** (bewijst dat bestanden een procesherstart overleven).
+Exit 1 = herstel niet bewezen (release-gate). Leg de RPO/RTO-uitslag vast bij het
+release-bewijs.
+
+### 4. Forms-cutover (CTO2-08) · optioneel, ná storage
+
+De legacy work-os formulieren migreren naar de canonieke engine:
+
+```bash
+node scripts/forms-cutover.js inventory   # wat staat er nog in legacy?
+node scripts/forms-cutover.js migrate     # idempotente migratie
+node scripts/forms-cutover.js reconcile   # exit 1 zolang niet alles gemigreerd is
+```
+
+Pas **nadat reconcile groen is**, zet `FORMS_SOURCE=pg` in Render. Dat bevriest
+het legacy schrijfpad (410) en maakt de canonieke engine de enige waarheid;
+lezen van historiek blijft werken.
