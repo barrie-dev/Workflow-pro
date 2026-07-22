@@ -63,8 +63,27 @@ const config = {
       return /^postgres(ql)?:\/\//.test(url) && !/@(localhost|127\.0\.0\.1|host\.docker\.internal|db)([:/]|$)/.test(url);
     })(),
     maxConnections: Number(process.env.DATABASE_MAX_CONNECTIONS) || 10,
-    statementTimeoutMs: Number(process.env.DATABASE_STATEMENT_TIMEOUT_MS) || 15000
+    statementTimeoutMs: Number(process.env.DATABASE_STATEMENT_TIMEOUT_MS) || 15000,
+    // CTO-13 · TLS-modus: 'require' versleutelt zonder certificaatvalidatie
+    // (dev/test-gemak); 'verify-full' valideert de certificaatketen (system
+    // trust store of DATABASE_CA_CERT). Productie default = verify-full.
+    sslMode: (() => {
+      const m = String(process.env.DATABASE_SSL_MODE || "").toLowerCase().trim();
+      if (m === "require" || m === "verify-full") return m;
+      return APP_ENV === "production" ? "verify-full" : "require";
+    })(),
+    caCert: process.env.DATABASE_CA_CERT || ""
   },
+  // CTO-03 · single-writer-guard: in productie/staging default AAN. Eén
+  // instantie houdt de PostgreSQL advisory lock; een nieuwe deploy wacht
+  // maximaal singleWriterWaitMs op de oude en faalt daarna hard.
+  singleWriter: (() => {
+    const v = String(process.env.SINGLE_WRITER || "").toLowerCase();
+    if (v === "true") return true;
+    if (v === "false") return false;
+    return APP_ENV === "production" || APP_ENV === "staging";
+  })(),
+  singleWriterWaitMs: Number(process.env.SINGLE_WRITER_WAIT_MS) || 60000,
   // CRM-bronschakelaar (handover 5.4 stap 5-7): legacy | shadow | pg.
   // shadow = legacy leidend + pg leest mee (afwijkingen naar telemetrie);
   // pg = cutover, met dual-write zodat rollback een flag-flip blijft.
@@ -177,6 +196,12 @@ function assertProductionConfig() {
   // provider: enkel een standaard PostgreSQL-URL is vereist (F-05).
   if (config.storageAdapter !== "postgres") missing.push("STORAGE_ADAPTER=postgres");
   if (!/^postgres(ql)?:\/\//.test(config.database.url)) missing.push("DATABASE_URL=postgresql://...");
+  // CTO-02 · lokale objectopslag is in productie VERBODEN: een deploy of
+  // crash van de container wist bestanden onherroepelijk. Managed storage
+  // (s3-compatibel of azure-blob) is de enige toegestane productiestandaard.
+  if (String(config.objectStorage.adapter).toLowerCase() === "local") {
+    missing.push("OBJECT_STORAGE_ADAPTER=s3|azure-blob (local is in productie verboden · bestanden overleven geen deploy)");
+  }
   if (isPlaceholder(config.jwtSecret) || String(config.jwtSecret).length < 32) missing.push("JWT_SECRET");
   if (isPlaceholder(config.encryptionKey) || String(config.encryptionKey).length < 32) missing.push("ENCRYPTION_KEY");
   // Stripe en Peppol zijn optioneel tijdens pilot · waarschuwing, geen harde fout
@@ -196,4 +221,20 @@ function assertProductionConfig() {
 
 assertProductionConfig();
 
-module.exports = { config };
+/**
+ * CTO-13 · pg-Pool ssl-opties uit de geconfigureerde TLS-modus.
+ * 'verify-full' valideert de certificaatketen (system trust store, of de
+ * meegegeven CA via DATABASE_CA_CERT); 'require' versleutelt zonder validatie.
+ * Retourneert undefined als TLS uit staat (lokale database).
+ */
+function databaseSslOptions() {
+  if (!config.database.ssl) return undefined;
+  if (config.database.sslMode === "verify-full") {
+    const opts = { rejectUnauthorized: true };
+    if (config.database.caCert) opts.ca = config.database.caCert;
+    return opts;
+  }
+  return { rejectUnauthorized: false };
+}
+
+module.exports = { config, databaseSslOptions };

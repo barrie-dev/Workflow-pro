@@ -162,7 +162,8 @@ function createDataAdapter() {
       : null;
     return new PostgresDataAdapter({
       connectionString: config.database.url,
-      ssl: config.database.ssl,
+      // CTO-13: volledige ssl-opties (verify-full in productie) i.p.v. boolean.
+      ssl: require("./config").databaseSslOptions(),
       maxConnections: config.database.maxConnections,
       statementTimeoutMs: config.database.statementTimeoutMs,
       initialImport,

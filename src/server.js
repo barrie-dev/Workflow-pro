@@ -298,7 +298,8 @@ const {
   acceptDpa,
   createGdprRequest,
   processGdprRequest,
-  processStripeWebhook
+  processStripeWebhook,
+  tenantMrr
 } = require("./modules/billing");
 const { readiness, applyKbo, createDemoGoldenPath } = require("./modules/golden-path");
 const { SECTORS, TEAM_SIZES, isValidSector, publicSectors, sectorByKey, terminologyFor } = require("./modules/sectors");
@@ -1014,6 +1015,15 @@ const httpServer = http.createServer(async (req, res) => {
   // is; anders is het requestId de correlatie.
   res.wfpCorrelationId = String(req.headers["x-correlation-id"] || res.wfpRequestId).slice(0, 64);
   res.wfpStartedAt = Date.now();
+  // CTO-05 · durability-gate: op een muterende request vertrekt een geslaagde
+  // response pas NADAT de staat echt gepersisteerd is (flush vóór antwoord).
+  // Zo overleeft een write zelfs een harde crash direct na de 2xx; het oude
+  // gat ("flush ná antwoord, één event-loop-tik risico") is hiermee dicht.
+  if (!["GET", "HEAD", "OPTIONS"].includes(req.method)) {
+    res.wfpBeforeSend = async (status) => {
+      if (status < 400 && store.isDirty()) await store.flush();
+    };
+  }
 
   try {
     const rateLimit = checkRateLimit(req, url.pathname);
@@ -2078,13 +2088,10 @@ const httpServer = http.createServer(async (req, res) => {
       assertSuperAdmin(user);
       const tenants = store.data.tenants;
       const allUsers = store.data.users;
-      // MRR schatting per plan
-      const MRR_PLAN = { starter: 9, business: 18, enterprise: 29 };
+      // CTO-09: MRR uit de centrale billingbron, geen vaste prijsconstanten.
       let mrr = 0;
-      tenants.filter(t => t.status === "active").forEach(t => {
-        const users = store.list("users", t.id).length;
-        mrr += (MRR_PLAN[t.plan] || 18) * Math.max(users, 1);
-      });
+      tenants.filter(t => t.status === "active").forEach(t => { mrr += tenantMrr(store, t); });
+      mrr = Math.round(mrr * 100) / 100;
       const errorCount = (store.data.errorEvents || []).filter(e => {
         const d = new Date(e.at || 0);
         return d > new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -2573,13 +2580,14 @@ const httpServer = http.createServer(async (req, res) => {
       const user = actor(req);
       if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
       assertPlatformScope(user, "billing");
-      const MRR_PLAN = { starter: 9, business: 18, enterprise: 29 };
+      // CTO-09: MRR uit de centrale billingbron (superadmin-bewerkbare
+      // bundelprijzen) · geen vaste prijsconstanten meer in dit overzicht.
       const rows = store.data.tenants.map(t => {
         const users = store.list("users", t.id).length;
-        const mrrUnit = MRR_PLAN[t.plan] || 18;
-        const mrr = t.status === "active" ? mrrUnit * Math.max(users, 1) : 0;
+        const mrr = tenantMrr(store, t);
+        const mrrUnit = users > 0 ? Math.round((mrr / users) * 100) / 100 : mrr;
         return { id: t.id, name: t.name, plan: t.plan, status: t.status,
-          users, mrrUnit, mrr, arr: mrr * 12, billingEmail: t.billingEmail || "" };
+          users, mrrUnit, mrr, arr: Math.round(mrr * 12 * 100) / 100, billingEmail: t.billingEmail || "" };
       }).sort((a, b) => b.mrr - a.mrr);
       const totalMrr = rows.reduce((s, r) => s + r.mrr, 0);
       sendJson(res, 200, { ok: true, rows, totalMrr, totalArr: totalMrr * 12 });
@@ -7727,6 +7735,14 @@ const httpServer = http.createServer(async (req, res) => {
 // een verzoek op een half-geïnitialiseerde store.
 (async () => {
   if (storeNeedsAsyncLoad) {
+    // Schema vóór data (CTO-review 4.3-vondst): de transactionele flush schrijft
+    // óók naar outbox_events · op een VERSE database bestond die tabel pas na
+    // een handmatige migratie, waardoor de eerste muterende request faalde.
+    // De migratie-runner is idempotent en draait daarom altijd bij boot.
+    if (storeAdapter.name === "postgres" && storeAdapter.pool) {
+      const { runMigrations } = require("./infrastructure/postgres/migration-runner");
+      await runMigrations(storeAdapter.pool);
+    }
     await store.initAsync();
     console.log(`  Database  : verbonden (${config.storageAdapter})`);
   }
@@ -7963,10 +7979,13 @@ function gracefulShutdown(signal) {
     .then(() => (typeof storeAdapter.close === "function" ? storeAdapter.close() : null))
     .then(done)
     .catch(err => { console.error(`[shutdown] wegschrijven mislukt: ${err.message}`); process.exit(1); });
-  // Geef lopende requests 10 s
+  // Geef lopende requests 10 s. CTO-05: loopt de flush vast terwijl er nog
+  // niet-gepersisteerde wijzigingen staan, dan is dat een ZICHTBARE fout
+  // (exit 1) · nooit stil afsluiten met dataverlies.
   setTimeout(() => {
-    console.log("[shutdown] Timeout bereikt · forceer stop");
-    process.exit(0);
+    const dirty = typeof storeAdapter.isDirty === "function" ? storeAdapter.isDirty() : false;
+    console.log(`[shutdown] Timeout bereikt · forceer stop${dirty ? " · WAARSCHUWING: niet-gepersisteerde wijzigingen" : ""}`);
+    process.exit(dirty ? 1 : 0);
   }, 10_000).unref();
 }
 
