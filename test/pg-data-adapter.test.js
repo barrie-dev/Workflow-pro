@@ -82,8 +82,9 @@ test("pg-adapter: save markeert vuil, flush schrijft en verhoogt de revisie", as
   assert.deepEqual(await adapter.flush(), { written: false });
 });
 
-test("pg-adapter: revisieconflict overschrijft niet en bewaart de mutatie", async () => {
-  // Een andere replica schreef tussentijds → de UPDATE raakt 0 rijen.
+test("pg-adapter: aanhoudend revisieconflict geeft pas na max merge-pogingen op en bewaart de mutatie", async () => {
+  // Een andere replica blijft schrijven → de UPDATE raakt telkens 0 rijen. Het
+  // herstel probeert eerst te mergen (MAX_MERGE_RETRIES) en geeft dan pas op.
   const pool = fakePool({ select: () => ({ rows: [{ data: {}, revision: 3 }] }), update: () => ({ rows: [] }) });
   const adapter = new PostgresDataAdapter({ pool });
   await adapter.loadAsync(() => ({}));
@@ -92,8 +93,9 @@ test("pg-adapter: revisieconflict overschrijft niet en bewaart de mutatie", asyn
   await assert.rejects(() => adapter.flush(), e => e.code === "STATE_REVISION_CONFLICT");
   // De mutatie is NIET weggegooid: ze staat klaar voor een retry na herladen.
   assert.equal(adapter.isDirty(), true, "openstaande mutatie behouden");
+  assert.ok(adapter.mergeRecoveries >= 1, "er zijn merge-herstelpogingen gedaan");
   assert.match(adapter.status().lastError, /revisieconflict/);
-  assert.equal(adapter.status().online, false, "conflict maakt de adapter niet-gezond");
+  assert.equal(adapter.status().online, false, "aanhoudend conflict maakt de adapter niet-gezond");
 });
 
 test("pg-adapter: schrijffout gooit de mutatie niet weg", async () => {
