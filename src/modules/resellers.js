@@ -5,15 +5,11 @@
 // zien enkel COMMERCIËLE gegevens van hun klanten (plan, status, abonnement,
 // commissie) · nooit operationele/persoonsgegevens (GDPR). Zie [[project-support-access]].
 
-// Zelfde MRR-formule als /api/admin/billing (plan × actieve gebruikers).
-const MRR_PLAN = { starter: 9, business: 18, enterprise: 29 };
-
-function tenantMrr(store, tenant) {
-  if (!tenant || tenant.status !== "active") return 0;
-  const users = store.list("users", tenant.id).length;
-  const unit = MRR_PLAN[tenant.plan] || 18;
-  return unit * Math.max(users, 1);
-}
+// CTO-09 · MRR komt UITSLUITEND uit de centrale billing-/pricingbron
+// (billing.tenantMrr op de superadmin-bewerkbare bundelprijzen). Vaste
+// prijsconstanten in resellerlogica zijn verboden (CTO-review 2026-07-22):
+// die konden afwijken van bewerkbare bundelprijzen, kortingen en seats.
+const { tenantMrr } = require("./billing");
 
 function clientsOfReseller(store, resellerId) {
   return (store.data.tenants || []).filter(t => t.resellerId === resellerId);
@@ -51,4 +47,4 @@ function publicReseller(reseller, store) {
     : safe;
 }
 
-module.exports = { MRR_PLAN, tenantMrr, clientsOfReseller, commissionPctFor, commissionOverview, publicReseller };
+module.exports = { tenantMrr, clientsOfReseller, commissionPctFor, commissionOverview, publicReseller };

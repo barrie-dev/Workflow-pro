@@ -123,7 +123,43 @@ test("pg-adapter: gelijktijdige flushes worden samengevoegd tot één schrijfact
   const [r1, r2, r3] = await Promise.all([adapter.flush(), adapter.flush(), adapter.flush()]);
   assert.equal(updates, 1, "drie aanroepen, één schrijfactie");
   assert.equal(r1.written, true);
-  assert.deepEqual([r2.written, r3.written], [true, true]);
+  // CTO-05 · nieuw, strikter contract: een geresolvede flush() betekent "de
+  // staat van op het aanroepmoment staat in de database". Oproep 2 en 3 hoefden
+  // zelf niets te schrijven (alles stond al veilig) en melden dat eerlijk.
+  assert.deepEqual([r2.written, r3.written], [false, false]);
+});
+
+test("pg-adapter: een write TIJDENS een lopende flush gaat niet verloren (durability-gate-race)", async () => {
+  // De lopende flush serialiseerde zijn snapshot al vóór onze tweede save.
+  // flush() mag dan NIET enkel bij die lopende schrijfactie aansluiten: hij
+  // wacht hem af en flusht opnieuw, anders meldt de gate "bewaard" terwijl
+  // de tweede mutatie nog in pending staat (het gat achter de verdwenen
+  // Durability-klant in de SIGTERM-test).
+  let updates = 0;
+  let releaseFirst;
+  const firstUpdateStarted = new Promise(r => { releaseFirst = { open: r }; });
+  const gate = new Promise(r => { releaseFirst.done = r; });
+  const pool = fakePool({
+    select: () => ({ rows: [{ data: {}, revision: 1 }] }),
+    update: async () => {
+      updates++;
+      if (updates === 1) { releaseFirst.open(); await gate; }
+      return { rows: [{ revision: 1 + updates }] };
+    },
+  });
+  const adapter = new PostgresDataAdapter({ pool });
+  await adapter.loadAsync(() => ({}));
+  adapter.save({ a: 1 });
+  const inflight = adapter.flush();          // flush 1 hangt in de (trage) update
+  await firstUpdateStarted;
+  adapter.save({ a: 1, b: 2 });              // write TIJDENS de lopende flush
+  const second = adapter.flush();            // moet b:2 alsnog persisteren
+  releaseFirst.done();
+  await inflight;
+  const r = await second;
+  assert.equal(r.written, true, "de tweede flush schreef de nagekomen mutatie");
+  assert.equal(updates, 2, "twee schrijfacties: één per snapshot, niets verloren");
+  assert.equal(adapter.isDirty(), false);
 });
 
 test("pg-adapter: status meldt openstaande schrijfacties en poolgebruik", async () => {

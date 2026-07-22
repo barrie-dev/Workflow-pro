@@ -88,6 +88,21 @@ function pricingFor(key) {
   return p && p.baseAnnual > 0 ? p : null;
 }
 
+// CTO-09 · DE canonieke MRR-berekening: één bron voor superadmin-billing én
+// resellercommissie. Prijs = de effectieve (superadmin-bewerkbare) bundelprijs:
+// (baseAnnual + seatAnnual × seats boven includedSeats) / 12. Enkel actieve
+// tenants tellen mee; een onbekend plan valt terug op 'business'. Vaste
+// prijsconstanten buiten deze module zijn verboden (CTO-review 2026-07-22).
+function tenantMrr(store, tenant) {
+  if (!tenant || tenant.status !== "active") return 0;
+  const pkg = effectivePackage(tenant.plan) || effectivePackage("business");
+  if (!pkg || !(pkg.baseAnnual > 0)) return 0;
+  const seats = store.list("users", tenant.id).length;
+  const extraSeats = Math.max(0, seats - (pkg.includedSeats || 0));
+  const annual = pkg.baseAnnual + (pkg.seatAnnual || 0) * extraSeats;
+  return Math.round((annual / 12) * 100) / 100;
+}
+
 // Publieke plan-catalogus voor de klant-zelfbediening (prijzen server-bepaald).
 // Leest de samenstelbare bundels uit de DB; prijzen uit PLAN_PACKAGES per key.
 // Bundels zonder bekende prijs (bv. door superadmin nieuw aangemaakt) worden als
@@ -750,6 +765,7 @@ module.exports = {
   createSetupIntent,
   billingQuote,
   planCatalog,
+  tenantMrr,
   selectPlan,
   attachPaymentMethod,
   createInvoice,
