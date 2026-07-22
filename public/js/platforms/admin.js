@@ -52,7 +52,7 @@
   // Dashboard, Actiecentrum en Werkruimte zijn shell-views: ze bundelen enkel
   // tenantdata waar de gebruiker al toegang toe heeft en hebben geen apart
   // backend-entitlement nodig.
-  const CORE_UI_VIEWS = new Set(["dashboard", "actions", "workos"]);
+  const CORE_UI_VIEWS = new Set(["dashboard", "actions", "workos", "profielen"]);
 
   // Verberg nav-items voor modules die niet in het pakket van de tenant zitten.
   function applyEntitlements() {
@@ -523,6 +523,10 @@
       <a class="adm-nav-item" data-view="employees" href="#">
         <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
         <span data-i18n="nav.employees">Medewerkers</span>
+      </a>
+      <a class="adm-nav-item" data-view="profielen" href="#">
+        <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+        <span data-i18n="nav.profielen">Profielen &amp; rechten</span>
       </a>
       <a class="adm-nav-item" data-view="employee_records" href="#">
         <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-2 14c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-8V3.5L18.5 8H15z"/></svg>

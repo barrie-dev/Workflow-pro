@@ -43,7 +43,7 @@ test("admin: actiecentrum bundelt dagelijkse uitzonderingen in een logische flow
   const css = read("public/css/admin.css");
   assert.match(source, /data-view="actions"/);
   assert.match(source, /id="admActionBadge"/);
-  assert.match(source, /const CORE_UI_VIEWS = new Set\(\["dashboard", "actions", "workos"\]\)/);
+  assert.match(source, /const CORE_UI_VIEWS = new Set\(\["dashboard", "actions", "workos", "profielen"\]\)/);
   assert.match(source, /async function renderActionCenter\(\)/);
   for (const endpoint of ["/notifications", "/leaves?status=aangevraagd", "/expenses", "/facturen", "/workorders"]) {
     assert.match(source, new RegExp(endpoint.replace(/[?]/g, "\\?")));
