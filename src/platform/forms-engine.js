@@ -98,34 +98,31 @@ function assertSegregationOfDuties({ actor, submitter, priorActors = [] }) {
   }
 }
 
-// ── FORM-05 · veld- en classificatierechten (server-side, één poort) ─────────
-// Alleen beheerders zien standaard confidential/financieel/personal/special;
-// een expliciet view_permission op het veld ontsluit het rechten-gedreven (bv.
-// field.cost_price.view). Dezelfde beslissing geldt in UI, API, search, export en AI.
+// ── FORM-03/FORM-05 · veld- en classificatierechten (server-side, één poort) ──
+// Gedelegeerd aan het gedeelde veldrechten-register (field-permissions.js), zodat
+// het scherm, de API, search, export en AI EXACT dezelfde beslissing nemen (h3).
+// Kern: bijzondere categorieën + security zijn nooit automatisch zichtbaar (ook
+// niet voor beheerders); een expliciet view_permission op het veld ontsluit ze.
+const fieldPerms = require("./field-permissions");
 const ADMIN_ROLES = new Set(["tenant_admin", "super_admin"]);
-const OPEN_CLASSIFICATIONS = new Set(["public", "internal"]);
 
 function userHasPermission(user, permission) {
-  if (!permission) return false;
-  const perms = (user && user.permissions) || [];
-  return perms.includes("*") || perms.some(p => String(p).replace(/^(read:|team:|own:)/, "") === permission);
+  return fieldPerms.hasFieldPermission(user, permission);
 }
 
 /** Mag deze gebruiker het veld ZIEN? */
 function canViewField(user, field) {
-  if (!user) return false;
-  if (user.role === "super_admin") return true;
-  const cls = (field && field.data_classification) || "internal";
-  if (OPEN_CLASSIFICATIONS.has(cls)) return true;
-  if (field && field.view_permission && userHasPermission(user, field.view_permission)) return true;
-  return ADMIN_ROLES.has(user.role); // tenant_admin ziet gevoelige velden binnen zijn tenant
+  return fieldPerms.canViewClassified(user, {
+    classification: (field && field.data_classification) || "internal",
+    viewPermission: field && field.view_permission,
+  });
 }
 
 /** Mag deze gebruiker het veld WIJZIGEN? (systeemvelden nooit) */
 function canEditField(user, field) {
   if (!field || field.required === "system") return false;
   if (!canViewField(user, field)) return false;
-  if (field.edit_permission) return userHasPermission(user, field.edit_permission) || ADMIN_ROLES.has(user.role) || user.role === "super_admin";
+  if (field.edit_permission) return userHasPermission(user, field.edit_permission) || ADMIN_ROLES.has(user.role);
   return true;
 }
 
