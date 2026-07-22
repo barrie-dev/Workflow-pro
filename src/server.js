@@ -6479,6 +6479,17 @@ const httpServer = http.createServer(async (req, res) => {
         }
       }
 
+      // Strangler (finale CTO-directive · één engine): met FORMS_SOURCE=pg is de
+      // canonieke engine de waarheid en is het legacy work-os SCHRIJFPAD bevroren.
+      // Lezen blijft toegestaan voor historiek; schrijven wijst naar de nieuwe paden.
+      if (config.forms.source === "pg" && req.method !== "GET" &&
+          (action.startsWith("forms/templates") || action.startsWith("forms/instances"))) {
+        return sendJson(res, 410, {
+          ok: false, code: "FORMS_LEGACY_FROZEN",
+          error: "Het legacy formulier-schrijfpad is bevroren. Gebruik form-definitions/* en form-instances/* (canonieke Forms-engine).",
+        });
+      }
+
       // ── Work OS-kern · formulieren, taken, bestanden, communicatie (h39/DOC) ──
       // Formulierdesigner
       if (action === "forms/templates" && req.method === "GET") {
