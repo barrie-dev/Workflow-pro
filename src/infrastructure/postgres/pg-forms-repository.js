@@ -52,11 +52,12 @@ function makePgFormsRepository(pool, { domainCommands = null, objectStorage = nu
     return withTenant(pool, tenantId, async client => {
       const defId = id("fdef");
       await q(client, `INSERT INTO form_definitions
-        (id, tenant_id, company_id, key, name, form_type, category, status, domain_object, data_classification, retention_policy_id, attributes, created_by, updated_by)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$13)`,
+        (id, tenant_id, company_id, key, name, form_type, category, status, domain_object, data_classification, retention_policy_id, external_reference, source, attributes, created_by, updated_by)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$15)`,
         [defId, tenantId, payload.company_id || null, key, name, payload.form_type || "domain", payload.category || null,
          payload.status && engine.DEFINITION_STATUSES.includes(payload.status) ? payload.status : "available",
          payload.domain_object || null, payload.data_classification || "internal", payload.retention_policy_id || null,
+         payload.external_reference || null, payload.source || "ui",
          JSON.stringify(payload.attributes || {}), actor || null]);
       // Elke definitie start met een bewerkbare draft-versie 1.
       const verId = id("fver");
@@ -197,11 +198,11 @@ function makePgFormsRepository(pool, { domainCommands = null, objectStorage = nu
       // Universele metadata (h5): de instance erft classificatie + bewaarbeleid
       // van zijn definitie, tenzij expliciet strenger meegegeven.
       await q(client, `INSERT INTO form_instances
-        (id, tenant_id, company_id, definition_id, version_id, assignment_id, subject_type, subject_id, status, assigned_to, idempotency_key, source, data_classification, retention_policy_id, created_by, updated_by)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'draft',$9,$10,$11,$12,$13,$14,$14)`,
+        (id, tenant_id, company_id, definition_id, version_id, assignment_id, subject_type, subject_id, status, assigned_to, idempotency_key, source, external_reference, data_classification, retention_policy_id, created_by, updated_by)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'draft',$9,$10,$11,$12,$13,$14,$15,$15)`,
         [instId, tenantId, payload.company_id || null, def.id, ver.id, payload.assignment_id || null,
          payload.subject_type || null, payload.subject_id || null, payload.assigned_to || actor || null,
-         payload.idempotency_key || null, payload.source || "ui",
+         payload.idempotency_key || null, payload.source || "ui", payload.external_reference || null,
          payload.data_classification || def.data_classification || "internal",
          payload.retention_policy_id || def.retention_policy_id || null, actor || null]);
       await appendEvent(client, tenantId, { instanceId: instId, definitionId: def.id, eventType: "form.assigned", actor });
@@ -777,13 +778,71 @@ function makePgFormsRepository(pool, { domainCommands = null, objectStorage = nu
     });
   }
 
+  // ── CTO2-08 · legacy-cutover: external_reference-lookup + directe import ─────
+  // De external_reference draagt de legacy work-os-id, zodat migratie idempotent
+  // is en reconciliatie brondekking kan tellen.
+  async function externalRefs(tenantId) {
+    return withTenant(pool, tenantId, async client => {
+      const defs = (await q(client, `SELECT external_reference AS r, id FROM form_definitions WHERE tenant_id=$1 AND external_reference IS NOT NULL`, [tenantId])).rows;
+      const insts = (await q(client, `SELECT external_reference AS r, id FROM form_instances WHERE tenant_id=$1 AND external_reference IS NOT NULL`, [tenantId])).rows;
+      return {
+        definitions: new Map(defs.map(x => [x.r, x.id])),
+        instances: new Map(insts.map(x => [x.r, x.id])),
+      };
+    });
+  }
+
+  // Importeer een legacy-invulling FAITHFUL: schrijf de antwoorden direct en zet
+  // de doelstatus zonder de invul-state-machine te doorlopen (historische data
+  // wordt bewaard, niet opnieuw gevalideerd · h27 "unmapped values niet verloren").
+  async function importLegacyInstance(tenantId, { definitionId, externalReference, subjectType = null, subjectId = null, answers = {}, status = "completed", createdBy = null, submittedAt = null }, actor) {
+    return withTenant(pool, tenantId, async client => {
+      const def = (await q(client, `SELECT id, current_version FROM form_definitions WHERE tenant_id=$1 AND id=$2`, [tenantId, definitionId])).rows[0];
+      if (!def) throw err(404, "FORM_NOT_FOUND", "definitie niet gevonden");
+      if (!def.current_version) throw err(409, "FORM_NOT_PUBLISHED", "definitie niet gepubliceerd");
+      const ver = (await q(client, `SELECT id FROM form_versions WHERE tenant_id=$1 AND definition_id=$2 AND version_number=$3`, [tenantId, def.id, def.current_version])).rows[0];
+      const st = engine.INSTANCE_STATES.includes(status) ? status : "completed";
+      const instId = id("finst");
+      await q(client, `INSERT INTO form_instances
+        (id, tenant_id, definition_id, version_id, subject_type, subject_id, status, source, external_reference,
+         submitted_at, completed_at, created_by, updated_by)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,'migration',$8,$9,$10,$11,$11)`,
+        [instId, tenantId, def.id, ver.id, subjectType, subjectId, st, externalReference,
+         submittedAt, st === "completed" ? (submittedAt || new Date().toISOString()) : null, createdBy]);
+      const struct = await loadVersionStructure(client, tenantId, ver.id);
+      const known = new Set((struct.fields || []).map(f => f.field_key));
+      const unmapped = {};
+      for (const [key, val] of Object.entries(answers || {})) {
+        if (known.has(key)) {
+          await q(client, `INSERT INTO form_answers (id, tenant_id, instance_id, field_key, value_json) VALUES ($1,$2,$3,$4,$5)`,
+            [id("fans"), tenantId, instId, key, JSON.stringify(val)]);
+        } else {
+          unmapped[key] = val; // controlled migration note, niet verloren
+        }
+      }
+      // Typed index voor reporting (enkel bij afgeronde/ingediende invullingen).
+      if (st === "completed" || st === "submitted" || st === "signed") {
+        const stored = (await q(client, `SELECT field_key, value_json FROM form_answers WHERE tenant_id=$1 AND instance_id=$2`, [tenantId, instId])).rows;
+        const map = {}; for (const a of stored) map[a.field_key] = a.value_json;
+        for (const r of engine.buildAnswerIndex(struct.fields, map)) {
+          await q(client, `INSERT INTO form_answer_index (id, tenant_id, instance_id, field_key, value_text, value_num, value_date, reporting_allowed, ai_allowed)
+                           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+            [id("fidx"), tenantId, instId, r.field_key, r.value_text, r.value_num, r.value_date, r.reporting_allowed, r.ai_allowed]);
+        }
+      }
+      await appendEvent(client, tenantId, { instanceId: instId, definitionId: def.id, eventType: "legacy.imported", actor,
+        data: { externalReference, status: st, unmapped: Object.keys(unmapped).length ? unmapped : undefined } });
+      return { id: instId, status: st, unmapped: Object.keys(unmapped) };
+    });
+  }
+
   return {
     createDefinition, getDefinition, listDefinitions, setDefinitionStatus,
     setDraftStructure, publishVersion, createNewVersion,
     createInstance, getInstance, saveDraft, submitInstance, transition, actOnApproval, listEvents,
     createAssignment, listAssignments, revokeAssignment, resolveActivation, resolveExternalToken, captureSignature,
     seedStandardForms, applyDictionaryStructure, reportOnDefinition, applyRetention, processDomainEvent, setAttachmentStatus,
-    addAttachment, listAttachments, processReminders,
+    addAttachment, listAttachments, processReminders, externalRefs, importLegacyInstance,
   };
 }
 

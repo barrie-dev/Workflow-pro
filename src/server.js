@@ -1976,6 +1976,37 @@ const httpServer = http.createServer(async (req, res) => {
       return;
     }
 
+    // ── Forms-cutover (CTO2-08) · superadmin ─────────────────────────────────
+    // Inventaris + reconciliatie van de legacy work-os forms tegen de canonieke
+    // engine. Poortwacht: FORMS_SOURCE=pg is pas veilig als ready=true.
+    if (url.pathname === "/api/admin/forms-cutover" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "system");
+      if (!formsRepo) return sendJson(res, 503, { ok: false, code: "FORMS_REQUIRES_PG", error: "De canonieke Forms-capability vereist PostgreSQL." });
+      const formsCutover = require("./modules/forms-cutover");
+      const tid = url.searchParams.get("tenantId");
+      const tenants = tid ? [{ id: tid }] : (store.data.tenants || []);
+      const rows = [];
+      for (const t of tenants) rows.push(await formsCutover.reconcileForms({ store, repo: formsRepo, tenantId: t.id }));
+      const ready = rows.every(r => r.ready);
+      return sendJson(res, 200, { ok: true, formsSource: config.forms.source, ready, tenants: rows });
+    }
+    if (url.pathname === "/api/admin/forms-cutover/migrate" && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "system");
+      assertInteractiveUser(user);
+      if (!formsRepo) return sendJson(res, 503, { ok: false, code: "FORMS_REQUIRES_PG", error: "De canonieke Forms-capability vereist PostgreSQL." });
+      const formsCutover = require("./modules/forms-cutover");
+      const body = await readBody(req);
+      const tenants = body.tenantId ? [{ id: body.tenantId }] : (store.data.tenants || []);
+      const rows = [];
+      for (const t of tenants) rows.push(await formsCutover.migrateLegacyForms({ store, repo: formsRepo, tenantId: t.id, actor: user.email }));
+      store.audit({ actor: user.email, tenantId: null, area: "forms", action: "forms_cutover_migrate", detail: `${tenants.length} tenant(s)` });
+      return sendJson(res, 200, { ok: true, migrated: rows });
+    }
+
     // ── Commission ledger (CTO2-10) · superadmin ─────────────────────────────
     // Immutable commissie-grootboek: accrual per periode uit de centrale billing-
     // MRR, correctie via tegenboeking, payouts met goedkeuring/betaalreferentie,
