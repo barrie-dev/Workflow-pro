@@ -6463,7 +6463,7 @@ const httpServer = http.createServer(async (req, res) => {
         if (!formsRepo) return sendJson(res, 503, { ok: false, code: "FORMS_REQUIRES_PG", error: "De canonieke Forms-capability vereist PostgreSQL." });
         // Definitie- en toewijzingsbeheer vraagt settings; instance-schrijven volgt
         // de API-key-schrijfgate. Assignments zijn beheer, dus onder settings.
-        if (action.startsWith("form-definitions") && req.method !== "GET") { assertCan(user, "settings"); assertInteractiveUser(user); }
+        if ((action.startsWith("form-definitions") || action.startsWith("form-retention")) && req.method !== "GET") { assertCan(user, "settings"); assertInteractiveUser(user); }
         if (action.startsWith("form-instances") && req.method !== "GET") assertApiKeyWriteAllowed(user, req);
         const needsBody = req.method === "POST" || req.method === "PATCH" || req.method === "PUT";
         const body = needsBody ? await readBody(req) : {};

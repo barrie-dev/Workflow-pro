@@ -189,17 +189,21 @@ function makePgFormsRepository(pool, { domainCommands = null } = {}) {
   // ── Instances · lifecycle ────────────────────────────────────────────────────
   async function createInstance(tenantId, payload, actor) {
     return withTenant(pool, tenantId, async client => {
-      const def = (await q(client, `SELECT id, current_version FROM form_definitions WHERE tenant_id=$1 AND id=$2`, [tenantId, payload.definition_id])).rows[0];
+      const def = (await q(client, `SELECT id, current_version, data_classification, retention_policy_id FROM form_definitions WHERE tenant_id=$1 AND id=$2`, [tenantId, payload.definition_id])).rows[0];
       if (!def) throw err(404, "FORM_NOT_FOUND", "definitie niet gevonden");
       if (!def.current_version) throw err(409, "FORM_NOT_PUBLISHED", "Deze definitie heeft nog geen gepubliceerde versie.");
       const ver = (await q(client, `SELECT id FROM form_versions WHERE tenant_id=$1 AND definition_id=$2 AND version_number=$3`, [tenantId, def.id, def.current_version])).rows[0];
       const instId = id("finst");
+      // Universele metadata (h5): de instance erft classificatie + bewaarbeleid
+      // van zijn definitie, tenzij expliciet strenger meegegeven.
       await q(client, `INSERT INTO form_instances
-        (id, tenant_id, company_id, definition_id, version_id, assignment_id, subject_type, subject_id, status, assigned_to, idempotency_key, source, created_by, updated_by)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'draft',$9,$10,$11,$12,$12)`,
+        (id, tenant_id, company_id, definition_id, version_id, assignment_id, subject_type, subject_id, status, assigned_to, idempotency_key, source, data_classification, retention_policy_id, created_by, updated_by)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'draft',$9,$10,$11,$12,$13,$14,$14)`,
         [instId, tenantId, payload.company_id || null, def.id, ver.id, payload.assignment_id || null,
          payload.subject_type || null, payload.subject_id || null, payload.assigned_to || actor || null,
-         payload.idempotency_key || null, payload.source || "ui", actor || null]);
+         payload.idempotency_key || null, payload.source || "ui",
+         payload.data_classification || def.data_classification || "internal",
+         payload.retention_policy_id || def.retention_policy_id || null, actor || null]);
       await appendEvent(client, tenantId, { instanceId: instId, definitionId: def.id, eventType: "form.assigned", actor });
       return { id: instId, definitionId: def.id, versionId: ver.id, status: "draft" };
     });
@@ -458,12 +462,89 @@ function makePgFormsRepository(pool, { domainCommands = null } = {}) {
     return setDraftStructure(tenantId, defId, struct, actor);
   }
 
+  // ── F6 · reporting over de typed answer-index (h27-pariteit) ─────────────────
+  // Alleen velden met reporting_allowed=true komen in het rapport; AI-consumers
+  // geven aiConsumer=true mee en krijgen enkel ai_allowed=true. Dezelfde
+  // veldrechten als het scherm: gevoelige velden vallen weg voor wie ze niet mag
+  // zien (parity UI/API/search/export/AI, h3).
+  async function reportOnDefinition(tenantId, defId, { user = null, aiConsumer = false } = {}) {
+    return withTenant(pool, tenantId, async client => {
+      const def = (await q(client, `SELECT * FROM form_definitions WHERE tenant_id=$1 AND id=$2`, [tenantId, defId])).rows[0];
+      if (!def) throw err(404, "FORM_NOT_FOUND", "definitie niet gevonden");
+      // Veldenlijst van de actuele gepubliceerde versie voor de rechten-check.
+      const ver = (await q(client, `SELECT id FROM form_versions WHERE tenant_id=$1 AND definition_id=$2 AND published ORDER BY version_number DESC LIMIT 1`, [tenantId, defId])).rows[0];
+      const fields = ver ? (await q(client, `SELECT field_key, data_classification, view_permission FROM form_fields WHERE tenant_id=$1 AND version_id=$2`, [tenantId, ver.id])).rows : [];
+      const fieldByKey = new Map(fields.map(f => [f.field_key, f]));
+      const flag = aiConsumer ? "ai_allowed" : "reporting_allowed";
+      const rows = (await q(client,
+        `SELECT i.field_key, i.value_text, i.value_num, i.value_date, x.status, x.submitted_at
+         FROM form_answer_index i
+         JOIN form_instances x ON x.tenant_id = i.tenant_id AND x.id = i.instance_id
+         WHERE i.tenant_id=$1 AND x.definition_id=$2 AND i.${flag} = true`,
+        [tenantId, defId])).rows;
+      // Veldrechten: strip rijen waarvan de gebruiker het veld niet mag zien.
+      const visible = rows.filter(r => {
+        const f = fieldByKey.get(r.field_key);
+        return !f || engine.canViewField(user, f);
+      });
+      // Compacte aggregatie per veld (count + som voor numeriek).
+      const perField = {};
+      for (const r of visible) {
+        const agg = perField[r.field_key] || (perField[r.field_key] = { count: 0, sum: 0, numeric: false });
+        agg.count += 1;
+        if (r.value_num != null) { agg.numeric = true; agg.sum += Number(r.value_num); }
+      }
+      return { definitionId: defId, key: def.key, consumer: aiConsumer ? "ai" : "reporting", rows: visible, aggregates: perField };
+    });
+  }
+
+  // ── h27 · retentie-purge: pas het bewaarbeleid toe op afgesloten instances ───
+  // GDPR-lijn: nooit stil verwijderen. soft_archive → archived; anonymize →
+  // antwoorden + index leeg, skelet blijft; hard_delete → weg (CASCADE), met
+  // purge-event op de definitie. Legal hold (beleid of instance) blokkeert alles.
+  async function applyRetention(tenantId, { now = Date.now(), dryRun = false } = {}) {
+    const retention = require("../../modules/retention-policy");
+    return withTenant(pool, tenantId, async client => {
+      const policies = (await q(client, `SELECT * FROM retention_policies WHERE tenant_id=$1 AND active`, [tenantId])).rows;
+      const outcome = [];
+      for (const pol of policies) {
+        const insts = (await q(client,
+          `SELECT id, status, created_at, archived_at FROM form_instances
+           WHERE tenant_id=$1 AND retention_policy_id=$2
+             AND status IN ('completed','void','archived','rejected','withdrawn')`,
+          [tenantId, pol.id])).rows;
+        const { eligible, strategy } = retention.computePurgeSet(insts, pol, { now });
+        for (const inst of eligible) {
+          if (dryRun) { outcome.push({ policy: pol.key, instance: inst.id, strategy, applied: false }); continue; }
+          if (strategy === "soft_archive") {
+            if (inst.status !== "archived") {
+              await q(client, `UPDATE form_instances SET status='archived', archived_at=now(), version=version+1 WHERE tenant_id=$1 AND id=$2`, [tenantId, inst.id]);
+              await appendEvent(client, tenantId, { instanceId: inst.id, eventType: "retention.archived", data: { policy: pol.key } });
+            }
+          } else if (strategy === "anonymize") {
+            await q(client, `DELETE FROM form_answers WHERE tenant_id=$1 AND instance_id=$2`, [tenantId, inst.id]);
+            await q(client, `DELETE FROM form_answer_index WHERE tenant_id=$1 AND instance_id=$2`, [tenantId, inst.id]);
+            await q(client, `UPDATE form_instances SET status='archived', archived_at=COALESCE(archived_at, now()), version=version+1 WHERE tenant_id=$1 AND id=$2`, [tenantId, inst.id]);
+            await appendEvent(client, tenantId, { instanceId: inst.id, eventType: "retention.anonymized", data: { policy: pol.key } });
+          } else if (strategy === "hard_delete") {
+            // Event op de DEFINITIE (de instance verdwijnt met CASCADE).
+            const d = (await q(client, `SELECT definition_id FROM form_instances WHERE tenant_id=$1 AND id=$2`, [tenantId, inst.id])).rows[0];
+            await q(client, `DELETE FROM form_instances WHERE tenant_id=$1 AND id=$2`, [tenantId, inst.id]);
+            await appendEvent(client, tenantId, { definitionId: d ? d.definition_id : null, eventType: "retention.purged", data: { policy: pol.key, instanceId: inst.id, legalBasis: pol.legal_basis } });
+          }
+          outcome.push({ policy: pol.key, instance: inst.id, strategy, applied: true });
+        }
+      }
+      return { policies: policies.length, actions: outcome };
+    });
+  }
+
   return {
     createDefinition, getDefinition, listDefinitions, setDefinitionStatus,
     setDraftStructure, publishVersion, createNewVersion,
     createInstance, getInstance, saveDraft, submitInstance, transition, actOnApproval, listEvents,
     createAssignment, listAssignments, revokeAssignment, resolveActivation, resolveExternalToken, captureSignature,
-    seedStandardForms, applyDictionaryStructure,
+    seedStandardForms, applyDictionaryStructure, reportOnDefinition, applyRetention,
   };
 }
 

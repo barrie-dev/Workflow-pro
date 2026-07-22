@@ -124,6 +124,16 @@ async function handleFormsRoute(repo, { user, tenantId, method, action, body = {
     if (fAssignId && method === "DELETE") {
       return ok(200, { result: await repo.revokeAssignment(tenantId, fAssignId[2], actor) });
     }
+    // F6 · reporting over de typed answer-index; ?consumer=ai → enkel ai_allowed.
+    const fReport = action.match(/^form-definitions\/([^/]+)\/report$/);
+    if (fReport && method === "GET") {
+      const ctx = queryContext(req);
+      return ok(200, { report: await repo.reportOnDefinition(tenantId, fReport[1], { user, aiConsumer: ctx.consumer === "ai" }) });
+    }
+    // h27 · retentie-purge (dry-run met ?dryRun=1); beheer-actie.
+    if (action === "form-retention/apply" && method === "POST") {
+      return ok(200, { result: await repo.applyRetention(tenantId, { dryRun: body.dryRun === true }) });
+    }
 
     // ── Instances ──
     const iGet = action.match(/^form-instances\/([^/]+)$/);
@@ -178,7 +188,8 @@ async function handleFormsRoute(repo, { user, tenantId, method, action, body = {
 // Herkent of een actie een canonieke forms-route is (voor snelle dispatch in
 // server.js). Bewust NIET de legacy work-os paden forms/templates|instances.
 function isFormsAction(action) {
-  return action === "form-definitions" || action.startsWith("form-definitions/") || action.startsWith("form-instances/");
+  return action === "form-definitions" || action.startsWith("form-definitions/") ||
+    action.startsWith("form-instances/") || action.startsWith("form-retention/");
 }
 
 module.exports = { handleFormsRoute, isFormsAction };
