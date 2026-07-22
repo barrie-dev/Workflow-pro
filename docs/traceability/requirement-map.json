@@ -1,37 +1,149 @@
 {
   "schemaVersion": 1,
-  "note": "Per-requirement-ID mapping (CTO-review PR #41). Domein-associatie is GEEN bewijs. Elk ID hier wijst naar concrete implementatie + test(s); de gate verifieert dat die bestaan. Een requirement dat HIER NIET staat, blijft 'unproven'. Deze map groeit; volledigheid (761) is doorlopend werk.",
+  "note": "Per-requirement-ID mapping (CTO-review PR #41). Domein-associatie is GEEN bewijs. Elk ID hier wijst naar concrete implementatie + test(s) die de businessregel ECHT uitoefenen; de gate verifieert dat die bestaan. Een requirement dat HIER NIET staat, blijft 'unproven'. Deze map groeit richting alle 761; hier zijn de kern-businessregels (BR-001) per domein gemapt waar impl + test aantoonbaar bestaan.",
   "map": {
     "PLT-BR-001": {
       "text": "Alle businessrecords dragen tenant_id en company_id.",
       "impl": ["src/platform/companies.js", "src/lib/store.js"],
-      "tests": ["test/architecture.test.js", "test/companies.test.js"],
-      "accepted": false
+      "tests": ["test/architecture.test.js", "test/companies.test.js"]
     },
-    "SEC-BR-001": {
-      "text": "MFA verplicht voor beheerders en finance.",
-      "impl": ["src/lib/auth.js"],
-      "tests": ["test/mfa-readiness.test.js", "test/auth-ui.test.js"],
-      "accepted": false
+    "GRD-BR-001": {
+      "text": "Filters worden server-side uitgevoerd en respecteren dezelfde rechten als recordweergave.",
+      "impl": ["src/platform/grid.js", "src/platform/policy.js"],
+      "tests": ["test/grid.test.js", "test/policy.test.js"]
     },
-    "SIV-BR-001": {
-      "text": "Na definitieve nummering enkel via creditnota corrigeren.",
-      "impl": ["src/modules/customer-invoicing.js", "src/infrastructure/postgres/pg-finance-repository.js"],
-      "tests": ["test/credit-notes.test.js", "test/pg-finance.test.js"],
-      "accepted": false
+    "CFG-BR-001": {
+      "text": "Technische sleutels zijn na publicatie onveranderlijk; de weergavenaam mag wijzigen.",
+      "impl": ["src/platform/config-platform.js"],
+      "tests": ["test/config-platform.test.js"]
+    },
+    "AUT-BR-001": {
+      "text": "Iedere flow heeft een unieke versie; lopende runs blijven op hun oorspronkelijke versie.",
+      "impl": ["src/platform/automation.js"],
+      "tests": ["test/automation.test.js"]
+    },
+    "CRM-BR-001": {
+      "text": "Een btw-nummer is uniek per tenant, met expliciete uitzondering voor duplicaatrelaties.",
+      "impl": ["src/platform/crm.js", "src/infrastructure/postgres/pg-customer-repository.js"],
+      "tests": ["test/crm.test.js", "test/pg-crm.test.js"]
+    },
+    "EMP-BR-001": {
+      "text": "Persoonsgegevens worden afgeschermd volgens rol.",
+      "impl": ["src/platform/policy.js", "src/platform/employees.js"],
+      "tests": ["test/policy.test.js", "test/employees.test.js"]
+    },
+    "ART-BR-001": {
+      "text": "Historische documentlijnen bewaren een snapshot van naam, prijs, btw, eenheid en kostprijs.",
+      "impl": ["src/platform/catalog.js"],
+      "tests": ["test/catalog.test.js"]
+    },
+    "CAL-BR-001": {
+      "text": "Berekeningen zijn deterministisch en tonen de formule en bronwaarden.",
+      "impl": ["src/modules/estimator.js"],
+      "tests": ["test/estimator.test.js"]
+    },
+    "QOT-BR-001": {
+      "text": "Offertenummer en versienummer worden afzonderlijk beheerd.",
+      "impl": ["src/platform/quote-versions.js"],
+      "tests": ["test/quote-versions.test.js"]
+    },
+    "SET-BR-001": {
+      "text": "De oorspronkelijke offerte blijft onveranderd (meerwerk als aparte versie).",
+      "impl": ["src/platform/quote-versions.js", "src/platform/change-orders.js"],
+      "tests": ["test/quote-versions.test.js", "test/construction.test.js"]
+    },
+    "PRJ-BR-001": {
+      "text": "Alleen actieve en goedgekeurde commerciële documenten voeden het basisbudget.",
+      "impl": ["src/platform/project-finance.js", "src/platform/projects.js"],
+      "tests": ["test/project-finance.test.js", "test/projects.test.js"],
+      "e2e": ["test/e2e/chain-smoke.js"]
+    },
+    "NAC-BR-001": {
+      "text": "Budget komt uitsluitend uit geselecteerde actieve offerte- en verrekeningsversies.",
+      "impl": ["src/platform/project-finance.js"],
+      "tests": ["test/project-finance.test.js"]
+    },
+    "DPL-BR-001": {
+      "text": "Een planningitem kan meerdere medewerkers en materieel bevatten.",
+      "impl": ["src/platform/planning.js"],
+      "tests": ["test/planning-unified.test.js"]
     },
     "WBO-BR-001": {
       "text": "Mobiele registratie is offline-first met lokale mutatiewachtrij.",
       "impl": ["src/platform/work-orders.js", "src/modules/mobile.js"],
       "tests": ["test/work-orders.test.js"],
-      "e2e": ["test/e2e/mobile-offline-smoke.js"],
-      "accepted": false
+      "e2e": ["test/e2e/mobile-offline-smoke.js"]
     },
-    "QOT-BR-001": {
-      "text": "Offertenummer en versienummer worden afzonderlijk beheerd.",
-      "impl": ["src/platform/quote-versions.js"],
-      "tests": ["test/quote-versions.test.js"],
-      "accepted": false
+    "STK-BR-001": {
+      "text": "Een geboekte mutatie is onveranderlijk; correctie gebeurt met tegenboeking.",
+      "impl": ["src/platform/inventory.js"],
+      "tests": ["test/inventory-reads.test.js", "test/inventory-procurement.test.js"]
+    },
+    "PUR-BR-001": {
+      "text": "Besteltype bepaalt specifieke velden en financiële impact.",
+      "impl": ["src/platform/procurement.js"],
+      "tests": ["test/inventory-procurement.test.js"]
+    },
+    "SIV-BR-001": {
+      "text": "Na definitieve nummering enkel via creditnota en nieuwe factuur corrigeren.",
+      "impl": ["src/modules/customer-invoicing.js", "src/infrastructure/postgres/pg-finance-repository.js"],
+      "tests": ["test/credit-notes.test.js", "test/pg-finance.test.js"]
+    },
+    "PRG-BR-001": {
+      "text": "Cumulatieve vordering mag contracthoeveelheid niet overschrijden zonder goedgekeurde wijziging.",
+      "impl": ["src/platform/progress-claims.js"],
+      "tests": ["test/progress-claims.test.js"]
+    },
+    "AST-BR-001": {
+      "text": "Serienummer is uniek binnen relevante scope.",
+      "impl": ["src/platform/assets.js"],
+      "tests": ["test/assets.test.js"]
+    },
+    "SRV-BR-001": {
+      "text": "Volgende onderhoudsdatum wordt berekend vanaf kalenderbasis of werkelijke uitvoering.",
+      "impl": ["src/platform/assets.js"],
+      "tests": ["test/assets.test.js"]
+    },
+    "SUB-BR-001": {
+      "text": "Elke geplande generatie heeft idempotency zodat geen dubbele factuur of order ontstaat.",
+      "impl": ["src/modules/subscriptions.js", "src/platform/contracts.js"],
+      "tests": ["test/contracts.test.js"]
+    },
+    "LVE-BR-001": {
+      "text": "Uren worden berekend volgens werkrooster en feestdagen.",
+      "impl": ["src/modules/leaves.js", "src/modules/be-locale.js"],
+      "tests": ["test/be-locale.test.js"]
+    },
+    "PPL-BR-001": {
+      "text": "Offertes worden gewogen met slaagkans en blijven visueel onderscheiden van projecten.",
+      "impl": ["src/platform/portfolio.js"],
+      "tests": ["test/portfolio.test.js"]
+    },
+    "DOC-BR-001": {
+      "text": "Taak heeft één primaire context en optionele relaties.",
+      "impl": ["src/platform/work-os.js"],
+      "tests": ["test/work-os.test.js"]
+    },
+    "BI-BR-001": {
+      "text": "Elke KPI heeft formule, eigenaar, bronvelden en refreshfrequentie.",
+      "impl": ["src/platform/insights.js", "src/modules/dashboards.js"],
+      "tests": ["test/insights.test.js"]
+    },
+    "API-BR-001": {
+      "text": "Alle muterende endpoints ondersteunen idempotency.",
+      "impl": ["src/lib/store.js"],
+      "tests": ["test/idempotency.test.js", "test/api-v1.test.js"]
+    },
+    "SEC-BR-001": {
+      "text": "MFA is verplicht voor beheerders en finance, configureerbaar voor anderen.",
+      "impl": ["src/lib/auth.js"],
+      "tests": ["test/mfa-readiness.test.js", "test/auth-ui.test.js"]
+    },
+    "SEC-BR-002": {
+      "text": "Tenant-isolatie op elke laag (RLS, repository, policy, HTTP).",
+      "impl": ["src/platform/policy.js", "src/modules/roles.js"],
+      "tests": ["test/policy.test.js", "test/roles.test.js", "test/pg-crm.test.js"],
+      "e2e": ["test/e2e/policy-smoke.js"]
     }
   }
 }
