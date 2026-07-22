@@ -480,7 +480,7 @@ const formsRepo = (() => {
        payload.email || null, payload.phone || null, payload.role || null, payload.is_primary === true, actor || null]);
     return { domainObject: "contact", domainId: cid, customerId };
   });
-  return makePgFormsRepository(pool, { domainCommands });
+  return makePgFormsRepository(pool, { domainCommands, objectStorage });
 })();
 
 /**
@@ -1430,6 +1430,32 @@ const httpServer = http.createServer(async (req, res) => {
       return;
     }
 
+    // ── Publieke formulier-ondertekening (CTO2-05) ────────────────────────────
+    // Extern tekenen kan UITSLUITEND met een geldig, niet-verlopen en niet-
+    // ingetrokken assignment-token; de identiteit (token → assignment), het IP,
+    // de user-agent en de inhouds-hash worden aan het signature-evidence gebonden.
+    if (url.pathname === "/api/public/form-sign" && req.method === "POST") {
+      if (!formsRepo) return sendJson(res, 503, { ok: false, code: "FORMS_REQUIRES_PG", error: "Formulieren vereisen PostgreSQL." });
+      const body = await readBody(req);
+      const tid = String(body.tenantId || "").trim();
+      const instId = String(body.instanceId || "").trim();
+      const token = String(body.token || "").trim();
+      if (!tid || !instId || !token) return sendJson(res, 400, { ok: false, error: "tenantId, instanceId en token zijn verplicht" });
+      const inst = await formsRepo.getInstance(tid, instId);
+      if (!inst) return sendJson(res, 403, { ok: false, code: "FORMS_FORBIDDEN", error: "Geen toegang." });
+      const grant = await formsRepo.resolveExternalToken(tid, inst.definition_id, token);
+      if (!grant) return sendJson(res, 403, { ok: false, code: "SIGN_TOKEN_INVALID", error: "Ongeldig, verlopen of ingetrokken ondertekentoken." });
+      const r = await formsRepo.captureSignature(tid, instId, {
+        signer_name: body.signerName || body.signer_name,
+        transitionToSigned: true,
+        evidence: {
+          type: "external_token", assignmentId: grant.id, scopeId: grant.scope_id,
+          ip: String(req.socket && req.socket.remoteAddress || ""), userAgent: String(req.headers["user-agent"] || "").slice(0, 200),
+        },
+      }, `extern:${grant.scope_id || grant.id}`);
+      return sendJson(res, 200, { ok: true, result: r });
+    }
+
     // ── Publieke KBO-opzoeking (BTW-autofill op de registratiepagina) ─────────
     if (url.pathname === "/api/public/kbo" && req.method === "GET") {
       const vat = String(url.searchParams.get("vat") || "").trim();
@@ -2141,7 +2167,7 @@ const httpServer = http.createServer(async (req, res) => {
       const allUsers = store.data.users;
       // CTO-09: MRR uit de centrale billingbron, geen vaste prijsconstanten.
       let mrr = 0;
-      tenants.filter(t => t.status === "active").forEach(t => { mrr += tenantMrr(store, t); });
+      tenants.filter(t => t.status === "active").forEach(t => { mrr += tenantMrr(store, t) || 0; });
       mrr = Math.round(mrr * 100) / 100;
       const errorCount = (store.data.errorEvents || []).filter(e => {
         const d = new Date(e.at || 0);
@@ -6492,15 +6518,21 @@ const httpServer = http.createServer(async (req, res) => {
       // de strangler unificeert die later. De handler bezit rechten + veldredactie.
       if (formsApi.isFormsAction(action)) {
         if (!formsRepo) return sendJson(res, 503, { ok: false, code: "FORMS_REQUIRES_PG", error: "De canonieke Forms-capability vereist PostgreSQL." });
-        // Definitie- en toewijzingsbeheer vraagt settings; instance-schrijven volgt
-        // de API-key-schrijfgate. Assignments zijn beheer, dus onder settings.
-        if ((action.startsWith("form-definitions") || action.startsWith("form-retention") || action.startsWith("form-reminders")) && req.method !== "GET") { assertCan(user, "settings"); assertInteractiveUser(user); }
-        if (action.startsWith("form-instances") && req.method !== "GET") assertApiKeyWriteAllowed(user, req);
+        // CTO2-01/02: de rechten (action + record-scope) leven in de handler zelf
+        // (forms-authz) · GEEN blanket settings-gate meer: die maakte starten te
+        // streng en muteren te ruim. Hier alleen de transportgates: geen API-key-
+        // schrijfacties zonder toestemming, en beheer alleen interactief.
+        if (req.method !== "GET") assertApiKeyWriteAllowed(user, req);
+        if ((action.startsWith("form-retention") || action.startsWith("form-reminders")) && req.method !== "GET") assertInteractiveUser(user);
         const needsBody = req.method === "POST" || req.method === "PATCH" || req.method === "PUT";
         const body = needsBody ? await readBody(req) : {};
         const formsTenant = (store.data.tenants || []).find(t => t.id === tenantId) || null;
         const entitlements = formsTenant ? resolveTenantModules(store, formsTenant) : [];
-        const r = await formsApi.handleFormsRoute(formsRepo, { user, tenantId, method: req.method, action, body, req, entitlements });
+        // Autorisatiecontext: e-mails van teamgenoten voor de team-scope.
+        const teamEmails = new Set(user && user.teamId
+          ? (store.data.users || []).filter(u => u.tenantId === tenantId && u.teamId === user.teamId).map(u => u.email)
+          : []);
+        const r = await formsApi.handleFormsRoute(formsRepo, { user, tenantId, method: req.method, action, body, req, entitlements, ctx: { teamEmails } });
         if (r) {
           if (r.headers) for (const [k, v] of Object.entries(r.headers)) res.setHeader(k, v);
           if (r.status >= 200 && r.status < 300 && req.method !== "GET") {

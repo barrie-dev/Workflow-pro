@@ -16,7 +16,7 @@ function sha256(v) { return crypto.createHash("sha256").update(String(v)).digest
 function clean(v) { return String(v == null ? "" : v).trim(); }
 function err(status, code, message) { const e = new Error(message); e.status = status; e.code = code; return e; }
 
-function makePgFormsRepository(pool, { domainCommands = null } = {}) {
+function makePgFormsRepository(pool, { domainCommands = null, objectStorage = null } = {}) {
   const q = (client, sql, params) => client.query(sql, params);
   const { dispatchMomentFor } = require("../../platform/forms-domain-commands");
 
@@ -222,12 +222,46 @@ function makePgFormsRepository(pool, { domainCommands = null } = {}) {
   }
 
   // Sla concept-antwoorden op (alleen in bewerkbare status, met If-Match).
-  async function saveDraft(tenantId, instId, { answers = {}, expectedVersion = null }, actor) {
+  // CTO2-03 · write-filtering: elke aangeboden answer key wordt getoetst aan de
+  // gepubliceerde structuur. Onbekende keys → 422; velden die de gebruiker niet
+  // mag bewerken (hidden/system/gevoelig zonder recht) → 422. Alleen de
+  // gefilterde set bereikt opslag, index, reporting én domeincommands.
+  async function assertWritableAnswers(client, tenantId, inst, answers, user) {
+    const keys = Object.keys(answers || {});
+    if (!keys.length) return;
+    const struct = await loadVersionStructure(client, tenantId, inst.version_id);
+    const byKey = new Map((struct.fields || []).map(f => [f.field_key, f]));
+    const fieldErrors = {};
+    for (const key of keys) {
+      const field = byKey.get(key);
+      if (!field) { fieldErrors[key] = "onbekend veld"; continue; }
+      if (user && !engine.canEditField(user, field)) fieldErrors[key] = "veld niet bewerkbaar";
+      else if (!user && field.required === "system") fieldErrors[key] = "veld niet bewerkbaar";
+    }
+    if (Object.keys(fieldErrors).length) {
+      const e = err(422, "FIELDS_NOT_WRITABLE", "Eén of meer velden zijn onbekend of niet bewerkbaar.");
+      e.fieldErrors = fieldErrors;
+      throw e;
+    }
+  }
+
+  // CTO2-06 · afronding vraagt schone bijlagen: submit/sign/completion blokkeren
+  // zolang een bijlage niet door de malwarecontrole is (pending of infected).
+  async function assertAttachmentsClean(client, tenantId, instId) {
+    const bad = (await q(client, `SELECT count(*)::int AS n FROM form_attachments
+                                  WHERE tenant_id=$1 AND instance_id=$2 AND malware_status <> 'clean'`, [tenantId, instId])).rows[0];
+    if (bad && bad.n > 0) {
+      throw err(409, "ATTACHMENTS_NOT_CLEAN", `${bad.n} bijlage(n) zonder groene malwarecontrole · afronden geblokkeerd.`);
+    }
+  }
+
+  async function saveDraft(tenantId, instId, { answers = {}, expectedVersion = null, user = null }, actor) {
     return withTenant(pool, tenantId, async client => {
       const inst = (await q(client, `SELECT * FROM form_instances WHERE tenant_id=$1 AND id=$2`, [tenantId, instId])).rows[0];
       if (!inst) throw err(404, "INSTANCE_NOT_FOUND", "instance niet gevonden");
       engine.assertIfMatch(inst.version, expectedVersion);
       if (!engine.isEditable(inst.status)) throw err(409, "INSTANCE_NOT_EDITABLE", `In status ${inst.status} zijn antwoorden niet bewerkbaar.`);
+      await assertWritableAnswers(client, tenantId, inst, answers, user);
       for (const [key, val] of Object.entries(answers)) {
         await q(client, `INSERT INTO form_answers (id, tenant_id, instance_id, field_key, value_json)
                          VALUES ($1,$2,$3,$4,$5)
@@ -241,7 +275,7 @@ function makePgFormsRepository(pool, { domainCommands = null } = {}) {
   }
 
   // Idempotente submit: valideert, bouwt de typed index, en zet draft→submitted.
-  async function submitInstance(tenantId, instId, { answers = null, idempotencyKey = null } = {}, actor) {
+  async function submitInstance(tenantId, instId, { answers = null, idempotencyKey = null, user = null } = {}, actor) {
     return withTenant(pool, tenantId, async client => {
       const inst = (await q(client, `SELECT * FROM form_instances WHERE tenant_id=$1 AND id=$2`, [tenantId, instId])).rows[0];
       if (!inst) throw err(404, "INSTANCE_NOT_FOUND", "instance niet gevonden");
@@ -251,6 +285,8 @@ function makePgFormsRepository(pool, { domainCommands = null } = {}) {
         // Reeds ingediend en geen matchende sleutel → geen dubbele submit.
         if (inst.status === "submitted") return { id: instId, status: inst.status, idempotent: true };
       }
+      if (answers) await assertWritableAnswers(client, tenantId, inst, answers, user);
+      await assertAttachmentsClean(client, tenantId, instId);
       if (answers) {
         for (const [key, val] of Object.entries(answers)) {
           await q(client, `INSERT INTO form_answers (id, tenant_id, instance_id, field_key, value_json) VALUES ($1,$2,$3,$4,$5)
@@ -290,6 +326,8 @@ function makePgFormsRepository(pool, { domainCommands = null } = {}) {
       if (!inst) throw err(404, "INSTANCE_NOT_FOUND", "instance niet gevonden");
       engine.assertIfMatch(inst.version, expectedVersion);
       engine.assertTransition(inst.status, toStatus);
+      // CTO2-06: afronden/tekenen vraagt schone bijlagen.
+      if (toStatus === "completed" || toStatus === "signed") await assertAttachmentsClean(client, tenantId, instId);
       const sets = ["status=$3", "version=version+1", "updated_by=$4"];
       if (toStatus === "completed") sets.push("completed_at=now()");
       if (toStatus === "archived") sets.push("archived_at=now()");
@@ -302,7 +340,7 @@ function makePgFormsRepository(pool, { domainCommands = null } = {}) {
   // Goedkeuringsactie met segregation of duties én het h26-beleid: serial,
   // parallel en any-of/all-of via attributes.approval_policy op de definitie.
   // Zonder beleid: één goedkeuring volstaat (ongewijzigd gedrag).
-  async function actOnApproval(tenantId, instId, { stepNo = 1, decision, note = null, actorRole = null }, actor) {
+  async function actOnApproval(tenantId, instId, { stepNo = 1, decision, note = null, actorRole = null, hasApproveRight = false }, actor) {
     return withTenant(pool, tenantId, async client => {
       const inst = (await q(client, `SELECT * FROM form_instances WHERE tenant_id=$1 AND id=$2`, [tenantId, instId])).rows[0];
       if (!inst) throw err(404, "INSTANCE_NOT_FOUND", "instance niet gevonden");
@@ -322,6 +360,14 @@ function makePgFormsRepository(pool, { domainCommands = null } = {}) {
         if (!engine.actorAllowedForStep(stepDef, actor, actorRole)) {
           throw err(403, "APPROVER_NOT_ALLOWED", "Je staat niet in de goedkeurderslijst voor deze stap.");
         }
+      }
+      // CTO2-04 · geen beleid, of een stap zonder goedkeurderslijst, verleent
+      // NOOIT goedkeuringsrecht aan "elke andere actor": dan is het expliciete
+      // forms.approve-recht (door de router vastgesteld) verplicht. Een stap
+      // MET lijst is zelf de expliciete toekenning.
+      const stepHasList = !!(stepDef && Array.isArray(stepDef.approvers) && stepDef.approvers.length);
+      if (!stepHasList && !hasApproveRight) {
+        throw err(403, "APPROVAL_RIGHT_REQUIRED", "Goedkeuren vereist het forms.approve-recht.");
       }
       const prior = existing.filter(a => Number(a.step_no) === Number(effectiveStep)).map(a => a.actor);
       engine.assertSegregationOfDuties({ actor, submitter: inst.created_by, priorActors: prior });
@@ -432,24 +478,40 @@ function makePgFormsRepository(pool, { domainCommands = null } = {}) {
 
   // Leg een handtekening vast, gebonden aan de instance-versie + een inhouds-hash
   // (integriteit). Optioneel schuift de instance door naar 'signed' via de machine.
-  async function captureSignature(tenantId, instId, { signer_name, signer_ref = null, transitionToSigned = true }, actor) {
+  // CTO2-05 · handtekening met VERPLICHTE identiteitsbinding: `evidence` zegt
+  // wie werkelijk tekent · { type: "internal", permission, actor } (router-gegate
+  // forms.sign) of { type: "external_token", assignmentId, ip, userAgent }
+  // (publiek pad, uitsluitend na resolveExternalToken). Zonder evidence: 403.
+  async function captureSignature(tenantId, instId, { signer_name, signer_ref = null, transitionToSigned = true, evidence = null }, actor) {
     if (!clean(signer_name)) throw err(400, "SIGNER_REQUIRED", "signer_name is verplicht");
+    if (!evidence || !["internal", "external_token"].includes(evidence.type)) {
+      throw err(403, "SIGNATURE_EVIDENCE_REQUIRED", "Ondertekenen vereist een geverifieerde identiteit (intern recht of geldig extern token).");
+    }
     return withTenant(pool, tenantId, async client => {
       const inst = (await q(client, `SELECT * FROM form_instances WHERE tenant_id=$1 AND id=$2`, [tenantId, instId])).rows[0];
       if (!inst) throw err(404, "INSTANCE_NOT_FOUND", "instance niet gevonden");
+      await assertAttachmentsClean(client, tenantId, instId); // CTO2-06
       const boundVer = (await q(client, `SELECT version_number FROM form_versions WHERE tenant_id=$1 AND id=$2`, [tenantId, inst.version_id])).rows[0];
       const stored = (await q(client, `SELECT field_key, value_json FROM form_answers WHERE tenant_id=$1 AND instance_id=$2 ORDER BY field_key`, [tenantId, instId])).rows;
       const boundHash = sha256(JSON.stringify(stored));
+      // signer_ref draagt de verificatiebron: het assignment-id bij extern token,
+      // anders de opgegeven referentie (interne ondertekenaar = actor zelf).
+      const ref = evidence.type === "external_token" ? `token:${evidence.assignmentId}` : (signer_ref || actor);
       await q(client, `INSERT INTO form_signatures (id, tenant_id, instance_id, signer_name, signer_ref, bound_version, bound_hash)
                        VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-        [id("fsig"), tenantId, instId, clean(signer_name), signer_ref, boundVer ? boundVer.version_number : null, boundHash]);
+        [id("fsig"), tenantId, instId, clean(signer_name), ref, boundVer ? boundVer.version_number : null, boundHash]);
       let status = inst.status;
       if (transitionToSigned && engine.canTransition(inst.status, "signed")) {
         await q(client, `UPDATE form_instances SET status='signed', version=version+1, updated_by=$3 WHERE tenant_id=$1 AND id=$2`, [tenantId, instId, actor || null]);
         status = "signed";
       }
-      await appendEvent(client, tenantId, { instanceId: instId, eventType: "signed", actor, data: { signer: clean(signer_name), boundHash } });
-      return { id: instId, status, boundHash, signer: clean(signer_name) };
+      // Volledig evidence in de lifecycle-log: wie, waarmee geverifieerd, vanaf
+      // waar (ip/user-agent bij extern), op welke inhoud (hash) en versie.
+      await appendEvent(client, tenantId, { instanceId: instId, eventType: "signed", actor, data: {
+        signer: clean(signer_name), signerRef: ref, boundHash,
+        boundVersion: boundVer ? boundVer.version_number : null, evidence,
+      } });
+      return { id: instId, status, boundHash, signer: clean(signer_name), signerRef: ref };
     });
   }
 
@@ -541,14 +603,20 @@ function makePgFormsRepository(pool, { domainCommands = null } = {}) {
   // GDPR-lijn: nooit stil verwijderen. soft_archive → archived; anonymize →
   // antwoorden + index leeg, skelet blijft; hard_delete → weg (CASCADE), met
   // purge-event op de definitie. Legal hold (beleid of instance) blokkeert alles.
-  async function applyRetention(tenantId, { now = Date.now(), dryRun = false } = {}) {
+  async function applyRetention(tenantId, { now = Date.now(), dryRun = false, executor = null, objectStorage: storageOverride = null } = {}) {
+    const storage = storageOverride || objectStorage;
     const retention = require("../../modules/retention-policy");
-    return withTenant(pool, tenantId, async client => {
+    const jobId = id("rjob");
+    // Verzamel te wissen object keys BINNEN de transactie; wis ze in storage pas
+    // NA de commit (best-effort, per key gerapporteerd) · CTO2-07.
+    const storageDeletes = [];
+    const result = await withTenant(pool, tenantId, async client => {
       const policies = (await q(client, `SELECT * FROM retention_policies WHERE tenant_id=$1 AND active`, [tenantId])).rows;
       const outcome = [];
       for (const pol of policies) {
+        // legal_hold van de INSTANCE leest mee (CTO2-07: kolom bestaat nu echt).
         const insts = (await q(client,
-          `SELECT id, status, created_at, archived_at FROM form_instances
+          `SELECT id, status, created_at, archived_at, legal_hold FROM form_instances
            WHERE tenant_id=$1 AND retention_policy_id=$2
              AND status IN ('completed','void','archived','rejected','withdrawn')`,
           [tenantId, pol.id])).rows;
@@ -558,24 +626,50 @@ function makePgFormsRepository(pool, { domainCommands = null } = {}) {
           if (strategy === "soft_archive") {
             if (inst.status !== "archived") {
               await q(client, `UPDATE form_instances SET status='archived', archived_at=now(), version=version+1 WHERE tenant_id=$1 AND id=$2`, [tenantId, inst.id]);
-              await appendEvent(client, tenantId, { instanceId: inst.id, eventType: "retention.archived", data: { policy: pol.key } });
+              await appendEvent(client, tenantId, { instanceId: inst.id, eventType: "retention.archived", actor: executor, data: { policy: pol.key, jobId } });
             }
           } else if (strategy === "anonymize") {
+            // VOLLEDIG anonimiseren (CTO2-07): antwoorden, index, bijlagen
+            // (incl. storage-objecten), ondertekenaargegevens en actor-sporen.
+            const atts = (await q(client, `SELECT object_key FROM form_attachments WHERE tenant_id=$1 AND instance_id=$2`, [tenantId, inst.id])).rows;
+            for (const a of atts) storageDeletes.push(a.object_key);
             await q(client, `DELETE FROM form_answers WHERE tenant_id=$1 AND instance_id=$2`, [tenantId, inst.id]);
             await q(client, `DELETE FROM form_answer_index WHERE tenant_id=$1 AND instance_id=$2`, [tenantId, inst.id]);
-            await q(client, `UPDATE form_instances SET status='archived', archived_at=COALESCE(archived_at, now()), version=version+1 WHERE tenant_id=$1 AND id=$2`, [tenantId, inst.id]);
-            await appendEvent(client, tenantId, { instanceId: inst.id, eventType: "retention.anonymized", data: { policy: pol.key } });
+            await q(client, `DELETE FROM form_attachments WHERE tenant_id=$1 AND instance_id=$2`, [tenantId, inst.id]);
+            await q(client, `UPDATE form_signatures SET signer_name='geanonimiseerd', signer_ref=NULL WHERE tenant_id=$1 AND instance_id=$2`, [tenantId, inst.id]);
+            await q(client, `UPDATE form_events SET actor='geanonimiseerd', data='{}'::jsonb WHERE tenant_id=$1 AND instance_id=$2 AND event_type <> 'retention.anonymized'`, [tenantId, inst.id]);
+            await q(client, `UPDATE form_instances SET status='archived', archived_at=COALESCE(archived_at, now()),
+                             assigned_to=NULL, created_by='geanonimiseerd', updated_by='geanonimiseerd', notes_internal=NULL,
+                             version=version+1 WHERE tenant_id=$1 AND id=$2`, [tenantId, inst.id]);
+            await appendEvent(client, tenantId, { instanceId: inst.id, eventType: "retention.anonymized", actor: executor, data: { policy: pol.key, jobId, attachments: atts.length } });
           } else if (strategy === "hard_delete") {
+            // CTO2-07: hard verwijderen ZONDER juridische grondslag is verboden.
+            if (!clean(pol.legal_basis)) {
+              outcome.push({ policy: pol.key, instance: inst.id, strategy, applied: false, reason: "LEGAL_BASIS_REQUIRED" });
+              continue;
+            }
+            const atts = (await q(client, `SELECT object_key FROM form_attachments WHERE tenant_id=$1 AND instance_id=$2`, [tenantId, inst.id])).rows;
+            for (const a of atts) storageDeletes.push(a.object_key);
             // Event op de DEFINITIE (de instance verdwijnt met CASCADE).
             const d = (await q(client, `SELECT definition_id FROM form_instances WHERE tenant_id=$1 AND id=$2`, [tenantId, inst.id])).rows[0];
             await q(client, `DELETE FROM form_instances WHERE tenant_id=$1 AND id=$2`, [tenantId, inst.id]);
-            await appendEvent(client, tenantId, { definitionId: d ? d.definition_id : null, eventType: "retention.purged", data: { policy: pol.key, instanceId: inst.id, legalBasis: pol.legal_basis } });
+            await appendEvent(client, tenantId, { definitionId: d ? d.definition_id : null, eventType: "retention.purged", actor: executor,
+              data: { policy: pol.key, instanceId: inst.id, legalBasis: pol.legal_basis, jobId, attachments: atts.length } });
           }
           outcome.push({ policy: pol.key, instance: inst.id, strategy, applied: true });
         }
       }
-      return { policies: policies.length, actions: outcome };
+      return { jobId, executor, policies: policies.length, actions: outcome };
     });
+    // Storage-objecten wissen ná de commit; resultaat per key in het rapport.
+    result.storage = { requested: storageDeletes.length, deleted: 0, failed: [] };
+    if (!dryRun && storage && typeof storage.delete === "function") {
+      for (const key of storageDeletes) {
+        try { await storage.delete(key); result.storage.deleted++; }
+        catch (e) { result.storage.failed.push({ key, error: e.message }); }
+      }
+    }
+    return result;
   }
 
   // ── h26 · assignment-triggers: domeinevent → automatische form-instance ─────
@@ -610,8 +704,7 @@ function makePgFormsRepository(pool, { domainCommands = null } = {}) {
   // Metadata in PostgreSQL, het object zelf in object storage (h4); de aanroeper
   // levert de object_key uit de ObjectStorage-poort. Validatie tegen het
   // definitie-beleid (attributes.mobile_policy) binnen de platformlimieten.
-  async function addAttachment(tenantId, instId, { field_key = null, object_key, file_name = null, mime_type = null, size_bytes = 0, gps = null }, actor) {
-    if (!clean(object_key)) throw err(400, "OBJECT_KEY_REQUIRED", "object_key is verplicht");
+  async function addAttachment(tenantId, instId, { field_key = null, file_name = null, mime_type = null, size_bytes = 0, gps = null }, actor) {
     return withTenant(pool, tenantId, async client => {
       const inst = (await q(client, `SELECT * FROM form_instances WHERE tenant_id=$1 AND id=$2`, [tenantId, instId])).rows[0];
       if (!inst) throw err(404, "INSTANCE_NOT_FOUND", "instance niet gevonden");
@@ -621,12 +714,28 @@ function makePgFormsRepository(pool, { domainCommands = null } = {}) {
       const check = engine.validateAttachment(policy, { mime_type, size_bytes, gps });
       if (!check.ok) { const e = err(422, "ATTACHMENT_INVALID", "Bijlage voldoet niet aan het beleid."); e.fieldErrors = check.errors; throw e; }
       const attId = id("fatt");
+      // CTO2-06 · de SERVER geeft de object key uit (tenant/instance-eigendom in
+      // het pad, nooit een client-gekozen key): upload-intent-patroon.
+      const safeName = String(file_name || "bestand").replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 80);
+      const objectKey = `forms/${tenantId}/${instId}/${attId}_${safeName}`;
       await q(client, `INSERT INTO form_attachments (id, tenant_id, instance_id, field_key, object_key, file_name, mime_type, size_bytes, malware_status, created_by)
                        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'pending',$9)`,
-        [attId, tenantId, instId, field_key, clean(object_key), file_name, mime_type, Number(size_bytes) || 0, actor || null]);
+        [attId, tenantId, instId, field_key, objectKey, file_name, mime_type, Number(size_bytes) || 0, actor || null]);
       // GPS-stempel in het lifecycle-event (audit); de bijlage-rij blijft canoniek.
       await appendEvent(client, tenantId, { instanceId: instId, eventType: "attachment.added", actor, data: { attachmentId: attId, fieldKey: field_key, gps: gps || null } });
-      return { id: attId, instanceId: instId, malware_status: "pending" };
+      // De uploader krijgt de uitgegeven key éénmalig terug (upload-doel).
+      return { id: attId, instanceId: instId, object_key: objectKey, malware_status: "pending" };
+    });
+  }
+
+  // Malwarestatus zetten (scanner/integratie of beheer) · gate voor afronding.
+  async function setAttachmentStatus(tenantId, attachmentId, status, actor) {
+    if (!["pending", "clean", "infected", "error"].includes(status)) throw err(400, "MALWARE_STATUS_INVALID", "onbekende status");
+    return withTenant(pool, tenantId, async client => {
+      const r = await q(client, `UPDATE form_attachments SET malware_status=$3 WHERE tenant_id=$1 AND id=$2 RETURNING instance_id`, [tenantId, attachmentId, status]);
+      if (!r.rows[0]) throw err(404, "ATTACHMENT_NOT_FOUND", "bijlage niet gevonden");
+      await appendEvent(client, tenantId, { instanceId: r.rows[0].instance_id, eventType: "attachment.scanned", actor, data: { attachmentId, status } });
+      return { id: attachmentId, malware_status: status };
     });
   }
 
@@ -673,7 +782,7 @@ function makePgFormsRepository(pool, { domainCommands = null } = {}) {
     setDraftStructure, publishVersion, createNewVersion,
     createInstance, getInstance, saveDraft, submitInstance, transition, actOnApproval, listEvents,
     createAssignment, listAssignments, revokeAssignment, resolveActivation, resolveExternalToken, captureSignature,
-    seedStandardForms, applyDictionaryStructure, reportOnDefinition, applyRetention, processDomainEvent,
+    seedStandardForms, applyDictionaryStructure, reportOnDefinition, applyRetention, processDomainEvent, setAttachmentStatus,
     addAttachment, listAttachments, processReminders,
   };
 }

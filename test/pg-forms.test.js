@@ -86,9 +86,11 @@ if (!LIVE || !/^postgres/.test(LIVE)) {
     const inst = await repo.createInstance(T, { definition_id: def.id }, "emp"); // created_by = emp
     await repo.submitInstance(T, inst.id, { answers: { reason: "x" } }, "emp");
     // De indiener mag niet zelf goedkeuren.
-    await assert.rejects(() => repo.actOnApproval(T, inst.id, { decision: "approved" }, "emp"), e => e.code === "SOD_SELF_APPROVAL");
+    await assert.rejects(() => repo.actOnApproval(T, inst.id, { decision: "approved", hasApproveRight: true }, "emp"), e => e.code === "SOD_SELF_APPROVAL");
+    // CTO2-04: zonder goedkeuringsrecht komt zelfs een andere actor er niet in.
+    await assert.rejects(() => repo.actOnApproval(T, inst.id, { decision: "approved" }, "mgr"), e => e.code === "APPROVAL_RIGHT_REQUIRED");
     // Een andere actor mag wel → approved.
-    const a = await repo.actOnApproval(T, inst.id, { decision: "approved", note: "akkoord" }, "mgr");
+    const a = await repo.actOnApproval(T, inst.id, { decision: "approved", note: "akkoord", hasApproveRight: true }, "mgr");
     assert.equal(a.status, "approved");
     // approved → completed via de state-machine.
     const c = await repo.transition(T, inst.id, "completed", "mgr");
