@@ -6445,11 +6445,15 @@ const httpServer = http.createServer(async (req, res) => {
       // de strangler unificeert die later. De handler bezit rechten + veldredactie.
       if (formsApi.isFormsAction(action)) {
         if (!formsRepo) return sendJson(res, 503, { ok: false, code: "FORMS_REQUIRES_PG", error: "De canonieke Forms-capability vereist PostgreSQL." });
+        // Definitie- en toewijzingsbeheer vraagt settings; instance-schrijven volgt
+        // de API-key-schrijfgate. Assignments zijn beheer, dus onder settings.
         if (action.startsWith("form-definitions") && req.method !== "GET") { assertCan(user, "settings"); assertInteractiveUser(user); }
         if (action.startsWith("form-instances") && req.method !== "GET") assertApiKeyWriteAllowed(user, req);
         const needsBody = req.method === "POST" || req.method === "PATCH" || req.method === "PUT";
         const body = needsBody ? await readBody(req) : {};
-        const r = await formsApi.handleFormsRoute(formsRepo, { user, tenantId, method: req.method, action, body, req });
+        const formsTenant = (store.data.tenants || []).find(t => t.id === tenantId) || null;
+        const entitlements = formsTenant ? resolveTenantModules(store, formsTenant) : [];
+        const r = await formsApi.handleFormsRoute(formsRepo, { user, tenantId, method: req.method, action, body, req, entitlements });
         if (r) {
           if (r.headers) for (const [k, v] of Object.entries(r.headers)) res.setHeader(k, v);
           if (r.status >= 200 && r.status < 300 && req.method !== "GET") {

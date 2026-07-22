@@ -9,8 +9,10 @@
 const crypto = require("crypto");
 const { withTenant } = require("./pg-customer-repository");
 const engine = require("../../platform/forms-engine");
+const activation = require("../../platform/forms-activation");
 
 function id(prefix) { return `${prefix}_${crypto.randomBytes(10).toString("hex")}`; }
+function sha256(v) { return crypto.createHash("sha256").update(String(v)).digest("hex"); }
 function clean(v) { return String(v == null ? "" : v).trim(); }
 function err(status, code, message) { const e = new Error(message); e.status = status; e.code = code; return e; }
 
@@ -290,6 +292,99 @@ function makePgFormsRepository(pool) {
     });
   }
 
+  // ── F2/F3 · assignments, activatie, externe tokens en handtekeningen ─────────
+
+  // Wijs een definitie toe aan een scope (tenant/company/team/role/user/project/
+  // customer/workorder/asset/supplier/external). Voor 'external' wordt een token
+  // gegenereerd; enkel de HASH wordt bewaard en het ruwe token één keer geretourneerd.
+  async function createAssignment(tenantId, defId, payload = {}, actor) {
+    const scopeType = clean(payload.scope_type);
+    const VALID = ["tenant", "company", "team", "role", "user", "project", "customer", "workorder", "asset", "supplier", "external"];
+    if (!VALID.includes(scopeType)) throw err(400, "ASSIGNMENT_SCOPE_INVALID", "onbekend scope_type");
+    return withTenant(pool, tenantId, async client => {
+      const def = (await q(client, `SELECT id FROM form_definitions WHERE tenant_id=$1 AND id=$2`, [tenantId, defId])).rows[0];
+      if (!def) throw err(404, "FORM_NOT_FOUND", "definitie niet gevonden");
+      const aid = id("fasg");
+      let rawToken = null, tokenHash = null, expiresAt = null;
+      if (scopeType === "external") {
+        rawToken = crypto.randomBytes(24).toString("base64url");
+        tokenHash = sha256(rawToken);
+        expiresAt = payload.token_expires_at || null;
+      }
+      await q(client, `INSERT INTO form_assignments (id, tenant_id, definition_id, scope_type, scope_id, active, external_token_hash, token_expires_at, created_by)
+                       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+        [aid, tenantId, defId, scopeType, payload.scope_id || null, payload.active !== false, tokenHash, expiresAt, actor || null]);
+      await appendEvent(client, tenantId, { definitionId: defId, eventType: "form.assignment.created", actor, data: { scopeType, scopeId: payload.scope_id || null } });
+      // Ruw token enkel bij aanmaak teruggeven (nooit meer opvraagbaar).
+      return { id: aid, scope_type: scopeType, scope_id: payload.scope_id || null, token: rawToken, token_expires_at: expiresAt };
+    });
+  }
+
+  async function listAssignments(tenantId, defId) {
+    return withTenant(pool, tenantId, async client =>
+      (await q(client, `SELECT id, scope_type, scope_id, active, token_expires_at, revoked_at, created_at, created_by,
+                               (external_token_hash IS NOT NULL) AS has_token
+                        FROM form_assignments WHERE tenant_id=$1 AND definition_id=$2 ORDER BY created_at`, [tenantId, defId])).rows);
+  }
+
+  async function revokeAssignment(tenantId, assignmentId, actor) {
+    return withTenant(pool, tenantId, async client => {
+      const r = await q(client, `UPDATE form_assignments SET active=false, revoked_at=now()
+                                 WHERE tenant_id=$1 AND id=$2 AND revoked_at IS NULL RETURNING definition_id`, [tenantId, assignmentId]);
+      if (!r.rows[0]) throw err(404, "ASSIGNMENT_NOT_FOUND", "toewijzing niet gevonden of al ingetrokken");
+      await appendEvent(client, tenantId, { definitionId: r.rows[0].definition_id, eventType: "form.assignment.revoked", actor, data: { assignmentId } });
+      return { id: assignmentId, revoked: true };
+    });
+  }
+
+  // Los de 8-lagen activatie op voor een definitie in een context (h2). De
+  // aanroeper levert de entitlements van de tenant (uit het entitlement-systeem).
+  async function resolveActivation(tenantId, defId, { user = null, context = {}, entitlements = [], now = Date.now() } = {}) {
+    return withTenant(pool, tenantId, async client => {
+      const def = (await q(client, `SELECT * FROM form_definitions WHERE tenant_id=$1 AND id=$2`, [tenantId, defId])).rows[0] || null;
+      if (!def) return activation.resolveActivation(null, {});
+      const assignments = (await q(client, `SELECT scope_type, scope_id, active, revoked_at FROM form_assignments WHERE tenant_id=$1 AND definition_id=$2`, [tenantId, defId])).rows;
+      return activation.resolveActivation(def, { user, context, entitlements, assignments, now });
+    });
+  }
+
+  // Valideer een extern token → de bijhorende (niet-ingetrokken, niet-verlopen)
+  // assignment, of null. Vergelijkt op hash; het ruwe token verlaat de client nooit.
+  async function resolveExternalToken(tenantId, defId, rawToken, { now = Date.now() } = {}) {
+    if (!rawToken) return null;
+    const hash = sha256(rawToken);
+    return withTenant(pool, tenantId, async client => {
+      const a = (await q(client, `SELECT * FROM form_assignments WHERE tenant_id=$1 AND definition_id=$2 AND scope_type='external' AND external_token_hash=$3`, [tenantId, defId, hash])).rows[0];
+      if (!a) return null;
+      if (a.revoked_at || a.active === false) return null;
+      if (a.token_expires_at && Date.parse(a.token_expires_at) < now) return null;
+      return { id: a.id, definition_id: defId, scope_id: a.scope_id };
+    });
+  }
+
+  // Leg een handtekening vast, gebonden aan de instance-versie + een inhouds-hash
+  // (integriteit). Optioneel schuift de instance door naar 'signed' via de machine.
+  async function captureSignature(tenantId, instId, { signer_name, signer_ref = null, transitionToSigned = true }, actor) {
+    if (!clean(signer_name)) throw err(400, "SIGNER_REQUIRED", "signer_name is verplicht");
+    return withTenant(pool, tenantId, async client => {
+      const inst = (await q(client, `SELECT * FROM form_instances WHERE tenant_id=$1 AND id=$2`, [tenantId, instId])).rows[0];
+      if (!inst) throw err(404, "INSTANCE_NOT_FOUND", "instance niet gevonden");
+      const boundVer = (await q(client, `SELECT version_number FROM form_versions WHERE tenant_id=$1 AND id=$2`, [tenantId, inst.version_id])).rows[0];
+      const stored = (await q(client, `SELECT field_key, value_json FROM form_answers WHERE tenant_id=$1 AND instance_id=$2 ORDER BY field_key`, [tenantId, instId])).rows;
+      const boundHash = sha256(JSON.stringify(stored));
+      await q(client, `INSERT INTO form_signatures (id, tenant_id, instance_id, signer_name, signer_ref, bound_version, bound_hash)
+                       VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+        [id("fsig"), tenantId, instId, clean(signer_name), signer_ref, boundVer ? boundVer.version_number : null, boundHash]);
+      let status = inst.status;
+      if (transitionToSigned && engine.canTransition(inst.status, "signed")) {
+        await q(client, `UPDATE form_instances SET status='signed', version=version+1, updated_by=$3 WHERE tenant_id=$1 AND id=$2`, [tenantId, instId, actor || null]);
+        status = "signed";
+      }
+      await appendEvent(client, tenantId, { instanceId: instId, eventType: "signed", actor, data: { signer: clean(signer_name), boundHash } });
+      return { id: instId, status, boundHash, signer: clean(signer_name) };
+    });
+  }
+
   async function listEvents(tenantId, instId) {
     return withTenant(pool, tenantId, async client =>
       (await q(client, `SELECT event_type, actor, occurred_at, data FROM form_events WHERE tenant_id=$1 AND instance_id=$2 ORDER BY occurred_at`, [tenantId, instId])).rows);
@@ -299,6 +394,7 @@ function makePgFormsRepository(pool) {
     createDefinition, getDefinition, listDefinitions, setDefinitionStatus,
     setDraftStructure, publishVersion, createNewVersion,
     createInstance, getInstance, saveDraft, submitInstance, transition, actOnApproval, listEvents,
+    createAssignment, listAssignments, revokeAssignment, resolveActivation, resolveExternalToken, captureSignature,
   };
 }
 

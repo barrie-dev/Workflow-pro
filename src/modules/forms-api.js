@@ -39,13 +39,26 @@ function ifMatch(req) {
 function idempotencyKey(req) {
   return String((req && req.headers && req.headers["idempotency-key"]) || "").trim() || null;
 }
+// Lees de activatie-context uit de querystring (object_type, status, amount,
+// risk, company_id, team_id) · numeriek waar het kan.
+function queryContext(req) {
+  const out = {};
+  try {
+    const u = new URL(String((req && req.url) || ""), "http://x");
+    for (const [k, v] of u.searchParams) {
+      const n = Number(v);
+      out[k] = v !== "" && Number.isFinite(n) && /^-?\d+(\.\d+)?$/.test(v) ? n : v;
+    }
+  } catch { /* geen query */ }
+  return out;
+}
 
 /**
  * @param {object} repo  makePgFormsRepository(pool)
  * @param {object} args  { user, tenantId, method, action, body, req }
  * @returns {Promise<{status, payload, headers}>}
  */
-async function handleFormsRoute(repo, { user, tenantId, method, action, body = {}, req }) {
+async function handleFormsRoute(repo, { user, tenantId, method, action, body = {}, req, entitlements = [] }) {
   const actor = (user && user.email) || null;
   try {
     // ── Definities ──
@@ -83,6 +96,26 @@ async function handleFormsRoute(repo, { user, tenantId, method, action, body = {
       return ok(201, { instance: created }, { ETag: '"1"' });
     }
 
+    // ── F2/F3 · activatie, assignments, externe tokens ──
+    const fActivation = action.match(/^form-definitions\/([^/]+)\/activation$/);
+    if (fActivation && method === "GET") {
+      const ctx = { ...queryContext(req), ...(body.context || {}) };
+      const res = await repo.resolveActivation(tenantId, fActivation[1], { user, context: ctx, entitlements });
+      return ok(200, { activation: res });
+    }
+    const fAssign = action.match(/^form-definitions\/([^/]+)\/assignments$/);
+    if (fAssign && method === "GET") {
+      return ok(200, { assignments: await repo.listAssignments(tenantId, fAssign[1]) });
+    }
+    if (fAssign && method === "POST") {
+      // Externe assignments geven het ruwe token éénmalig terug (201).
+      return ok(201, { assignment: await repo.createAssignment(tenantId, fAssign[1], body, actor) });
+    }
+    const fAssignId = action.match(/^form-definitions\/([^/]+)\/assignments\/([^/]+)$/);
+    if (fAssignId && method === "DELETE") {
+      return ok(200, { result: await repo.revokeAssignment(tenantId, fAssignId[2], actor) });
+    }
+
     // ── Instances ──
     const iGet = action.match(/^form-instances\/([^/]+)$/);
     if (iGet && method === "GET") {
@@ -111,6 +144,15 @@ async function handleFormsRoute(repo, { user, tenantId, method, action, body = {
     const iApprove = action.match(/^form-instances\/([^/]+)\/approve$/);
     if (iApprove && method === "POST") {
       const r = await repo.actOnApproval(tenantId, iApprove[1], { stepNo: body.stepNo || 1, decision: body.decision, note: body.note || null }, actor);
+      return ok(200, { result: r });
+    }
+    const iSign = action.match(/^form-instances\/([^/]+)\/sign$/);
+    if (iSign && method === "POST") {
+      const r = await repo.captureSignature(tenantId, iSign[1], {
+        signer_name: body.signer_name || body.signerName,
+        signer_ref: body.signer_ref || body.signerRef || null,
+        transitionToSigned: body.transitionToSigned !== false,
+      }, actor);
       return ok(200, { result: r });
     }
     const iEvents = action.match(/^form-instances\/([^/]+)\/events$/);

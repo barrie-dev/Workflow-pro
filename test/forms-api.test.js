@@ -122,6 +122,42 @@ if (!LIVE || !/^postgres/.test(LIVE)) {
     return { instId };
   });
 
+  test("F2/F3 · activatie, externe token en handtekening over HTTP", async () => {
+    const c = await call(admin, "POST", "form-definitions", { key: "API-004", name: "Werfbon", form_type: "domain" });
+    const defId = c.payload.form.id;
+    await call(admin, "PUT", `form-definitions/${defId}/structure`, STRUCT);
+
+    // Nog niet gepubliceerd → status 'available' → activatie blokkeert op tenant.
+    const act1 = await call(admin, "GET", `form-definitions/${defId}/activation`);
+    assert.equal(act1.payload.activation.active, false);
+    assert.equal(act1.payload.activation.blockedBy, "tenant");
+
+    await call(admin, "POST", `form-definitions/${defId}/publish`);
+    await call(admin, "PATCH", `form-definitions/${defId}/status`, { status: "enabled" });
+    const act2 = await call(admin, "GET", `form-definitions/${defId}/activation`);
+    assert.equal(act2.payload.activation.active, true, "gepubliceerd + enabled → actief");
+
+    // Externe token-assignment → ruw token éénmalig terug.
+    const asg = await call(admin, "POST", `form-definitions/${defId}/assignments`, { scope_type: "external", scope_id: "klant@x" });
+    assert.equal(asg.status, 201);
+    assert.ok(asg.payload.assignment.token, "ruw token wordt teruggegeven");
+    const list = await call(admin, "GET", `form-definitions/${defId}/assignments`);
+    assert.ok(list.payload.assignments.some(a => a.scope_type === "external" && a.has_token && !a.token));
+
+    // Handtekening op een ingediende instance → status 'signed', gebonden hash.
+    const inst = await call(emp, "POST", `form-definitions/${defId}/instances`, {});
+    const instId = inst.payload.instance.id;
+    await call(emp, "POST", `form-instances/${instId}/submit`, { answers: { reason: "opgeleverd" } });
+    const sig = await call(admin, "POST", `form-instances/${instId}/sign`, { signer_name: "Jan Klant", signer_ref: "klant@x" });
+    assert.equal(sig.status, 200);
+    assert.equal(sig.payload.result.status, "signed");
+    assert.ok(sig.payload.result.boundHash);
+
+    // Toewijzing intrekken.
+    const rev = await call(admin, "DELETE", `form-definitions/${defId}/assignments/${asg.payload.assignment.id}`);
+    assert.equal(rev.payload.result.revoked, true);
+  });
+
   test("approve over HTTP · segregation of duties dwingt af (geen zelfgoedkeuring)", async () => {
     const c = await call(admin, "POST", "form-definitions", { key: "API-003", name: "Aankoop 3", form_type: "workflow" });
     const defId = c.payload.form.id;
