@@ -70,9 +70,18 @@ before(async () => {
   throw new Error("server kwam niet op:\n" + boot);
 });
 
-after(() => {
-  if (server && server.exitCode === null) server.kill();
-  if (dir) fs.rmSync(dir, { recursive: true, force: true });
+after(async () => {
+  // Wacht op het echte exit vóór de tempmap weggaat: een gekillde server kan
+  // nog een gebufferde JSON-flush schrijven en dan faalt rmSync met ENOTEMPTY
+  // (race, vooral op Linux/CI). Cleanup is bovendien best-effort · tmp.
+  if (server && server.exitCode === null) {
+    await new Promise(resolve => {
+      server.once("exit", resolve);
+      server.kill();
+      setTimeout(() => { try { server.kill("SIGKILL"); } catch (_) {} }, 3000).unref();
+    });
+  }
+  if (dir) { try { fs.rmSync(dir, { recursive: true, force: true }); } catch (_) { /* tmp · OS ruimt op */ } }
 });
 
 test("sso e2e: ondertekende assertie → JIT-provisioning, sessie en idempotente herlogin", async () => {
