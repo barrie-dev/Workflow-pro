@@ -321,6 +321,7 @@ const EMP_HOME_WIDGETS = [
 const { leaveConflictOn } = require("./modules/planning-rules");
 const { listIntegrations, connectIntegration, updateMapping, runSync, retrySync, listProviders, runRobawsDocSync } = require("./modules/integrations");
 const { commissionOverview, publicReseller, commissionPctFor } = require("./modules/resellers");
+const commissionSvc = require("./modules/commission-service");
 const saml = require("./modules/saml");
 const { tenantStatus, unlockUser, listBackups, createBackup, backupPreview, restoreBackup, publicStatus, mfaRisk, getBackupPolicy, setBackupPolicy, pruneTenantBackups } = require("./modules/admin");
 const { createNotification, listNotifications, markNotificationRead, generateReminders, notificationSummary } = require("./modules/notifications");
@@ -1973,6 +1974,77 @@ const httpServer = http.createServer(async (req, res) => {
       }
       sendJson(res, 200, { ok: true, ...payouts });
       return;
+    }
+
+    // ── Commission ledger (CTO2-10) · superadmin ─────────────────────────────
+    // Immutable commissie-grootboek: accrual per periode uit de centrale billing-
+    // MRR, correctie via tegenboeking, payouts met goedkeuring/betaalreferentie,
+    // clawback en dispute. Alles herleidbaar (bron, grondslag, tarief, bedrag).
+    const commAccrueMatch = url.pathname.match(/^\/api\/admin\/reseller-commission\/([^/]+)\/accrue$/);
+    if (commAccrueMatch && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const reseller = store.get("resellers", commAccrueMatch[1]);
+      if (!reseller) return sendJson(res, 404, { ok: false, error: "Reseller niet gevonden" });
+      const body = await readBody(req);
+      try {
+        const overview = commissionOverview(store, reseller);
+        const r = commissionSvc.accruePeriod(store, { resellerId: reseller.id, period: body.period, overview }, user);
+        return sendJson(res, 200, { ok: true, ...r });
+      } catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+    }
+    const commLedgerMatch = url.pathname.match(/^\/api\/admin\/reseller-commission\/([^/]+)$/);
+    if (commLedgerMatch && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      return sendJson(res, 200, { ok: true, ...commissionSvc.ledgerFor(store, commLedgerMatch[1]) });
+    }
+    const commCorrectMatch = url.pathname.match(/^\/api\/admin\/reseller-commission\/([^/]+)\/correct$/);
+    if (commCorrectMatch && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const body = await readBody(req);
+      try { return sendJson(res, 200, { ok: true, event: commissionSvc.correctEvent(store, { eventId: body.eventId, amount: body.amount ?? null, reason: body.reason }, user) }); }
+      catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+    }
+    const commClawMatch = url.pathname.match(/^\/api\/admin\/reseller-commission\/([^/]+)\/clawback$/);
+    if (commClawMatch && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const body = await readBody(req);
+      try { return sendJson(res, 200, { ok: true, event: commissionSvc.clawback(store, { eventId: body.eventId, amount: body.amount ?? null, reason: body.reason }, user) }); }
+      catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+    }
+    const commPayoutMatch = url.pathname.match(/^\/api\/admin\/reseller-commission\/([^/]+)\/payouts$/);
+    if (commPayoutMatch && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const body = await readBody(req);
+      try { return sendJson(res, 201, { ok: true, payout: commissionSvc.createPayout(store, { resellerId: commPayoutMatch[1], period: body.period || null }, user) }); }
+      catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+    }
+    const commPayoutTransMatch = url.pathname.match(/^\/api\/admin\/reseller-commission\/payouts\/([^/]+)\/transition$/);
+    if (commPayoutTransMatch && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const body = await readBody(req);
+      try { return sendJson(res, 200, { ok: true, payout: commissionSvc.transitionPayout(store, { payoutId: commPayoutTransMatch[1], to: body.to, paymentRef: body.paymentRef || null, reason: body.reason || null }, user) }); }
+      catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
+    }
+    // Reseller-portaal: eigen grootboek (read-only, enkel commerciële data).
+    if (url.pathname === "/api/reseller/commission" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertReseller(user);
+      const reseller = store.get("resellers", user.resellerId);
+      if (!reseller || reseller.status !== "active") return sendJson(res, 403, { ok: false, error: "Reseller-account niet actief" });
+      return sendJson(res, 200, { ok: true, ...commissionSvc.ledgerFor(store, reseller.id) });
     }
 
     // ── Governance: security-center, GDPR/DPA-overzicht, API-key-governance ──
