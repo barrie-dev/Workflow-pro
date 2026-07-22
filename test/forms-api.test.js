@@ -158,6 +158,32 @@ if (!LIVE || !/^postgres/.test(LIVE)) {
     assert.equal(rev.payload.result.revoked, true);
   });
 
+  test("F4 · standaardformulieren-seed (h25+h23) is volledig en idempotent", async () => {
+    const { STANDARD_FORMS } = require("../src/platform/forms-catalog");
+    assert.equal(STANDARD_FORMS.length, 35, "25 kern + 10 reseller");
+    const seed1 = await call(admin, "POST", "form-definitions/seed");
+    assert.equal(seed1.status, 200);
+    assert.equal(seed1.payload.result.created.length, 35, "eerste seed maakt alles");
+    // Idempotent: tweede seed maakt niets nieuw.
+    const seed2 = await call(admin, "POST", "form-definitions/seed");
+    assert.equal(seed2.payload.result.created.length, 0);
+    assert.equal(seed2.payload.result.skipped.length, 35);
+    // Spot-check: system_required + security-classificatie + reseller-entitlement.
+    const list = (await call(admin, "GET", "form-definitions")).payload.forms;
+    const sec = list.find(f => f.key === "SEC-001");
+    assert.equal(sec.status, "system_required");
+    assert.equal(sec.data_classification, "security_sensitive");
+    const res3 = list.find(f => f.key === "RES-003");
+    assert.equal(res3.attributes.requires_entitlement, "reseller_program");
+    // Reseller-formulier zonder entitlement → activatie blokkeert op entitlement.
+    const act = await call(admin, "GET", `form-definitions/${res3.id}/activation`);
+    assert.equal(act.payload.activation.blockedBy, "entitlement");
+    // Verlofformulier draagt zijn module-entitlement (enabled when leave module).
+    const hr1 = list.find(f => f.key === "HR-001");
+    assert.equal(hr1.attributes.requires_entitlement, "leave");
+    assert.equal(hr1.data_classification, "special_category");
+  });
+
   test("approve over HTTP · segregation of duties dwingt af (geen zelfgoedkeuring)", async () => {
     const c = await call(admin, "POST", "form-definitions", { key: "API-003", name: "Aankoop 3", form_type: "workflow" });
     const defId = c.payload.form.id;

@@ -451,7 +451,23 @@ const formsRepo = (() => {
   const pool = storeAdapter && storeAdapter.name === "postgres" ? storeAdapter.pool : null;
   if (!pool) return null;
   const { makePgFormsRepository } = require("./infrastructure/postgres/pg-forms-repository");
-  return makePgFormsRepository(pool);
+  // F4 · domeincommands: een domeinformulier schrijft transactioneel naar het
+  // canonieke domeinobject (zelfde pg-transactie als de submit/approve). De
+  // customer-handler voedt CRM-001/002 rechtstreeks in de genormaliseerde tabel.
+  const { makeDomainCommandRouter } = require("./platform/forms-domain-commands");
+  const domainCommands = makeDomainCommandRouter();
+  domainCommands.register("customer", async ({ client, tenantId, payload, actor }) => {
+    const cid = "cus_" + require("crypto").randomBytes(10).toString("hex");
+    await client.query(
+      `INSERT INTO customers (id, tenant_id, name, email, phone, vat_number, language, status, notes, custom_fields, created_by, updated_by)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,'prospect',$8,$9,$10,$10)`,
+      [cid, tenantId, String(payload.name || payload.customer_name || "").trim() || "Onbekend",
+       payload.email || null, payload.phone || null, payload.vat_number || null,
+       ["nl", "fr", "en"].includes(payload.language) ? payload.language : "nl",
+       payload.notes || null, JSON.stringify(payload.custom_fields || {}), actor || null]);
+    return { domainObject: "customer", domainId: cid };
+  });
+  return makePgFormsRepository(pool, { domainCommands });
 })();
 
 /**

@@ -16,8 +16,25 @@ function sha256(v) { return crypto.createHash("sha256").update(String(v)).digest
 function clean(v) { return String(v == null ? "" : v).trim(); }
 function err(status, code, message) { const e = new Error(message); e.status = status; e.code = code; return e; }
 
-function makePgFormsRepository(pool) {
+function makePgFormsRepository(pool, { domainCommands = null } = {}) {
   const q = (client, sql, params) => client.query(sql, params);
+  const { dispatchMomentFor } = require("../../platform/forms-domain-commands");
+
+  // Dispatch een domeincommand BINNEN de lopende transactie (zelfde client): een
+  // falend command draait de statusovergang mee terug (F4: transactioneel).
+  async function dispatchDomain(client, tenantId, { instance, moment, actor }) {
+    if (!domainCommands) return null;
+    const def = (await q(client, `SELECT * FROM form_definitions WHERE tenant_id=$1 AND id=$2`, [tenantId, instance.definition_id])).rows[0];
+    if (!def || dispatchMomentFor(def.form_type) !== moment) return null;
+    if (!domainCommands.has(def.domain_object)) return null;
+    const stored = (await q(client, `SELECT field_key, value_json FROM form_answers WHERE tenant_id=$1 AND instance_id=$2`, [tenantId, instance.id])).rows;
+    const answers = {}; for (const a of stored) answers[a.field_key] = a.value_json;
+    const result = await domainCommands.dispatch({ client, tenantId, definition: def, instance, answers, actor });
+    if (result) {
+      await appendEvent(client, tenantId, { instanceId: instance.id, definitionId: def.id, eventType: "domain.command.applied", actor, data: { domainObject: def.domain_object, result } });
+    }
+    return result;
+  }
 
   async function appendEvent(client, tenantId, { instanceId = null, definitionId = null, eventType, actor = null, data = {} }) {
     await q(client, `INSERT INTO form_events (id, tenant_id, instance_id, definition_id, event_type, actor, data)
@@ -255,7 +272,10 @@ function makePgFormsRepository(pool) {
       await q(client, `UPDATE form_instances SET status='submitted', submitted_at=now(), idempotency_key=COALESCE($3, idempotency_key), version=version+1, updated_by=$4
                        WHERE tenant_id=$1 AND id=$2`, [tenantId, instId, idempotencyKey, actor || null]);
       await appendEvent(client, tenantId, { instanceId: instId, definitionId: inst.definition_id, eventType: "submitted", actor });
-      return { id: instId, status: "submitted", idempotent: false };
+      // F4 · domeinformulier: de inzending schrijft transactioneel naar het
+      // canonieke domeinobject (faalt het command, dan draait de submit terug).
+      const domain = await dispatchDomain(client, tenantId, { instance: inst, moment: "submit", actor });
+      return { id: instId, status: "submitted", idempotent: false, domain: domain || undefined };
     });
   }
 
@@ -288,7 +308,12 @@ function makePgFormsRepository(pool) {
       engine.assertTransition(inst.status, toStatus);
       await q(client, `UPDATE form_instances SET status=$3, version=version+1, updated_by=$4 WHERE tenant_id=$1 AND id=$2`, [tenantId, instId, toStatus, actor || null]);
       await appendEvent(client, tenantId, { instanceId: instId, eventType: toStatus, actor, data: { stepNo, decision } });
-      return { id: instId, status: toStatus, decision };
+      // F4 · workflowformulier: pas ná goedkeuring naar het domeinobject
+      // ("form instance tot goedkeuring, daarna domeinobject").
+      const domain = toStatus === "approved"
+        ? await dispatchDomain(client, tenantId, { instance: inst, moment: "approve", actor })
+        : null;
+      return { id: instId, status: toStatus, decision, domain: domain || undefined };
     });
   }
 
@@ -390,11 +415,40 @@ function makePgFormsRepository(pool) {
       (await q(client, `SELECT event_type, actor, occurred_at, data FROM form_events WHERE tenant_id=$1 AND instance_id=$2 ORDER BY occurred_at`, [tenantId, instId])).rows);
   }
 
+  // ── F4 · standaardformulieren-seed (h25 + h23 RES-001..010) ──────────────────
+  // Idempotent: bestaande keys worden overgeslagen, nooit overschreven (een tenant
+  // kan een standaardformulier immers zelf hebben aangepast/geherpubliceerd).
+  async function seedStandardForms(tenantId, actor, { catalog = null } = {}) {
+    const { STANDARD_FORMS, attributesFor } = require("../../platform/forms-catalog");
+    const entries = catalog || STANDARD_FORMS;
+    return withTenant(pool, tenantId, async client => {
+      const existing = new Set(
+        (await q(client, `SELECT key FROM form_definitions WHERE tenant_id=$1`, [tenantId])).rows.map(r => r.key));
+      const created = [], skipped = [];
+      for (const entry of entries) {
+        if (existing.has(entry.key)) { skipped.push(entry.key); continue; }
+        const defId = id("fdef");
+        await q(client, `INSERT INTO form_definitions
+          (id, tenant_id, key, name, form_type, category, status, domain_object, data_classification, attributes, source, created_by, updated_by)
+          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'migration',$11,$11)`,
+          [defId, tenantId, entry.key, entry.name, entry.form_type, entry.key.split("-")[0],
+           entry.status, entry.domain_object || null, entry.data_classification || "internal",
+           JSON.stringify(attributesFor(entry)), actor || "seed"]);
+        await q(client, `INSERT INTO form_versions (id, tenant_id, definition_id, version_number, published, created_by)
+                         VALUES ($1,$2,$3,1,false,$4)`, [id("fver"), tenantId, defId, actor || "seed"]);
+        await appendEvent(client, tenantId, { definitionId: defId, eventType: "form.definition.created", actor: actor || "seed", data: { catalog: entry.key } });
+        created.push(entry.key);
+      }
+      return { created, skipped, total: entries.length };
+    });
+  }
+
   return {
     createDefinition, getDefinition, listDefinitions, setDefinitionStatus,
     setDraftStructure, publishVersion, createNewVersion,
     createInstance, getInstance, saveDraft, submitInstance, transition, actOnApproval, listEvents,
     createAssignment, listAssignments, revokeAssignment, resolveActivation, resolveExternalToken, captureSignature,
+    seedStandardForms,
   };
 }
 

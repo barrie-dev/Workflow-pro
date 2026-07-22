@@ -68,6 +68,10 @@ async function handleFormsRoute(repo, { user, tenantId, method, action, body = {
     if (action === "form-definitions" && method === "POST") {
       return ok(201, { form: await repo.createDefinition(tenantId, body, actor) });
     }
+    // Standaardformulieren-seed (h25 + h23): idempotent, bestaande keys blijven.
+    if (action === "form-definitions/seed" && method === "POST") {
+      return ok(200, { result: await repo.seedStandardForms(tenantId, actor) });
+    }
     const fMatch = action.match(/^form-definitions\/([^/]+)$/);
     if (fMatch && method === "GET") {
       const def = await repo.getDefinition(tenantId, fMatch[1]);
