@@ -52,7 +52,7 @@
   // Dashboard, Actiecentrum en Werkruimte zijn shell-views: ze bundelen enkel
   // tenantdata waar de gebruiker al toegang toe heeft en hebben geen apart
   // backend-entitlement nodig.
-  const CORE_UI_VIEWS = new Set(["dashboard", "actions", "workos", "profielen"]);
+  const CORE_UI_VIEWS = new Set(["dashboard", "actions", "workos", "profielen", "dossiers"]);
 
   // Verberg nav-items voor modules die niet in het pakket van de tenant zitten.
   function applyEntitlements() {
@@ -517,6 +517,10 @@
       <a class="adm-nav-item" data-view="lists" href="#">
         <svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
         <span data-i18n="nav.lists">Lijsten & export</span>
+      </a>
+      <a class="adm-nav-item" data-view="dossiers" href="#">
+        <svg viewBox="0 0 24 24"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-1 8h-3v3h-2v-3h-3v-2h3V9h2v3h3v2z"/></svg>
+        <span data-i18n="nav.dossiers">360°-dossiers</span>
       </a>
 
       <div class="adm-nav-label" data-i18n="nav.sec.system">Instellingen</div>

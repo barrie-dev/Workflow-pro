@@ -13,7 +13,7 @@ const html = fs.readFileSync(path.join(root, "public", "index.html"), "utf8");
 const coordination = fs.readFileSync(path.join(root, "docs", "FRONTEND-UI-COORDINATION.md"), "utf8");
 
 test("Work OS is een echte, pakket-onafhankelijke tenantwerkruimte", () => {
-  assert.match(admin, /CORE_UI_VIEWS = new Set\(\["dashboard", "actions", "workos", "profielen"\]\)/);
+  assert.match(admin, /CORE_UI_VIEWS = new Set\(\["dashboard", "actions", "workos", "profielen", "dossiers"\]\)/);
   assert.match(admin, /data-view="workos"/);
   assert.match(admin, /workos: "Werkruimte"/);
   assert.match(source, /A\.views\.workos = renderWorkOs/);
