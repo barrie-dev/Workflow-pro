@@ -606,12 +606,75 @@ function makePgFormsRepository(pool, { domainCommands = null } = {}) {
     return { event: event.eventType, created, skipped };
   }
 
+  // ── F5 · bijlagen met mobiel beleid (foto/GPS, malwarestatus, limieten) ─────
+  // Metadata in PostgreSQL, het object zelf in object storage (h4); de aanroeper
+  // levert de object_key uit de ObjectStorage-poort. Validatie tegen het
+  // definitie-beleid (attributes.mobile_policy) binnen de platformlimieten.
+  async function addAttachment(tenantId, instId, { field_key = null, object_key, file_name = null, mime_type = null, size_bytes = 0, gps = null }, actor) {
+    if (!clean(object_key)) throw err(400, "OBJECT_KEY_REQUIRED", "object_key is verplicht");
+    return withTenant(pool, tenantId, async client => {
+      const inst = (await q(client, `SELECT * FROM form_instances WHERE tenant_id=$1 AND id=$2`, [tenantId, instId])).rows[0];
+      if (!inst) throw err(404, "INSTANCE_NOT_FOUND", "instance niet gevonden");
+      if (!engine.isEditable(inst.status)) throw err(409, "INSTANCE_NOT_EDITABLE", `In status ${inst.status} zijn bijlagen niet meer toe te voegen.`);
+      const def = (await q(client, `SELECT attributes FROM form_definitions WHERE tenant_id=$1 AND id=$2`, [tenantId, inst.definition_id])).rows[0];
+      const policy = (def && def.attributes && def.attributes.mobile_policy) || {};
+      const check = engine.validateAttachment(policy, { mime_type, size_bytes, gps });
+      if (!check.ok) { const e = err(422, "ATTACHMENT_INVALID", "Bijlage voldoet niet aan het beleid."); e.fieldErrors = check.errors; throw e; }
+      const attId = id("fatt");
+      await q(client, `INSERT INTO form_attachments (id, tenant_id, instance_id, field_key, object_key, file_name, mime_type, size_bytes, malware_status, created_by)
+                       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'pending',$9)`,
+        [attId, tenantId, instId, field_key, clean(object_key), file_name, mime_type, Number(size_bytes) || 0, actor || null]);
+      // GPS-stempel in het lifecycle-event (audit); de bijlage-rij blijft canoniek.
+      await appendEvent(client, tenantId, { instanceId: instId, eventType: "attachment.added", actor, data: { attachmentId: attId, fieldKey: field_key, gps: gps || null } });
+      return { id: attId, instanceId: instId, malware_status: "pending" };
+    });
+  }
+
+  async function listAttachments(tenantId, instId) {
+    return withTenant(pool, tenantId, async client =>
+      (await q(client, `SELECT id, field_key, object_key, file_name, mime_type, size_bytes, malware_status, created_at, created_by
+                        FROM form_attachments WHERE tenant_id=$1 AND instance_id=$2 ORDER BY created_at`, [tenantId, instId])).rows);
+  }
+
+  // ── h26 · reminders + escalatie: instances die te lang op beoordeling wachten ─
+  // Eén reminder en één escalatie per instance (dedup op form_events); de
+  // tenant-instelling wordt geklemd binnen de platformlimieten. De aanroeper
+  // (server/cron) verstuurt de meldingen; hier enkel detectie + audit-event.
+  async function processReminders(tenantId, { now = Date.now() } = {}) {
+    return withTenant(pool, tenantId, async client => {
+      const defs = (await q(client, `SELECT id, key, attributes FROM form_definitions
+                                     WHERE tenant_id=$1 AND attributes ? 'reminders'`, [tenantId])).rows;
+      const reminders = [], escalations = [];
+      for (const def of defs) {
+        const pol = engine.clampReminderPolicy(def.attributes.reminders || {});
+        if (!pol.remindAfterHours && !pol.escalateAfterHours) continue;
+        const insts = (await q(client, `SELECT id, status, submitted_at, assigned_to, created_by FROM form_instances
+                                        WHERE tenant_id=$1 AND definition_id=$2 AND status IN ('submitted','in_review','resubmitted') AND submitted_at IS NOT NULL`,
+          [tenantId, def.id])).rows;
+        for (const inst of insts) {
+          const ageH = (now - Date.parse(inst.submitted_at)) / 3600000;
+          const sent = (await q(client, `SELECT event_type FROM form_events WHERE tenant_id=$1 AND instance_id=$2 AND event_type IN ('reminder.sent','escalation.sent')`, [tenantId, inst.id])).rows.map(r => r.event_type);
+          if (pol.remindAfterHours && ageH >= pol.remindAfterHours && !sent.includes("reminder.sent")) {
+            await appendEvent(client, tenantId, { instanceId: inst.id, definitionId: def.id, eventType: "reminder.sent", data: { afterHours: pol.remindAfterHours } });
+            reminders.push({ instance: inst.id, definition: def.key, notify: inst.assigned_to || inst.created_by });
+          }
+          if (pol.escalateAfterHours && ageH >= pol.escalateAfterHours && !sent.includes("escalation.sent")) {
+            await appendEvent(client, tenantId, { instanceId: inst.id, definitionId: def.id, eventType: "escalation.sent", data: { afterHours: pol.escalateAfterHours, escalateTo: pol.escalateTo } });
+            escalations.push({ instance: inst.id, definition: def.key, notify: pol.escalateTo });
+          }
+        }
+      }
+      return { reminders, escalations };
+    });
+  }
+
   return {
     createDefinition, getDefinition, listDefinitions, setDefinitionStatus,
     setDraftStructure, publishVersion, createNewVersion,
     createInstance, getInstance, saveDraft, submitInstance, transition, actOnApproval, listEvents,
     createAssignment, listAssignments, revokeAssignment, resolveActivation, resolveExternalToken, captureSignature,
     seedStandardForms, applyDictionaryStructure, reportOnDefinition, applyRetention, processDomainEvent,
+    addAttachment, listAttachments, processReminders,
   };
 }
 

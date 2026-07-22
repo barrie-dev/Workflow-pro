@@ -165,6 +165,23 @@ async function handleFormsRoute(repo, { user, tenantId, method, action, body = {
       const r = await repo.actOnApproval(tenantId, iApprove[1], { stepNo: body.stepNo || 1, decision: body.decision, note: body.note || null, actorRole: (user && user.role) || null }, actor);
       return ok(200, { result: r });
     }
+    // F5 · bijlagen (foto/GPS-beleid); het object zelf gaat via object storage.
+    const iAtt = action.match(/^form-instances\/([^/]+)\/attachments$/);
+    if (iAtt && method === "GET") {
+      return ok(200, { attachments: await repo.listAttachments(tenantId, iAtt[1]) });
+    }
+    if (iAtt && method === "POST") {
+      const r = await repo.addAttachment(tenantId, iAtt[1], {
+        field_key: body.field_key || null, object_key: body.object_key,
+        file_name: body.file_name || null, mime_type: body.mime_type || null,
+        size_bytes: body.size_bytes || 0, gps: body.gps || null,
+      }, actor);
+      return ok(201, { attachment: r });
+    }
+    // h26 · reminders/escalaties draaien (beheer of cron).
+    if (action === "form-reminders/run" && method === "POST") {
+      return ok(200, { result: await repo.processReminders(tenantId) });
+    }
     const iSign = action.match(/^form-instances\/([^/]+)\/sign$/);
     if (iSign && method === "POST") {
       const r = await repo.captureSignature(tenantId, iSign[1], {
@@ -189,7 +206,8 @@ async function handleFormsRoute(repo, { user, tenantId, method, action, body = {
 // server.js). Bewust NIET de legacy work-os paden forms/templates|instances.
 function isFormsAction(action) {
   return action === "form-definitions" || action.startsWith("form-definitions/") ||
-    action.startsWith("form-instances/") || action.startsWith("form-retention/");
+    action.startsWith("form-instances/") || action.startsWith("form-retention/") ||
+    action.startsWith("form-reminders/");
 }
 
 module.exports = { handleFormsRoute, isFormsAction };

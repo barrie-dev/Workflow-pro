@@ -467,6 +467,18 @@ const formsRepo = (() => {
        payload.notes || null, JSON.stringify(payload.custom_fields || {}), actor || null]);
     return { domainObject: "customer", domainId: cid };
   });
+  // CRM-003 · contact hangt tenant-veilig aan zijn klant (pg-canoniek, 002_crm).
+  domainCommands.register("contact", async ({ client, tenantId, instance, payload, actor }) => {
+    const customerId = payload.customer_id || (instance.subject_type === "customer" ? instance.subject_id : null);
+    if (!customerId) { const e = new Error("customer_id is verplicht voor een contactformulier"); e.status = 422; e.code = "CONTACT_CUSTOMER_REQUIRED"; throw e; }
+    const cid = "ctc_" + require("crypto").randomBytes(10).toString("hex");
+    await client.query(
+      `INSERT INTO customer_contacts (id, tenant_id, customer_id, first_name, last_name, email, phone, role, is_primary, created_by, updated_by)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$10)`,
+      [cid, tenantId, customerId, payload.first_name || null, payload.last_name || null,
+       payload.email || null, payload.phone || null, payload.role || null, payload.is_primary === true, actor || null]);
+    return { domainObject: "contact", domainId: cid, customerId };
+  });
   return makePgFormsRepository(pool, { domainCommands });
 })();
 
@@ -6474,7 +6486,7 @@ const httpServer = http.createServer(async (req, res) => {
         if (!formsRepo) return sendJson(res, 503, { ok: false, code: "FORMS_REQUIRES_PG", error: "De canonieke Forms-capability vereist PostgreSQL." });
         // Definitie- en toewijzingsbeheer vraagt settings; instance-schrijven volgt
         // de API-key-schrijfgate. Assignments zijn beheer, dus onder settings.
-        if ((action.startsWith("form-definitions") || action.startsWith("form-retention")) && req.method !== "GET") { assertCan(user, "settings"); assertInteractiveUser(user); }
+        if ((action.startsWith("form-definitions") || action.startsWith("form-retention") || action.startsWith("form-reminders")) && req.method !== "GET") { assertCan(user, "settings"); assertInteractiveUser(user); }
         if (action.startsWith("form-instances") && req.method !== "GET") assertApiKeyWriteAllowed(user, req);
         const needsBody = req.method === "POST" || req.method === "PATCH" || req.method === "PUT";
         const body = needsBody ? await readBody(req) : {};

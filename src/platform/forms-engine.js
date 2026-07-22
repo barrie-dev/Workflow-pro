@@ -222,6 +222,48 @@ function buildAnswerIndex(fields, answers) {
   return rows;
 }
 
+// ── F5 · mobiel bijlage-/GPS-beleid (h13/h24: foto, malwarecheck, content) ───
+// Per definitie: attributes.mobile_policy = { gps_required, max_mb, allowed_types }.
+// Platformlimieten begrenzen wat een tenant kan kiezen (h26: "binnen platform-
+// limieten"): nooit groter dan 25 MB, enkel het veilige type-allowlist.
+const ATTACHMENT_LIMITS = { maxMb: 25, allowedTypes: ["image/jpeg", "image/png", "image/webp", "image/heic", "application/pdf", "video/mp4"] };
+
+function validateAttachment(policy = {}, meta = {}) {
+  const errors = {};
+  const maxMb = Math.min(Number(policy.max_mb) > 0 ? Number(policy.max_mb) : ATTACHMENT_LIMITS.maxMb, ATTACHMENT_LIMITS.maxMb);
+  const allowed = Array.isArray(policy.allowed_types) && policy.allowed_types.length
+    ? policy.allowed_types.filter(t => ATTACHMENT_LIMITS.allowedTypes.includes(t))
+    : ATTACHMENT_LIMITS.allowedTypes;
+  if (!meta.mime_type || !allowed.includes(meta.mime_type)) errors.mime_type = "bestandstype niet toegestaan";
+  if (!(Number(meta.size_bytes) > 0)) errors.size_bytes = "grootte ontbreekt";
+  else if (Number(meta.size_bytes) > maxMb * 1024 * 1024) errors.size_bytes = `max ${maxMb} MB`;
+  if (policy.gps_required) {
+    const g = meta.gps || {};
+    const okGps = Number.isFinite(Number(g.lat)) && Number.isFinite(Number(g.lng))
+      && Math.abs(Number(g.lat)) <= 90 && Math.abs(Number(g.lng)) <= 180;
+    if (!okGps) errors.gps = "GPS-locatie is verplicht voor dit formulier";
+  }
+  return { ok: Object.keys(errors).length === 0, errors };
+}
+
+// ── h26 · reminder-/escalatieregels binnen platformlimieten ─────────────────
+// Per definitie: attributes.reminders = { remind_after_hours, escalate_after_hours,
+// escalate_to }. De klem houdt tenant-instellingen binnen [1u, 30 dagen].
+const REMINDER_LIMITS = { minHours: 1, maxHours: 720 };
+
+function clampReminderPolicy(raw = {}) {
+  const clamp = v => {
+    const n = Number(v);
+    if (!Number.isFinite(n) || n <= 0) return null;
+    return Math.min(Math.max(n, REMINDER_LIMITS.minHours), REMINDER_LIMITS.maxHours);
+  };
+  return {
+    remindAfterHours: clamp(raw.remind_after_hours),
+    escalateAfterHours: clamp(raw.escalate_after_hours),
+    escalateTo: raw.escalate_to || null,
+  };
+}
+
 module.exports = {
   FORM_TYPES, DEFINITION_STATUSES, CLASSIFICATIONS, REQUIRED_LEVELS,
   INSTANCE_STATES, INSTANCE_TRANSITIONS, EDITABLE_STATES, TERMINAL_STATES,
@@ -230,4 +272,5 @@ module.exports = {
   assertSegregationOfDuties, canViewField, canEditField, redactAnswers,
   validateAnswers, buildAnswerIndex, userHasPermission,
   actorAllowedForStep, evaluateApprovals,
+  ATTACHMENT_LIMITS, validateAttachment, REMINDER_LIMITS, clampReminderPolicy,
 };
