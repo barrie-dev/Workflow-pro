@@ -578,12 +578,40 @@ function makePgFormsRepository(pool, { domainCommands = null } = {}) {
     });
   }
 
+  // ── h26 · assignment-triggers: domeinevent → automatische form-instance ─────
+  // Idempotent per (event, definitie): her-bezorging maakt nooit een tweede
+  // instance. Ongepubliceerde definities worden overgeslagen (gerapporteerd).
+  async function processDomainEvent(tenantId, event) {
+    const triggersMod = require("../../platform/forms-triggers");
+    const defs = await withTenant(pool, tenantId, async client =>
+      (await q(client, `SELECT * FROM form_definitions
+                        WHERE tenant_id=$1 AND attributes ? 'triggers'
+                          AND status IN ('system_required','enabled','conditional','scheduled')`, [tenantId])).rows);
+    const created = [], skipped = [];
+    for (const def of defs) {
+      for (const trig of triggersMod.matchTriggers(def, event)) {
+        const payload = triggersMod.instancePayloadFor(def, trig, event);
+        const dup = await withTenant(pool, tenantId, async client =>
+          (await q(client, `SELECT id FROM form_instances WHERE tenant_id=$1 AND idempotency_key=$2`, [tenantId, payload.idempotency_key])).rows[0]);
+        if (dup) { skipped.push({ definition: def.key, reason: "duplicate", instance: dup.id }); continue; }
+        try {
+          const inst = await createInstance(tenantId, payload, event.actor || "automation");
+          created.push({ definition: def.key, instance: inst.id, assignedTo: payload.assigned_to });
+        } catch (e) {
+          // FORM_NOT_PUBLISHED e.d.: trigger mag een event nooit laten falen.
+          skipped.push({ definition: def.key, reason: e.code || e.message });
+        }
+      }
+    }
+    return { event: event.eventType, created, skipped };
+  }
+
   return {
     createDefinition, getDefinition, listDefinitions, setDefinitionStatus,
     setDraftStructure, publishVersion, createNewVersion,
     createInstance, getInstance, saveDraft, submitInstance, transition, actOnApproval, listEvents,
     createAssignment, listAssignments, revokeAssignment, resolveActivation, resolveExternalToken, captureSignature,
-    seedStandardForms, applyDictionaryStructure, reportOnDefinition, applyRetention,
+    seedStandardForms, applyDictionaryStructure, reportOnDefinition, applyRetention, processDomainEvent,
   };
 }
 

@@ -667,6 +667,17 @@ const pgTxManager = storeAdapter && storeAdapter.name === "postgres"
   : null;
 // Automation-engine (E11) luistert op alle domain events (best-effort).
 registerEventListener(makeDispatcher(store));
+// h26 · Forms assignment-triggers: een domeinevent kan automatisch een
+// formulier toewijzen (objectaanmaak/statuswijziging/bedrag/...). Best-effort
+// en idempotent per (event, definitie) · een trigger mag een event nooit laten
+// falen; zonder pg (geen formsRepo) is er niets te triggeren.
+if (formsRepo) {
+  registerEventListener((event) => {
+    formsRepo.processDomainEvent(event.tenantId, event)
+      .then(r => { if (r.created.length) telemetry.metric("forms.trigger.assigned", r.created.length, { event: event.eventType }); })
+      .catch(() => { /* best-effort: nooit het event blokkeren */ });
+  });
+}
 
 function csvCell(value) {
   const text = value == null ? "" : Array.isArray(value) || typeof value === "object" ? JSON.stringify(value) : String(value);
