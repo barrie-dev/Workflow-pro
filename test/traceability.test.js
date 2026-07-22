@@ -116,6 +116,19 @@ test("een ontbrekende epic-koppeling maakt de epic ROOD (deleted test → red)",
   fs.rmSync(tmp, { recursive: true, force: true });
 });
 
+test("po_acceptance: ondertekende governance-acceptatie groen; ingetrokken/onvolledig → rood", () => {
+  const p = path.join(ROOT, "docs", "traceability", "po-acceptance.json");
+  const backup = fs.readFileSync(p);
+  const po = () => buildTraceability({ repoRoot: ROOT, commitSha: "test" }).definitionOfDone.find(d => d.key === "po_acceptance");
+  try {
+    assert.equal(po().ok, true, "ondertekende acceptatie hoort groen te zijn (governance, niet commit-gebonden)");
+    fs.rmSync(p);
+    assert.equal(po().ok, false, "ingetrokken acceptatie → rood");
+    fs.writeFileSync(p, JSON.stringify({ acceptedBy: "x" })); // ontbrekende velden
+    assert.equal(po().ok, false, "onvolledige acceptatie → rood");
+  } finally { fs.writeFileSync(p, backup); }
+});
+
 test("evidence-map dekt precies E01-E22", () => {
   assert.deepEqual(Object.keys(EVIDENCE).sort(), Array.from({ length: 22 }, (_, i) => `E${String(i + 1).padStart(2, "0")}`));
 });

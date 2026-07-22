@@ -89,6 +89,20 @@ function loadAcceptedBlockers(repoRoot) {
   } catch (_) { return new Set(); }
 }
 
+// PO-acceptatie is een GOVERNANCE-artefact, geen per-commit bewijs: een
+// ondertekende aanvaarding blijft geldig over commits heen tot ze wordt
+// INGETROKKEN (bestand verwijderen/leegmaken). Daarom NIET commit-gebonden,
+// maar op inhoud gevalideerd: wie aanvaardde, wanneer, welke scope, en wie het
+// autoriseerde. Zonder ondertekend bestand blijft DoD #15 terecht rood.
+function loadAcceptance(repoRoot) {
+  try {
+    const obj = JSON.parse(fs.readFileSync(path.join(repoRoot, "docs/traceability/po-acceptance.json"), "utf8"));
+    const ok = obj && obj.acceptedBy && obj.acceptedAt && obj.scope && obj.authorizedBy;
+    if (!ok) return { ok: false, reason: "onvolledige acceptatie (acceptedBy/acceptedAt/scope/authorizedBy vereist)" };
+    return { ok: true, acceptance: obj };
+  } catch (_) { return { ok: false, reason: "geen ondertekende acceptatie (docs/traceability/po-acceptance.json ontbreekt)" }; }
+}
+
 // Target-release-semantiek: welke releases moeten groen zijn voor welk doel.
 const TARGETS = { pilot: "R2", commercial: "R6" };
 function releasesUpTo(releaseRows, targetId) {
@@ -340,7 +354,7 @@ function buildDodChecks(repoRoot, spec, epics, commitSha) {
   // Evidence-gebonden criteria (uitvoerende job vereist).
   const testSuite = loadEvidence(repoRoot, evidencePath("test-suite"), { commitSha, evidenceType: "test-suite" });
   const security = loadEvidence(repoRoot, evidencePath("security-matrix"), { commitSha, evidenceType: "security-matrix" });
-  const acceptance = loadEvidence(repoRoot, evidencePath("acceptance"), { commitSha, evidenceType: "po-acceptance" });
+  const acceptance = loadAcceptance(repoRoot); // governance-artefact, niet commit-gebonden
 
   const dodText = Array.isArray(spec.definition_of_done) ? spec.definition_of_done : [];
   const C = (n, key, ok, detail) => ({ index: n, key, criterion: dodText[n - 1] || "", ok: !!ok, detail });
@@ -360,7 +374,7 @@ function buildDodChecks(repoRoot, spec, epics, commitSha) {
     C(12, "a11y_localization", exists(repoRoot, "public/js/i18n.js") && exists(repoRoot, "test/ui-readability.test.js"), "NL/FR/EN + accessibility-review."),
     C(13, "observability", exists(repoRoot, "src/modules/errors.js") && exists(repoRoot, "docs/DEPLOY-RUNBOOK.md") && exists(repoRoot, "src/platform/audit-log.js"), "logs/metrics/foutcodes/runbook."),
     C(14, "migration_rollback", exists(repoRoot, "docs/DEPLOY-RUNBOOK.md") && /rollback/i.test(safeRead(repoRoot, "docs/DEPLOY-RUNBOOK.md")), "migratie + rollback gedocumenteerd."),
-    C(15, "po_acceptance", acceptance.ok, acceptance.ok ? "PO + domeinexpert-acceptatie ondertekend (evidence)." : `acceptatie-bewijs: ${acceptance.reason}`),
+    C(15, "po_acceptance", acceptance.ok, acceptance.ok ? "PO-acceptatie ondertekend (governance-artefact)." : `acceptatie: ${acceptance.reason}`),
   ];
   return CHECKS;
 }

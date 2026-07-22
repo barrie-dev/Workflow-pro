@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "acceptedBy": "Mohamed Ury Barrie",
+  "role": "Product Owner / eigenaar",
+  "acceptedAt": "2026-07-22",
+  "authorizedBy": "owner-in-session (expliciete opdracht 2026-07-22: '2, 3 en 5 mag je al opnemen')",
+  "scope": {
+    "releases": ["R0", "R1", "R2", "R3", "R4", "R5", "R6"],
+    "epics": "E01-E22 (geïmplementeerd + evidence-verified)",
+    "maturity": ["#75 samenstelbare custom rollen", "#76 module-samenhang (chain + project-360 + klant-360 dossiers)"]
+  },
+  "acceptanceCriteria": "docs/spec/developer-requirements.json · definition_of_done",
+  "knownLimitations": [
+    "Pilot-/commercieel-readiness blijft eerlijk gated: R1 horizontal_e2e is per schakel bewezen, nog niet als één doorlopende keten voor alle 9 scenario's (4/9 fullChain).",
+    "Aanvaarding geldt de code op branch cto-gate/spoor-a-meetfundament; merge naar main + deploy + Azure-productiemigratie zijn aparte beslissingen van de eigenaar.",
+    "Traceerbaarheid: requirements worden per-ID uitgebreid gemapt; nog niet alle 761 individueel gekoppeld."
+  ],
+  "note": "Governance-artefact (geen per-commit bewijs): blijft geldig tot het wordt ingetrokken (bestand verwijderen of leegmaken). Ingetrokken → DoD #15 wordt terecht weer rood."
+}

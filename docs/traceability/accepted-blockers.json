@@ -14,7 +14,6 @@
     { "type": "release", "id": "R6", "reason": "Geblokkeerd door R0-cutover (dependencyvolgorde).", "owner": "dev-core", "acceptedUntil": "2026-08-15" },
     { "type": "condition", "id": "R1.horizontal_e2e", "reason": "9 verplichte E2E-scenario's draaien groen; scenario 1 nu als volledige keten (chain-smoke), maar 5/9 nog per schakel i.p.v. één doorlopende keten (restpunten: foto-upload werkbon, echte Peppol-provider, uitputtende tenant-padenscan). Zie evidence/e2e-scenarios.json.", "owner": "dev-core", "acceptedUntil": "2026-08-15" },
     { "type": "dod", "id": "tests_pass", "reason": "test-suite-evidence wordt door CI gegenereerd; nog geen commit-gebonden artefact (DEV-02).", "owner": "dev-core", "acceptedUntil": "2026-08-15" },
-    { "type": "dod", "id": "tenant_isolation", "reason": "security-matrix-evidence nog te genereren (DEV-08).", "owner": "security", "acceptedUntil": "2026-08-15" },
-    { "type": "dod", "id": "po_acceptance", "reason": "PO/domeinexpert-acceptatie nog niet ondertekend.", "owner": "product", "acceptedUntil": "2026-08-15" }
+    { "type": "dod", "id": "tenant_isolation", "reason": "security-matrix-evidence nog te genereren (DEV-08).", "owner": "security", "acceptedUntil": "2026-08-15" }
   ]
 }
