@@ -24,16 +24,19 @@ function commissionPctFor(tenant, reseller) {
 // Overzicht van de klanten + commissie van één reseller (enkel commerciële velden).
 function commissionOverview(store, reseller) {
   const rows = clientsOfReseller(store, reseller.id).map(t => {
-    const mrr = tenantMrr(store, t);
+    const mrr = tenantMrr(store, t); // CTO2-09: null = op aanvraag (custom/enterprise)
     const pct = commissionPctFor(t, reseller);
     return {
       tenantId: t.id, name: t.name, plan: t.plan, status: t.status,
-      mrr, commissionPct: pct, commission: Math.round(mrr * pct) / 100
+      mrr, unpriced: mrr === null,
+      commissionPct: pct, commission: mrr === null ? 0 : Math.round(mrr * pct) / 100
     };
   });
   return {
     clientCount: rows.length,
-    totalMrr: rows.reduce((s, r) => s + r.mrr, 0),
+    // Alleen geprijsde klanten tellen in het totaal; op-aanvraag telt niet als 0-omzet.
+    totalMrr: Math.round(rows.reduce((s, r) => s + (r.mrr || 0), 0) * 100) / 100,
+    unpricedCount: rows.filter(r => r.unpriced).length,
     totalCommission: Math.round(rows.reduce((s, r) => s + r.commission * 100, 0)) / 100,
     rows
   };

@@ -43,6 +43,23 @@ const ADMIN_DELEGATABLE = [
   { key: "field.salary.view", label: "Salarisveld zichtbaar", group: "hr", scopes: ["all"], sensitive: true },
   { key: "field.medical.view", label: "Medisch veld zichtbaar", group: "hr", scopes: ["all"], sensitive: true },
   { key: "field.security_secret.view", label: "Beveiligingsgeheim zichtbaar", group: "beveiliging", scopes: ["all"], sensitive: true },
+  // Forms-rechtendomein (CTO2-02 · h3): granulaire formulierrechten voor
+  // samengestelde profielen. Instance-rechten kennen een scope (own/team/all);
+  // beheer-, rapport- en retentierechten zijn tenant-breed.
+  { key: "forms.definition.view", label: "Formulierdefinities bekijken", group: "formulieren", scopes: ["all"] },
+  { key: "forms.definition.manage", label: "Formulieren beheren (bouwen/toewijzen)", group: "formulieren", scopes: ["all"], sensitive: true },
+  { key: "forms.definition.publish", label: "Formulierversies publiceren", group: "formulieren", scopes: ["all"], sensitive: true },
+  { key: "forms.instance.create", label: "Formulieren starten", group: "formulieren", scopes: ["all", "team", "own"] },
+  { key: "forms.instance.view", label: "Ingevulde formulieren bekijken", group: "formulieren", scopes: ["all", "team", "own"] },
+  { key: "forms.instance.edit", label: "Formulieren bewerken", group: "formulieren", scopes: ["all", "team", "own"] },
+  { key: "forms.instance.submit", label: "Formulieren indienen", group: "formulieren", scopes: ["all", "team", "own"] },
+  { key: "forms.instance.withdraw", label: "Formulieren intrekken", group: "formulieren", scopes: ["all", "team", "own"] },
+  { key: "forms.approve", label: "Formulieren goedkeuren", group: "formulieren", scopes: ["all", "team", "own"], sensitive: true },
+  { key: "forms.sign", label: "Formulieren ondertekenen", group: "formulieren", scopes: ["all", "team", "own"], sensitive: true },
+  { key: "forms.assign", label: "Formulieren toewijzen", group: "formulieren", scopes: ["all"], sensitive: true },
+  { key: "forms.report", label: "Formulierrapportage", group: "formulieren", scopes: ["all"] },
+  { key: "forms.export", label: "Formulierexport en downloads", group: "formulieren", scopes: ["all"], sensitive: true },
+  { key: "forms.retention.manage", label: "Formulierretentie beheren", group: "formulieren", scopes: ["all"], sensitive: true },
 ];
 const ADMIN_DELEGATABLE_KEYS = new Set(ADMIN_DELEGATABLE.map(a => a.key));
 
@@ -86,7 +103,7 @@ function permissionCatalog(store, tenant) {
   }));
   return {
     scopes: SCOPE_LABELS,
-    groups: ["operationeel", "beheer", "financieel", "hr", "beveiliging"],
+    groups: ["operationeel", "beheer", "financieel", "hr", "beveiliging", "formulieren"],
     operational,
     admin: ADMIN_DELEGATABLE,
     forbidden: [...FORBIDDEN_KEYS],

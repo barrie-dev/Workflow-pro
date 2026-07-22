@@ -24,12 +24,14 @@ if (!LIVE || !/^postgres/.test(LIVE)) {
   // Acteurs: een beheerder (ziet alles), een indiener en een goedkeurder.
   const admin = { email: "admin@a", role: "tenant_admin", permissions: [] };
   const emp = { email: "emp@a", role: "employee", permissions: ["read:projects"] };
-  const mgr = { email: "mgr@a", role: "employee", permissions: ["read:projects"] };
+  const mgr = { email: "mgr@a", role: "manager", permissions: ["read:projects"] };
+  // Team-context voor de team-scope van de manager (ctx uit de server).
+  const MGR_CTX = { teamEmails: new Set(["emp@a", "mgr@a"]) };
 
   // Minimale req-stub met headers voor If-Match/Idempotency-Key.
   const reqWith = (headers = {}) => ({ headers, method: "GET", url: "/" });
-  const call = (user, method, action, body = {}, headers = {}) =>
-    handleFormsRoute(repo, { user, tenantId: T, method, action, body, req: reqWith(headers) });
+  const call = (user, method, action, body = {}, headers = {}, ctx = {}) =>
+    handleFormsRoute(repo, { user, tenantId: T, method, action, body, req: reqWith(headers), ctx });
 
   const STRUCT = {
     sections: [{ key: "main", title: { nl: "Hoofd" } }],
@@ -61,10 +63,10 @@ if (!LIVE || !/^postgres/.test(LIVE)) {
     const id = create.payload.form.id;
     assert.ok(id);
 
-    // Onbekende definitie → 404 met code.
+    // Onbekende definitie → generieke 403 (h27: geen detaillek, geen ID-probing).
     const missing = await call(admin, "GET", "form-definitions/nope_123");
-    assert.equal(missing.status, 404);
-    assert.equal(missing.payload.code, "FORM_NOT_FOUND");
+    assert.equal(missing.status, 403);
+    assert.equal(missing.payload.code, "FORMS_FORBIDDEN");
 
     await call(admin, "PUT", `form-definitions/${id}/structure`, STRUCT);
     const pub = await call(admin, "POST", `form-definitions/${id}/publish`);
@@ -82,17 +84,25 @@ if (!LIVE || !/^postgres/.test(LIVE)) {
     const defId = c.payload.form.id;
     await call(admin, "PUT", `form-definitions/${defId}/structure`, STRUCT);
     await call(admin, "POST", `form-definitions/${defId}/publish`);
+    await call(admin, "PATCH", `form-definitions/${defId}/status`, { status: "enabled" }); // activatie (CTO2-02)
 
-    // Instance starten → 201 + ETag "1".
+    // Instance starten: een medewerker met forms.instance.create + actieve
+    // definitie · GEEN settings-recht meer nodig (de omgekeerde matrix is weg).
     const start = await call(emp, "POST", `form-definitions/${defId}/instances`, { subject_type: "purchase", subject_id: "po_9" });
     assert.equal(start.status, 201);
     assert.equal(start.headers.ETag, '"1"');
     const instId = start.payload.instance.id;
 
-    // Concept opslaan met If-Match (kosttarief zichtbaar voor wie mag opslaan).
-    const save = await call(emp, "PATCH", `form-instances/${instId}`, { answers: { amount: 40, cost_price: 12 } }, { "if-match": '"1"' });
+    // CTO2-03: een financieel veld zonder recht is voor de medewerker NIET schrijfbaar.
+    const forbidden = await call(emp, "PATCH", `form-instances/${instId}`, { answers: { amount: 40, cost_price: 12 } }, { "if-match": '"1"' });
+    assert.equal(forbidden.status, 422);
+    assert.equal(forbidden.payload.code, "FIELDS_NOT_WRITABLE");
+    const save = await call(emp, "PATCH", `form-instances/${instId}`, { answers: { amount: 40 } }, { "if-match": '"1"' });
     assert.equal(save.status, 200);
     assert.ok(save.headers.ETag);
+    // De beheerder mag het financiële veld wél zetten.
+    const adminSave = await call(admin, "PATCH", `form-instances/${instId}`, { answers: { cost_price: 12 } });
+    assert.equal(adminSave.status, 200);
 
     // Submit zonder verplichte 'reason' → 422 met fieldErrors.
     const bad = await call(emp, "POST", `form-instances/${instId}/submit`, {});
@@ -201,20 +211,21 @@ if (!LIVE || !/^postgres/.test(LIVE)) {
     const defId = c.payload.form.id;
     await call(admin, "PUT", `form-definitions/${defId}/structure`, STRUCT);
     await call(admin, "POST", `form-definitions/${defId}/publish`);
+    await call(admin, "PATCH", `form-definitions/${defId}/status`, { status: "enabled" });
     const start = await call(emp, "POST", `form-definitions/${defId}/instances`, {});
     const instId = start.payload.instance.id;
     await call(emp, "POST", `form-instances/${instId}/submit`, { answers: { reason: "x" } });
 
-    // De indiener mag niet zelf goedkeuren → 403 SOD_SELF_APPROVAL.
+    // CTO2-01/04: een medewerker heeft géén goedkeuringsrecht · generieke 403.
     const self = await call(emp, "POST", `form-instances/${instId}/approve`, { decision: "approved" });
     assert.equal(self.status, 403);
-    assert.equal(self.payload.code, "SOD_SELF_APPROVAL");
+    assert.equal(self.payload.code, "FORMS_FORBIDDEN");
 
-    // Een andere actor mag → approved, en de lifecycle-events zijn opvraagbaar.
-    const ok = await call(mgr, "POST", `form-instances/${instId}/approve`, { decision: "approved", note: "akkoord" });
+    // De teamleider (forms.approve, team-scope) mag → approved.
+    const ok = await call(mgr, "POST", `form-instances/${instId}/approve`, { decision: "approved", note: "akkoord" }, {}, MGR_CTX);
     assert.equal(ok.status, 200);
     assert.equal(ok.payload.result.status, "approved");
-    const events = await call(mgr, "GET", `form-instances/${instId}/events`);
+    const events = await call(mgr, "GET", `form-instances/${instId}/events`, {}, {}, MGR_CTX);
     assert.ok(events.payload.events.some(e => e.event_type === "submitted"));
     assert.ok(events.payload.events.some(e => e.event_type === "approved"));
 

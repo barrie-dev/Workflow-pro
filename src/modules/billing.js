@@ -88,18 +88,19 @@ function pricingFor(key) {
   return p && p.baseAnnual > 0 ? p : null;
 }
 
-// CTO-09 · DE canonieke MRR-berekening: één bron voor superadmin-billing én
-// resellercommissie. Prijs = de effectieve (superadmin-bewerkbare) bundelprijs:
-// (baseAnnual + seatAnnual × seats boven includedSeats) / 12. Enkel actieve
-// tenants tellen mee; een onbekend plan valt terug op 'business'. Vaste
-// prijsconstanten buiten deze module zijn verboden (CTO-review 2026-07-22).
+// CTO-09/CTO2-09 · DE canonieke MRR-berekening, in EXACT dezelfde semantiek als
+// de klantfacturatie (billingQuote): dezelfde billableSeats() (enkel actieve,
+// factureerbare gebruikers · admins tellen niet mee) en dezelfde pricingFor()
+// (custom/enterprise/onbekend plan = op aanvraag, GEEN stille Business-terugval).
+// Retour: bedrag in euro, 0 voor niet-actieve tenants, of NULL wanneer er nog
+// geen contractprijs bestaat (unpriced) · een teller mag null nooit optellen.
 function tenantMrr(store, tenant) {
   if (!tenant || tenant.status !== "active") return 0;
-  const pkg = effectivePackage(tenant.plan) || effectivePackage("business");
-  if (!pkg || !(pkg.baseAnnual > 0)) return 0;
-  const seats = store.list("users", tenant.id).length;
-  const extraSeats = Math.max(0, seats - (pkg.includedSeats || 0));
-  const annual = pkg.baseAnnual + (pkg.seatAnnual || 0) * extraSeats;
+  const price = pricingFor(String(tenant.plan || "").toLowerCase());
+  if (!price) return null; // op aanvraag · geen prijs = geen MRR-schatting
+  const seats = billableSeats(store, tenant.id);
+  const extraSeats = Math.max(0, seats - (price.includedSeats || 0));
+  const annual = price.baseAnnual + (price.seatAnnual || 0) * extraSeats;
   return Math.round((annual / 12) * 100) / 100;
 }
 

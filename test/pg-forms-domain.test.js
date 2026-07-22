@@ -88,7 +88,7 @@ if (!LIVE || !/^postgres/.test(LIVE)) {
     const before = await pool.query("SELECT count(*)::int AS n FROM customers WHERE tenant_id=$1 AND name='Later BV'", [T]);
     assert.equal(before.rows[0].n, 0);
     // Goedkeuring door een ander → domeinschrijf.
-    const ok = await repo.actOnApproval(T, inst.id, { decision: "approved" }, "mgr@t");
+    const ok = await repo.actOnApproval(T, inst.id, { decision: "approved", hasApproveRight: true }, "mgr@t");
     assert.equal(ok.status, "approved");
     assert.ok(ok.domain && ok.domain.domainId, "approve dispatcht het domeincommand");
     const after = await pool.query("SELECT count(*)::int AS n FROM customers WHERE tenant_id=$1 AND name='Later BV'", [T]);

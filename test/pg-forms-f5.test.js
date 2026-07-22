@@ -92,15 +92,21 @@ if (!LIVE || !/^postgres/.test(LIVE)) {
     await repo.publishVersion(T, def.id, "admin@f");
     const inst = await repo.createInstance(T, { definition_id: def.id }, "emp@f");
 
-    await assert.rejects(() => repo.addAttachment(T, inst.id, { object_key: "t/x.jpg", mime_type: "image/jpeg", size_bytes: 100 }, "emp@f"),
+    await assert.rejects(() => repo.addAttachment(T, inst.id, { mime_type: "image/jpeg", size_bytes: 100 }, "emp@f"),
       e => e.code === "ATTACHMENT_INVALID" && !!e.fieldErrors.gps);
-    const att = await repo.addAttachment(T, inst.id, { object_key: "t/x.jpg", file_name: "werf.jpg", mime_type: "image/jpeg", size_bytes: 100, gps: { lat: 51.05, lng: 3.72 } }, "emp@f");
+    const att = await repo.addAttachment(T, inst.id, { file_name: "werf.jpg", mime_type: "image/jpeg", size_bytes: 100, gps: { lat: 51.05, lng: 3.72 } }, "emp@f");
     assert.equal(att.malware_status, "pending");
+    // CTO2-06: de SERVER geeft de object key uit (tenant/instance in het pad).
+    assert.ok(att.object_key.startsWith(`forms/${T}/${inst.id}/`), "server-issued object key");
     const list = await repo.listAttachments(T, inst.id);
     assert.equal(list.length, 1);
+    // CTO2-06: pending bijlage blokkeert submit; na een groene scan mag het wel.
+    await assert.rejects(() => repo.submitInstance(T, inst.id, { answers: { first_name: "x" } }, "emp@f"),
+      e => e.code === "ATTACHMENTS_NOT_CLEAN");
+    await repo.setAttachmentStatus(T, att.id, "clean", "scanner");
     // Na submit is de instance niet meer bewerkbaar → bijlage geweigerd.
     await repo.submitInstance(T, inst.id, { answers: { first_name: "x" } }, "emp@f");
-    await assert.rejects(() => repo.addAttachment(T, inst.id, { object_key: "t/y.jpg", mime_type: "image/jpeg", size_bytes: 10, gps: { lat: 51, lng: 3.7 } }, "emp@f"),
+    await assert.rejects(() => repo.addAttachment(T, inst.id, { mime_type: "image/jpeg", size_bytes: 10, gps: { lat: 51, lng: 3.7 } }, "emp@f"),
       e => e.code === "INSTANCE_NOT_EDITABLE");
     // GPS-stempel zit in het lifecycle-event (audit).
     const events = await repo.listEvents(T, inst.id);
