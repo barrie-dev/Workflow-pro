@@ -83,21 +83,39 @@ function sendJson(res, status, payload, extraHeaders = {}) {
     status = t.status; payload = t.payload; extraHeaders = { ...extraHeaders, ...t.headers };
     res.wfpV1 = null;
   }
-  res.writeHead(status, {
-    ...securityHeaders(),
-    "Content-Type": "application/json; charset=utf-8",
-    "Cache-Control": "no-store",
-    ...extraHeaders
-  });
-  res.end(JSON.stringify(payload));
-  // Idempotency-Key (h41): een route die door de server "gearmed" is legt zijn
-  // succesvolle response vast, zodat een herhaalde mutatie met dezelfde sleutel
-  // deze response teruggespeeld krijgt in plaats van opnieuw uit te voeren.
-  if (res.wfpIdem) {
-    try { require("./idempotency").recordResponse(res.wfpIdem.store, res.wfpIdem.cacheKey, { status, payload }); }
-    catch (err) { /* vastleggen mag een geslaagde request nooit laten falen */ }
-    res.wfpIdem = null;
+  const finish = () => {
+    res.writeHead(status, {
+      ...securityHeaders(),
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store",
+      ...extraHeaders
+    });
+    res.end(JSON.stringify(payload));
+    // Idempotency-Key (h41): een route die door de server "gearmed" is legt zijn
+    // succesvolle response vast, zodat een herhaalde mutatie met dezelfde sleutel
+    // deze response teruggespeeld krijgt in plaats van opnieuw uit te voeren.
+    if (res.wfpIdem) {
+      try { require("./idempotency").recordResponse(res.wfpIdem.store, res.wfpIdem.cacheKey, { status, payload }); }
+      catch (err) { /* vastleggen mag een geslaagde request nooit laten falen */ }
+      res.wfpIdem = null;
+    }
+  };
+  // CTO-05 · durability-gate: de server kan per (muterende) request een async
+  // poort zetten (res.wfpBeforeSend = flush) die AF moet zijn vóór de response
+  // vertrekt · een 2xx betekent dan echt "bewaard", ook bij een harde crash
+  // direct na het antwoord. Faalt de poort, dan sturen we een eerlijke 503 in
+  // plaats van een 2xx die niet waar is.
+  const gate = res.wfpBeforeSend;
+  if (typeof gate === "function" && !res.wfpGateRan) {
+    res.wfpGateRan = true;
+    Promise.resolve().then(() => gate(status)).then(finish).catch(err => {
+      console.error(`[http] durability-gate faalde: ${err.message}`);
+      res.writeHead(503, { ...securityHeaders(), "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+      res.end(JSON.stringify({ ok: false, code: "PERSIST_FAILED", error: "Opslag tijdelijk niet beschikbaar · de wijziging is niet bevestigd en wordt automatisch opnieuw geprobeerd.", requestId: res.wfpRequestId }));
+    });
+    return;
   }
+  finish();
 }
 
 function readBody(req, maxBytes = 2_000_000) {

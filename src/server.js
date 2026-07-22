@@ -1015,6 +1015,15 @@ const httpServer = http.createServer(async (req, res) => {
   // is; anders is het requestId de correlatie.
   res.wfpCorrelationId = String(req.headers["x-correlation-id"] || res.wfpRequestId).slice(0, 64);
   res.wfpStartedAt = Date.now();
+  // CTO-05 · durability-gate: op een muterende request vertrekt een geslaagde
+  // response pas NADAT de staat echt gepersisteerd is (flush vóór antwoord).
+  // Zo overleeft een write zelfs een harde crash direct na de 2xx; het oude
+  // gat ("flush ná antwoord, één event-loop-tik risico") is hiermee dicht.
+  if (!["GET", "HEAD", "OPTIONS"].includes(req.method)) {
+    res.wfpBeforeSend = async (status) => {
+      if (status < 400 && store.isDirty()) await store.flush();
+    };
+  }
 
   try {
     const rateLimit = checkRateLimit(req, url.pathname);

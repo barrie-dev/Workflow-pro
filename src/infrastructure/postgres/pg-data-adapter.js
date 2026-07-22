@@ -250,11 +250,17 @@ class PostgresDataAdapter {
    * plaats van stil te overschrijven.
    */
   async flush() {
-    // Eerst aansluiten bij een LOPENDE schrijfactie, pas daarna de vuil-check.
-    // Andersom zou een aanroeper tijdens een lopende write {written:false}
-    // krijgen en denken dat alles bewaard is, terwijl de schrijfactie nog liep.
-    // De shutdown-handler zou dan te vroeg kunnen afsluiten.
-    if (this.flushing) return this.flushing;
+    // Een LOPENDE flush kan een snapshot van VÓÓR onze mutatie hebben
+    // geserialiseerd (bv. gestart door een achtergrond-spiegel-lus). Alleen
+    // aansluiten bij die promise zou dan "bewaard" melden terwijl ónze
+    // wijziging nog in pending staat · precies het gat dat de durability-gate
+    // (CTO-05) moet dichten. Daarom: lopende flush afwachten en daarna zelf
+    // opnieuw flushen zolang er vuil staat. Een geresolvede flush() betekent
+    // zo altijd: de staat van op het moment van aanroep staat in de database.
+    while (this.flushing) {
+      try { await this.flushing; }
+      catch (_) { break; } // requeue gebeurde al · de dirty-check hieronder beslist
+    }
     if (!this.isDirty()) return { written: false };
     const data = this.pending;
     this.pending = null;
