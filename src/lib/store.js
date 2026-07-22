@@ -123,6 +123,8 @@ const REQUIRED_COLLECTIONS = [
   "salesLeads",
   "partners",
   "resellers",
+  "commissionEvents",
+  "commissionPayouts",
   "bundles",
   "postedWorkers",
   "templates",

@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-07-21T21:02:51.690Z",
-  "commitSha": "de50a0d",
+  "generatedAt": "2026-07-22T18:57:27.611Z",
+  "commitSha": "f21c762",
   "gateIssue": "https://github.com/barrie-dev/Workflow-pro/issues/40",
   "summary": {
     "releases": 8,
@@ -11,17 +11,17 @@
     "epicsMissingEvidence": 0,
     "epicsUnmapped": 0,
     "requirements": 761,
-    "requirementsProven": 5,
+    "requirementsProven": 28,
     "requirementLevels": {
-      "unproven": 756,
+      "unproven": 733,
       "mapped": 0,
       "implemented": 0,
-      "tested": 5,
+      "tested": 28,
       "accepted": 0
     },
     "dodTotal": 15,
-    "dodGreen": 12,
-    "blocking": 12,
+    "dodGreen": 13,
+    "blocking": 11,
     "unacceptedBlockers": 0
   },
   "targets": {
@@ -48,17 +48,17 @@
       {
         "type": "condition",
         "id": "R0.identity_cutover",
-        "reason": "cutover-identity: bestand ontbreekt (DEV-03)"
+        "reason": "cutover-identity: commitSha 393bcc0 hoort niet bij huidige f21c762 (DEV-03)"
       },
       {
         "type": "condition",
         "id": "R0.company_cutover",
-        "reason": "cutover-company: bestand ontbreekt (DEV-03)"
+        "reason": "cutover-company: commitSha 393bcc0 hoort niet bij huidige f21c762 (DEV-03)"
       },
       {
         "type": "condition",
         "id": "R0.crm_cutover",
-        "reason": "cutover-crm: bestand ontbreekt (DEV-03)"
+        "reason": "cutover-crm: commitSha 393bcc0 hoort niet bij huidige f21c762 (DEV-03)"
       },
       {
         "type": "release",
@@ -93,17 +93,12 @@
       {
         "type": "dod",
         "id": "tests_pass",
-        "reason": "test-suite-bewijs: bestand ontbreekt"
+        "reason": "test-suite-bewijs: commitSha 393bcc0 hoort niet bij huidige f21c762"
       },
       {
         "type": "dod",
         "id": "tenant_isolation",
-        "reason": "security-matrix-bewijs: bestand ontbreekt"
-      },
-      {
-        "type": "dod",
-        "id": "po_acceptance",
-        "reason": "acceptatie-bewijs: bestand ontbreekt"
+        "reason": "security-matrix-bewijs: commitSha 393bcc0 hoort niet bij huidige f21c762"
       }
     ],
     "unaccepted": []
@@ -122,19 +117,19 @@
           "key": "identity_cutover",
           "label": "Identity read-cutover naar pg bewezen",
           "ok": false,
-          "detail": "cutover-identity: bestand ontbreekt (DEV-03)"
+          "detail": "cutover-identity: commitSha 393bcc0 hoort niet bij huidige f21c762 (DEV-03)"
         },
         {
           "key": "company_cutover",
           "label": "Company read-cutover naar pg bewezen",
           "ok": false,
-          "detail": "cutover-company: bestand ontbreekt (DEV-03)"
+          "detail": "cutover-company: commitSha 393bcc0 hoort niet bij huidige f21c762 (DEV-03)"
         },
         {
           "key": "crm_cutover",
           "label": "CRM read-cutover naar pg bewezen",
           "ok": false,
-          "detail": "cutover-crm: bestand ontbreekt (DEV-03)"
+          "detail": "cutover-crm: commitSha 393bcc0 hoort niet bij huidige f21c762 (DEV-03)"
         }
       ],
       "blockedBy": [],
@@ -160,19 +155,19 @@
           "key": "horizontal_e2e",
           "label": "9 verplichte E2E-scenario's volledig",
           "ok": false,
-          "detail": "e2e-scenarios: bestand ontbreekt (DEV-03)"
+          "detail": "e2e-scenarios: status is 'fail', niet 'pass' (DEV-03)"
         },
         {
           "key": "finance_tx",
           "label": "Finance multi-write rollback bewezen (pg-integratietest)",
           "ok": false,
-          "detail": "finance-tx: bestand ontbreekt (DEV-06)"
+          "detail": "finance-tx: commitSha 393bcc0 hoort niet bij huidige f21c762 (DEV-06)"
         },
         {
           "key": "finance_cutover",
           "label": "Finance read-cutover naar pg bewezen",
           "ok": false,
-          "detail": "cutover-finance: bestand ontbreekt (DEV-03)"
+          "detail": "cutover-finance: commitSha 393bcc0 hoort niet bij huidige f21c762 (DEV-03)"
         }
       ],
       "blockedBy": [
@@ -239,7 +234,7 @@
           "key": "pfi_tx",
           "label": "Projectfinance database-native transactioneel",
           "ok": false,
-          "detail": "finance-tx: bestand ontbreekt (DEV-06)"
+          "detail": "finance-tx: commitSha 393bcc0 hoort niet bij huidige f21c762 (DEV-06)"
         }
       ],
       "blockedBy": [
@@ -1291,7 +1286,7 @@
       "key": "entities_constraints",
       "criterion": "Entities and relationships are migrated or created with constraints.",
       "ok": true,
-      "detail": "7 SQL-migraties met constraints in migrations/sql/."
+      "detail": "10 SQL-migraties met constraints in migrations/sql/."
     },
     {
       "index": 3,
@@ -1347,14 +1342,14 @@
       "key": "tests_pass",
       "criterion": "Unit, integration and end-to-end tests pass.",
       "ok": false,
-      "detail": "test-suite-bewijs: bestand ontbreekt"
+      "detail": "test-suite-bewijs: commitSha 393bcc0 hoort niet bij huidige f21c762"
     },
     {
       "index": 11,
       "key": "tenant_isolation",
       "criterion": "Tenant isolation and privilege tests pass.",
       "ok": false,
-      "detail": "security-matrix-bewijs: bestand ontbreekt"
+      "detail": "security-matrix-bewijs: commitSha 393bcc0 hoort niet bij huidige f21c762"
     },
     {
       "index": 12,
@@ -1381,18 +1376,18 @@
       "index": 15,
       "key": "po_acceptance",
       "criterion": "Product owner and domain expert accept the scenario.",
-      "ok": false,
-      "detail": "acceptatie-bewijs: bestand ontbreekt"
+      "ok": true,
+      "detail": "PO-acceptatie ondertekend (governance-artefact)."
     }
   ],
   "requirements": {
     "total": 761,
-    "proven": 5,
+    "proven": 28,
     "levels": {
-      "unproven": 756,
+      "unproven": 733,
       "mapped": 0,
       "implemented": 0,
-      "tested": 5,
+      "tested": 28,
       "accepted": 0
     },
     "items": [
@@ -1538,7 +1533,7 @@
         "id": "GRD-BR-001",
         "priority": "must",
         "module": "Universele overzichten, zoeken en bulkacties",
-        "level": "unproven"
+        "level": "tested"
       },
       {
         "id": "GRD-BR-002",
@@ -1658,7 +1653,7 @@
         "id": "CFG-BR-001",
         "priority": "must",
         "module": "Statussen, extra velden, templates en configuratie",
-        "level": "unproven"
+        "level": "tested"
       },
       {
         "id": "CFG-BR-002",
@@ -1784,7 +1779,7 @@
         "id": "AUT-BR-001",
         "priority": "must",
         "module": "Automation en goedkeuringsflows",
-        "level": "unproven"
+        "level": "tested"
       },
       {
         "id": "AUT-BR-002",
@@ -1940,7 +1935,7 @@
         "id": "CRM-BR-001",
         "priority": "must",
         "module": "Klanten, eindklanten en contactpersonen",
-        "level": "unproven"
+        "level": "tested"
       },
       {
         "id": "CRM-BR-002",
@@ -2210,7 +2205,7 @@
         "id": "EMP-BR-001",
         "priority": "must",
         "module": "Werknemers, teams, vaardigheden en capaciteit",
-        "level": "unproven"
+        "level": "tested"
       },
       {
         "id": "EMP-BR-002",
@@ -2336,7 +2331,7 @@
         "id": "ART-BR-001",
         "priority": "must",
         "module": "Artikels, posten, activiteiten en prijsmotor",
-        "level": "unproven"
+        "level": "tested"
       },
       {
         "id": "ART-BR-002",
@@ -2474,7 +2469,7 @@
         "id": "CAL-BR-001",
         "priority": "must",
         "module": "Postenbibliotheek en calculatiemotor",
-        "level": "unproven"
+        "level": "tested"
       },
       {
         "id": "CAL-BR-002",
@@ -2774,7 +2769,7 @@
         "id": "SET-BR-001",
         "priority": "must",
         "module": "Verrekeningen, meerwerken en minderwerken",
-        "level": "unproven"
+        "level": "tested"
       },
       {
         "id": "SET-BR-002",
@@ -3020,7 +3015,7 @@
         "id": "PRJ-BR-001",
         "priority": "must",
         "module": "Projecten en centraal uitvoeringsdossier",
-        "level": "unproven"
+        "level": "tested"
       },
       {
         "id": "PRJ-BR-002",
@@ -3164,7 +3159,7 @@
         "id": "NAC-BR-001",
         "priority": "must",
         "module": "Budgetopvolging, nacalculatie en forecast",
-        "level": "unproven"
+        "level": "tested"
       },
       {
         "id": "NAC-BR-002",
@@ -3302,7 +3297,7 @@
         "id": "DPL-BR-001",
         "priority": "must",
         "module": "Dagplanning, resources en dispatching",
-        "level": "unproven"
+        "level": "tested"
       },
       {
         "id": "DPL-BR-002",
@@ -3740,7 +3735,7 @@
         "id": "PUR-BR-001",
         "priority": "must",
         "module": "Aankooporders, onderaanneming, huur en transport",
-        "level": "unproven"
+        "level": "tested"
       },
       {
         "id": "PUR-BR-002",
@@ -3890,7 +3885,7 @@
         "id": "STK-BR-001",
         "priority": "must",
         "module": "Voorraad, reservaties en stockmutaties",
-        "level": "unproven"
+        "level": "tested"
       },
       {
         "id": "STK-BR-002",
@@ -4472,7 +4467,7 @@
         "id": "PRG-BR-001",
         "priority": "must",
         "module": "Vorderingsstaten, prijsherziening en verlet",
-        "level": "unproven"
+        "level": "tested"
       },
       {
         "id": "PRG-BR-002",
@@ -4604,7 +4599,7 @@
         "id": "AST-BR-001",
         "priority": "must",
         "module": "Materieel, installaties en serienummers",
-        "level": "unproven"
+        "level": "tested"
       },
       {
         "id": "AST-BR-002",
@@ -4736,7 +4731,7 @@
         "id": "SRV-BR-001",
         "priority": "must",
         "module": "Service, onderhoud en interventies",
-        "level": "unproven"
+        "level": "tested"
       },
       {
         "id": "SRV-BR-002",
@@ -4880,7 +4875,7 @@
         "id": "SUB-BR-001",
         "priority": "must",
         "module": "Abonnementen, contracten en terugkerende omzet",
-        "level": "unproven"
+        "level": "tested"
       },
       {
         "id": "SUB-BR-002",
@@ -5156,7 +5151,7 @@
         "id": "LVE-BR-001",
         "priority": "must",
         "module": "Verlof, afwezigheden en tijdregistratie",
-        "level": "unproven"
+        "level": "tested"
       },
       {
         "id": "LVE-BR-002",
@@ -5288,7 +5283,7 @@
         "id": "PPL-BR-001",
         "priority": "must",
         "module": "Projectplanning, fasen en capaciteitsforecast",
-        "level": "unproven"
+        "level": "tested"
       },
       {
         "id": "PPL-BR-002",
@@ -5414,7 +5409,7 @@
         "id": "DOC-BR-001",
         "priority": "must",
         "module": "Taken, formulieren, bestanden en communicatie",
-        "level": "unproven"
+        "level": "tested"
       },
       {
         "id": "DOC-BR-002",
@@ -5552,7 +5547,7 @@
         "id": "BI-BR-001",
         "priority": "must",
         "module": "Dashboard, analyses en managementrapportering",
-        "level": "unproven"
+        "level": "tested"
       },
       {
         "id": "BI-BR-002",
@@ -5672,7 +5667,7 @@
         "id": "API-BR-001",
         "priority": "must",
         "module": "API, webhooks, import en integratieplatform",
-        "level": "unproven"
+        "level": "tested"
       },
       {
         "id": "API-BR-002",
@@ -5828,7 +5823,7 @@
         "id": "SEC-BR-002",
         "priority": "must",
         "module": "Beveiliging, audit, privacy en continuïteit",
-        "level": "unproven"
+        "level": "tested"
       },
       {
         "id": "SEC-BR-003",
