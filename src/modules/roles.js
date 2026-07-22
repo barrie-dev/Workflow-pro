@@ -38,6 +38,7 @@ const ADMIN_DELEGATABLE = [
   // samenstellen zonder de beheerdersrol. Bijzondere categorieën (salaris/medisch)
   // en secrets zijn NOOIT automatisch zichtbaar - enkel via deze expliciete rechten.
   { key: "field.cost_price.view", label: "Kostprijsveld zichtbaar", group: "financieel", scopes: ["all"], sensitive: true },
+  { key: "field.margin.view", label: "Margeveld zichtbaar", group: "financieel", scopes: ["all"], sensitive: true },
   { key: "field.bank_account.view", label: "Bankrekeningveld zichtbaar", group: "financieel", scopes: ["all"], sensitive: true },
   { key: "field.salary.view", label: "Salarisveld zichtbaar", group: "hr", scopes: ["all"], sensitive: true },
   { key: "field.medical.view", label: "Medisch veld zichtbaar", group: "hr", scopes: ["all"], sensitive: true },

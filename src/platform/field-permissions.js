@@ -14,14 +14,22 @@
 //  - Financieel/confidential/personal: beheerders zien binnen hun tenant; een
 //    expliciet veldrecht ontsluit het rechten-gedreven voor niet-beheerders.
 
-// De vijf canonieke veld-zichtbaarheidsrechten (h3 "Veldniveau").
+// De canonieke veld-zichtbaarheidsrechten (h3 "Veldniveau" + h10 field.margin.view).
+// h3 noemt voorbeelden; elk recht dat het patroon field.<naam>.view volgt is
+// geldig (isFieldPermission) - deze lijst is de delegeerbare catalogus.
 const FIELD_PERMISSIONS = [
   "field.cost_price.view",
   "field.salary.view",
   "field.medical.view",
   "field.bank_account.view",
   "field.security_secret.view",
+  "field.margin.view",
 ];
+
+/** Volgt een recht het canonieke veldrecht-patroon? */
+function isFieldPermission(perm) {
+  return perm === "costs.view" || /^field\.[a-z0-9_]+\.view$/.test(String(perm || ""));
+}
 
 // Klasse-brede rechten: bezit van één ervan ontsluit de hele klasse. 'costs.view'
 // blijft als bestaand zichtbaarheidsrecht (samenstelbare profielen #75) meelopen
@@ -77,5 +85,5 @@ function permissionsForClassification(classification) {
 
 module.exports = {
   FIELD_PERMISSIONS, CLASSIFICATION_PERMISSION, EXPLICIT_ONLY_CLASSIFICATIONS,
-  hasFieldPermission, canViewClassified, permissionsForClassification,
+  hasFieldPermission, canViewClassified, permissionsForClassification, isFieldPermission,
 };

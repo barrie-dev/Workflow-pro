@@ -15,11 +15,16 @@ const secops = { role: "employee", permissions: ["field.security_secret.view"] }
 
 const V = (u, classification, viewPermission) => F.canViewClassified(u, { classification, viewPermission });
 
-test("het register kent de vijf canonieke veldrechten", () => {
+test("het register kent de canonieke veldrechten + het patroon", () => {
   assert.deepEqual(F.FIELD_PERMISSIONS, [
     "field.cost_price.view", "field.salary.view", "field.medical.view",
-    "field.bank_account.view", "field.security_secret.view",
+    "field.bank_account.view", "field.security_secret.view", "field.margin.view",
   ]);
+  // h3 noemt voorbeelden; het patroon field.<naam>.view is de echte grens.
+  assert.equal(F.isFieldPermission("field.margin.view"), true);
+  assert.equal(F.isFieldPermission("costs.view"), true);
+  assert.equal(F.isFieldPermission("field.Weird.View"), false);
+  assert.equal(F.isFieldPermission("settings"), false);
 });
 
 test("public/internal · iedereen ziet, ook zonder gebruiker", () => {

@@ -86,6 +86,11 @@ async function handleFormsRoute(repo, { user, tenantId, method, action, body = {
     if (fStruct && (method === "PUT" || method === "PATCH")) {
       return ok(200, { result: await repo.setDraftStructure(tenantId, fStruct[1], body, actor) });
     }
+    // Normatieve structuur uit de velddictionary (h6-h24) op de draft zetten.
+    const fDict = action.match(/^form-definitions\/([^/]+)\/structure\/dictionary$/);
+    if (fDict && method === "POST") {
+      return ok(200, { result: await repo.applyDictionaryStructure(tenantId, fDict[1], actor) });
+    }
     const fPublish = action.match(/^form-definitions\/([^/]+)\/publish$/);
     if (fPublish && method === "POST") {
       return ok(200, { version: await repo.publishVersion(tenantId, fPublish[1], actor) });

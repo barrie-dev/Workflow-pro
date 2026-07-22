@@ -443,12 +443,27 @@ function makePgFormsRepository(pool, { domainCommands = null } = {}) {
     });
   }
 
+  // Geef een (gezaaide) definitie haar normatieve draft-structuur uit de
+  // velddictionary (h6-h24) · attributes.dictionary_chapter wijst het hoofdstuk.
+  async function applyDictionaryStructure(tenantId, defId, actor) {
+    let dict;
+    try { dict = require("../../platform/field-dictionary"); }
+    catch { throw err(409, "DICTIONARY_NOT_BUILT", "De velddictionary is nog niet gebouwd (scripts/build-field-dictionary.js)."); }
+    const def = await getDefinition(tenantId, defId);
+    if (!def) throw err(404, "FORM_NOT_FOUND", "definitie niet gevonden");
+    const chapter = def.attributes && def.attributes.dictionary_chapter;
+    if (!chapter) throw err(400, "NO_DICTIONARY_CHAPTER", "deze definitie heeft geen dictionary_chapter");
+    const struct = dict.structureFor(chapter);
+    if (!struct) throw err(404, "DICTIONARY_CHAPTER_UNKNOWN", `hoofdstuk ${chapter} staat niet in de dictionary`);
+    return setDraftStructure(tenantId, defId, struct, actor);
+  }
+
   return {
     createDefinition, getDefinition, listDefinitions, setDefinitionStatus,
     setDraftStructure, publishVersion, createNewVersion,
     createInstance, getInstance, saveDraft, submitInstance, transition, actOnApproval, listEvents,
     createAssignment, listAssignments, revokeAssignment, resolveActivation, resolveExternalToken, captureSignature,
-    seedStandardForms,
+    seedStandardForms, applyDictionaryStructure,
   };
 }
 

@@ -182,6 +182,18 @@ if (!LIVE || !/^postgres/.test(LIVE)) {
     const hr1 = list.find(f => f.key === "HR-001");
     assert.equal(hr1.attributes.requires_entitlement, "leave");
     assert.equal(hr1.data_classification, "special_category");
+
+    // Velddictionary (h6-h24): CRM-001 krijgt zijn normatieve h8-structuur en
+    // is daarna publiceerbaar · de spec-velden zijn de ECHTE structuur.
+    const dict = require("../src/platform/field-dictionary");
+    const crm1 = list.find(f => f.key === "CRM-001");
+    assert.equal(crm1.attributes.dictionary_chapter, 8);
+    const applied = await call(admin, "POST", `form-definitions/${crm1.id}/structure/dictionary`);
+    assert.equal(applied.status, 200);
+    const expect = dict.structureFor(8);
+    assert.equal(applied.payload.result.fields, expect.fields.length, "alle h8-velden staan op de draft");
+    const pub = await call(admin, "POST", `form-definitions/${crm1.id}/publish`);
+    assert.equal(pub.payload.version.published, true, "dictionary-structuur is publiceerbaar");
   });
 
   test("approve over HTTP · segregation of duties dwingt af (geen zelfgoedkeuring)", async () => {
