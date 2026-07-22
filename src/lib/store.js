@@ -326,6 +326,13 @@ class Store {
    */
   async initAsync() {
     if (this.initialized) return this;
+    // CTO-03 · single-writer-guard: vóór we ook maar één byte schrijven neemt
+    // deze instantie de writer-lock. Een nieuwe deploy wacht op de oude (rolling
+    // window) en faalt daarna hard · nooit twee schrijvers op platform_state.
+    if (config.singleWriter && typeof this.adapter.acquireWriterLock === "function") {
+      await this.adapter.acquireWriterLock({ waitMs: config.singleWriterWaitMs });
+      console.log("[store] single-writer-lock verkregen · deze instantie is de enige schrijver");
+    }
     this.data = typeof this.adapter.loadAsync === "function"
       ? this.enrichDemoData(await this.adapter.loadAsync(seed))
       : this.load();
@@ -519,8 +526,16 @@ class Store {
   remove(collection, id) {
     const before = (this.data[collection] || []).length;
     this.data[collection] = (this.data[collection] || []).filter(row => row.id !== id);
+    const removed = before !== this.data[collection].length;
+    if (removed) {
+      // Tombstone (CTO-04): laat de conflictmerge weten dat deze rij VERWIJDERD
+      // is · zonder dit kan een revisieconflict met een andere instantie de rij
+      // laten terugkeren. De merge pruned tombstones ouder dan het TTL zelf.
+      const tomb = this.data._tombstones = this.data._tombstones || {};
+      (tomb[collection] = tomb[collection] || {})[id] = new Date().toISOString();
+    }
     this.save();
-    return before !== this.data[collection].length;
+    return removed;
   }
 }
 

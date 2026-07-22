@@ -43,30 +43,71 @@ CREATE TABLE IF NOT EXISTS ${STATE_TABLE} (
 // bij aanhoudende hoge gelijktijdigheid.
 const MAX_MERGE_RETRIES = 5;
 
+// Vaste advisory-lock-sleutel voor de platform_state-writer (CTO-03). Eén
+// constante voor het hele platform · twee instanties met dezelfde database
+// concurreren per definitie om dezelfde lock.
+const WRITER_LOCK_KEY = 727270031;
+
 function isIdRow(r) { return r && typeof r === "object" && !Array.isArray(r) && "id" in r; }
+
+// Tombstones (CTO-04): het document draagt onder _tombstones per collectie een
+// map { id → deletedAtISO }. Zo weet de merge dat een ontbrekende rij VERWIJDERD
+// is en niet "nog niet gezien" · verwijderde records keren niet terug bij een
+// revisieconflict, en een delete wint van een gelijktijdige update op die rij.
+const TOMBSTONES_KEY = "_tombstones";
+const TOMBSTONE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // ruim voorbij elk overlap-venster
+
+function pruneTombstones(map, now = Date.now()) {
+  if (!map || typeof map !== "object") return map;
+  for (const coll of Object.keys(map)) {
+    for (const [id, at] of Object.entries(map[coll] || {})) {
+      const ms = Date.parse(at);
+      if (!Number.isFinite(ms) || now - ms > TOMBSTONE_TTL_MS) delete map[coll][id];
+    }
+    if (!Object.keys(map[coll]).length) delete map[coll];
+  }
+  return map;
+}
 
 /**
  * Voeg de HUIDIGE database-staat (`incoming`) samen IN `target` (onze staat),
  * zodat een revisieconflict niet leidt tot dataverlies maar tot een merge:
  *  - collecties van rijen-met-id worden verenigd op id · rijen die alleen de
  *    andere instantie toevoegde blijven behouden (append-veilig);
- *  - bij dezelfde id wint onze versie (last-writer-wins per rij);
+ *  - bij dezelfde id wint onze versie (last-writer-wins per rij) · onder de
+ *    single-writer-guard (CTO-03) komt dit pad in productie niet meer voor;
+ *  - tombstones (CTO-04): een rij die één van beide kanten verwijderde blijft
+ *    verwijderd · geen resurrectie, delete wint van een gelijktijdige update;
  *  - sleutels die enkel in de database bestaan worden overgenomen;
  *  - scalars en niet-id-arrays houden onze waarde.
  * Muteert `target` in-place (dat is de referentie naar de store-data, dus de
- * in-memory leesweergave loopt mee). Bekende grens: een rij die WIJ verwijderden
- * maar de andere instantie nog heeft, keert terug (zeldzaam, binnen het korte
- * overlap-venster · een tombstone-vrije single-row-opslag kan dit niet weten).
+ * in-memory leesweergave loopt mee).
  */
 function mergeStateInto(target, incoming) {
   if (!target || !incoming || typeof incoming !== "object") return target;
+  // Tombstones eerst verenigen: beide kanten hun deletes tellen mee.
+  const incTomb = incoming[TOMBSTONES_KEY] || {};
+  const tgtTomb = target[TOMBSTONES_KEY] = target[TOMBSTONES_KEY] || {};
+  for (const coll of Object.keys(incTomb)) {
+    tgtTomb[coll] = { ...(incTomb[coll] || {}), ...(tgtTomb[coll] || {}) };
+  }
+  pruneTombstones(tgtTomb);
+  const deadIn = coll => tgtTomb[coll] || {};
+
   for (const key of Object.keys(incoming)) {
+    if (key === TOMBSTONES_KEY) continue;
     const inc = incoming[key];
     if (!(key in target)) { target[key] = inc; continue; }
     const tgt = target[key];
     if (Array.isArray(inc) && Array.isArray(tgt) && inc.every(isIdRow) && tgt.every(isIdRow)) {
+      const dead = deadIn(key);
+      // Delete wint: rijen die (door één van beide kanten) getombstoned zijn
+      // verdwijnen ook uit onze staat, zelfs als wij ze intussen wijzigden.
+      if (Object.keys(dead).length) {
+        for (let i = tgt.length - 1; i >= 0; i--) if (dead[tgt[i].id]) tgt.splice(i, 1);
+      }
       const seen = new Set(tgt.map(r => r.id));
-      for (const row of inc) if (!seen.has(row.id)) tgt.push(row);
+      for (const row of inc) if (!seen.has(row.id) && !dead[row.id]) tgt.push(row);
     }
     // anders: onze waarde blijft (last-writer-wins).
   }
@@ -94,12 +135,14 @@ class PostgresDataAdapter {
       e.status = 500; e.code = "DATABASE_URL_MISSING";
       throw e;
     }
+    // CTO-13 · TLS: `ssl` mag een boolean zijn (legacy: require zonder
+    // validatie) of een compleet opties-object van databaseSslOptions()
+    // (verify-full met certificaatvalidatie in productie).
+    const sslOptions = ssl && typeof ssl === "object" ? ssl : (ssl ? { rejectUnauthorized: false } : undefined);
     this.pool = pool || new Pool({
       connectionString: this.connectionString,
       max: maxConnections,
-      // Managed Postgres (Azure, RDS, Cloud SQL) vereist doorgaans TLS. We
-      // laten certificaatvalidatie over aan de omgeving/CA-bundle.
-      ssl: ssl ? { rejectUnauthorized: false } : undefined,
+      ssl: sslOptions,
       statement_timeout: statementTimeoutMs,
       idle_in_transaction_session_timeout: statementTimeoutMs,
     });
@@ -350,10 +393,60 @@ class PostgresDataAdapter {
     };
   }
 
-  async close() {
-    try { await this.flush(); } catch (_) { /* afsluiten mag niet blokkeren op een schrijffout */ }
+  /**
+   * CTO-03 · single-writer-guard: neem een PostgreSQL advisory lock zodat er
+   * nooit twee schrijvende instanties tegelijk op platform_state staan. Een
+   * nieuwe instantie wacht maximaal `waitMs` op de oude (rolling deploy) en
+   * faalt daarna HARD · liever geen tweede writer dan een stil merge-risico.
+   */
+  async acquireWriterLock({ waitMs = 60000, retryMs = 2000 } = {}) {
+    if (this.lockClient) return true; // idempotent
+    const client = await this.pool.connect();
+    const deadline = Date.now() + waitMs;
+    try {
+      for (;;) {
+        const r = await client.query("SELECT pg_try_advisory_lock($1) AS got", [WRITER_LOCK_KEY]);
+        if (r.rows[0] && r.rows[0].got === true) { this.lockClient = client; return true; }
+        if (Date.now() >= deadline) {
+          const e = new Error("Single-writer-lock niet verkregen: een andere instantie schrijft nog naar platform_state.");
+          e.code = "WRITER_LOCK_TIMEOUT"; e.status = 503;
+          throw e;
+        }
+        await new Promise(res => setTimeout(res, retryMs));
+      }
+    } catch (err) {
+      client.release();
+      throw err;
+    }
+  }
+
+  async releaseWriterLock() {
+    if (!this.lockClient) return;
+    const client = this.lockClient;
+    this.lockClient = null;
+    try { await client.query("SELECT pg_advisory_unlock($1)", [WRITER_LOCK_KEY]); } catch (_) { /* sessie-einde geeft hem sowieso vrij */ }
+    client.release();
+  }
+
+  /**
+   * CTO-05 · shutdown durability: afsluiten met niet-gepersisteerde writes is
+   * een FOUT, geen stilte. We flushen; blijft er een schrijffout of dirty staat
+   * over, dan gooit close() DIRTY_SHUTDOWN zodat de shutdown-handler non-zero
+   * kan eindigen en monitoring het ziet. `force` bestaat voor tests/noodpaden.
+   */
+  async close({ force = false } = {}) {
+    let flushError = null;
+    try { await this.flush(); } catch (e) { flushError = e; }
+    const dirty = this.isDirty();
+    await this.releaseWriterLock();
     await this.pool.end();
+    if ((flushError || dirty) && !force) {
+      const e = new Error("Afsluiten met niet-gepersisteerde wijzigingen" + (flushError ? `: ${flushError.message}` : " (pending writes)"));
+      e.code = "DIRTY_SHUTDOWN";
+      e.cause = flushError || undefined;
+      throw e;
+    }
   }
 }
 
-module.exports = { PostgresDataAdapter, STATE_TABLE, SCHEMA_SQL, mergeStateInto };
+module.exports = { PostgresDataAdapter, STATE_TABLE, SCHEMA_SQL, mergeStateInto, TOMBSTONES_KEY, WRITER_LOCK_KEY, pruneTombstones };
