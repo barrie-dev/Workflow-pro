@@ -9208,6 +9208,18 @@ const httpServer = http.createServer(async (req, res) => {
   startServer();
 })().catch(err => {
   console.error(`[start] kon de opslag niet initialiseren: ${err.message}`);
+  // Een TLS-ketenfout is bijna altijd een ONTBREKENDE root-CA, niet een defecte
+  // database. Zonder deze hint leest de operator enkel "self-signed certificate
+  // in certificate chain" en is niet duidelijk welke knop hij moet omzetten.
+  if (/self[- ]signed|certificate|CERT_|unable to (get|verify)/i.test(err.message || "")) {
+    console.error(
+      "[start] TLS-hint: DATABASE_SSL_MODE staat in productie standaard op 'verify-full', " +
+      "dus de certificaatketen van de database MOET te valideren zijn. Zet DATABASE_CA_CERT " +
+      "op de PEM van de root-CA van je provider (volledige inhoud incl. BEGIN/END-regels), " +
+      "of zet tijdelijk DATABASE_SSL_MODE=require om enkel te versleutelen zonder de keten " +
+      "te valideren (zwakker · zie CTO-13)."
+    );
+  }
   process.exit(1);
 });
 
