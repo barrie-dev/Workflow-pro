@@ -66,8 +66,8 @@
 <div class="mgr-layout">
   <aside class="mgr-sidebar" id="mgrSidebar">
     <div class="mgr-logo">
-      <span class="mgr-logo-mark">M</span>
-      <span class="mgr-logo-text">Monargo <small>Manager</small></span>
+      <span class="mgr-logo-mark"><img src="/brand/one-symbol.svg" alt=""></span>
+      <span class="mgr-logo-text">One <small>by Monargo · Manager</small></span>
     </div>
     <nav class="mgr-nav">
       <a class="mgr-nav-item active" data-view="dashboard" href="#" tabindex="0">
@@ -666,17 +666,20 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
     const from = weekStart.toISOString().slice(0,10);
     const to = weekEnd.toISOString().slice(0,10);
 
-    const data = await api("GET", `/manager/planning?from=${from}&to=${to}`);
+    const [data, dashboard] = await Promise.all([
+      api("GET", `/manager/planning?from=${from}&to=${to}`),
+      api("GET", "/manager/dashboard").catch(() => ({ teamList: [] }))
+    ]);
     const shifts = Array.isArray(data) ? data : (data.shifts || []);
+    const team = dashboard.teamList || data.employees || [];
+    const locale = (window.wfpI18n && window.wfpI18n.lang === "fr")
+      ? "fr-BE"
+      : (window.wfpI18n && window.wfpI18n.lang === "en") ? "en-GB" : "nl-BE";
 
     const days = [];
     for (let d = new Date(weekStart); d <= weekEnd; d.setDate(d.getDate()+1)) {
       days.push(d.toISOString().slice(0,10));
     }
-
-    const MGR_COLORS = [["var(--wf-blue-l)","var(--wf-blue)"],["var(--wf-green-l)","var(--wf-green)"],["var(--wf-yellow-l)","var(--wf-yellow)"],["var(--wf-orange-l)","var(--wf-orange)"],["var(--gray-200)","var(--gray-500)"],["var(--wf-blue-l)","var(--wf-blue-d)"],["var(--wf-red-l)","var(--wf-red)"],["var(--wf-blue-l)","var(--wf-blue)"]];
-    const mgrColorMap = {}; let mgrColorIdx = 0;
-    const getMgrColor = uid => { if (!mgrColorMap[uid]) { mgrColorMap[uid]=MGR_COLORS[mgrColorIdx%MGR_COLORS.length]; mgrColorIdx++; } return mgrColorMap[uid]; };
 
     const byUser = {};
     shifts.forEach(s => {
@@ -684,70 +687,180 @@ table.mgr-table { width:100%; border-collapse:collapse; font-size:13px; }
       if (!byUser[s.userId].days[s.date]) byUser[s.userId].days[s.date] = [];
       byUser[s.userId].days[s.date].push(s);
     });
+    team.forEach(user => {
+      const uid = user.id || user.userId;
+      if (!uid) return;
+      if (!byUser[uid]) byUser[uid] = { name:user.name || user.email || uid, role:user.function || user.jobTitle || "", uid, days:{} };
+      else byUser[uid].role = user.function || user.jobTitle || "";
+    });
 
-    const weekLabel = `${new Date(from).toLocaleDateString("nl-BE",{day:"numeric",month:"short"})} – ${new Date(to).toLocaleDateString("nl-BE",{day:"numeric",month:"short",year:"numeric"})}`;
+    const weekLabel = `${new Date(`${from}T12:00:00`).toLocaleDateString(locale,{day:"numeric",month:"short"})} ${tM("mgr.plan.until", "tot")} ${new Date(`${to}T12:00:00`).toLocaleDateString(locale,{day:"numeric",month:"short",year:"numeric"})}`;
+    const plannedMinutes = shifts.reduce((total, shift) => {
+      const [sh, sm] = String(shift.start || "0:0").split(":").map(Number);
+      const [eh, em] = String(shift.end || "0:0").split(":").map(Number);
+      return total + Math.max(0, (eh * 60 + em) - (sh * 60 + sm));
+    }, 0);
+    const occupied = Object.keys(byUser).filter(userId => days.some(date => (byUser[userId].days[date] || []).length)).length;
 
     const content = document.getElementById("mgrContent");
     content.innerHTML = `
-<div class="mgr-card">
-  <div class="mgr-card-header">
-    <h3 class="mgr-card-title">${tM("nav.planning","Planning")}</h3>
-    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-      <button class="mgr-btn mgr-btn-secondary mgr-btn-sm" id="mgrPrevWeek">‹</button>
-      <span style="font-size:12px;font-weight:500;min-width:160px;text-align:center;">${weekLabel}</span>
-      <button class="mgr-btn mgr-btn-secondary mgr-btn-sm" id="mgrNextWeek">›</button>
-      ${_mgrWeekOffset !== 0 ? `<button class="mgr-btn mgr-btn-secondary mgr-btn-sm" id="mgrTodayWeek">${tM("mgr.now","Nu")}</button>` : ""}
-      <button class="mgr-btn mgr-btn-primary mgr-btn-sm" id="mgrAddShift">+ ${tM("mgr.shift","Shift")}</button>
+<div class="mgr-planning-page">
+  <section class="mgr-planning-title">
+    <div><span class="mgr-eyebrow">${tM("mgr.plan.eyebrow", "Teamuitvoering")}</span><h2>${tM("nav.planning", "Planning")}</h2><p>${tM("mgr.plan.subtitle", "Verdeel het werk over je team en verplaats opdrachten rechtstreeks naar een ander moment.")}</p></div>
+    <button class="mgr-btn mgr-btn-primary" id="mgrAddShift">+ ${tM("mgr.shift", "Shift")}</button>
+  </section>
+  <section class="mgr-planning-toolbar">
+    <div class="mgr-week-navigation">
+      <button class="mgr-btn mgr-btn-secondary mgr-btn-sm" id="mgrPrevWeek" aria-label="${tM("mgr.plan.previousWeek", "Vorige week")}">‹</button>
+      <button class="mgr-btn mgr-btn-secondary mgr-btn-sm" id="mgrNextWeek" aria-label="${tM("mgr.plan.nextWeek", "Volgende week")}">›</button>
+      ${_mgrWeekOffset !== 0 ? `<button class="mgr-btn mgr-btn-secondary mgr-btn-sm" id="mgrTodayWeek">${tM("mgr.now", "Nu")}</button>` : ""}
+      <strong>${esc(weekLabel)}</strong>
     </div>
-  </div>
-  <div class="mgr-card-body mgr-table-wrap">
-    <table class="mgr-table">
-      <thead>
-        <tr>
-          <th>${tM("adm.thEmployee","Medewerker")}</th>
-          ${days.map(d => { const dd = new Date(d); return `<th style="${d===todayStr?"color:var(--wf-blue);font-weight:600;background:var(--wf-blue-l)":""}">${dd.toLocaleDateString("nl-BE",{weekday:"short",day:"numeric",month:"numeric"})}</th>`; }).join("")}
-        </tr>
-      </thead>
-      <tbody>
-        ${Object.values(byUser).map(u => {
-          const [bg,fg] = getMgrColor(u.uid);
-          const totalShifts = Object.values(u.days).reduce((s,d)=>s+d.length,0);
-          return `<tr>
-          <td style="font-weight:500;white-space:nowrap;">
-            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${fg};margin-right:5px;vertical-align:middle;"></span>
-            ${esc(u.name)} <span style="font-size:10px;color:var(--gray-400);">${totalShifts}×</span>
-          </td>
-          ${days.map(d => {
-            const ds = u.days[d]||[];
-            const isToday = d === todayStr;
-            return `<td style="${isToday?"background:var(--wf-blue-l);":""}">
-              ${ds.map(s=>`<div class="mgr-shift-pill" data-id="${s.id}"
-                style="background:${bg};color:${fg};border:1px solid ${fg}30;border-radius:5px;padding:2px 7px;font-size:11px;font-weight:600;margin-bottom:2px;cursor:pointer;white-space:nowrap;">
-                ${esc(s.start||"")}${s.end?`–${esc(s.end)}`:""}
-              </div>`).join("")||`<span style="color:var(--gray-200);font-size:11px;">-</span>`}
-            </td>`;
-          }).join("")}
-        </tr>`;}).join("") || `<tr><td colspan="${days.length+1}" class="mgr-empty">${tM("mgr.noShifts","Geen shifts")}</td></tr>`}
-      </tbody>
-    </table>
-  </div>
+    <div class="mgr-planning-summary">
+      <span><small>${tM("mgr.plan.hours", "Geplande uren")}</small><b>${(plannedMinutes / 60).toLocaleString(locale, { maximumFractionDigits:1 })} u</b></span>
+      <span><small>${tM("mgr.plan.teamPlanned", "Team ingepland")}</small><b>${occupied}/${Object.keys(byUser).length}</b></span>
+      <span><small>${tM("mgr.plan.assignments", "Opdrachten")}</small><b>${shifts.length}</b></span>
+    </div>
+  </section>
+  <section class="mgr-planner-scroll" style="--mgr-day-count:${days.length}">
+    <div class="mgr-planner-head"><span>${tM("adm.thEmployee", "Medewerker")}</span>${days.map(date => {
+      const day = new Date(`${date}T12:00:00`);
+      return `<div class="${date === todayStr ? "today" : ""}"><b>${esc(day.toLocaleDateString(locale, { weekday:"short", day:"numeric", month:"short" }).replace(".", ""))}</b>${date === todayStr ? "<i></i>" : ""}</div>`;
+    }).join("")}</div>
+    ${Object.values(byUser).map((user, rowIndex) => {
+      const totalShifts = Object.values(user.days).reduce((total, rows) => total + rows.length, 0);
+      const initials = String(user.name || "M").split(/\s+/).slice(0,2).map(part => part[0]).join("").toUpperCase();
+      return `<div class="mgr-planner-row">
+        <div class="mgr-planner-person"><i class="color-${rowIndex % 5}">${esc(initials)}</i><span><b>${esc(user.name)}</b><small>${esc(user.role || `${totalShifts} ${tM("mgr.plan.assignmentsShort", "opdrachten")}`)}</small></span></div>
+        ${days.map(date => {
+          const dayShifts = user.days[date] || [];
+          return `<div class="mgr-planner-cell ${date === todayStr ? "today" : ""}" data-user="${esc(user.uid)}" data-date="${date}">
+            ${dayShifts.map(shift => `<button type="button" class="mgr-shift-pill" draggable="true" data-id="${esc(shift.id)}">
+              <strong>${esc(shift.start || "")}${shift.end ? ` ${tM("mgr.plan.until", "tot")} ${esc(shift.end)}` : ""}</strong>
+              <span>${esc(shift.title || shift.location || shift.venueName || shift.note || tM("mgr.plan.assignment", "Opdracht"))}</span>
+            </button>`).join("")}
+            <button type="button" class="mgr-empty-slot" data-add-user="${esc(user.uid)}" data-add-date="${date}" aria-label="${tM("mgr.plan.addHere", "Hier inplannen")}">+</button>
+          </div>`;
+        }).join("")}
+      </div>`;
+    }).join("") || `<div class="mgr-planning-empty"><h3>${tM("mgr.plan.noTeam", "Nog geen teamplanning")}</h3><p>${tM("mgr.plan.noTeamText", "Voeg een shift toe om de weekplanning te starten.")}</p></div>`}
+  </section>
 </div>`;
 
     document.getElementById("mgrAddShift")?.addEventListener("click", () => openShiftModal(from, to, null, shifts));
     document.getElementById("mgrPrevWeek")?.addEventListener("click", () => { _mgrWeekOffset--; renderPlanning(); });
     document.getElementById("mgrNextWeek")?.addEventListener("click", () => { _mgrWeekOffset++; renderPlanning(); });
     document.getElementById("mgrTodayWeek")?.addEventListener("click", () => { _mgrWeekOffset = 0; renderPlanning(); });
-    document.querySelectorAll(".mgr-shift-pill").forEach(pill => {
+    content.querySelectorAll(".mgr-shift-pill").forEach(pill => {
+      pill.addEventListener("dragstart", event => {
+        pill.classList.add("is-dragging");
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", pill.dataset.id);
+      });
+      pill.addEventListener("dragend", () => pill.classList.remove("is-dragging"));
       pill.addEventListener("click", () => {
         const shift = shifts.find(s => s.id === pill.dataset.id);
-        if (shift) openShiftModal(from, to, shift, shifts);
+        if (shift) openManagerPlanningWorkspace(from, to, shift, shifts);
       });
     });
+    content.querySelectorAll(".mgr-planner-cell").forEach(cell => {
+      cell.addEventListener("dragover", event => {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+        cell.classList.add("is-drop-target");
+      });
+      cell.addEventListener("dragleave", event => {
+        if (!cell.contains(event.relatedTarget)) cell.classList.remove("is-drop-target");
+      });
+      cell.addEventListener("drop", async event => {
+        event.preventDefault();
+        cell.classList.remove("is-drop-target");
+        const shift = shifts.find(item => item.id === event.dataTransfer.getData("text/plain"));
+        const userId = cell.dataset.user;
+        const date = cell.dataset.date;
+        if (!shift || !userId || !date || (shift.userId === userId && shift.date === date)) return;
+        cell.classList.add("is-saving");
+        try {
+          await api("PATCH", `/planning/${shift.id}`, { userId, date });
+          window.showToast && window.showToast(tM("mgr.plan.moved", "Planning verplaatst"), "success");
+          renderPlanning();
+        } catch (error) {
+          cell.classList.remove("is-saving");
+          window.showToast && window.showToast(error.message, "error");
+        }
+      });
+    });
+    content.querySelectorAll(".mgr-empty-slot").forEach(button => {
+      button.addEventListener("click", () => openShiftModal(from, to, {
+        userId: button.dataset.addUser,
+        date: button.dataset.addDate,
+        start: "07:00",
+        end: "17:00",
+        _prefill: true
+      }, shifts));
+    });
+  }
+
+  function openManagerPlanningWorkspace(weekFrom, weekTo, shift, allShifts) {
+    document.getElementById("mgrPlanningWorkspace")?.remove();
+    const locale = (window.wfpI18n && window.wfpI18n.lang === "fr")
+      ? "fr-BE"
+      : (window.wfpI18n && window.wfpI18n.lang === "en") ? "en-GB" : "nl-BE";
+    const workspace = document.createElement("section");
+    workspace.id = "mgrPlanningWorkspace";
+    workspace.className = "mn-workspace-overlay mgr-planning-workspace";
+    workspace.setAttribute("role", "dialog");
+    workspace.setAttribute("aria-modal", "true");
+    workspace.innerHTML = `<div class="mn-workspace-shell">
+      <header class="mn-workspace-header">
+        <button type="button" class="mn-btn mn-btn-ghost" id="mgrPlanningBack">← ${tM("mgr.plan.back", "Terug naar planning")}</button>
+        <div class="mgr-planning-workspace-heading"><span>${tM("mgr.plan.assignment", "Opdracht")}</span><strong>${esc(shift.title || shift.location || shift.venueName || tM("mgr.shift", "Shift"))}</strong></div>
+        <span class="mn-status mn-status-info">${esc(shift.status || tM("mgr.plan.planned", "Ingepland"))}</span>
+      </header>
+      <main class="mn-workspace-body">
+        <section class="mgr-planning-detail-hero">
+          <div><span class="mgr-eyebrow">${esc(new Date(`${shift.date}T12:00:00`).toLocaleDateString(locale, { weekday:"long", day:"numeric", month:"long" }))}</span><h2>${esc(shift.title || shift.location || shift.venueName || tM("mgr.plan.assignment", "Geplande opdracht"))}</h2><p>${esc(shift.note || tM("mgr.plan.noNote", "Er is nog geen interne notitie toegevoegd."))}</p></div>
+          <button type="button" class="mn-btn mn-btn-primary" id="mgrPlanningEdit">${tM("mgr.plan.edit", "Planning bewerken")}</button>
+        </section>
+        <div class="mgr-planning-detail-grid">
+          <section class="mn-card mgr-planning-detail-main">
+            <div class="mn-card-header"><h3 class="mn-card-title">${tM("mgr.plan.execution", "Uitvoering")}</h3></div>
+            <div class="mn-card-body">
+              <dl class="mgr-planning-facts">
+                <div><dt>${tM("adm.thEmployee", "Medewerker")}</dt><dd>${esc(shift.userName || shift.userId || tM("mgr.plan.unassigned", "Niet toegewezen"))}</dd></div>
+                <div><dt>${tM("mgr.plan.time", "Tijdstip")}</dt><dd>${esc(shift.start || "")}${shift.end ? ` ${tM("mgr.plan.until", "tot")} ${esc(shift.end)}` : ""}</dd></div>
+                <div><dt>${tM("mgr.venueSite", "Locatie / Werf")}</dt><dd>${esc(shift.location || shift.venueName || shift.venueId || tM("mgr.plan.noLocation", "Nog geen locatie"))}</dd></div>
+                <div><dt>${tM("mgr.plan.linkedWork", "Gekoppeld werk")}</dt><dd>${esc(shift.workorderNumber || shift.workorderId || shift.projectName || shift.projectId || tM("mgr.plan.noLinkedWork", "Geen koppeling"))}</dd></div>
+              </dl>
+              <div class="mgr-planning-notes"><span>${tM("mgr.note", "Notitie")}</span><p>${esc(shift.note || tM("mgr.plan.noNote", "Er is nog geen interne notitie toegevoegd."))}</p></div>
+            </div>
+          </section>
+          <aside class="mgr-planning-detail-aside">
+            <section class="mn-card"><div class="mn-card-header"><h3 class="mn-card-title">${tM("mgr.plan.summary", "Samenvatting")}</h3></div><div class="mn-card-body mgr-planning-summary-list">
+              <p><span>${tM("adm.date", "Datum")}</span><strong>${esc(new Date(`${shift.date}T12:00:00`).toLocaleDateString(locale, { day:"numeric", month:"long", year:"numeric" }))}</strong></p>
+              <p><span>${tM("mgr.plan.duration", "Duur")}</span><strong>${esc(shift.start || "")}${shift.end ? ` ${tM("mgr.plan.until", "tot")} ${esc(shift.end)}` : ""}</strong></p>
+              <p><span>${tM("adm.status", "Status")}</span><strong>${esc(shift.status || tM("mgr.plan.planned", "Ingepland"))}</strong></p>
+            </div></section>
+            <section class="mn-card"><div class="mn-card-header"><h3 class="mn-card-title">${tM("mgr.plan.attention", "Aandachtspunten")}</h3></div><div class="mn-card-body"><div class="mgr-planning-attention ${shift.userId && shift.date ? "ready" : ""}"><span>${shift.userId && shift.date ? "✓" : "!"}</span><p>${shift.userId && shift.date ? tM("mgr.plan.ready", "De basisplanning is volledig en klaar voor uitvoering.") : tM("mgr.plan.incomplete", "Wijs een medewerker en datum toe voor uitvoering.")}</p></div></div></section>
+          </aside>
+        </div>
+      </main>
+    </div>`;
+    document.body.appendChild(workspace);
+    const close = () => workspace.remove();
+    document.getElementById("mgrPlanningBack")?.addEventListener("click", close);
+    document.getElementById("mgrPlanningEdit")?.addEventListener("click", () => {
+      close();
+      openShiftModal(weekFrom, weekTo, shift, allShifts);
+    });
+    workspace.addEventListener("keydown", event => { if (event.key === "Escape") close(); });
+    document.getElementById("mgrPlanningBack")?.focus({ preventScroll:true });
   }
 
   // ── Shift modal ────────────────────────────────────────────
   function openShiftModal(weekFrom, weekTo, shift = null, allShifts = []) {
-    const isEdit = !!shift;
+    const isPrefill = Boolean(shift && shift._prefill);
+    const isEdit = Boolean(shift && !isPrefill);
     api("GET", "/manager/dashboard").then(dash => {
       const team = dash.teamList || [];
       let modal = document.getElementById("mgrShiftModal");
