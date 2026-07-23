@@ -1229,27 +1229,45 @@ function serveStatic(req, res) {
 // nooit en kwam de lock nooit vrij · een deadlock die elke deploy liet falen.
 // Door eerst te luisteren wordt de healthcheck groen, stopt het platform de
 // oude instantie, valt de lock vrij en neemt deze instantie hem over.
-// Zolang dat niet rond is beantwoorden we ALLEEN /api/health: niemand mag op
-// een half geladen staat lezen of schrijven.
-// De gate geldt ALLEEN wanneer de store asynchroon laadt (pg-modus met de
-// writer-lock-wachttijd). In JSON-modus (dev/test) is de staat al synchroon
-// geladen · dan is er niets om op te wachten en start de server meteen open.
-let wfpBooting = storeNeedsAsyncLoad;
+// CTO3-01 · STARTUP-STATE-MACHINE. De bootgate opent businessverkeer UITSLUITEND
+// wanneer de staat geladen EN de laatste verplichte bootflush geslaagd is
+// (state=ready). Elke tussenstap is expliciet en zichtbaar. Een mislukte
+// verplichte persistactie is een HARDE, zichtbare startupfout (state=failed,
+// exit 1) · nooit een stille best-effort. Liveness (het proces leeft) en
+// readiness (mag businessverkeer bedienen) zijn verschillende signalen: alleen
+// readiness bepaalt of businessroutes worden bediend.
+const BOOT_STATES = ["booting", "migrating", "waiting_lock", "loading", "flushing", "ready", "failed"];
+let bootState = "booting";
+function setBootState(next) {
+  if (!BOOT_STATES.includes(next)) return;
+  // 'ready' is een eindtoestand: alleen 'failed' mag hem nog overrulen.
+  if (bootState === "ready" && next !== "failed") return;
+  bootState = next;
+  if (next !== "ready") console.log(`[boot] state=${next}`);
+}
+function isBootReady() { return bootState === "ready"; }
 
 const httpServer = http.createServer(async (req, res) => {
   const url = new URL(req.url, config.appUrl);
-  if (wfpBooting) {
-    if (url.pathname === "/api/health") {
-      // Bewust zonder store-toegang: die is er nog niet.
+  if (!isBootReady()) {
+    // Liveness: het proces leeft (ook tijdens opstarten). Nooit een readiness-
+    // claim: een 200 hier betekent NIET dat businessverkeer veilig kan.
+    if (url.pathname === "/api/health" || url.pathname === "/api/live") {
       return sendJson(res, 200, {
-        ok: true, app: "Monargo One Fullstack", status: "booting",
+        ok: true, app: "Monargo One Fullstack", status: bootState,
         appEnv: config.appEnv, version: config.appVersion, commitSha: config.commitSha,
       });
     }
+    // Readiness weerspiegelt de state-machine: 503 tot state=ready.
+    if (url.pathname === "/api/ready") {
+      res.setHeader("retry-after", "5");
+      return sendJson(res, 503, { ok: false, code: "NOT_READY", status: bootState });
+    }
+    // Alle overige (business)routes: geweigerd tot de staat geladen EN geflusht is.
     res.setHeader("retry-after", "5");
     return sendJson(res, 503, {
-      ok: false, code: "BOOTING",
-      error: "De server start op en wacht op de schrijfrechten. Probeer het zo opnieuw.",
+      ok: false, code: "BOOTING", status: bootState,
+      error: "De server start op. Businessverkeer wordt pas bediend na volledige, duurzame initialisatie.",
     });
   }
   let errorTenantId = url.pathname.match(/^\/api\/tenants\/([^/]+)\//)?.[1] || null;
@@ -9797,6 +9815,20 @@ httpServer.listen(config.port, () => {
   console.log(`Monargo One Fullstack luistert op poort ${config.port} · bezig met opstarten…`);
 });
 
+// CTO3-01 · verplichte bootflush. De boot-mutaties (seed + eerste backup) MOETEN
+// duurzaam zijn vóór we businessverkeer openen. Een mislukte flush is een harde
+// startupfout (fail-closed), geen best-effort: de fout propageert naar de outer
+// catch die het proces met exitcode 1 stopt. GEEN catch(_){} · nooit stil door.
+async function bootFlush() {
+  // Durability-testseam: laat de verplichte bootflush GECONTROLEERD falen om de
+  // fail-closed-semantiek te bewijzen. Strikt buiten productie en enkel wanneer
+  // expliciet gevraagd · nooit een pad in een echte deploy.
+  if (process.env.WFP_FAULT_BOOTFLUSH === "1" && !config.isProduction) {
+    const e = new Error("bootflush faalde (durability-testinjectie)"); e.code = "BOOTFLUSH_FAILED"; throw e;
+  }
+  if (store.isDirty && store.isDirty()) await store.flush();
+}
+
 (async () => {
   if (storeNeedsAsyncLoad) {
     // Schema vóór data (CTO-review 4.3-vondst): de transactionele flush schrijft
@@ -9804,26 +9836,39 @@ httpServer.listen(config.port, () => {
     // een handmatige migratie, waardoor de eerste muterende request faalde.
     // De migratie-runner is idempotent en draait daarom altijd bij boot.
     if (storeAdapter.name === "postgres" && storeAdapter.pool) {
+      setBootState("migrating");
       const { runMigrations } = require("./infrastructure/postgres/migration-runner");
       await runMigrations(storeAdapter.pool);
     }
+    // initAsync neemt (bij single-writer) eerst de writer-lock en laadt daarna
+    // de staat · vandaar waiting_lock → loading.
+    setBootState(config.singleWriter ? "waiting_lock" : "loading");
     await store.initAsync();
+    setBootState("loading");
     console.log(`  Database  : verbonden (${config.storageAdapter})`);
   }
   // Opstarttaken opzetten (incl. de eerste achtergrond-backupronde) TERWIJL de
   // bootgate nog dicht is.
   startServer();
-  // Laat die eerste achtergrondronde lopen en de boot-mutaties (seed + backup)
-  // volledig wegschrijven VOORDAT we verkeer aannemen. Zonder dit kan de eerste
-  // boot-flush racen met de flush van de allereerste request-write · onder een
-  // harde kill vlak daarna gaat die write dan verloren. Settelen = deterministisch.
+  // Laat die eerste achtergrondronde lopen en de boot-mutaties volledig
+  // wegschrijven VOORDAT we verkeer aannemen. Zonder dit kan de eerste boot-flush
+  // racen met de flush van de allereerste request-write · onder een harde kill
+  // vlak daarna gaat die write dan verloren. Settelen = deterministisch.
   await new Promise(res => setImmediate(res));
-  if (store.isDirty && store.isDirty()) { try { await store.flush(); } catch (_) {} }
+  setBootState("flushing");
+  // Durability-testseam: een observeerbaar niet-ready venster in state=flushing,
+  // om te bewijzen dat businessverkeer 503 krijgt tot state=ready. Strikt buiten
+  // productie.
+  if (process.env.WFP_FAULT_BOOTDELAY_MS && !config.isProduction) {
+    await new Promise(res => setTimeout(res, Number(process.env.WFP_FAULT_BOOTDELAY_MS) || 0));
+  }
+  await bootFlush();
   // Pas nu is de staat geladen, geflusht en zijn we de enige schrijver: de
   // bootgate gaat open en het volledige verkeer wordt bediend.
-  wfpBooting = false;
+  setBootState("ready");
 })().catch(err => {
-  console.error(`[start] kon de opslag niet initialiseren: ${err.message}`);
+  setBootState("failed");
+  console.error(`[start] STARTUP_FAILED code=${err.code || "STARTUP_FAILED"}: ${err.message}`);
   // Een TLS-ketenfout is bijna altijd een ONTBREKENDE root-CA, niet een defecte
   // database. Zonder deze hint leest de operator enkel "self-signed certificate
   // in certificate chain" en is niet duidelijk welke knop hij moet omzetten.
