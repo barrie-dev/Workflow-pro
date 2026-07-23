@@ -52,7 +52,7 @@
   // Dashboard, Actiecentrum en Werkruimte zijn shell-views: ze bundelen enkel
   // tenantdata waar de gebruiker al toegang toe heeft en hebben geen apart
   // backend-entitlement nodig.
-  const CORE_UI_VIEWS = new Set(["dashboard", "actions", "workos", "profielen", "dossiers"]);
+  const CORE_UI_VIEWS = new Set(["dashboard", "actions", "operations", "workos", "profielen", "dossiers"]);
 
   // Verberg nav-items voor modules die niet in het pakket van de tenant zitten.
   function applyEntitlements() {
@@ -715,11 +715,14 @@
 
 `;
 
+    organizeAdminNavigation(el);
+
     // nav click + hover-submenu (flyout) per module
     el.querySelectorAll(".adm-nav-item[data-view]").forEach(a => {
       a.addEventListener("click", e => {
         e.preventDefault();
         switchView(a.dataset.view);
+        document.getElementById("admSidebar")?.classList.remove("open");
         hideNavFlyout(true);
       });
       a.addEventListener("mouseenter", () => showNavFlyout(a, a.dataset.view));
@@ -794,7 +797,7 @@
 
   // ── Navigation ─────────────────────────────────────────────
   const VIEW_LABELS = {
-    dashboard: "Dashboard", actions: "Actiecentrum", workos: "Werkruimte", employees: "Medewerkers", planning: "Planning",
+    dashboard: "Dashboard", actions: "Actiecentrum", operations: "Overzicht", workos: "Werkruimte", employees: "Medewerkers", planning: "Planning",
     appointments: "Afspraken",
     clocking: "Prikklok", leaves: "Verlof", expenses: "Onkosten",
     workorders: "Werkbonnen", messages: "Berichten", reports: "Rapportages",
@@ -818,6 +821,46 @@
     projects: "+ Project", worksites: "+ Werf", contracts: "+ Contract", purchasing: "+ Bestelling", inventory: "+ Mutatie", assets: "+ Asset",
     payments: "+ Betaling"
   };
+
+  const ADMIN_NAV_GROUPS = [
+    { key:"nav.sec.home", fallback:"Home", views:["dashboard", "actions", "inbox", "messages"] },
+    { key:"nav.sec.operations", fallback:"Operaties", views:["operations", "planning", "workorders", "projects", "worksites", "vehicles", "stock", "appointments", "assets"] },
+    { key:"nav.sec.finance", fallback:"Klanten & Financiën", views:["customers", "venues", "offertes", "contracts", "catalog", "purchasing", "inventory", "facturen", "payments"] },
+    { key:"nav.sec.team", fallback:"Team", views:["employees", "employee_records", "clocking", "leaves", "expenses"] },
+    { key:"nav.sec.compliance", fallback:"Compliance", views:["incidents", "ciaw", "posted_workers", "progress-claims"] },
+    { key:"nav.sec.insights", fallback:"Inzichten", views:["reports", "portfolio", "lists", "dossiers"] },
+    { key:"nav.sec.system", fallback:"Instellingen", views:["workos", "templates", "formulieren", "integrations", "webhooks", "profielen", "audit", "billing", "roadmap", "settings"] }
+  ];
+
+  function operationsNavItem() {
+    const item = document.createElement("a");
+    item.className = "adm-nav-item";
+    item.dataset.view = "operations";
+    item.href = "#";
+    item.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3h6c.55 0 1 .45 1 1v6c0 .55-.45 1-1 1H4c-.55 0-1-.45-1-1V4c0-.55.45-1 1-1zm10 0h6c.55 0 1 .45 1 1v3c0 .55-.45 1-1 1h-6c-.55 0-1-.45-1-1V4c0-.55.45-1 1-1zM4 13h6c.55 0 1 .45 1 1v6c0 .55-.45 1-1 1H4c-.55 0-1-.45-1-1v-6c0-.55.45-1 1-1zm10-3h6c.55 0 1 .45 1 1v9c0 .55-.45 1-1 1h-6c-.55 0-1-.45-1-1v-9c0-.55.45-1 1-1z"/></svg><span data-i18n="nav.operationsOverview">Overzicht</span>`;
+    return item;
+  }
+
+  function organizeAdminNavigation(platform) {
+    const nav = platform.querySelector(".adm-nav");
+    if (!nav) return;
+    const items = new Map(
+      [...nav.querySelectorAll(".adm-nav-item[data-view]")].map(item => [item.dataset.view, item])
+    );
+    items.set("operations", operationsNavItem());
+    nav.replaceChildren();
+
+    ADMIN_NAV_GROUPS.forEach(group => {
+      const available = group.views.map(view => items.get(view)).filter(Boolean);
+      if (!available.length) return;
+      const label = document.createElement("div");
+      label.className = "adm-nav-label";
+      label.dataset.i18n = group.key;
+      label.textContent = group.fallback;
+      nav.appendChild(label);
+      available.forEach(item => nav.appendChild(item));
+    });
+  }
 
   const FLOW_VIEWS = [
     { view:"customers", label:"Klant" },
@@ -1188,6 +1231,121 @@
       document.getElementById("admActionRefresh")?.addEventListener("click", renderActionCenter);
     };
     paint(_actionFilter);
+  }
+
+  // ── Operaties · centraal overzicht over de echte uitvoeringsdomeinen ──────
+  async function renderOperationsOverview() {
+    const content = document.getElementById("admContent");
+    content.innerHTML = `<div class="adm-loading"><div class="adm-spinner"></div>${tA("adm.operations.loading", "Operaties verzamelen…")}</div>`;
+
+    const fetchDomain = async (view, path) => {
+      if (!viewEnabled(view)) return {};
+      try { return await api("GET", path); }
+      catch (error) { return { _error: error.message }; }
+    };
+    const [planningData, workorderData, projectData, worksiteData, vehicleData, stockData] = await Promise.all([
+      fetchDomain("planning", "/planning"),
+      fetchDomain("workorders", "/workorders"),
+      fetchDomain("projects", "/projects"),
+      fetchDomain("worksites", "/worksites"),
+      fetchDomain("vehicles", "/vehicles"),
+      fetchDomain("stock", "/stock")
+    ]);
+
+    const rows = (payload, keys) => {
+      for (const key of keys) if (Array.isArray(payload && payload[key])) return payload[key];
+      return Array.isArray(payload) ? payload : [];
+    };
+    const planning = rows(planningData, ["shifts", "planning", "rows"]);
+    const workorders = rows(workorderData, ["workorders", "rows"]);
+    const projects = rows(projectData, ["projects", "rows"]);
+    const worksites = rows(worksiteData, ["worksites", "rows"]);
+    const vehicles = rows(vehicleData, ["vehicles", "rows"]);
+    const stock = rows(stockData, ["stock", "items", "rows"]);
+    const today = new Date();
+    const todayIso = new Date(today.getTime() - today.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+    const plannedToday = planning.filter(item => String(item.date || item.startDate || item.start || "").slice(0, 10) === todayIso);
+    const activeWorkorders = workorders.filter(item => !["done", "completed", "afgerond", "afgewerkt", "geannuleerd", "cancelled"].includes(String(item.status || "").toLowerCase()));
+    const activeProjects = projects.filter(item => !["done", "completed", "afgerond", "geannuleerd", "cancelled"].includes(String(item.status || "").toLowerCase()));
+    const serviceVehicles = vehicles.filter(item => ["maintenance", "service", "onderhoud"].includes(String(item.status || "").toLowerCase()) || item.serviceDue);
+    const lowStock = stock.filter(item => Number(item.available ?? item.quantity ?? item.stock ?? 0) <= Number(item.minimum ?? item.minStock ?? 0));
+    const domainErrors = [planningData, workorderData, projectData, worksiteData, vehicleData, stockData].filter(item => item && item._error).length;
+
+    const moduleCard = ({ view, icon, title, value, meta, attention }) => {
+      if (!viewEnabled(view)) return "";
+      return `<button type="button" class="adm-operation-module ${attention ? "needs-attention" : ""}" data-operation-view="${view}">
+        <span class="adm-operation-icon" aria-hidden="true">${icon}</span>
+        <span class="adm-operation-copy"><small>${esc(title)}</small><strong>${esc(String(value))}</strong><span>${esc(meta)}</span></span>
+        <span class="adm-operation-open" aria-hidden="true">→</span>
+      </button>`;
+    };
+
+    const upcoming = [...plannedToday]
+      .sort((a, b) => String(a.startTime || a.start || "").localeCompare(String(b.startTime || b.start || "")))
+      .slice(0, 5);
+    const workToFollow = activeWorkorders.slice(0, 5);
+
+    content.innerHTML = `<div class="adm-operations-overview">
+      <section class="adm-operations-hero">
+        <div>
+          <span class="adm-eyebrow">${tA("adm.operations.eyebrow", "Dagelijkse uitvoering")}</span>
+          <h2>${tA("adm.operations.title", "Operaties in één werkruimte")}</h2>
+          <p>${tA("adm.operations.subtitle", "Plan mensen en middelen, volg de uitvoering en ga rechtstreeks naar de juiste operationele module.")}</p>
+        </div>
+        <div class="adm-operations-hero-actions">
+          <button type="button" class="adm-btn adm-btn-secondary" data-operation-view="planning">${tA("adm.operations.openPlanning", "Open planning")}</button>
+          <button type="button" class="adm-btn adm-btn-primary" id="admOperationNewWorkorder">${tA("adm.operations.newWorkorder", "Nieuwe werkbon")}</button>
+        </div>
+      </section>
+
+      ${domainErrors ? `<div class="adm-operations-notice" role="status"><span>!</span><p>${tA("adm.operations.partial", "Niet alle operationele gegevens konden worden geladen. De beschikbare modules blijven bruikbaar.")}</p></div>` : ""}
+
+      <section class="adm-operation-modules" aria-label="${tA("nav.sec.operations", "Operaties")}">
+        ${moduleCard({ view:"planning", icon:"◫", title:tA("nav.planning", "Planning"), value:plannedToday.length, meta:tA("adm.operations.plannedToday", "vandaag ingepland") })}
+        ${moduleCard({ view:"workorders", icon:"✓", title:(window.wfpTerms && window.wfpTerms.t("jobPlural")) || tA("nav.workorders", "Werkbonnen"), value:activeWorkorders.length, meta:tA("adm.operations.openWorkorders", "open voor uitvoering"), attention:activeWorkorders.some(item => item.scheduledDate && item.scheduledDate < todayIso) })}
+        ${moduleCard({ view:"projects", icon:"P", title:tA("nav.projects", "Projecten"), value:activeProjects.length, meta:tA("adm.operations.activeProjects", "actieve projecten") })}
+        ${moduleCard({ view:"worksites", icon:"⌖", title:tA("nav.worksites", "Werven"), value:worksites.length, meta:tA("adm.operations.worksites", "beschikbare werven") })}
+        ${moduleCard({ view:"vehicles", icon:"V", title:tA("nav.vehicles", "Wagenpark"), value:vehicles.length, meta:serviceVehicles.length ? tA("adm.operations.vehicleAttention", "{n} vraagt aandacht").replace("{n}", serviceVehicles.length) : tA("adm.operations.vehiclesReady", "beschikbaar voor planning"), attention:serviceVehicles.length })}
+        ${moduleCard({ view:"stock", icon:"S", title:tA("nav.stock", "Voorraad"), value:stock.length, meta:lowStock.length ? tA("adm.operations.stockAttention", "{n} onder minimum").replace("{n}", lowStock.length) : tA("adm.operations.stockReady", "artikelen op niveau"), attention:lowStock.length })}
+      </section>
+
+      <section class="adm-operations-detail-grid">
+        <article class="adm-card adm-operation-list-card">
+          <div class="adm-card-header">
+            <div><span class="adm-eyebrow">${tA("adm.operations.today", "Vandaag")}</span><h3 class="adm-card-title">${tA("adm.operations.nextPlanning", "Volgende planning")}</h3></div>
+            <button type="button" class="adm-btn adm-btn-ghost adm-btn-sm" data-operation-view="planning">${tA("adm.operations.viewAll", "Alles bekijken")}</button>
+          </div>
+          <div class="adm-operation-list">
+            ${upcoming.length ? upcoming.map(item => `<button type="button" data-operation-view="planning">
+              <time>${esc(item.startTime || String(item.start || "").slice(11, 16) || "Vandaag")}</time>
+              <span><strong>${esc(item.title || item.description || tA("adm.operations.planningItem", "Geplande opdracht"))}</strong><small>${esc(item.userName || empNameById(item.userId) || item.customerName || item.venueName || "")}</small></span>
+              <span aria-hidden="true">→</span>
+            </button>`).join("") : `<div class="adm-operation-empty"><span>◫</span><h4>${tA("adm.operations.noPlanning", "Nog niets ingepland vandaag")}</h4><p>${tA("adm.operations.noPlanningText", "Open de planning om medewerkers of opdrachten in te plannen.")}</p><button type="button" class="adm-btn adm-btn-secondary" data-operation-view="planning">${tA("adm.operations.planNow", "Nu inplannen")}</button></div>`}
+          </div>
+        </article>
+
+        <article class="adm-card adm-operation-list-card">
+          <div class="adm-card-header">
+            <div><span class="adm-eyebrow">${tA("adm.operations.execution", "Uitvoering")}</span><h3 class="adm-card-title">${tA("adm.operations.workFollowup", "Werkbonnen om op te volgen")}</h3></div>
+            <button type="button" class="adm-btn adm-btn-ghost adm-btn-sm" data-operation-view="workorders">${tA("adm.operations.viewAll", "Alles bekijken")}</button>
+          </div>
+          <div class="adm-operation-list">
+            ${workToFollow.length ? workToFollow.map(item => `<button type="button" data-operation-view="workorders">
+              <span class="adm-operation-status ${String(item.status || "").toLowerCase().includes("progress") ? "active" : ""}"></span>
+              <span><strong>${esc(item.number || item.title || tA("adm.operations.workorder", "Werkbon"))}</strong><small>${esc(item.customerName || item.clientName || item.venueName || item.description || "")}</small></span>
+              <span aria-hidden="true">→</span>
+            </button>`).join("") : `<div class="adm-operation-empty"><span>✓</span><h4>${tA("adm.operations.noWorkorders", "Geen open werkbonnen")}</h4><p>${tA("adm.operations.noWorkordersText", "Nieuwe of lopende werkbonnen verschijnen hier automatisch.")}</p><button type="button" class="adm-btn adm-btn-secondary" id="admOperationEmptyWorkorder">${tA("adm.operations.newWorkorder", "Nieuwe werkbon")}</button></div>`}
+          </div>
+        </article>
+      </section>
+    </div>`;
+
+    content.querySelectorAll("[data-operation-view]").forEach(button => {
+      button.addEventListener("click", () => switchView(button.dataset.operationView));
+    });
+    const openWorkorder = () => window.wfpAdmin.drawers.workorder(null);
+    document.getElementById("admOperationNewWorkorder")?.addEventListener("click", openWorkorder);
+    document.getElementById("admOperationEmptyWorkorder")?.addEventListener("click", openWorkorder);
   }
 
   // ── Dashboard · orkestrator met filter (standaard / mijn / organisatie) ────
@@ -2187,7 +2345,7 @@ ${emp ? `
     <section class="adm-modern-planner" style="--day-count:${days.length};--planner-min:${190 + days.length * 160}px">
       <div class="adm-modern-planner-head"><span>Medewerker</span>${days.map(d => {
         const date = new Date(`${d}T12:00:00`);
-        return `<div class="${d === today ? "today" : ""}"><small>${date.toLocaleDateString("nl-BE", { weekday:"short" })}</small><b>${date.getDate()}</b>${d === today ? "<i></i>" : ""}</div>`;
+        return `<div class="${d === today ? "today" : ""}"><b>${esc(date.toLocaleDateString("nl-BE", { weekday:"short", day:"numeric", month:"short" }).replace(".", ""))}</b>${d === today ? "<i></i>" : ""}</div>`;
       }).join("")}</div>
       ${renderPlanningRows(shifts, days, leaveMap, visibleEmployees)}
     </section>
@@ -2234,9 +2392,44 @@ ${emp ? `
       } catch(e) { window.showToast && window.showToast(e.message, "error"); btn.disabled = false; btn.textContent = tA("adm.plan.copyWeek","⧉ Kopieer week"); }
     });
     document.querySelectorAll(".adm-shift-pill").forEach(pill => {
+      pill.setAttribute("draggable", "true");
+      pill.addEventListener("dragstart", event => {
+        pill.classList.add("is-dragging");
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", pill.dataset.id);
+      });
+      pill.addEventListener("dragend", () => pill.classList.remove("is-dragging"));
       pill.addEventListener("click", () => {
         const shift = shifts.find(s => s.id === pill.dataset.id);
         if (shift) openShiftDrawer(from, to, shift, shifts);
+      });
+    });
+    document.querySelectorAll(".adm-planner-cell").forEach(cell => {
+      cell.addEventListener("dragover", event => {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+        cell.classList.add("is-drop-target");
+      });
+      cell.addEventListener("dragleave", event => {
+        if (!cell.contains(event.relatedTarget)) cell.classList.remove("is-drop-target");
+      });
+      cell.addEventListener("drop", async event => {
+        event.preventDefault();
+        cell.classList.remove("is-drop-target");
+        const shiftId = event.dataTransfer.getData("text/plain");
+        const shift = shifts.find(row => row.id === shiftId);
+        const userId = cell.dataset.user;
+        const date = cell.dataset.date;
+        if (!shift || !userId || !date || (shift.userId === userId && shift.date === date)) return;
+        cell.classList.add("is-saving");
+        try {
+          await api("PATCH", `/planning/${shift.id}`, { userId, date });
+          window.showToast && window.showToast(`Planning verplaatst naar ${new Date(`${date}T12:00:00`).toLocaleDateString("nl-BE", { weekday:"short", day:"numeric", month:"short" })}.`, "success");
+          renderPlanning();
+        } catch (error) {
+          cell.classList.remove("is-saving");
+          window.showToast && window.showToast(error.message, "error");
+        }
       });
     });
     document.querySelectorAll(".adm-empty-slot").forEach(slot => slot.addEventListener("click", () => openShiftDrawer(from, to, null, shifts, { userId:slot.dataset.user, date:slot.dataset.date })));
@@ -2308,7 +2501,7 @@ ${emp ? `
           const dayShifts = u.days[d] || [];
           const isToday = d === today;
           const onLeave = leaveMap[userId]?.[d];
-          return `<div class="adm-planner-cell ${isToday ? "today" : ""} ${onLeave ? "on-leave" : ""}">
+          return `<div class="adm-planner-cell ${isToday ? "today" : ""} ${onLeave ? "on-leave" : ""}" data-user="${esc(userId)}" data-date="${esc(d)}">
             ${onLeave && !dayShifts.length ? `<span class="adm-leave-slot"><i></i>${esc(onLeave)}</span>` : ""}
             ${dayShifts.map(s =>
               `<button type="button" class="adm-shift-pill" data-id="${esc(s.id)}" title="${esc(s.note||s.locationLabel||"")} · klik om te bewerken" style="--shift-bg:${bg};--shift-color:${fg}"><span><b>${esc(s.note || s.project || s.locationLabel || "Geplande opdracht")}</b><em>${esc(s.status || "Shift")}</em></span><small>${esc(s.locationLabel || "Locatie nog te bepalen")}</small><time>${esc(s.start||"")}${s.end?` – ${esc(s.end)}`:""}</time></button>`
@@ -2332,10 +2525,21 @@ ${emp ? `
       const selectedVenue = venues.find(venue => venue.id === selectedVenueId);
       const legacyLocation = selectedVenue ? "" : (shift?.venueId || "");
       const isEdit = !!shift;
-      document.getElementById("admDrawerTitle").textContent = isEdit ? "Shift bewerken" : "Shift toevoegen";
+      const drawer = document.getElementById("admDrawer");
+      drawer.dataset.editorKind = "planning";
+      document.getElementById("admDrawerContext").textContent = isEdit ? "Operaties · Planningdetail" : "Operaties · Nieuwe planning";
+      document.getElementById("admDrawerTitle").textContent = isEdit ? (shift.note || shift.project || "Planning bewerken") : "Nieuwe planning";
       document.getElementById("admDrawerBody").innerHTML = `
-<form id="admShiftForm">
+<form id="admShiftForm" class="adm-planning-detail">
   <input type="hidden" name="workorderId" value="${esc(shift?.workorderId || prefill.workorderId || "")}">
+  <div class="adm-planning-detail-status">
+    <span class="mn-status ${isEdit ? "mn-status-info" : "mn-status-warning"}">${isEdit ? esc(shift.status || "Gepland") : "Nieuwe planning"}</span>
+    <span>${isEdit ? `Laatst gekend op ${esc(shift.date || "")}` : "Vul de opdracht en uitvoering in"}</span>
+  </div>
+  <div class="adm-planning-detail-grid">
+  <div class="adm-planning-detail-main">
+  <section class="adm-planning-detail-section">
+    <div class="adm-planning-detail-heading"><span>01</span><div><h3>Opdracht en uitvoering</h3><p>Wie voert de opdracht uit, waar en wanneer?</p></div></div>
   <div class="adm-form-row">
     <div class="adm-form-group"><label>Medewerker *</label>
       <select name="userId" required>
@@ -2364,7 +2568,31 @@ ${emp ? `
     ${legacyLocation ? `<div class="planning-legacy-location">Oude vrije locatie: <strong>${esc(legacyLocation)}</strong>. Kies een bestaande werf om dit record te normaliseren.</div>` : ""}
   </div>
   <div class="adm-form-group"><label>Notitie</label>
-    <input name="note" placeholder="Optionele notitie" value="${esc(shift?.note||prefill.note||"")}">
+    <textarea name="note" rows="4" placeholder="Werkafspraken, instructies of aandachtspunten">${esc(shift?.note||prefill.note||"")}</textarea>
+  </div>
+  </section>
+  ${isEdit ? `<section class="adm-planning-detail-section">
+    <div class="adm-planning-detail-heading"><span>02</span><div><h3>Gekoppelde informatie</h3><p>Alles wat nodig is voor een vlotte uitvoering.</p></div></div>
+    <div class="adm-planning-links">
+      <button type="button"><span>▣</span><b>Werkbon</b><small>${shift.workorderId ? "Gekoppeld aan deze planning" : "Nog geen werkbon gekoppeld"}</small></button>
+      <button type="button"><span>⌁</span><b>Documenten</b><small>Voeg plannen, foto's of bijlagen toe</small></button>
+      <button type="button"><span>◇</span><b>Materiaal</b><small>Registreer benodigd materiaal</small></button>
+      <button type="button"><span>✎</span><b>Interne notities</b><small>Deel context met het team</small></button>
+    </div>
+  </section>` : ""}
+  </div>
+  <aside class="adm-planning-detail-aside">
+    <section><span class="adm-eyebrow">Samenvatting</span>
+      <dl>
+        <div><dt>Datum</dt><dd>${esc(shift?.date || prefill.date || weekFrom || today)}</dd></div>
+        <div><dt>Tijd</dt><dd>${esc(shift?.start || "07:00")} tot ${esc(shift?.end || "17:00")}</dd></div>
+        <div><dt>Locatie</dt><dd>${esc(selectedVenue?.name || "Nog te bepalen")}</dd></div>
+        <div><dt>Werkbon</dt><dd>${shift?.workorderId ? "Gekoppeld" : "Niet gekoppeld"}</dd></div>
+      </dl>
+    </section>
+    <section class="adm-planning-attention"><span>i</span><div><b>Controle vóór opslaan</b><p>Monargo controleert beschikbaarheid, verlof en overlappende planning via de backend.</p></div></section>
+    ${isEdit ? `<section><span class="adm-eyebrow">Activiteit</span><div class="adm-planning-activity"><i></i><div><b>Planning beschikbaar</b><p>Klik op opslaan om wijzigingen vast te leggen.</p></div></div></section>` : ""}
+  </aside>
   </div>
   ${!isEdit ? `
   <div style="background:var(--gray-50);border-radius:8px;padding:12px;margin-bottom:4px;">
@@ -8294,9 +8522,10 @@ ${enrolled.map(e => `
     const drawer = document.getElementById("admDrawer");
     const body = document.getElementById("admDrawerBody");
     const isDocument = Boolean(body?.querySelector("#invForm, #qForm, #woForm"));
-    drawer.dataset.editorKind = isDocument ? "document" : "record";
+    const isPlanning = Boolean(body?.querySelector("#admShiftForm"));
+    drawer.dataset.editorKind = isPlanning ? "planning" : isDocument ? "document" : "record";
     const context = document.getElementById("admDrawerContext");
-    if (context) context.textContent = isDocument ? "Documentwerkruimte" : "Bewerkingsruimte";
+    if (context && !isPlanning) context.textContent = isDocument ? "Documentwerkruimte" : "Bewerkingsruimte";
     drawer.classList.remove("hidden");
     document.getElementById("admOverlay").classList.remove("hidden");
     document.documentElement.classList.add("adm-editor-open");
@@ -8304,7 +8533,9 @@ ${enrolled.map(e => `
   }
 
   function closeDrawer() {
-    document.getElementById("admDrawer").classList.add("hidden");
+    const drawer = document.getElementById("admDrawer");
+    drawer.classList.add("hidden");
+    drawer.dataset.editorKind = "record";
     document.getElementById("admOverlay").classList.add("hidden");
     document.documentElement.classList.remove("adm-editor-open");
   }
@@ -8893,7 +9124,7 @@ ${typeKeys.map(tk => {
 
   // Kern-renderers registreren (worden gaandeweg naar modules verplaatst).
   Object.assign(A.views, {
-    dashboard: renderDashboard, actions: renderActionCenter, employees: renderEmployees, planning: renderPlanning,
+    dashboard: renderDashboard, actions: renderActionCenter, operations: renderOperationsOverview, employees: renderEmployees, planning: renderPlanning,
     appointments: renderAppointments, incidents: renderIncidents, inbox: renderInbox,
     clocking: renderClocking, leaves: renderLeaves, expenses: renderExpenses,
     workorders: renderWorkorders, messages: renderMessages,

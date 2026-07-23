@@ -1,77 +1,152 @@
-// Reseller-portaal: een platform-partner beheert zijn EIGEN klanten en ziet zijn
-// commissie (% van het abonnement). Enkel commerciële data, geen operationele
-// klantgegevens (GDPR). Zie [[project-support-access]] en docs/SECTORPROFIELEN.md.
+// Resellerportaal: commerciële werkruimte voor de eigen klanten, onboarding
+// en commissies. Operationele tenantgegevens blijven bewust afgeschermd.
 (function () {
   "use strict";
+  // Monargo Workspace · reseller
+
   const token = () => window.wfpCore.token();
-  const esc = s => window.wfpCore.esc(s);
+  const esc = value => window.wfpCore.esc(value == null ? "" : String(value));
   const tR = (key, fallback) => window.wfpI18n ? window.wfpI18n.t(key, fallback) : fallback;
-  function eur(n) { try { return new Intl.NumberFormat("nl-BE", { style: "currency", currency: "EUR" }).format(Number(n) || 0); } catch (_) { return "€" + (Number(n) || 0).toFixed(2); } }
+  const locale = () => ({ nl: "nl-BE", fr: "fr-BE", en: "en-GB" }[window.wfpI18n?.lang] || "nl-BE");
+  const state = { view: "dashboard", clients: null, ledger: null, loading: false };
+  let _rspLangHandler = null;
+
+  function eur(value) {
+    return new Intl.NumberFormat(locale(), { style: "currency", currency: "EUR" }).format(Number(value) || 0);
+  }
+
+  function date(value) {
+    if (!value) return tR("rsp.notAvailable", "Niet beschikbaar");
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return tR("rsp.notAvailable", "Niet beschikbaar");
+    return new Intl.DateTimeFormat(locale(), { day: "numeric", month: "short", year: "numeric" }).format(parsed);
+  }
+
+  function status(value) {
+    const labels = {
+      active: tR("rsp.statusActive", "Actief"),
+      trial: tR("rsp.statusTrial", "Proefperiode"),
+      draft: tR("rsp.statusDraft", "Concept"),
+      pending_approval: tR("rsp.statusPending", "In goedkeuring"),
+      approved: tR("rsp.statusApproved", "Goedgekeurd"),
+      paid: tR("rsp.statusPaid", "Uitbetaald"),
+      disputed: tR("rsp.statusDisputed", "Betwist"),
+      cancelled: tR("rsp.statusCancelled", "Geannuleerd"),
+      accrual: tR("rsp.statusAccrual", "Opbouw"),
+      correction: tR("rsp.statusCorrection", "Correctie"),
+      clawback: tR("rsp.statusClawback", "Terugboeking")
+    };
+    const key = String(value || "draft");
+    return `<span class="rsp-status rsp-status-${esc(key.replace(/_/g, "-"))}">${esc(labels[key] || key)}</span>`;
+  }
+
   async function api(method, path, body) {
-    const r = await fetch(path, {
+    const response = await fetch(path, {
       method,
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + token() },
       body: body ? JSON.stringify(body) : undefined
     });
-    const d = await r.json().catch(() => ({}));
-    if (r.status === 401) { localStorage.removeItem("wfp_token"); window.WorkFlowProPlatformRouter && window.WorkFlowProPlatformRouter.showLogin(); throw new Error(d.error || "Sessie verlopen"); }
-    if (!r.ok) throw new Error(d.error || ("Fout " + r.status));
-    return d;
+    const data = await response.json().catch(() => ({}));
+    if (response.status === 401) {
+      localStorage.removeItem("wfp_token");
+      window.WorkFlowProPlatformRouter?.showLogin();
+      throw new Error(data.error || tR("rsp.sessionExpired", "Sessie verlopen"));
+    }
+    if (!response.ok) throw new Error(data.error || `${tR("rsp.error", "Fout")} ${response.status}`);
+    return data;
+  }
+
+  function viewMeta(view) {
+    return {
+      dashboard: {
+        eyebrow: tR("rsp.partnerWorkspace", "Partnerwerkruimte"),
+        title: tR("rsp.dashboard", "Overzicht"),
+        text: tR("rsp.dashboardIntro", "Volg klanten, activaties en commissies vanuit één rustige werkruimte.")
+      },
+      clients: {
+        eyebrow: tR("rsp.customerManagement", "Klantenbeheer"),
+        title: tR("rsp.myClients", "Mijn klanten"),
+        text: tR("rsp.clientsIntro", "Bekijk uitsluitend de commerciële gegevens van klanten die aan jouw partneraccount zijn gekoppeld.")
+      },
+      commission: {
+        eyebrow: tR("rsp.finance", "Financieel"),
+        title: tR("rsp.commission", "Commissies"),
+        text: tR("rsp.commissionIntro", "Volg opgebouwde commissie, uitbetalingen en correcties vanuit het grootboek.")
+      },
+      onboarding: {
+        eyebrow: tR("rsp.onboarding", "Onboarding"),
+        title: tR("rsp.createClient", "Nieuwe klant"),
+        text: tR("rsp.onboardingIntro", "Maak een tenant en beheerder aan. De beheerder stelt daarna zelf veilig een wachtwoord in.")
+      }
+    }[view] || {};
   }
 
   function buildShell() {
-    const el = document.getElementById("platform-reseller");
-    if (!el) return;
-    el.innerHTML = `
-<style>
-#platform-reseller{min-height:100vh;background:var(--bg);font-family:var(--font-sans)}
-#platform-reseller *{box-sizing:border-box}
-.rsp-shell{min-height:100vh;background:radial-gradient(circle at 92% 0,rgba(0,113,227,.08),transparent 32%),var(--bg)}
-.rsp-topbar{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.86);backdrop-filter:saturate(180%) blur(20px);color:var(--ink);border-bottom:1px solid var(--line);padding:14px 24px;display:flex;align-items:center;justify-content:space-between}
-.rsp-brand,.rsp-actions{display:flex;align-items:center;gap:12px}
-.rsp-mark{background:linear-gradient(135deg,#0b7bf1,#005fc7);color:#fff;width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-weight:700;box-shadow:0 7px 18px rgba(0,113,227,.28)}
-.rsp-brand-name{font-weight:650;letter-spacing:-.25px}.rsp-brand-sub{font-size:12px;color:var(--muted)}
-.rsp-btn{background:var(--surface);color:var(--ink);border:1px solid var(--line-strong);border-radius:10px;padding:9px 13px;font-size:12.5px;font-weight:600;cursor:pointer;transition:transform .14s,box-shadow .14s,background .14s}
-.rsp-btn:hover{background:#fff;box-shadow:0 5px 16px rgba(15,31,50,.08);transform:translateY(-1px)}
-.rsp-btn-primary{background:var(--wf-blue);color:#fff;border-color:var(--wf-blue);padding:10px 17px}.rsp-btn-primary:hover{background:var(--blue-hover);color:#fff}
-.rsp-main{max-width:1120px;margin:0 auto;padding:28px 22px 44px}
-.rsp-hero{display:flex;align-items:center;gap:24px;padding:25px 27px;margin-bottom:18px;border-radius:20px;color:#fff;background:linear-gradient(125deg,#0a1829 0%,#102a4c 64%,#0b75db 145%);box-shadow:0 18px 45px rgba(9,28,51,.16);overflow:hidden;position:relative}
-.rsp-hero:after{content:"";position:absolute;width:210px;height:210px;border-radius:50%;right:-60px;top:-105px;background:rgba(61,159,255,.18)}
-.rsp-hero-copy{position:relative;z-index:1;flex:1}.rsp-eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.56);font-weight:700;margin-bottom:6px}.rsp-hero h1{font-size:25px;line-height:1.15;letter-spacing:-.6px;margin:0 0 6px}.rsp-hero p{font-size:13px;line-height:1.55;color:rgba(255,255,255,.67);margin:0;max-width:600px}
-.rsp-flow{position:relative;z-index:1;display:grid;grid-template-columns:repeat(3,auto);align-items:center;gap:7px;font-size:11px;font-weight:650;color:rgba(255,255,255,.72)}.rsp-flow span{padding:7px 9px;border-radius:8px;background:rgba(255,255,255,.09);white-space:nowrap}.rsp-flow b{color:#59b5ff}
-.rsp-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px}.rsp-kpi{background:rgba(255,255,255,.9);border-radius:16px;padding:18px;border:1px solid var(--line);box-shadow:0 8px 24px rgba(15,31,50,.045);transition:transform .16s,box-shadow .16s}.rsp-kpi:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(15,31,50,.08)}.rsp-kpi-label{font-size:12px;color:var(--muted)}.rsp-kpi-value{font-size:25px;font-weight:650;color:var(--ink);letter-spacing:-.6px;margin:3px 0}.rsp-kpi-sub{font-size:11px;color:var(--gray-400)}
-.rsp-card{background:rgba(255,255,255,.94);border-radius:16px;margin-bottom:18px;border:1px solid var(--line);box-shadow:0 8px 26px rgba(15,31,50,.045);overflow:hidden}.rsp-card-body{padding:20px}.rsp-card-head{padding:15px 20px;font-weight:650;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:9px}.rsp-step{width:24px;height:24px;border-radius:8px;background:var(--wf-blue-l);color:var(--wf-blue);display:grid;place-items:center;font-size:11px;font-weight:750}
-.rsp-form{display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:760px}.rsp-form input,.rsp-form select{width:100%;padding:11px 12px;border:1px solid var(--line-strong);border-radius:10px;background:#fff;color:var(--ink);font:inherit;font-size:13px}.rsp-form input:focus,.rsp-form select:focus{outline:none;border-color:var(--wf-blue);box-shadow:var(--ring)}.rsp-span2{grid-column:1/3}.rsp-hint{font-size:12px;line-height:1.45;color:var(--gray-500)}.rsp-submit{display:flex;align-items:center;gap:10px}.rsp-msg{font-size:12.5px;color:var(--wf-red)}
-.rsp-table-wrap{overflow-x:auto}.rsp-table{width:100%;border-collapse:collapse;font-size:13px}.rsp-table th{text-align:left;color:var(--gray-500);font-size:11px;text-transform:uppercase;letter-spacing:.45px;padding:11px 15px;background:var(--surface-subtle);white-space:nowrap}.rsp-table td{padding:12px 15px;border-top:1px solid var(--gray-50);white-space:nowrap}.rsp-table tbody tr:hover{background:var(--gray-50)}.rsp-client{font-weight:650;color:var(--gray-900)}.rsp-empty{padding:34px!important;text-align:center;color:var(--gray-400)}
-@media(max-width:760px){.rsp-topbar{padding:12px 14px}.rsp-brand-name{font-size:13px}.rsp-actions{gap:6px}.rsp-btn{padding:8px 10px}.rsp-main{padding:18px 14px 34px}.rsp-hero{align-items:flex-start;flex-direction:column;padding:22px}.rsp-flow{width:100%;grid-template-columns:1fr auto 1fr auto 1fr}.rsp-flow span{text-align:center;padding:7px 5px}.rsp-kpis{grid-template-columns:1fr}.rsp-form{grid-template-columns:1fr}.rsp-span2{grid-column:1}.rsp-submit{align-items:flex-start;flex-direction:column}}
-@media(max-width:430px){.rsp-brand-sub{display:none}.rsp-logout-label{display:none}.rsp-hero h1{font-size:22px}.rsp-flow{font-size:10px}.rsp-kpi{padding:15px}}
+    const root = document.getElementById("platform-reseller");
+    if (!root) return;
+    root.innerHTML = `
+      <div class="rsp-layout">
+        <aside class="rsp-sidebar" id="rspSidebar" aria-label="${esc(tR("rsp.partnerNavigation", "Partnernavigatie"))}">
+          <div class="rsp-sidebar-brand">
+            <span class="rsp-mark"><img src="/brand/one-symbol.svg" alt=""></span>
+            <div>
+              <strong>One <small>by Monargo</small></strong>
+              <span>${esc(tR("rsp.reseller", "Reseller"))}</span>
+            </div>
+            <button type="button" class="rsp-sidebar-close" id="rspSidebarClose" aria-label="${esc(tR("rsp.closeMenu", "Menu sluiten"))}">×</button>
+          </div>
+          <nav class="rsp-nav">
+            <span class="rsp-nav-label">${esc(tR("rsp.workspace", "Werkruimte"))}</span>
+            <button type="button" class="rsp-nav-item active" data-rsp-view="dashboard"><span aria-hidden="true">▦</span>${esc(tR("rsp.dashboard", "Overzicht"))}</button>
+            <button type="button" class="rsp-nav-item" data-rsp-view="clients"><span aria-hidden="true">◉</span>${esc(tR("rsp.myClients", "Mijn klanten"))}</button>
+            <button type="button" class="rsp-nav-item" data-rsp-view="commission"><span aria-hidden="true">€</span>${esc(tR("rsp.commission", "Commissies"))}</button>
+            <span class="rsp-nav-label">${esc(tR("rsp.grow", "Groei"))}</span>
+            <button type="button" class="rsp-nav-item" data-rsp-view="onboarding"><span aria-hidden="true">＋</span>${esc(tR("rsp.createClient", "Nieuwe klant"))}</button>
+          </nav>
+          <div class="rsp-sidebar-foot">
+            <span>${esc(tR("rsp.privacyTitle", "Privacy beschermd"))}</span>
+            <small>${esc(tR("rsp.privacyText", "Je ziet geen operationele klant- of personeelsgegevens."))}</small>
+          </div>
+        </aside>
+        <div class="rsp-mainarea">
+          <header class="rsp-topbar">
+            <div class="rsp-topbar-start">
+              <button type="button" class="rsp-menu-toggle" id="rspMenuBtn" aria-label="${esc(tR("rsp.openMenu", "Menu openen"))}" aria-controls="rspSidebar" aria-expanded="false">☰</button>
+              <div>
+                <strong id="rspTopTitle">${esc(tR("rsp.dashboard", "Overzicht"))}</strong>
+                <span id="rspName">${esc(tR("rsp.partnerPortal", "Partnerportaal"))}</span>
+              </div>
+            </div>
+            <div class="rsp-actions">
+              <button id="rspLangToggle" class="rsp-btn" type="button" title="NL / FR / EN">NL</button>
+              <button id="rspTopCreate" class="rsp-btn rsp-btn-primary" type="button">${esc(tR("rsp.createClient", "Nieuwe klant"))}</button>
+              <button id="rspLogout" class="rsp-btn rsp-btn-icon" type="button" aria-label="${esc(tR("rsp.logout", "Uitloggen"))}">↗</button>
+            </div>
+          </header>
+          <main class="rsp-main" id="rspMain" tabindex="-1"></main>
+        </div>
+      </div>`;
 
-/* Monargo Workspace · reseller */
-.rsp-shell{background:#f6f6f9}.rsp-topbar{height:58px;padding:0 22px;background:#fff;border-color:#e7e7ed;backdrop-filter:none}.rsp-mark{width:34px;height:34px;border-radius:9px;background:#5b5ce2;box-shadow:none}.rsp-brand-name{font-size:13px}.rsp-brand-sub{font-size:9.5px}.rsp-btn{padding:7px 10px;border-radius:8px;font-size:10.5px;box-shadow:none}.rsp-btn:hover{transform:none;box-shadow:none}.rsp-main{max-width:1320px;padding:22px 24px 40px}.rsp-hero{min-height:112px;padding:19px 21px;margin-bottom:10px;color:#303247;background:#fff;border:1px solid #e1e2e8;border-radius:12px;box-shadow:none}.rsp-hero:after{display:none}.rsp-eyebrow{color:#595bcd;font-size:8.5px}.rsp-hero h1{font-size:23px}.rsp-hero p{color:#8b8d9e;font-size:10.5px}.rsp-flow{color:#616376}.rsp-flow span{color:#55576d;background:#f5f5f8}.rsp-flow b{color:#7779d9}.rsp-kpis{gap:9px;margin-bottom:10px}.rsp-kpi{min-height:91px;position:relative;padding:14px 15px;border-color:#e1e2e8;border-radius:11px;box-shadow:none;overflow:hidden}.rsp-kpi:before{content:"";width:20px;height:3px;position:absolute;top:0;left:15px;background:#5b5ce2;border-radius:0 0 3px 3px}.rsp-kpi:nth-child(2):before{background:#a35bc4}.rsp-kpi:nth-child(3):before{background:#00a86b}.rsp-kpi:hover{transform:none;box-shadow:none}.rsp-kpi-label{font-size:8.5px}.rsp-kpi-value{font-size:22px}.rsp-kpi-sub{font-size:8px}.rsp-card{margin-bottom:10px;background:#fff;border-color:#e1e2e8;border-radius:12px;box-shadow:none}.rsp-card-head{min-height:51px;padding:11px 15px;font-size:11.5px}.rsp-card-body{padding:15px}.rsp-step{width:22px;height:22px;border-radius:6px;font-size:9px}.rsp-form{gap:9px}.rsp-form input,.rsp-form select{padding:9px 10px;border-radius:8px;font-size:11px}.rsp-table{font-size:11px}.rsp-table th{padding:9px 12px;font-size:8.5px}.rsp-table td{padding:10px 12px}.rsp-hint{font-size:9px}
-@media(max-width:760px){.rsp-main{padding:16px 13px 34px}.rsp-topbar{padding:0 13px}.rsp-hero{padding:17px}.rsp-hero h1{font-size:21px}}
-</style>
-<div class="rsp-shell">
-  <header class="rsp-topbar">
-    <div class="rsp-brand">
-      <span class="rsp-mark">M</span>
-      <div><div class="rsp-brand-name">Monargo One · Reseller</div><div id="rspName" class="rsp-brand-sub">${tR("rsp.partnerPortal","Partnerportaal")}</div></div>
-    </div>
-    <div class="rsp-actions">
-      <button id="rspLangToggle" class="rsp-btn" title="NL / FR / EN">NL</button>
-      <button id="rspLogout" class="rsp-btn"><span class="rsp-logout-label">${tR("rsp.logout","Uitloggen")}</span><span aria-hidden="true">↗</span></button>
-    </div>
-  </header>
-  <main class="rsp-main" id="rspMain"><div style="color:var(--gray-400);padding:40px;text-align:center">${tR("adm.loading","Laden…")}</div></main>
-</div>`;
-    document.getElementById("rspLogout").addEventListener("click", () => {
+    document.getElementById("rspLogout")?.addEventListener("click", () => {
       localStorage.removeItem("wfp_token");
-      window.WorkFlowProPlatformRouter && window.WorkFlowProPlatformRouter.showLogin();
+      window.WorkFlowProPlatformRouter?.showLogin();
     });
-    // NL/FR/EN taalwissel: knop toont de taal waarnaar je overschakelt.
+    document.getElementById("rspMenuBtn")?.addEventListener("click", () => {
+      document.getElementById("rspSidebar")?.classList.toggle("open");
+    });
+    document.getElementById("rspSidebarClose")?.addEventListener("click", () => {
+      document.getElementById("rspSidebar")?.classList.remove("open");
+      document.getElementById("rspMenuBtn")?.focus({ preventScroll: true });
+    });
+    document.getElementById("rspTopCreate")?.addEventListener("click", () => switchView("onboarding"));
+    root.querySelectorAll("[data-rsp-view]").forEach(button => {
+      button.addEventListener("click", () => switchView(button.dataset.rspView));
+    });
+
     if (window.wfpI18n) {
       const paintLang = () => {
-        const b = document.getElementById("rspLangToggle");
-        if (b) b.textContent = window.wfpI18n.nextLang(window.wfpI18n.lang).toUpperCase();
+        const button = document.getElementById("rspLangToggle");
+        if (button) button.textContent = window.wfpI18n.nextLang(window.wfpI18n.lang).toUpperCase();
       };
       paintLang();
       document.getElementById("rspLangToggle")?.addEventListener("click", () => window.wfpI18n.cycleLang());
@@ -79,82 +154,259 @@
       _rspLangHandler = () => buildShell();
       document.addEventListener("wfp:langchange", _rspLangHandler);
     }
-    render();
+    renderCurrent();
   }
-  let _rspLangHandler = null;
 
-  async function render() {
-    const main = document.getElementById("rspMain");
-    let d;
-    try { d = await api("GET", "/api/reseller/clients"); }
-    catch (e) { main.innerHTML = `<div style="background:#fff;border-radius:12px;padding:20px;color:var(--wf-red)">${esc(e.message)}</div>`; return; }
-    const nm = document.getElementById("rspName"); if (nm && d.reseller) nm.textContent = tR("rsp.defaultCommission","{name} · standaard {pct}% commissie").replace("{name}", d.reseller.name).replace("{pct}", d.reseller.defaultCommissionPct || 0);
-    const card = (label, value, sub) => `<div class="rsp-kpi"><div class="rsp-kpi-label">${label}</div><div class="rsp-kpi-value">${value}</div><div class="rsp-kpi-sub">${sub || ""}</div></div>`;
-    main.innerHTML = `
-<section class="rsp-hero">
-  <div class="rsp-hero-copy">
-    <div class="rsp-eyebrow">Partner workspace</div>
-    <h1>${tR("rsp.partnerPortal","Partnerportaal")}</h1>
-    <p>Maak klanten aan, volg hun activatie en behoud meteen zicht op je maandelijkse commissie.</p>
-  </div>
-  <div class="rsp-flow" aria-label="Partnerflow"><span>Klant</span><b>›</b><span>Activatie</span><b>›</b><span>Commissie</span></div>
-</section>
-<div class="rsp-kpis">
-  ${card(tR("rsp.myClients","Mijn klanten"), d.clientCount || 0, tR("rsp.activeTrial","actieve + trial"))}
-  ${card(tR("rsp.subMrr","Abonnement (MRR)"), eur(d.totalMrr), tR("rsp.sumActive","som van actieve klanten"))}
-  ${card(tR("rsp.commissionMonth","Commissie / maand"), eur(d.totalCommission), tR("rsp.yourEarnings","jouw verdienste"))}
-</div>
+  function switchView(view) {
+    state.view = view;
+    document.querySelectorAll("[data-rsp-view]").forEach(button => {
+      const active = button.dataset.rspView === view;
+      button.classList.toggle("active", active);
+      if (active) button.setAttribute("aria-current", "page");
+      else button.removeAttribute("aria-current");
+    });
+    const meta = viewMeta(view);
+    const title = document.getElementById("rspTopTitle");
+    if (title) title.textContent = meta.title || "";
+    renderCurrent();
+  }
 
-<section class="rsp-card">
-  <div class="rsp-card-head"><span class="rsp-step">1</span>${tR("rsp.createClient","Nieuwe klant aanmaken")}</div>
-  <div class="rsp-card-body rsp-form">
-    <input id="ncName" placeholder="${tR("rsp.clientCompanyPh","Bedrijfsnaam klant")}">
-    <select id="ncPlan"><option value="starter">Starter</option><option value="business" selected>Business</option><option value="enterprise">Enterprise</option></select>
-    <input id="ncEmail" type="email" placeholder="${tR("rsp.adminEmailPh","Login-e-mail beheerder klant")}">
-    <input id="ncAdminName" placeholder="${tR("rsp.adminNamePh","Naam beheerder")}">
-    <div class="rsp-span2 rsp-hint">${tR("rsp.activationNote","De beheerder van de klant ontvangt een activatiemail om zelf een wachtwoord in te stellen.")}</div>
-    <div class="rsp-span2 rsp-submit">
-      <button id="ncCreate" class="rsp-btn rsp-btn-primary">${tR("rsp.createClientBtn","Klant aanmaken")}</button>
-      <span id="ncMsg" class="rsp-msg" role="status"></span>
-    </div>
-  </div>
-</section>
+  async function loadData(force) {
+    if (!force && state.clients && state.ledger) return;
+    const [clients, ledger] = await Promise.all([
+      api("GET", "/api/reseller/clients"),
+      api("GET", "/api/reseller/commission").catch(() => ({ events: [], payouts: [], balance: { payable: 0, paid: 0, reserved: 0 } }))
+    ]);
+    state.clients = clients;
+    state.ledger = ledger;
+    const name = document.getElementById("rspName");
+    if (name && clients.reseller) {
+      name.textContent = tR("rsp.defaultCommission", "{name} · standaard {pct}% commissie")
+        .replace("{name}", clients.reseller.name)
+        .replace("{pct}", clients.reseller.defaultCommissionPct || 0);
+    }
+  }
 
-<section class="rsp-card">
-  <div class="rsp-card-head"><span class="rsp-step">2</span>${tR("rsp.clientsCommission","Mijn klanten &amp; commissie")}</div>
-  <div class="rsp-table-wrap"><table class="rsp-table">
-    <thead><tr><th>${tR("adm.thCustomer","Klant")}</th><th>${tR("rsp.plan","Plan")}</th><th>${tR("adm.status","Status")}</th><th>MRR</th><th>${tR("rsp.commissionPct","Commissie %")}</th><th>${tR("rsp.commissionMo","Commissie/mnd")}</th></tr></thead>
-    <tbody>${(d.rows || []).map(r => `<tr>
-      <td class="rsp-client">${esc(r.name)}</td>
-      <td style="text-transform:capitalize">${esc(r.plan)}</td>
-      <td>${r.status === "active" ? `<span class="adm-dot" style="background:var(--wf-green)"></span> ${tR("adm.active","actief").toLowerCase()}` : '<span class="adm-dot" style="background:var(--wf-yellow)"></span> ' + esc(r.status)}</td>
-      <td>${eur(r.mrr)}</td>
-      <td>${r.commissionPct}%</td>
-      <td style="font-weight:650;color:var(--wf-green)">${eur(r.commission)}</td>
-    </tr>`).join("") || `<tr><td colspan="6" class="rsp-empty">${tR("rsp.noClients","Nog geen klanten · maak je eerste klant aan hierboven.")}</td></tr>`}</tbody>
-  </table></div>
-</section>`;
+  function pageHead(action) {
+    const meta = viewMeta(state.view);
+    return `
+      <header class="rsp-page-head">
+        <div>
+          <span class="rsp-page-eyebrow">${esc(meta.eyebrow)}</span>
+          <h1>${esc(meta.title)}</h1>
+          <p>${esc(meta.text)}</p>
+        </div>
+        ${action || ""}
+      </header>`;
+  }
 
-    document.getElementById("ncCreate").addEventListener("click", async () => {
-      const name = document.getElementById("ncName").value.trim();
-      const plan = document.getElementById("ncPlan").value;
-      const adminEmail = document.getElementById("ncEmail").value.trim();
-      const adminName = document.getElementById("ncAdminName").value.trim();
-      const msg = document.getElementById("ncMsg"); msg.textContent = "";
-      if (!name || !adminEmail) { msg.textContent = tR("rsp.reqFields","Klantnaam en login-e-mail zijn verplicht."); return; }
+  function metric(label, value, note, tone) {
+    return `<article class="rsp-kpi ${tone ? `rsp-kpi-${tone}` : ""}">
+      <span class="rsp-kpi-label">${esc(label)}</span>
+      <strong class="rsp-kpi-value">${esc(value)}</strong>
+      <small class="rsp-kpi-sub">${esc(note || "")}</small>
+    </article>`;
+  }
+
+  function ledgerAmounts() {
+    const ledger = state.ledger || {};
+    const reserved = (ledger.payouts || [])
+      .filter(payout => ["draft", "pending_approval", "approved"].includes(payout.status))
+      .reduce((sum, payout) => sum + (Number(payout.amount) || 0), 0);
+    return {
+      available: Math.max(0, (Number(ledger.balance?.payable) || 0) - reserved),
+      reserved,
+      paid: Number(ledger.balance?.paid) || 0
+    };
+  }
+
+  function clientRows(rows, limit) {
+    const list = typeof limit === "number" ? rows.slice(0, limit) : rows;
+    return list.map(row => `<tr>
+      <td><strong class="rsp-client">${esc(row.name)}</strong><small>${esc(row.tenantId)}</small></td>
+      <td><span class="rsp-plan">${esc(row.plan)}</span></td>
+      <td>${status(row.status)}</td>
+      <td>${row.unpriced ? esc(tR("rsp.onRequest", "Op aanvraag")) : eur(row.mrr)}</td>
+      <td>${esc(`${row.commissionPct}%`)}</td>
+      <td><strong>${eur(row.commission)}</strong></td>
+    </tr>`).join("");
+  }
+
+  function renderDashboard() {
+    const data = state.clients;
+    const ledger = state.ledger || {};
+    const amounts = ledgerAmounts();
+    const rows = data.rows || [];
+    const attention = rows.filter(row => row.status !== "active");
+    const payouts = ledger.payouts || [];
+    return `
+      ${pageHead(`<button type="button" class="rsp-btn rsp-btn-primary" data-rsp-action="onboarding">${esc(tR("rsp.createClient", "Nieuwe klant"))}</button>`)}
+      <section class="rsp-kpis">
+        ${metric(tR("rsp.myClients", "Mijn klanten"), data.clientCount || 0, tR("rsp.activeTrial", "actief en proefperiode"), "blue")}
+        ${metric(tR("rsp.subMrr", "Abonnement per maand"), eur(data.totalMrr), data.unpricedCount ? tR("rsp.unpriced", "{count} op aanvraag").replace("{count}", data.unpricedCount) : tR("rsp.allPriced", "alle klanten geprijsd"), "violet")}
+        ${metric(tR("rsp.commissionMonth", "Commissie per maand"), eur(data.totalCommission), tR("rsp.yourEarnings", "verwachte opbrengst"), "green")}
+        ${metric(tR("rsp.payableBalance", "Beschikbaar saldo"), eur(amounts.available), tR("rsp.fromLedger", "volgens het grootboek"), "amber")}
+      </section>
+      <div class="rsp-dashboard-grid">
+        <section class="rsp-card">
+          <div class="rsp-card-head">
+            <div><span>${esc(tR("rsp.customerSnapshot", "Klantenoverzicht"))}</span><small>${esc(tR("rsp.customerSnapshotText", "Recente commerciële status"))}</small></div>
+            <button type="button" class="rsp-link-btn" data-rsp-action="clients">${esc(tR("rsp.viewAll", "Alles bekijken"))}</button>
+          </div>
+          <div class="rsp-table-wrap">
+            <table class="rsp-table">
+              <thead><tr><th>${esc(tR("adm.thCustomer", "Klant"))}</th><th>${esc(tR("rsp.plan", "Plan"))}</th><th>${esc(tR("adm.status", "Status"))}</th><th>MRR</th><th>${esc(tR("rsp.commissionPct", "Commissie"))}</th><th>${esc(tR("rsp.commissionMo", "Per maand"))}</th></tr></thead>
+              <tbody>${clientRows(rows, 5) || `<tr><td colspan="6" class="rsp-empty">${esc(tR("rsp.noClientsShort", "Nog geen klanten gekoppeld."))}</td></tr>`}</tbody>
+            </table>
+          </div>
+        </section>
+        <aside class="rsp-side-stack">
+          <section class="rsp-card rsp-attention-card">
+            <div class="rsp-card-head"><div><span>${esc(tR("rsp.attention", "Aandacht"))}</span><small>${esc(tR("rsp.attentionText", "Onboarding en activatie"))}</small></div></div>
+            <div class="rsp-card-body">
+              ${attention.length ? attention.slice(0, 4).map(row => `<button type="button" class="rsp-attention-row" data-rsp-action="clients"><span>${esc(row.name)}</span>${status(row.status)}</button>`).join("") : `<div class="rsp-success-note"><span aria-hidden="true">✓</span><div><strong>${esc(tR("rsp.allActive", "Alles loopt goed"))}</strong><small>${esc(tR("rsp.noActivationIssues", "Geen activaties vragen aandacht."))}</small></div></div>`}
+            </div>
+          </section>
+          <section class="rsp-card">
+            <div class="rsp-card-head"><div><span>${esc(tR("rsp.latestPayout", "Laatste uitbetaling"))}</span><small>${esc(tR("rsp.payoutHistory", "Status vanuit het grootboek"))}</small></div></div>
+            <div class="rsp-card-body">
+              ${payouts[0] ? `<div class="rsp-payout-highlight"><strong>${eur(payouts[0].amount)}</strong>${status(payouts[0].status)}<span>${esc(date(payouts[0].paidAt || payouts[0].createdAt))}</span></div>` : `<div class="rsp-empty-state"><strong>${esc(tR("rsp.noPayouts", "Nog geen uitbetalingen"))}</strong><span>${esc(tR("rsp.noPayoutsText", "Nieuwe uitbetalingen verschijnen hier automatisch."))}</span></div>`}
+            </div>
+          </section>
+        </aside>
+      </div>`;
+  }
+
+  function renderClients() {
+    const rows = state.clients.rows || [];
+    return `
+      ${pageHead(`<button type="button" class="rsp-btn rsp-btn-primary" data-rsp-action="onboarding">${esc(tR("rsp.createClient", "Nieuwe klant"))}</button>`)}
+      <section class="rsp-card">
+        <div class="rsp-card-head">
+          <div><span>${esc(tR("rsp.clientsCommission", "Klanten en commissie"))}</span><small>${esc(tR("rsp.commercialOnly", "Uitsluitend commerciële gegevens"))}</small></div>
+          <span class="rsp-count">${esc(String(rows.length))}</span>
+        </div>
+        <div class="rsp-table-wrap">
+          <table class="rsp-table">
+            <thead><tr><th>${esc(tR("adm.thCustomer", "Klant"))}</th><th>${esc(tR("rsp.plan", "Plan"))}</th><th>${esc(tR("adm.status", "Status"))}</th><th>MRR</th><th>${esc(tR("rsp.commissionPct", "Commissie"))}</th><th>${esc(tR("rsp.commissionMo", "Per maand"))}</th></tr></thead>
+            <tbody>${clientRows(rows) || `<tr><td colspan="6" class="rsp-empty">${esc(tR("rsp.noClients", "Nog geen klanten. Maak je eerste klant aan."))}</td></tr>`}</tbody>
+          </table>
+        </div>
+      </section>`;
+  }
+
+  function renderCommission() {
+    const ledger = state.ledger || {};
+    const amounts = ledgerAmounts();
+    const events = [...(ledger.events || [])].reverse();
+    const payouts = ledger.payouts || [];
+    return `
+      ${pageHead("")}
+      <section class="rsp-kpis rsp-kpis-three">
+        ${metric(tR("rsp.payableBalance", "Beschikbaar saldo"), eur(amounts.available), tR("rsp.readyForPayout", "beschikbaar voor uitbetaling"), "green")}
+        ${metric(tR("rsp.reservedBalance", "Gereserveerd"), eur(amounts.reserved), tR("rsp.inOpenPayouts", "in openstaande uitbetalingen"), "amber")}
+        ${metric(tR("rsp.paidTotal", "Uitbetaald"), eur(amounts.paid), tR("rsp.historicalTotal", "historisch totaal"), "blue")}
+      </section>
+      <div class="rsp-ledger-grid">
+        <section class="rsp-card">
+          <div class="rsp-card-head"><div><span>${esc(tR("rsp.ledger", "Grootboek"))}</span><small>${esc(tR("rsp.ledgerText", "Opbouw, correcties en terugboekingen"))}</small></div></div>
+          <div class="rsp-table-wrap">
+            <table class="rsp-table">
+              <thead><tr><th>${esc(tR("rsp.date", "Datum"))}</th><th>${esc(tR("rsp.period", "Periode"))}</th><th>${esc(tR("rsp.type", "Type"))}</th><th>${esc(tR("rsp.client", "Klant"))}</th><th>${esc(tR("rsp.amount", "Bedrag"))}</th></tr></thead>
+              <tbody>${events.map(event => `<tr><td>${esc(date(event.createdAt))}</td><td>${esc(event.period || "")}</td><td>${status(event.type)}</td><td>${esc(event.clientName || event.clientTenantId || "")}</td><td><strong class="${Number(event.amount) < 0 ? "rsp-negative" : "rsp-positive"}">${eur(event.amount)}</strong></td></tr>`).join("") || `<tr><td colspan="5" class="rsp-empty">${esc(tR("rsp.noLedgerEvents", "Nog geen commissiebewegingen."))}</td></tr>`}</tbody>
+            </table>
+          </div>
+        </section>
+        <section class="rsp-card">
+          <div class="rsp-card-head"><div><span>${esc(tR("rsp.payouts", "Uitbetalingen"))}</span><small>${esc(tR("rsp.payoutsText", "Historiek en betaalreferenties"))}</small></div></div>
+          <div class="rsp-card-body rsp-payout-list">
+            ${payouts.map(payout => `<article><div><strong>${eur(payout.amount)}</strong><span>${esc(payout.period || date(payout.createdAt))}</span></div><div>${status(payout.status)}<small>${esc(payout.paymentRef || tR("rsp.noPaymentRef", "Nog geen betaalreferentie"))}</small></div></article>`).join("") || `<div class="rsp-empty-state"><strong>${esc(tR("rsp.noPayouts", "Nog geen uitbetalingen"))}</strong><span>${esc(tR("rsp.noPayoutsText", "Nieuwe uitbetalingen verschijnen hier automatisch."))}</span></div>`}
+          </div>
+        </section>
+      </div>`;
+  }
+
+  function renderOnboarding() {
+    return `
+      ${pageHead("")}
+      <div class="rsp-onboarding-layout">
+        <section class="rsp-card">
+          <div class="rsp-card-head"><div><span>${esc(tR("rsp.clientDetails", "Klantgegevens"))}</span><small>${esc(tR("rsp.clientDetailsText", "Tenant, plan en eerste beheerder"))}</small></div><span class="rsp-step">1</span></div>
+          <form class="rsp-card-body rsp-form" id="rspClientForm">
+            <label><span>${esc(tR("rsp.companyName", "Bedrijfsnaam"))}</span><input name="name" autocomplete="organization" required placeholder="${esc(tR("rsp.clientCompanyPh", "Bedrijfsnaam klant"))}"></label>
+            <label><span>${esc(tR("rsp.plan", "Plan"))}</span><select name="plan"><option value="starter">Starter</option><option value="business" selected>Business</option><option value="enterprise">Enterprise</option></select></label>
+            <label><span>${esc(tR("rsp.adminEmail", "E-mail beheerder"))}</span><input name="adminEmail" type="email" autocomplete="email" required placeholder="${esc(tR("rsp.adminEmailPh", "Login-e-mail beheerder klant"))}"></label>
+            <label><span>${esc(tR("rsp.adminName", "Naam beheerder"))}</span><input name="adminName" autocomplete="name" placeholder="${esc(tR("rsp.adminNamePh", "Naam beheerder"))}"></label>
+            <div class="rsp-span2 rsp-form-note"><span aria-hidden="true">i</span><p>${esc(tR("rsp.activationNote", "De beheerder ontvangt een activatiemail en stelt zelf een wachtwoord in."))}</p></div>
+            <div class="rsp-span2 rsp-form-actions"><button class="rsp-btn rsp-btn-primary" type="submit">${esc(tR("rsp.createClientBtn", "Klant aanmaken"))}</button><span id="rspClientMessage" class="rsp-msg" role="status"></span></div>
+          </form>
+        </section>
+        <aside class="rsp-onboarding-aside">
+          <section class="rsp-card"><div class="rsp-card-body"><span class="rsp-aside-index">1</span><strong>${esc(tR("rsp.stepTenant", "Tenant wordt aangemaakt"))}</strong><p>${esc(tR("rsp.stepTenantText", "Het gekozen pakket en jouw commissie worden centraal gekoppeld."))}</p></div></section>
+          <section class="rsp-card"><div class="rsp-card-body"><span class="rsp-aside-index">2</span><strong>${esc(tR("rsp.stepActivation", "Beheerder activeert"))}</strong><p>${esc(tR("rsp.stepActivationText", "De klant kiest zelf een veilig wachtwoord via de activatiemail."))}</p></div></section>
+          <section class="rsp-card"><div class="rsp-card-body"><span class="rsp-aside-index">3</span><strong>${esc(tR("rsp.stepFollowup", "Jij volgt commercieel op"))}</strong><p>${esc(tR("rsp.stepFollowupText", "Status, MRR en commissie verschijnen in jouw klantenoverzicht."))}</p></div></section>
+        </aside>
+      </div>`;
+  }
+
+  function bindView() {
+    document.querySelectorAll("[data-rsp-action]").forEach(button => {
+      button.addEventListener("click", () => switchView(button.dataset.rspAction));
+    });
+    const form = document.getElementById("rspClientForm");
+    form?.addEventListener("submit", async event => {
+      event.preventDefault();
+      const message = document.getElementById("rspClientMessage");
+      const submit = form.querySelector('button[type="submit"]');
+      const payload = Object.fromEntries(new FormData(form).entries());
+      message.textContent = "";
+      submit.disabled = true;
+      submit.textContent = tR("rsp.creating", "Klant wordt aangemaakt...");
       try {
-        const button = document.getElementById("ncCreate");
-        button.disabled = true;
-        button.textContent = tR("adm.loading","Laden…");
-        const r = await api("POST", "/api/reseller/clients", { name, plan, adminEmail, adminName });
-        if (r && r.activationLink && window.showToast) window.showToast(tR("rsp.clientCreated","Klant aangemaakt. Activatielink (dev): ") + r.activationLink, "success");
-        render();
-      } catch (e) {
-        msg.textContent = e.message;
-        const button = document.getElementById("ncCreate");
-        if (button) { button.disabled = false; button.textContent = tR("rsp.createClientBtn","Klant aanmaken"); }
+        const result = await api("POST", "/api/reseller/clients", payload);
+        state.clients = null;
+        state.ledger = null;
+        if (window.showToast) {
+          window.showToast(result.activationLink ? tR("rsp.clientCreatedActivation", "Klant aangemaakt. De activatielink is beschikbaar in de ontwikkelomgeving.") : tR("rsp.clientCreatedShort", "Klant aangemaakt."), "success");
+        }
+        await loadData(true);
+        switchView("clients");
+      } catch (error) {
+        message.textContent = error.message;
+        submit.disabled = false;
+        submit.textContent = tR("rsp.createClientBtn", "Klant aanmaken");
       }
     });
+  }
+
+  async function renderCurrent() {
+    const main = document.getElementById("rspMain");
+    if (!main || state.loading) return;
+    state.loading = true;
+    main.setAttribute("aria-busy", "true");
+    main.innerHTML = `<div class="rsp-loading"><span class="adm-spinner"></span>${esc(tR("adm.loading", "Laden..."))}</div>`;
+    try {
+      await loadData(false);
+      const renderers = {
+        dashboard: renderDashboard,
+        clients: renderClients,
+        commission: renderCommission,
+        onboarding: renderOnboarding
+      };
+      main.innerHTML = renderers[state.view]();
+      bindView();
+      main.focus({ preventScroll: true });
+    } catch (error) {
+      main.innerHTML = `<section class="rsp-error"><strong>${esc(tR("rsp.couldNotLoad", "De partnerwerkruimte kon niet laden."))}</strong><p>${esc(error.message)}</p><button type="button" class="rsp-btn" id="rspRetry">${esc(tR("rsp.retry", "Opnieuw proberen"))}</button></section>`;
+      document.getElementById("rspRetry")?.addEventListener("click", () => {
+        state.clients = null;
+        state.ledger = null;
+        renderCurrent();
+      });
+    } finally {
+      state.loading = false;
+      main.removeAttribute("aria-busy");
+    }
   }
 
   window.wfp_resellerInit = buildShell;

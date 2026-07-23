@@ -136,7 +136,7 @@
   <!-- Top header -->
   <header class="emp-header">
     <div class="emp-header-left">
-      <div class="emp-logo-mark">M</div>
+      <div class="emp-logo-mark"><img src="/brand/one-symbol.svg" alt=""></div>
       <div>
         <div class="emp-header-greeting" id="empGreeting">Goedemorgen</div>
         <div class="emp-header-name" id="empHeaderName">Medewerker</div>
@@ -175,8 +175,8 @@
   <!-- Bottom tab bar (mobiel) · zijnav (pc) -->
   <nav class="emp-tabbar" aria-label="Hoofdnavigatie">
     <div class="emp-side-brand emp-desk-only">
-      <div class="emp-side-brand-mark">M</div>
-      <div><div class="emp-side-brand-name">Monargo <small>One</small></div><div class="emp-side-brand-sub" id="empSideBrandSub">Mijn werkplek</div></div>
+      <div class="emp-side-brand-mark"><img src="/brand/one-symbol.svg" alt=""></div>
+      <div><div class="emp-side-brand-name">One <small>by Monargo</small></div><div class="emp-side-brand-sub" id="empSideBrandSub">Mijn werkplek</div></div>
     </div>
     <button class="emp-tab active" data-view="today">
       <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
@@ -1374,6 +1374,9 @@ ${cfgPanel}`;
 
     const data = await api("GET", `/me/planning?from=${from}&to=${to}`);
     const shifts = data.shifts || [];
+    const locale = (window.wfpI18n && window.wfpI18n.lang === "fr")
+      ? "fr-BE"
+      : (window.wfpI18n && window.wfpI18n.lang === "en") ? "en-GB" : "nl-BE";
 
     const today = new Date().toISOString().slice(0,10);
     const isCurrentWeek = _empPlanningWeekOffset === 0;
@@ -1386,44 +1389,46 @@ ${cfgPanel}`;
     // Week label
     const weekLabel = isCurrentWeek
       ? t9("emp.plan.thisWeek", "Deze week")
-      : `${weekStart.toLocaleDateString("nl-BE",{day:"numeric",month:"short"})} – ${weekEnd.toLocaleDateString("nl-BE",{day:"numeric",month:"short",year:"numeric"})}`;
+      : `${weekStart.toLocaleDateString(locale,{day:"numeric",month:"short"})} ${t9("emp.plan.until", "tot")} ${weekEnd.toLocaleDateString(locale,{day:"numeric",month:"short",year:"numeric"})}`;
 
     main.innerHTML = `
-<div class="emp-card">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-    <p class="emp-card-title" style="margin:0;">${esc(weekLabel)}</p>
-    <div style="display:flex;gap:6px;">
-      <button class="emp-btn emp-btn-secondary emp-btn-sm" id="empPlanPrev" style="padding:4px 10px;font-size:12px;">‹</button>
-      ${!isCurrentWeek ? `<button class="emp-btn emp-btn-secondary emp-btn-sm" id="empPlanNow" style="padding:4px 10px;font-size:12px;">${t9("emp.plan.now", "Nu")}</button>` : ""}
-      <button class="emp-btn emp-btn-secondary emp-btn-sm" id="empPlanNext" style="padding:4px 10px;font-size:12px;">›</button>
+<div class="emp-card emp-planning-week">
+  <div class="emp-planning-week-head">
+    <div><span class="emp-planning-eyebrow">${t9("emp.plan.eyebrow", "Mijn werkweek")}</span><p class="emp-card-title">${esc(weekLabel)}</p></div>
+    <div class="emp-planning-week-actions">
+      <button class="emp-btn emp-btn-secondary emp-btn-sm" id="empPlanPrev" aria-label="${t9("emp.plan.previousWeek", "Vorige week")}">‹</button>
+      ${!isCurrentWeek ? `<button class="emp-btn emp-btn-secondary emp-btn-sm" id="empPlanNow">${t9("emp.plan.now", "Nu")}</button>` : ""}
+      <button class="emp-btn emp-btn-secondary emp-btn-sm" id="empPlanNext" aria-label="${t9("emp.plan.nextWeek", "Volgende week")}">›</button>
     </div>
   </div>
   <div class="emp-day-strip">
     ${days.map(d => {
       const hasShift = shifts.some(s => s.date === d);
-      const dd = new Date(d);
-      return `<div class="emp-day-pill ${d===today?"today":""} ${hasShift?"has-shift":""}">
-        <span>${dd.toLocaleDateString("nl-BE",{weekday:"short"})[0].toUpperCase()}</span>
+      const dd = new Date(`${d}T12:00:00`);
+      const dayName = dd.toLocaleDateString(locale,{weekday:"short"}).replace(".", "");
+      return `<button type="button" class="emp-day-pill ${d===today?"today":""} ${hasShift?"has-shift":""}" data-emp-day="${d}" aria-label="${esc(dd.toLocaleDateString(locale,{weekday:"long",day:"numeric",month:"long"}))}">
+        <span>${esc(dayName)}</span>
         <span class="emp-day-num">${dd.getDate()}</span>
-      </div>`;
+      </button>`;
     }).join("")}
   </div>
 </div>
 
 ${shifts.length ? shifts.map(s => `
-<div class="emp-card">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-    <div style="font-size:13px;font-weight:600;color:var(--gray-900);">${new Date(s.date).toLocaleDateString("nl-BE",{weekday:"long",day:"numeric",month:"long"})}</div>
+<button type="button" class="emp-card emp-planning-card" data-emp-shift="${esc(s.id)}">
+  <div class="emp-planning-card-head">
+    <div>${new Date(`${s.date}T12:00:00`).toLocaleDateString(locale,{weekday:"long",day:"numeric",month:"long"})}</div>
     ${s.date===today?`<span class="emp-pill emp-pill-blue">${t9("emp.tab.today","Vandaag")}</span>`:""}
   </div>
-  <div class="emp-shift-item" style="border:none;padding:0;">
-    <div class="emp-shift-time">${esc(s.start||"")}${s.end?`–${esc(s.end)}`:""}</div>
+  <div class="emp-shift-item">
+    <div class="emp-shift-time">${esc(s.start||"")}${s.end?` ${t9("emp.plan.until", "tot")} ${esc(s.end)}`:""}</div>
     <div class="emp-shift-info">
       <div class="emp-shift-title">${esc(s.location||s.title||t9("emp.plan.shift","Shift"))}</div>
       <div class="emp-shift-sub">${esc(s.notes||"")}</div>
     </div>
+    <span class="emp-planning-card-open" aria-hidden="true">→</span>
   </div>
-</div>`).join("") : `<div class="emp-empty"><div class="emp-empty-text">${t9("emp.plan.noShifts", "Geen shifts gepland deze week")}</div></div>`}`;
+</button>`).join("") : `<div class="emp-empty emp-planning-empty"><span>◫</span><div class="emp-empty-text">${t9("emp.plan.noShifts", "Geen shifts gepland deze week")}</div><p>${t9("emp.plan.noShiftsText", "Zodra je manager een opdracht plant, verschijnt die hier.")}</p></div>`}`;
 
     document.getElementById("empPlanPrev")?.addEventListener("click", () => {
       _empPlanningWeekOffset--; renderPlanning();
@@ -1434,6 +1439,73 @@ ${shifts.length ? shifts.map(s => `
     document.getElementById("empPlanNow")?.addEventListener("click", () => {
       _empPlanningWeekOffset = 0; renderPlanning();
     });
+    main.querySelectorAll("[data-emp-shift]").forEach(card => {
+      card.addEventListener("click", () => {
+        const shift = shifts.find(item => item.id === card.dataset.empShift);
+        if (shift) openEmployeePlanningDetail(shift, locale);
+      });
+    });
+    main.querySelectorAll("[data-emp-day]").forEach(day => {
+      day.addEventListener("click", () => {
+        const first = shifts.find(item => item.date === day.dataset.empDay);
+        if (first) openEmployeePlanningDetail(first, locale);
+      });
+    });
+  }
+
+  function openEmployeePlanningDetail(shift, locale) {
+    document.getElementById("empPlanningDetail")?.remove();
+    const detail = document.createElement("section");
+    detail.id = "empPlanningDetail";
+    detail.className = "mn-workspace-overlay emp-planning-detail";
+    detail.setAttribute("role", "dialog");
+    detail.setAttribute("aria-modal", "true");
+    const dateLabel = new Date(`${shift.date}T12:00:00`).toLocaleDateString(locale, { weekday:"long", day:"numeric", month:"long", year:"numeric" });
+    const title = shift.location || shift.title || shift.venueName || t9("emp.plan.shift", "Shift");
+    detail.innerHTML = `<div class="mn-workspace-shell">
+      <header class="mn-workspace-header">
+        <button type="button" class="mn-btn mn-btn-ghost" id="empPlanningDetailBack">← ${t9("emp.plan.back", "Terug")}</button>
+        <div class="emp-planning-detail-heading"><span>${t9("emp.plan.assignment", "Geplande opdracht")}</span><strong>${esc(title)}</strong></div>
+        <span class="mn-status mn-status-info">${esc(shift.status || t9("emp.plan.planned", "Ingepland"))}</span>
+      </header>
+      <main class="mn-workspace-body">
+        <section class="emp-planning-detail-hero">
+          <div><span class="emp-planning-eyebrow">${esc(dateLabel)}</span><h2>${esc(title)}</h2><p>${esc(shift.notes || shift.note || t9("emp.plan.noNote", "Er is geen bijkomende instructie toegevoegd."))}</p></div>
+          ${shift.workorderId ? `<button type="button" class="mn-btn mn-btn-primary" id="empPlanningOpenWorkorder">${t9("emp.plan.openWorkorder", "Open werkbon")}</button>` : ""}
+        </section>
+        <div class="emp-planning-detail-grid">
+          <section class="mn-card">
+            <div class="mn-card-header"><h3 class="mn-card-title">${t9("emp.plan.execution", "Mijn uitvoering")}</h3></div>
+            <div class="mn-card-body">
+              <dl class="emp-planning-facts">
+                <div><dt>${t9("emp.plan.time", "Tijdstip")}</dt><dd>${esc(shift.start || "")}${shift.end ? ` ${t9("emp.plan.until", "tot")} ${esc(shift.end)}` : ""}</dd></div>
+                <div><dt>${t9("emp.plan.location", "Locatie")}</dt><dd>${esc(shift.location || shift.venueName || shift.venueId || t9("emp.plan.noLocation", "Nog geen locatie"))}</dd></div>
+                <div><dt>${t9("emp.plan.workorder", "Werkbon")}</dt><dd>${esc(shift.workorderNumber || shift.workorderId || t9("emp.plan.noWorkorder", "Niet gekoppeld"))}</dd></div>
+                <div><dt>${t9("emp.plan.project", "Project")}</dt><dd>${esc(shift.projectName || shift.projectId || t9("emp.plan.noProject", "Niet gekoppeld"))}</dd></div>
+              </dl>
+              <div class="emp-planning-instructions"><span>${t9("emp.plan.instructions", "Instructies")}</span><p>${esc(shift.notes || shift.note || t9("emp.plan.noNote", "Er is geen bijkomende instructie toegevoegd."))}</p></div>
+            </div>
+          </section>
+          <aside class="emp-planning-detail-aside">
+            <section class="mn-card"><div class="mn-card-header"><h3 class="mn-card-title">${t9("emp.plan.daySummary", "Dagoverzicht")}</h3></div><div class="mn-card-body">
+              <p><span>${t9("emp.plan.date", "Datum")}</span><strong>${esc(dateLabel)}</strong></p>
+              <p><span>${t9("emp.plan.duration", "Tijd")}</span><strong>${esc(shift.start || "")}${shift.end ? ` ${t9("emp.plan.until", "tot")} ${esc(shift.end)}` : ""}</strong></p>
+              <p><span>${t9("emp.plan.status", "Status")}</span><strong>${esc(shift.status || t9("emp.plan.planned", "Ingepland"))}</strong></p>
+            </div></section>
+            <section class="mn-card emp-planning-ready"><div class="mn-card-body"><span>✓</span><div><strong>${t9("emp.plan.ready", "Klaar voor je werkdag")}</strong><p>${t9("emp.plan.readyText", "Controleer de locatie en open de gekoppelde werkbon zodra je start.")}</p></div></div></section>
+          </aside>
+        </div>
+      </main>
+    </div>`;
+    document.body.appendChild(detail);
+    const close = () => detail.remove();
+    document.getElementById("empPlanningDetailBack")?.addEventListener("click", close);
+    document.getElementById("empPlanningOpenWorkorder")?.addEventListener("click", () => {
+      close();
+      switchView("workorders");
+    });
+    detail.addEventListener("keydown", event => { if (event.key === "Escape") close(); });
+    document.getElementById("empPlanningDetailBack")?.focus({ preventScroll:true });
   }
 
   // ── Leaves ─────────────────────────────────────────────────
@@ -1885,7 +1957,7 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
   <form id="empComposeForm" style="display:flex;flex-direction:column;gap:12px">
     <div>
       <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">${t9("emp.msg.to","Aan")}</label>
-      <select name="recipientRole" style="width:100%;10px">
+      <select name="recipientRole" style="width:100%;padding:10px">
         <option value="">${t9("emp.msg.allTeam","Alle teamleden")}</option>
         <option value="manager">${t9("emp.msg.managers","Manager(s)")}</option>
         <option value="tenant_admin">${t9("emp.msg.admin","Admin")}</option>
@@ -1893,11 +1965,11 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
     </div>
     <div>
       <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">${t9("emp.msg.subject","Onderwerp")}</label>
-      <input name="subject" placeholder="${t9("emp.msg.subjectPh","Onderwerp van je bericht")}" style="width:100%;10px">
+      <input name="subject" placeholder="${t9("emp.msg.subjectPh","Onderwerp van je bericht")}" style="width:100%;padding:10px">
     </div>
     <div>
       <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px">${t9("emp.msg.body","Bericht")} *</label>
-      <textarea name="body" required rows="3" placeholder="${t9("emp.msg.bodyPh","Schrijf je bericht…")}" style="width:100%;10px;resize:none"></textarea>
+      <textarea name="body" required rows="3" placeholder="${t9("emp.msg.bodyPh","Schrijf je bericht…")}" style="width:100%;padding:10px;resize:none"></textarea>
     </div>
     <div id="empComposeErr" style="display:none;background:var(--wf-red-l);color:var(--wf-red);border-radius:8px;padding:8px 10px;font-size:12px"></div>
     <button type="submit" style="padding:11px;background:var(--wf-blue);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;">${t9("emp.msg.send","Versturen")}</button>
@@ -2061,19 +2133,19 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
   <form id="empProfileForm" style="display:flex;flex-direction:column;gap:12px;">
     <div>
       <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px;">${t9("emp.more.name","Naam")}</label>
-      <input name="name" value="${profile.name||""}" placeholder="${t9("emp.more.name","Naam")}" style="width:100%;10px">
+      <input name="name" value="${profile.name||""}" placeholder="${t9("emp.more.name","Naam")}" style="width:100%;padding:10px">
     </div>
     <div>
       <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px;">${t9("emp.more.phone","Telefoon")}</label>
-      <input name="phone" type="tel" value="${profile.phone||""}" placeholder="+32 ..." style="width:100%;10px">
+      <input name="phone" type="tel" value="${profile.phone||""}" placeholder="+32 ..." style="width:100%;padding:10px">
     </div>
     <div>
       <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px;">${t9("emp.more.address","Adres")}</label>
-      <input name="address" value="${profile.address||""}" placeholder="Straat 1, 1000 Brussel" style="width:100%;10px">
+      <input name="address" value="${profile.address||""}" placeholder="Straat 1, 1000 Brussel" style="width:100%;padding:10px">
     </div>
     <div>
       <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px;">IBAN <span style="font-weight:400;color:var(--gray-400);">${t9("emp.more.ibanNote","(voor onkostenvergoeding)")}</span></label>
-      <input name="iban" value="${profile.iban||""}" placeholder="BE00 0000 0000 0000" style="width:100%;10px;font-family:monospace" autocomplete="off">
+      <input name="iban" value="${profile.iban||""}" placeholder="BE00 0000 0000 0000" style="width:100%;padding:10px;font-family:monospace" autocomplete="off">
     </div>
     <div id="empProfileMsg" style="display:none;padding:8px 10px;border-radius:8px;font-size:12px;"></div>
     <button type="submit" style="padding:10px;background:var(--wf-blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">${t9("emp.more.save","Opslaan")}</button>
@@ -2086,11 +2158,11 @@ ${data.absentNow ? `<div style="background:var(--wf-yellow-l);border-radius:10px
   <form id="empPwForm" style="display:flex;flex-direction:column;gap:12px;">
     <div>
       <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px;">${t9("emp.more.currentPw","Huidig wachtwoord")}</label>
-      <input name="currentPassword" type="password" required style="width:100%;10px">
+      <input name="currentPassword" type="password" required style="width:100%;padding:10px">
     </div>
     <div>
       <label style="display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:4px;">${t9("emp.more.newPw","Nieuw wachtwoord")}</label>
-      <input name="newPassword" type="password" required minlength="8" style="width:100%;10px">
+      <input name="newPassword" type="password" required minlength="8" style="width:100%;padding:10px">
     </div>
     <div id="empPwMsg" style="display:none;padding:8px 10px;border-radius:8px;font-size:12px;"></div>
     <button type="submit" style="padding:10px;background:var(--gray-900);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">${t9("emp.more.change","Wijzigen")}</button>

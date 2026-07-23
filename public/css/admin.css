@@ -1097,6 +1097,84 @@ button.adm-board-row:hover { background:#fafafe; }
 .adm-capacity-board article>em { font-size:11px; }
 .adm-planning-empty { font-size:13px; }
 
+/* Planningpilot, leesbare SaaS-schaal en directe interactie */
+.adm-planning-page { padding-bottom:32px; }
+.adm-planning-toolbar { min-height:64px; padding:11px 13px; margin-bottom:14px; border-radius:14px; }
+.adm-planning-metrics { min-height:72px; margin-bottom:14px; border-radius:14px; }
+.adm-planning-metrics>span { min-width:132px; padding:13px 16px; }
+.adm-planning-workspace { grid-template-columns:minmax(0,1fr) 280px; gap:14px; }
+.adm-modern-planner { border-radius:14px; }
+.adm-modern-planner-head,.adm-modern-planner-row { grid-template-columns:210px repeat(var(--day-count),minmax(174px,1fr)); }
+.adm-modern-planner-head { height:58px; }
+.adm-modern-planner-head>span { padding:0 16px; font-size:13px; }
+.adm-modern-planner-head>div b { width:auto; height:auto; padding:7px 10px; font-size:13px; text-transform:capitalize; }
+.adm-modern-planner-head>div.today b { border-radius:8px; }
+.adm-modern-planner-row { min-height:138px; }
+.adm-planner-person { gap:11px; padding:14px; }
+.adm-planner-person>i { width:38px; height:38px; font-size:12px; }
+.adm-planner-person b { font-size:14px; }
+.adm-planner-person small { font-size:12px; line-height:1.4; }
+.adm-planner-cell { gap:8px; padding:9px; transition:background .14s ease,box-shadow .14s ease; }
+.adm-planner-cell.is-drop-target { background:var(--mn-brand-soft); box-shadow:inset 0 0 0 2px var(--mn-brand); }
+.adm-planner-cell.is-saving { opacity:.58; pointer-events:none; }
+.adm-shift-pill { min-height:82px; padding:10px 11px; border-radius:9px; transition:transform .14s ease,box-shadow .14s ease,opacity .14s ease; }
+.adm-shift-pill.is-dragging { opacity:.42; transform:scale(.98); }
+.adm-shift-pill b { font-size:13px; }
+.adm-shift-pill small,.adm-shift-pill time { font-size:12px; }
+.adm-shift-pill em { font-size:11px; }
+.adm-planning-side { gap:14px; }
+.adm-planning-side-card,.adm-planning-insight { border-radius:14px; }
+.adm-side-card-head { height:56px; padding:0 16px; }
+.adm-planning-side-card>button { min-height:68px; padding:10px 14px; gap:10px; }
+.adm-planning-side-card>button b { font-size:13px; }
+.adm-planning-side-card>button small { font-size:12px; line-height:1.4; }
+.adm-planning-insight { gap:12px; padding:16px; }
+.adm-planning-insight b { font-size:14px; }
+.adm-planning-insight p { font-size:13px; line-height:1.5; }
+.adm-copy-week { height:42px; font-size:13px; border-radius:10px; }
+
+/* Planningdetail als volwaardige werkpagina */
+.adm-drawer[data-editor-kind="planning"] { inset:24px; width:auto; height:auto; border-radius:20px; box-shadow:var(--mn-shadow-modal); }
+.adm-drawer[data-editor-kind="planning"] .adm-drawer-body { padding:28px 34px 110px; background:var(--mn-canvas); }
+.adm-drawer[data-editor-kind="planning"] .adm-drawer-header { border-radius:20px 20px 0 0; }
+.adm-planning-detail { max-width:1440px; margin:0 auto; }
+.adm-planning-detail-status { display:flex; align-items:center; gap:12px; margin-bottom:20px; color:var(--mn-text-secondary); font-size:14px; }
+.adm-planning-detail-grid { display:grid; grid-template-columns:minmax(0,1fr) 330px; gap:24px; align-items:start; }
+.adm-planning-detail-main { display:flex; flex-direction:column; gap:20px; }
+.adm-planning-detail-section,.adm-planning-detail-aside>section { padding:24px; border:1px solid var(--mn-border); border-radius:16px; background:#fff; box-shadow:var(--mn-shadow-card); }
+.adm-planning-detail-heading { display:flex; gap:13px; margin-bottom:22px; }
+.adm-planning-detail-heading>span { width:32px; height:32px; display:grid; place-items:center; flex:none; color:var(--mn-brand); background:var(--mn-brand-soft); border-radius:9px; font-size:13px; font-weight:700; }
+.adm-planning-detail-heading h3 { margin:0; color:var(--mn-ink); font-size:18px; }
+.adm-planning-detail-heading p { margin:4px 0 0; color:var(--mn-text-secondary); font-size:14px; }
+.adm-planning-detail-aside { display:flex; flex-direction:column; gap:16px; position:sticky; top:0; }
+.adm-planning-detail-aside dl { margin:15px 0 0; }
+.adm-planning-detail-aside dl div { display:flex; justify-content:space-between; gap:20px; padding:12px 0; border-top:1px solid var(--mn-border); }
+.adm-planning-detail-aside dt { color:var(--mn-text-secondary); font-size:13px; }
+.adm-planning-detail-aside dd { margin:0; color:var(--mn-ink); font-size:14px; font-weight:650; text-align:right; }
+.adm-planning-links { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.adm-planning-links button { display:grid; grid-template-columns:38px 1fr; column-gap:11px; padding:15px; border:1px solid var(--mn-border); border-radius:12px; color:var(--mn-text); background:var(--mn-surface-subtle); text-align:left; cursor:pointer; }
+.adm-planning-links button:hover { border-color:var(--mn-border-strong); background:#fff; box-shadow:var(--mn-shadow-card); }
+.adm-planning-links button>span { grid-row:1/3; width:38px; height:38px; display:grid; place-items:center; color:var(--mn-brand); background:var(--mn-brand-soft); border-radius:9px; font-size:17px; }
+.adm-planning-links b { font-size:14px; }
+.adm-planning-links small { margin-top:3px; color:var(--mn-text-secondary); font-size:13px; line-height:1.35; }
+.adm-planning-attention { display:flex; gap:11px; color:#765009; background:var(--mn-warning-soft)!important; border-color:#f1d9a9!important; }
+.adm-planning-attention>span { width:28px; height:28px; display:grid; place-items:center; flex:none; border-radius:50%; background:#fff; font-weight:700; }
+.adm-planning-attention b { font-size:14px; }
+.adm-planning-attention p,.adm-planning-activity p { margin:4px 0 0; font-size:13px; line-height:1.5; }
+.adm-planning-activity { display:flex; gap:11px; margin-top:15px; }
+.adm-planning-activity>i { width:9px; height:9px; margin-top:5px; border-radius:50%; background:var(--mn-success); box-shadow:0 0 0 5px var(--mn-success-soft); }
+.adm-planning-activity b { font-size:14px; }
+
+@media (max-width:1000px) {
+  .adm-planning-detail-grid { grid-template-columns:1fr; }
+  .adm-planning-detail-aside { position:static; }
+}
+@media (max-width:768px) {
+  .adm-drawer[data-editor-kind="planning"] { inset:0; border-radius:0; }
+  .adm-drawer[data-editor-kind="planning"] .adm-drawer-body { padding:20px 18px 100px; }
+  .adm-planning-links { grid-template-columns:1fr; }
+}
+
 /* Onboarding in dezelfde leesbare productschaal */
 .adm-onboarding-head .adm-eyebrow { font-size:11.5px; }
 .adm-onboarding-head h2 { font-size:22px; }

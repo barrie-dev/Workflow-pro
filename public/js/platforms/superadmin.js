@@ -250,10 +250,10 @@
 <div class="sa-layout">
   <aside class="sa-sidebar" id="saSidebar">
     <div class="sa-brand">
-      <div class="sa-brand-mark">SA</div>
+      <div class="sa-brand-mark"><img src="/brand/one-symbol.svg" alt=""></div>
       <div>
-        <div class="sa-brand-name">Monargo One</div>
-        <div class="sa-brand-sub">Super Admin</div>
+        <div class="sa-brand-name">One <small>by Monargo</small></div>
+        <div class="sa-brand-sub">Superadmin</div>
       </div>
     </div>
 
