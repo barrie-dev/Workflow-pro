@@ -61,38 +61,40 @@ functie optioneel; `scripts/check-production-config.js` valideert het geheel.
 6. **Leg bewijs vast**: `node scripts/generate-evidence-bundle.js` en commit
    het dossier uit `docs/evidence/`.
 
-### 3.1 Stop de oude instantie EERST (single-writer, CTO-03)
+### 3.1 Single-writer en de rolling deploy (CTO-03 · bootgate)
 
 Dit platform verdraagt bewust maar **een** schrijver: de instantie die de
 PostgreSQL advisory lock op `platform_state` houdt. Die guard bestaat omdat
 overlappende schrijvers eerder stil dataverlies veroorzaakten bij een deploy.
 
-Gevolg voor de deploystrategie: een **zero-downtime deploy werkt hier niet**.
-Platformen als Render starten de nieuwe instantie naast de oude en stoppen de
-oude pas als de nieuwe gezond is. De nieuwe wacht dan op een lock die de oude
-pas loslaat bij het stoppen, en dat loopt vast. De deploy faalt na
-`SINGLE_WRITER_WAIT_MS` (standaard 60 s) met:
+Een zero-downtime (rolling) deploy start de nieuwe instantie NAAST de oude en
+stopt de oude pas als de nieuwe gezond is. Dat kan botsen met de single writer.
+De **bootgate** lost dit op zodat een gewone rolling deploy gewoon werkt:
 
-```
-[start] kon de opslag niet initialiseren: Single-writer-lock niet verkregen:
-        een andere instantie schrijft nog naar platform_state.
-```
+- De nieuwe instantie gaat METEEN luisteren en is direct **healthy** op
+  `GET /api/health` (met `status: "booting"`). Zo ziet het platform haar als
+  gezond en stopt het de oude instantie.
+- Zolang de nieuwe instantie de writer-lock nog niet heeft, weigert ze ALLE
+  overige verkeer met `503 BOOTING` · er wordt nooit gelezen of geschreven op
+  een half geladen staat. `GET /api/ready` is dan ook 503.
+- Zodra de oude instantie stopt, geeft PostgreSQL de lock vrij, neemt de nieuwe
+  instantie hem over, laadt de staat, en gaat `GET /api/ready` naar 200.
 
-**Werkwijze:** zorg dat de oude instantie gestopt is voor de nieuwe start.
+**Probe-instelling (belangrijk):** stuur **verkeer op readiness** (`/api/ready`)
+en herstart op liveness (`/api/health`). Zo krijgt een wachtende-op-de-lock
+instantie geen verkeer, maar wordt ze ook niet als dood herstart. Render met een
+enkele instantie en `healthCheckPath: /api/health` werkt zonder verdere
+configuratie.
 
-- Render: **Suspend** de service, wacht tot ze echt gestopt is, en **Resume**.
-  Gelijkwaardig: schaal naar 0 instanties en daarna terug naar 1.
-- Kubernetes: `strategy.type: Recreate` (niet `RollingUpdate`).
-- Docker Compose / handmatig: `docker stop` de oude container voor je de
-  nieuwe start.
+`SINGLE_WRITER_WAIT_MS` staat op 5 minuten: ruim voldoende voor de overlap van
+een rolling deploy. Faalt de start alsnog met "Single-writer-lock niet
+verkregen", dan draait er nog een oude instantie die niet gestopt wordt (of een
+hard-gecrashte instantie waarvan de databaseverbinding nog hangt). Stop die
+expliciet · op Render: **Suspend** en daarna **Resume**, of schaal naar 0 en
+terug naar 1.
 
-Reken op ongeveer een minuut onbereikbaarheid. Dat is de prijs van de
-single-writer-garantie.
-
-**Niet doen:** `SINGLE_WRITER_WAIT_MS` verhogen lost niets op, want de oude
-instantie geeft de lock pas vrij als ze stopt. En `SINGLE_WRITER=false` zetten
-om de deploy erdoor te krijgen heft precies de bescherming op die het eerdere
-dataverlies moest voorkomen.
+**Niet doen:** `SINGLE_WRITER=false` zetten om een deploy erdoor te krijgen
+heft precies de bescherming op die het eerdere dataverlies moest voorkomen.
 
 ## 4. Rollback
 
