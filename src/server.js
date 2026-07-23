@@ -9211,6 +9211,21 @@ const httpServer = http.createServer(async (req, res) => {
   // Een TLS-ketenfout is bijna altijd een ONTBREKENDE root-CA, niet een defecte
   // database. Zonder deze hint leest de operator enkel "self-signed certificate
   // in certificate chain" en is niet duidelijk welke knop hij moet omzetten.
+  // De single-writer-guard (CTO-03) botst met een zero-downtime deploy: het
+  // platform verdraagt maar EEN schrijver op platform_state, terwijl Render en
+  // vergelijkbare platformen de nieuwe instantie starten VOOR ze de oude
+  // stoppen. De nieuwe wacht dan op een lock die de oude pas loslaat als de
+  // nieuwe gezond is · dat loopt vast. De uitweg is een stop-eerst-deploy.
+  if (/single-writer/i.test(err.message || "")) {
+    console.error(
+      "[start] deploy-hint: dit platform verdraagt maar EEN schrijver. Een deploy die de nieuwe " +
+      "instantie naast de oude start, loopt hier altijd vast. Stop de oude instantie eerst " +
+      "(op Render: Suspend en daarna Resume, of schaal naar 0 instanties en terug naar 1) en " +
+      "deploy dan opnieuw. SINGLE_WRITER_WAIT_MS verhogen helpt NIET, want de oude instantie " +
+      "geeft de lock pas vrij als ze stopt. Zet SINGLE_WRITER niet uit: die guard bestaat juist " +
+      "omdat overlappende schrijvers eerder stil dataverlies op platform_state veroorzaakten."
+    );
+  }
   if (/self[- ]signed|certificate|CERT_|unable to (get|verify)/i.test(err.message || "")) {
     console.error(
       "[start] TLS-hint: DATABASE_SSL_MODE staat in productie standaard op 'verify-full', " +
