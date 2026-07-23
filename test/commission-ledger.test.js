@@ -64,6 +64,7 @@ function fakeStore() {
   };
 }
 const admin = { email: "super@x" };
+const admin2 = { email: "super2@x" }; // tweede persoon voor vier-ogen op payouts (finding 3)
 const overview = { rows: [{ tenantId: "c1", mrr: 200, commissionPct: 10 }, { tenantId: "c2", mrr: 100, commissionPct: 15 }] };
 
 test("accruePeriod · idempotent, geen dubbele boekingen", () => {
@@ -87,10 +88,11 @@ test("payout-lifecycle · draft → approved → paid met betaalreferentie", () 
   // De events zijn gereserveerd; een tweede payout vindt niets meer.
   assert.throws(() => svc.createPayout(store, { resellerId: "r1", period: "2026-07" }, admin), e => e.code === "NO_PAYABLE_EVENTS");
   svc.transitionPayout(store, { payoutId: payout.id, to: "pending_approval" }, admin);
-  svc.transitionPayout(store, { payoutId: payout.id, to: "approved" }, admin);
+  // Vier-ogen (finding 3): de aanmaker keurt/betaalt niet zelf · admin2 doet dat.
+  svc.transitionPayout(store, { payoutId: payout.id, to: "approved" }, admin2);
   // Uitbetalen zonder referentie → geweigerd.
-  assert.throws(() => svc.transitionPayout(store, { payoutId: payout.id, to: "paid" }, admin), e => e.code === "PAYMENT_REF_REQUIRED");
-  const paid = svc.transitionPayout(store, { payoutId: payout.id, to: "paid", paymentRef: "SEPA-2026-07-001" }, admin);
+  assert.throws(() => svc.transitionPayout(store, { payoutId: payout.id, to: "paid" }, admin2), e => e.code === "PAYMENT_REF_REQUIRED");
+  const paid = svc.transitionPayout(store, { payoutId: payout.id, to: "paid", paymentRef: "SEPA-2026-07-001" }, admin2);
   assert.equal(paid.status, "paid");
   assert.equal(paid.paymentRef, "SEPA-2026-07-001");
   const led = svc.ledgerFor(store, "r1");
@@ -125,9 +127,9 @@ test("clawback · enkel op reeds uitbetaald event; dispute-flow", () => {
   // Dispute vanuit pending_approval.
   const disp = svc.transitionPayout(store, { payoutId: payout.id, to: "disputed", reason: "reseller betwist bedrag" }, admin);
   assert.equal(disp.dispute.reason, "reseller betwist bedrag");
-  // Terug naar approved en uitbetalen.
-  svc.transitionPayout(store, { payoutId: payout.id, to: "approved" }, admin);
-  svc.transitionPayout(store, { payoutId: payout.id, to: "paid", paymentRef: "REF-1" }, admin);
+  // Terug naar approved en uitbetalen · vier-ogen (finding 3): admin2 keurt/betaalt.
+  svc.transitionPayout(store, { payoutId: payout.id, to: "approved" }, admin2);
+  svc.transitionPayout(store, { payoutId: payout.id, to: "paid", paymentRef: "REF-1" }, admin2);
   // Nu mag de clawback (deel van de betaalde c1-accrual = 20).
   const cb = svc.clawback(store, { eventId: ev.id, amount: 12, reason: "klant opgezegd binnen maand" }, admin);
   assert.equal(cb.amount, -12);
@@ -135,4 +137,69 @@ test("clawback · enkel op reeds uitbetaald event; dispute-flow", () => {
   const bal = svc.ledgerFor(store, "r1").balance;
   assert.equal(bal.clawedBack, -12);
   assert.equal(bal.accrued, 23); // 35 - 12
+});
+
+// ── Regressietests · cluster A (financiele integriteit) ──
+
+test("finding 2 · clawback kent een cumulatieve grens, saldo wordt nooit negatief", () => {
+  const store = fakeStore();
+  svc.accruePeriod(store, { resellerId: "r1", period: "2026-07", overview: { rows: [{ tenantId: "c1", mrr: 1000, commissionPct: 10 }] } }, admin); // 100
+  const ev = store.data.commissionEvents.find(e => e.clientTenantId === "c1"); // amount 100
+  const payout = svc.createPayout(store, { resellerId: "r1", period: "2026-07" }, admin);
+  svc.transitionPayout(store, { payoutId: payout.id, to: "pending_approval" }, admin);
+  svc.transitionPayout(store, { payoutId: payout.id, to: "approved" }, admin2);
+  svc.transitionPayout(store, { payoutId: payout.id, to: "paid", paymentRef: "SEPA-1" }, admin2);
+  // Eerste volledige clawback (100) lukt.
+  const cb1 = svc.clawback(store, { eventId: ev.id, amount: 100, reason: "refund" }, admin);
+  assert.equal(cb1.amount, -100);
+  // Tweede volledige clawback op hetzelfde event → geweigerd (zou saldo negatief maken).
+  assert.throws(() => svc.clawback(store, { eventId: ev.id, amount: 100, reason: "nogmaals" }, admin),
+    e => e.code === "CORRECTION_TOO_LARGE");
+  assert.equal(svc.ledgerFor(store, "r1").balance.accrued, 0, "saldo blijft 0, nooit negatief");
+});
+
+test("finding 3 · payout-vier-ogen: aanmaker keurt/betaalt nooit zelf", () => {
+  const store = fakeStore();
+  svc.accruePeriod(store, { resellerId: "r1", period: "2026-07", overview }, admin);
+  const payout = svc.createPayout(store, { resellerId: "r1", period: "2026-07" }, admin); // createdBy = admin
+  svc.transitionPayout(store, { payoutId: payout.id, to: "pending_approval" }, admin);
+  // Dezelfde aanmaker keurt zelf goed → geweigerd.
+  assert.throws(() => svc.transitionPayout(store, { payoutId: payout.id, to: "approved" }, admin),
+    e => e.status === 403 && e.code === "SELF_APPROVAL_FORBIDDEN");
+  // Een tweede persoon keurt goed.
+  const appr = svc.transitionPayout(store, { payoutId: payout.id, to: "approved" }, admin2);
+  assert.equal(appr.approvedBy, "super2@x");
+  // Ook uitbetalen mag de aanmaker niet zelf.
+  assert.throws(() => svc.transitionPayout(store, { payoutId: payout.id, to: "paid", paymentRef: "R1" }, admin),
+    e => e.code === "SELF_APPROVAL_FORBIDDEN");
+  const paid = svc.transitionPayout(store, { payoutId: payout.id, to: "paid", paymentRef: "R1" }, admin2);
+  assert.equal(paid.status, "paid");
+});
+
+test("finding 8 · payout-statussen failed en reversed zijn additief representeerbaar", () => {
+  // Nieuwe overgangen uit 23.11, additief op het bestaande grootboek.
+  assert.ok(L.PAYOUT_STATES.includes("failed"));
+  assert.ok(L.PAYOUT_STATES.includes("reversed"));
+  L.assertPayoutTransition("approved", "failed");        // uitbetaling mislukt
+  L.assertPayoutTransition("failed", "pending_approval"); // herpoging
+  L.assertPayoutTransition("paid", "reversed");           // teruggedraaid na betaling
+  // Ongeldige sprongen blijven geweigerd.
+  assert.throws(() => L.assertPayoutTransition("draft", "failed"), e => e.code === "PAYOUT_TRANSITION_INVALID");
+  assert.throws(() => L.assertPayoutTransition("reversed", "paid"), e => e.code === "PAYOUT_TRANSITION_INVALID");
+  // De service materialiseert de tijdstempels en volgt de volledige weg.
+  const store = fakeStore();
+  svc.accruePeriod(store, { resellerId: "r1", period: "2026-07", overview }, admin);
+  const payout = svc.createPayout(store, { resellerId: "r1", period: "2026-07" }, admin);
+  svc.transitionPayout(store, { payoutId: payout.id, to: "pending_approval" }, admin);
+  svc.transitionPayout(store, { payoutId: payout.id, to: "approved" }, admin2);
+  const failed = svc.transitionPayout(store, { payoutId: payout.id, to: "failed" }, admin2);
+  assert.equal(failed.status, "failed");
+  assert.ok(failed.failedAt);
+  // Herpoging: failed → pending_approval → approved → paid → reversed.
+  svc.transitionPayout(store, { payoutId: payout.id, to: "pending_approval" }, admin);
+  svc.transitionPayout(store, { payoutId: payout.id, to: "approved" }, admin2);
+  svc.transitionPayout(store, { payoutId: payout.id, to: "paid", paymentRef: "SEPA-9" }, admin2);
+  const reversed = svc.transitionPayout(store, { payoutId: payout.id, to: "reversed" }, admin2);
+  assert.equal(reversed.status, "reversed");
+  assert.ok(reversed.reversedAt);
 });

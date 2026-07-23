@@ -1,6 +1,14 @@
-// Reseller-portaal: een platform-partner beheert zijn EIGEN klanten en ziet zijn
+// Reseller-portaal: een platform-partner meldt klanten aan en ziet zijn
 // commissie (% van het abonnement). Enkel commerciële data, geen operationele
 // klantgegevens (GDPR). Zie [[project-support-access]] en docs/SECTORPROFIELEN.md.
+//
+// Een partner maakt NOOIT zelf een klantomgeving aan: hij dient een
+// tenantaanvraag in (23.9). Monargo beoordeelt, bevestigt bij de klant en
+// provisioneert daarna pas · koppelen en provisionen zijn platformacties (23.4).
+//
+// TODO (volgende slice): de overige 23.13-paginas (deals, licentie-aanvragen,
+// prijsuitzonderingen, gedelegeerde toegang, commissiestaten, disputen en
+// payoutwijzigingen) bestaan al als API maar nog niet als portaalpagina.
 (function () {
   "use strict";
   const token = () => window.wfpCore.token();
@@ -83,21 +91,27 @@
   }
   let _rspLangHandler = null;
 
+  // Statuslabel van een tenantaanvraag (machine 23.14) · drietalig.
+  const trqLabel = s => tR("rsp.trq." + String(s || ""), String(s || "-"));
+
   async function render() {
     const main = document.getElementById("rspMain");
     let d;
     try { d = await api("GET", "/api/reseller/clients"); }
     catch (e) { main.innerHTML = `<div style="background:#fff;border-radius:12px;padding:20px;color:var(--wf-red)">${esc(e.message)}</div>`; return; }
+    // Eigen tenantaanvragen · faalt deze call, dan blijft de rest bruikbaar.
+    let requests = [];
+    try { requests = (await api("GET", "/api/reseller/tenant-requests")).requests || []; } catch (_) { requests = []; }
     const nm = document.getElementById("rspName"); if (nm && d.reseller) nm.textContent = tR("rsp.defaultCommission","{name} · standaard {pct}% commissie").replace("{name}", d.reseller.name).replace("{pct}", d.reseller.defaultCommissionPct || 0);
     const card = (label, value, sub) => `<div class="rsp-kpi"><div class="rsp-kpi-label">${label}</div><div class="rsp-kpi-value">${value}</div><div class="rsp-kpi-sub">${sub || ""}</div></div>`;
     main.innerHTML = `
 <section class="rsp-hero">
   <div class="rsp-hero-copy">
-    <div class="rsp-eyebrow">Partner workspace</div>
+    <div class="rsp-eyebrow">${tR("rsp.eyebrow","Partner workspace")}</div>
     <h1>${tR("rsp.partnerPortal","Partnerportaal")}</h1>
-    <p>Maak klanten aan, volg hun activatie en behoud meteen zicht op je maandelijkse commissie.</p>
+    <p>${tR("rsp.heroLead","Meld klanten aan, volg de beoordeling door Monargo en houd zicht op je maandelijkse commissie.")}</p>
   </div>
-  <div class="rsp-flow" aria-label="Partnerflow"><span>Klant</span><b>›</b><span>Activatie</span><b>›</b><span>Commissie</span></div>
+  <div class="rsp-flow" aria-label="${tR("rsp.flowLabel","Partnerflow")}"><span>${tR("rsp.flowRequest","Aanvraag")}</span><b>›</b><span>${tR("rsp.flowReview","Beoordeling")}</span><b>›</b><span>${tR("rsp.commissionMonth","Commissie / maand")}</span></div>
 </section>
 <div class="rsp-kpis">
   ${card(tR("rsp.myClients","Mijn klanten"), d.clientCount || 0, tR("rsp.activeTrial","actieve + trial"))}
@@ -106,22 +120,46 @@
 </div>
 
 <section class="rsp-card">
-  <div class="rsp-card-head"><span class="rsp-step">1</span>${tR("rsp.createClient","Nieuwe klant aanmaken")}</div>
+  <div class="rsp-card-head"><span class="rsp-step">1</span>${tR("rsp.requestClient","Klant aanmelden")}</div>
   <div class="rsp-card-body rsp-form">
     <input id="ncName" placeholder="${tR("rsp.clientCompanyPh","Bedrijfsnaam klant")}">
+    <input id="ncVat" placeholder="${tR("rsp.vatPh","Ondernemingsnummer (optioneel)")}">
+    <input id="ncContactName" placeholder="${tR("rsp.contactNamePh","Naam contactpersoon")}">
+    <input id="ncEmail" type="email" placeholder="${tR("rsp.contactEmailPh","E-mail contactpersoon")}">
+    <input id="ncStreet" placeholder="${tR("rsp.streetPh","Straat")}">
+    <input id="ncNumber" placeholder="${tR("rsp.numberPh","Nummer")}">
+    <input id="ncZip" placeholder="${tR("rsp.zipPh","Postcode")}">
+    <input id="ncCity" placeholder="${tR("rsp.cityPh","Gemeente")}">
+    <input id="ncCountry" placeholder="${tR("rsp.countryPh","Land (BE)")}" value="BE">
+    <select id="ncLang"><option value="NL">NL</option><option value="FR">FR</option><option value="EN">EN</option></select>
     <select id="ncPlan"><option value="starter">Starter</option><option value="business" selected>Business</option><option value="enterprise">Enterprise</option></select>
-    <input id="ncEmail" type="email" placeholder="${tR("rsp.adminEmailPh","Login-e-mail beheerder klant")}">
-    <input id="ncAdminName" placeholder="${tR("rsp.adminNamePh","Naam beheerder")}">
-    <div class="rsp-span2 rsp-hint">${tR("rsp.activationNote","De beheerder van de klant ontvangt een activatiemail om zelf een wachtwoord in te stellen.")}</div>
+    <select id="ncBilling">
+      <option value="monargo_direct">${tR("rsp.billingDirect","Monargo factureert de klant")}</option>
+      <option value="via_reseller">${tR("rsp.billingViaReseller","Monargo factureert via mij")}</option>
+    </select>
+    <div class="rsp-span2 rsp-hint">${tR("rsp.requestNote","Monargo beoordeelt elke aanvraag, bevestigt bij de klant en maakt daarna pas de omgeving aan. De status van je aanvraag zie je hieronder.")}</div>
     <div class="rsp-span2 rsp-submit">
-      <button id="ncCreate" class="rsp-btn rsp-btn-primary">${tR("rsp.createClientBtn","Klant aanmaken")}</button>
+      <button id="ncCreate" class="rsp-btn rsp-btn-primary">${tR("rsp.requestBtn","Aanvraag indienen")}</button>
       <span id="ncMsg" class="rsp-msg" role="status"></span>
     </div>
   </div>
 </section>
 
 <section class="rsp-card">
-  <div class="rsp-card-head"><span class="rsp-step">2</span>${tR("rsp.clientsCommission","Mijn klanten &amp; commissie")}</div>
+  <div class="rsp-card-head"><span class="rsp-step">2</span>${tR("rsp.myRequests","Mijn aanvragen")}</div>
+  <div class="rsp-table-wrap"><table class="rsp-table">
+    <thead><tr><th>${tR("adm.thCustomer","Klant")}</th><th>${tR("rsp.plan","Plan")}</th><th>${tR("adm.status","Status")}</th><th>${tR("rsp.thRequested","Aangevraagd op")}</th></tr></thead>
+    <tbody>${requests.map(r => `<tr>
+      <td class="rsp-client">${esc((r.endCustomer && r.endCustomer.legalName) || "-")}</td>
+      <td style="text-transform:capitalize">${esc((r.package && r.package.plan) || "-")}</td>
+      <td>${esc(trqLabel(r.status))}</td>
+      <td>${esc(String(r.createdAt || "").slice(0, 10) || "-")}</td>
+    </tr>`).join("") || `<tr><td colspan="4" class="rsp-empty">${tR("rsp.noRequests","Nog geen aanvragen · meld hierboven je eerste klant aan.")}</td></tr>`}</tbody>
+  </table></div>
+</section>
+
+<section class="rsp-card">
+  <div class="rsp-card-head"><span class="rsp-step">3</span>${tR("rsp.clientsCommission","Mijn klanten &amp; commissie")}</div>
   <div class="rsp-table-wrap"><table class="rsp-table">
     <thead><tr><th>${tR("adm.thCustomer","Klant")}</th><th>${tR("rsp.plan","Plan")}</th><th>${tR("adm.status","Status")}</th><th>MRR</th><th>${tR("rsp.commissionPct","Commissie %")}</th><th>${tR("rsp.commissionMo","Commissie/mnd")}</th></tr></thead>
     <tbody>${(d.rows || []).map(r => `<tr>
@@ -136,23 +174,42 @@
 </section>`;
 
     document.getElementById("ncCreate").addEventListener("click", async () => {
-      const name = document.getElementById("ncName").value.trim();
-      const plan = document.getElementById("ncPlan").value;
-      const adminEmail = document.getElementById("ncEmail").value.trim();
-      const adminName = document.getElementById("ncAdminName").value.trim();
+      const val = id => document.getElementById(id).value.trim();
       const msg = document.getElementById("ncMsg"); msg.textContent = "";
-      if (!name || !adminEmail) { msg.textContent = tR("rsp.reqFields","Klantnaam en login-e-mail zijn verplicht."); return; }
+      const legalName = val("ncName");
+      const email = val("ncEmail");
+      const address = {
+        straat: val("ncStreet"), nummer: val("ncNumber"),
+        postcode: val("ncZip"), gemeente: val("ncCity"), land: val("ncCountry"),
+      };
+      if (!legalName || !email || Object.values(address).some(v => !v)) {
+        msg.textContent = tR("rsp.reqFieldsRequest","Bedrijfsnaam, contact-e-mail en het volledige adres zijn verplicht.");
+        return;
+      }
+      const button = document.getElementById("ncCreate");
       try {
-        const button = document.getElementById("ncCreate");
         button.disabled = true;
         button.textContent = tR("adm.loading","Laden…");
-        const r = await api("POST", "/api/reseller/clients", { name, plan, adminEmail, adminName });
-        if (r && r.activationLink && window.showToast) window.showToast(tR("rsp.clientCreated","Klant aangemaakt. Activatielink (dev): ") + r.activationLink, "success");
+        // 23.9: aanvraag indienen (draft) en meteen ter beoordeling aanbieden.
+        const r = await api("POST", "/api/reseller/clients", {
+          endCustomer: {
+            legalName, enterpriseVat: val("ncVat") || null, address,
+            contact: { name: val("ncContactName") || null, email },
+            language: document.getElementById("ncLang").value,
+          },
+          package: { plan: document.getElementById("ncPlan").value },
+          billingOwnership: document.getElementById("ncBilling").value,
+        });
+        const requestId = r && r.tenantRequest && r.tenantRequest.id;
+        if (requestId) {
+          try { await api("POST", `/api/reseller/tenant-requests/${requestId}/transition`, { to: "submitted" }); }
+          catch (_) { /* blijft als concept staan · zichtbaar in de lijst */ }
+        }
+        if (window.showToast) window.showToast(tR("rsp.requestSubmitted","Aanvraag ingediend · Monargo beoordeelt ze en bevestigt bij de klant."), "success");
         render();
       } catch (e) {
         msg.textContent = e.message;
-        const button = document.getElementById("ncCreate");
-        if (button) { button.disabled = false; button.textContent = tR("rsp.createClientBtn","Klant aanmaken"); }
+        if (button) { button.disabled = false; button.textContent = tR("rsp.requestBtn","Aanvraag indienen"); }
       }
     });
   }

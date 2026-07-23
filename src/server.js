@@ -320,8 +320,145 @@ const EMP_HOME_WIDGETS = [
 ];
 const { leaveConflictOn } = require("./modules/planning-rules");
 const { listIntegrations, connectIntegration, updateMapping, runSync, retrySync, listProviders, runRobawsDocSync } = require("./modules/integrations");
-const { commissionOverview, publicReseller, commissionPctFor } = require("./modules/resellers");
+const { commissionOverview, publicReseller, payoutDetails } = require("./modules/resellers");
 const commissionSvc = require("./modules/commission-service");
+// Kanaaldomein h23 (reseller, partnerkanaal en commissiebeheer): pure
+// beslislaag + vijf store-gebonden domeinmodules. Elke route gaat VOOR de
+// service-call door reseller-authz (actie + scope + tenantrelatie).
+const resellerAuthz = require("./platform/reseller-authz");
+const resellerDealsSvc = require("./modules/reseller-deals");
+const resellerTenantsSvc = require("./modules/reseller-tenants");
+const resellerLicensingSvc = require("./modules/reseller-licensing");
+const resellerCommissionSvc = require("./modules/reseller-commission-agreement");
+const resellerLifecycleSvc = require("./modules/reseller-lifecycle");
+
+// ── Kanaaldomein h23 · route-helpers ─────────────────────────────────────────
+
+// Kanaalrol voor portaalgebruikers (23.6): een expliciete sub-rol op de
+// gebruiker (resellerRole) wint; de klassieke enkelvoudige reseller-login
+// (systeemrol "reseller", zonder sub-rol) werkt als eigenaar met de bestaande
+// portaalbevoegdheden. Deny-by-default blijft gelden voor al het overige, en
+// de gevoelige beperkingen uit 23.5 blijven hard.
+const LEGACY_RESELLER_GRANTS = Object.freeze([
+  "reseller.deals.create:own",
+  "reseller.tenants.request:own",
+  "reseller.licenses.request:assigned",
+  "reseller.commissions.dispute:own",
+  "reseller.payout.manage:own",
+  "reseller.delegated_admin.use:assigned"
+]);
+function resellerChannelActor(user) {
+  if (user.resellerRole) return user;
+  return { ...user, resellerRole: "reseller_owner", permissions: [...(user.permissions || []), ...LEGACY_RESELLER_GRANTS] };
+}
+
+// Monargo-zijde: superadmins zonder expliciete kanaalrol krijgen per
+// routefamilie een passende fallbackrol (partnerbeheer vs finance), zodat de
+// gevoelige beperkingen uit 23.5 aan de juiste kant vallen (een partner
+// manager wijzigt bv. nooit payoutgegevens).
+function monargoChannelActor(user, fallbackRole) {
+  if (user.resellerRole) return user;
+  return { ...user, resellerRole: fallbackRole };
+}
+
+// Portaal-gate (23.6/23.15): actie + scope + tenantrelatie via reseller-authz,
+// VOOR elke service-call. Zonder tenant in het spel volstaat de grant plus de
+// suspensieregel (23.4: views blijven werken, al het andere blokkeert); met
+// tenantId is bovendien een actieve tenantkoppeling vereist (assignment-
+// record · reseller_id op de tenant alleen is nooit genoeg).
+function resellerPortalAllowed(channelUser, permissions, reseller, tenantId = null) {
+  const list = Array.isArray(permissions) ? permissions : [permissions];
+  for (const permission of list) {
+    if (tenantId != null) {
+      const ok = resellerAuthz.canResellerAction(channelUser, permission, {
+        resellerId: reseller.id, resellerStatus: reseller.status, tenantId,
+        assignments: store.data.resellerTenantLinks || []
+      });
+      if (ok) return true;
+      continue;
+    }
+    const scope = resellerAuthz.grantFor(channelUser, permission);
+    if (!scope) continue;
+    if (reseller.status !== "active" && resellerAuthz.suspensionBlocks(permission)) continue;
+    return true;
+  }
+  return false;
+}
+
+// Fouten uit de kanaalservices: status/code/fieldErrors een-op-een doorgeven.
+function sendResellerError(res, e) {
+  const payload = { ok: false, error: e.message, code: e.code };
+  if (e.fieldErrors) payload.fieldErrors = e.fieldErrors;
+  if (e.currentVersion !== undefined) payload.currentVersion = e.currentVersion;
+  if (e.removedModules) payload.removedModules = e.removedModules;
+  return sendJson(res, e.status || 400, payload);
+}
+
+// Generieke 403 zonder ID-probing (23.15/ISO-07): vaste body, ongeacht het
+// bestaan van het object of de precieze reden van de weigering.
+function resellerForbidden(res) {
+  return sendJson(res, 403, { ok: false, error: "Geen toegang", code: "RESELLER_FORBIDDEN" });
+}
+
+// ISO-03 (23.6): een EXPLICIETE ?resellerId= die niet de eigen organisatie is,
+// is een harde weigering · nooit stil herfilteren naar de eigen scope. Elke
+// portaal-GET roept dit aan voor de service-call. Retourneert true als het
+// antwoord al verstuurd is.
+function foreignResellerParam(res, url, reseller) {
+  const rid = url.searchParams.get("resellerId");
+  if (rid && rid !== reseller.id) {
+    sendResellerError(res, resellerAuthz.scopeViolationError());
+    return true;
+  }
+  return false;
+}
+
+// MFA-plicht 23.15/DoD-8 · zelfde patroon als de payoutflow
+// (reseller-commission-agreement.assertMfa): reselleradmins, finance en IEDEREEN
+// met gedelegeerde tenanttoegang hebben sterke authenticatie nodig. Faalt
+// dicht: zonder aantoonbare MFA is er geen toegang.
+function assertResellerMfa(channelUser, permission) {
+  if (!resellerAuthz.requiresMfa(channelUser, permission)) return;
+  if (channelUser && (channelUser.mfaEnabled === true || channelUser.mfaVerified === true)) return;
+  const e = new Error("Sterke authenticatie (MFA) is vereist voor deze actie");
+  e.status = 403; e.code = "MFA_REQUIRED";
+  throw e;
+}
+
+// Idempotency-Key voor muterende kanaalroutes (zelfde mechaniek als in de
+// tenant-dispatcher · h41): een herhaalde mutatie met dezelfde sleutel maakt
+// geen duplicaat maar krijgt de eerdere response terug. Retourneert true als
+// de replay al verstuurd is.
+function armResellerIdempotency(req, res, url, user) {
+  if (!["POST", "PATCH", "PUT", "DELETE"].includes(req.method)) return false;
+  const idemKey = idempotency.idempotencyKeyFrom(req);
+  if (!idemKey) return false;
+  const cacheKey = idempotency.cacheKeyFor({
+    tenantId: user.resellerId || null, actorId: user.id, method: req.method, path: url.pathname, key: idemKey
+  });
+  const replay = idempotency.findReplay(store, cacheKey);
+  if (replay) {
+    res.wfpV1 = null;
+    sendJson(res, replay.status, JSON.parse(replay.body), { "Idempotency-Replayed": "true" });
+    return true;
+  }
+  res.wfpIdem = { store, cacheKey };
+  return false;
+}
+
+// Aanmaak van een licentieaanvraag (23.10): routelaag-switch op kind; alle
+// validatie, catalogus- en prijslogica zit in de servicelaag.
+function createResellerLicenseRequest(body, channelUser) {
+  const kind = String((body && body.kind) || "").trim();
+  if (kind === "order") return resellerLicensingSvc.licenseOrder(store, body, channelUser);
+  if (kind === "seat_change") return resellerLicensingSvc.seatChange(store, body, channelUser);
+  if (kind === "plan_change") return resellerLicensingSvc.upgradeDowngrade(store, body, channelUser);
+  if (kind === "trial_extension") return resellerLicensingSvc.trialExtension(store, body, channelUser);
+  if (kind === "cancellation") return resellerLicensingSvc.cancellation(store, body, channelUser);
+  const e = new Error(`kind moet een van ${resellerLicensingSvc.LICENSE_REQUEST_KINDS.join(", ")} zijn`);
+  e.status = 400; e.code = "LICENSE_KIND_INVALID";
+  throw e;
+}
 const saml = require("./modules/saml");
 const { tenantStatus, unlockUser, listBackups, createBackup, backupPreview, restoreBackup, publicStatus, mfaRisk, getBackupPolicy, setBackupPolicy, pruneTenantBackups } = require("./modules/admin");
 const { createNotification, listNotifications, markNotificationRead, generateReminders, notificationSummary } = require("./modules/notifications");
@@ -1530,12 +1667,14 @@ const httpServer = http.createServer(async (req, res) => {
         defaultCommissionPct: 0, appliedAt: now, createdAt: now
       });
       // Login alvast aanmaken maar INACTIEF en zonder wachtwoord. Pas bij
-      // goedkeuring ontvangt de aanvrager de activatiemail om zijn wachtwoord te kiezen.
+      // goedkeuring ontvangt de aanvrager de activatiemail om zijn wachtwoord te
+      // kiezen. MFA is verplicht voor reselleraccounts (23.15) · mfaEnforced
+      // staat daarom meteen aan.
       store.insert("users", {
         id: `reseller_user_${Date.now()}_${Math.random().toString(16).slice(2)}`,
         tenantId: null, name, email, passwordHash: "",
         role: "reseller", permissions: [], resellerId: reseller.id,
-        mfaEnabled: false, mfaEnforced: false, active: false, createdAt: now
+        mfaEnabled: false, mfaEnforced: true, active: false, createdAt: now
       });
       store.audit({ actor: email, tenantId: null, action: "reseller_applied", area: "resellers", detail: name });
       sendJson(res, 201, { ok: true, message: "Aanvraag ontvangen · je account wordt na goedkeuring geactiveerd." });
@@ -2064,8 +2203,17 @@ const httpServer = http.createServer(async (req, res) => {
       const user = actor(req);
       if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
       assertPlatformScope(user, "resellers");
+      // Daar waar geld het systeem verlaat gelden dezelfde eisen als bij een
+      // IBAN-wijziging (23.11): het recht reseller.payout.approve (partner
+      // manager is hier hard uitgesloten via SENSITIVE_DENY) plus MFA. De
+      // vier-ogencontrole zelf zit in transitionPayout (service-side).
+      const cu = monargoChannelActor(user, "monargo_partner_finance");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.payout.approve", {})) return resellerForbidden(res);
       const body = await readBody(req);
-      try { return sendJson(res, 200, { ok: true, payout: commissionSvc.transitionPayout(store, { payoutId: commPayoutTransMatch[1], to: body.to, paymentRef: body.paymentRef || null, reason: body.reason || null }, user) }); }
+      try {
+        assertResellerMfa(cu, "reseller.payout.approve");
+        return sendJson(res, 200, { ok: true, payout: commissionSvc.transitionPayout(store, { payoutId: commPayoutTransMatch[1], to: body.to, paymentRef: body.paymentRef || null, reason: body.reason || null }, user) });
+      }
       catch (e) { return sendJson(res, e.status || 400, { ok: false, error: e.message, code: e.code }); }
     }
     // Reseller-portaal: eigen grootboek (read-only, enkel commerciële data).
@@ -2075,6 +2223,7 @@ const httpServer = http.createServer(async (req, res) => {
       assertReseller(user);
       const reseller = store.get("resellers", user.resellerId);
       if (!reseller || reseller.status !== "active") return sendJson(res, 403, { ok: false, error: "Reseller-account niet actief" });
+      if (foreignResellerParam(res, url, reseller)) return;
       return sendJson(res, 200, { ok: true, ...commissionSvc.ledgerFor(store, reseller.id) });
     }
 
@@ -2599,17 +2748,44 @@ const httpServer = http.createServer(async (req, res) => {
       if (store.getUserByEmail(loginEmail)) return sendJson(res, 409, { ok: false, error: "Er bestaat al een gebruiker met dit e-mailadres" });
       const pct = Math.min(Math.max(Number(body.defaultCommissionPct) || 0, 0), 100);
       const now = new Date().toISOString();
+      // LEGACY-BOOTSTRAP (bewust · h23-migratiepad). Deze route maakt de
+      // organisatie meteen in status "active" aan en slaat daarmee de
+      // 23.14-onboarding (applicant → screening → contracting → onboarding →
+      // active) EN de activatiegates uit 23.4 over: geen 23.2-veldvalidatie,
+      // geen contract-, DPA- of NDA-controle. Ze blijft bestaan zodat de
+      // bestaande superadmin-console werkt; de normatieve weg is
+      // POST /api/admin/resellers (applicant) + /onboarding + /activate.
+      // Om de historiek toch kloppend te houden schrijven we de bootstrap als
+      // expliciete gebeurtenis naar het append-only lifecycle-log (23.15).
       const reseller = store.insert("resellers", {
         id: `reseller_${Date.now()}_${Math.random().toString(16).slice(2)}`,
         tenantId: null, name, contactEmail: String(body.contactEmail || loginEmail),
         status: "active", defaultCommissionPct: pct, createdBy: user.email, createdAt: now
       });
+      // De gates uit 23.4 worden hier niet AFGEDWONGEN (dat zou de console breken),
+      // maar wel GEMETEN en vastgelegd: zolang activationBlockers niet leeg is,
+      // staat deze organisatie actief zonder geldig contract/DPA. Het veld is
+      // machinaal opvraagbaar (GET /api/admin/resellers/:id/activation-blockers)
+      // en het lifecycle-log draagt de exacte lijst, zodat de afwijking niet stil
+      // is. Volledig sluiten vraagt een productbesluit: de console moet dan de
+      // 23.2-verplichte velden + agreement_version/accepted_at uitvragen.
+      const bootstrapBlockers = resellerLifecycleSvc.activationBlockers(reseller, [], new Date());
+      store.update("resellers", reseller.id, { activationBlockers: bootstrapBlockers });
+      reseller.activationBlockers = bootstrapBlockers;
+      resellerLifecycleSvc.logLifecycle(store, {
+        resellerId: reseller.id, kind: "organization", action: "legacy_bootstrap_created",
+        reason: "legacy admin-console · onboarding- en contractgates overgeslagen",
+        before: null,
+        after: { status: "active", defaultCommissionPct: pct, activationBlockers: bootstrapBlockers },
+      }, user);
       // Geen wachtwoord door de aanmaker: de reseller ontvangt een activatiemail.
+      // MFA is verplicht voor reselleradmins (23.15): het account wordt met
+      // mfaEnforced aangemaakt, zodat de eerste aanmelding MFA vraagt.
       const { user: loginUser, activationLink } = provisionPendingUser({
         id: `reseller_user_${Date.now()}_${Math.random().toString(16).slice(2)}`,
         tenantId: null, name, email: loginEmail,
         role: "reseller", permissions: [], resellerId: reseller.id,
-        mfaEnabled: false, mfaEnforced: false
+        mfaEnabled: false, mfaEnforced: true
       });
       store.audit({ actor: user.email, tenantId: null, action: "reseller_created", area: "resellers", detail: `${name} (${loginEmail}) ${pct}%` });
       sendJson(res, 201, { ok: true, reseller: publicReseller(reseller, store), login: { email: loginUser.email }, activationLink });
@@ -2623,16 +2799,37 @@ const httpServer = http.createServer(async (req, res) => {
       const reseller = store.get("resellers", adminResellerMatch[1]);
       if (!reseller) return sendJson(res, 404, { ok: false, error: "Reseller niet gevonden" });
       const body = await readBody(req);
+      // ── Status via de 23.14-machine, niet via een vrije patch ──────────────
+      // "paused" bestond alleen in dit legacy-pad en is in de machine niet
+      // representeerbaar: zo'n rij kon daarna nooit meer gesuspendeerd of
+      // beeindigd worden. De console blijft "paused" en "active" sturen, maar
+      // de route mapt dat op de echte lifecycle: paused → suspend (reden
+      // verplicht) en active → de expliciet gemarkeerde legacy-heractivatie.
+      // Een self-signup-aanvraag ("pending") is geen machinestatus: pauzeren
+      // daarvan faalt nu luid (RESELLER_ORG_STATE_INVALID) in plaats van stil
+      // een onbekende status weg te schrijven · goedkeuren blijft wel werken.
+      const wanted = body.status === "paused" ? "suspended" : body.status;
+      if (typeof body.status === "string" && !["active", "paused", "suspended"].includes(body.status)) {
+        return sendJson(res, 400, { ok: false, error: "Status moet active, paused of suspended zijn", code: "RESELLER_STATUS_INVALID" });
+      }
       const patch = {};
-      if (typeof body.status === "string" && ["active", "paused"].includes(body.status)) patch.status = body.status;
       if (typeof body.name === "string" && body.name.trim()) patch.name = body.name.trim();
       if (body.defaultCommissionPct !== undefined) patch.defaultCommissionPct = Math.min(Math.max(Number(body.defaultCommissionPct) || 0, 0), 100);
-      const updated = store.update("resellers", reseller.id, { ...patch, updatedAt: new Date().toISOString() });
+      let updated = store.update("resellers", reseller.id, { ...patch, updatedAt: new Date().toISOString() });
+      if (wanted) {
+        try {
+          // Eenmalige datareparatie van legacy-rijen met status "paused".
+          resellerLifecycleSvc.normalizeLegacyStatus(store, reseller.id, user);
+          updated = wanted === "suspended"
+            ? resellerLifecycleSvc.suspend(store, { resellerId: reseller.id, reason: body.reason || "legacy pauze" }, user)
+            : resellerLifecycleSvc.legacyReactivate(store, { resellerId: reseller.id, reason: body.reason || null }, user);
+        } catch (e) { return sendResellerError(res, e); }
+      }
       let activationLink = null;
-      if (patch.status) {
+      if (wanted) {
         (store.data.users || []).filter(u => u.role === "reseller" && u.resellerId === reseller.id)
           .forEach(u => {
-            if (patch.status === "active") {
+            if (wanted === "active") {
               // Goedkeuren: heeft de aanvrager nog geen wachtwoord? → activatiemail
               // sturen zodat die er zelf één instelt. Anders gewoon heractiveren.
               if (!u.passwordHash && !u.activation) {
@@ -2650,51 +2847,1091 @@ const httpServer = http.createServer(async (req, res) => {
             }
           });
       }
-      store.audit({ actor: user.email, tenantId: null, action: "reseller_updated", area: "resellers", detail: `${reseller.name} ${JSON.stringify(patch)}` });
+      store.audit({ actor: user.email, tenantId: null, action: "reseller_updated", area: "resellers", detail: `${reseller.name} ${JSON.stringify({ ...patch, ...(wanted ? { status: updated.status } : {}) })}` });
       sendJson(res, 200, { ok: true, reseller: publicReseller(updated, store), activationLink });
       return;
     }
 
     // ── Reseller-portaal: enkel commerciële data van EIGEN klanten ─────────────
+    // De lijst volgt de koppelingsadministratie (resellerTenantLinks): een
+    // ingetrokken of beeindigde koppeling laat de klant meteen verdwijnen ·
+    // reseller_id op de tenant alleen is nooit genoeg (23.15). Zie
+    // clientsOfReseller in src/modules/resellers.js voor de legacy-regel.
     if (url.pathname === "/api/reseller/clients" && req.method === "GET") {
       const user = actor(req);
       if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
       assertReseller(user);
       const reseller = store.get("resellers", user.resellerId);
       if (!reseller || reseller.status !== "active") return sendJson(res, 403, { ok: false, error: "Reseller-account niet actief" });
+      if (foreignResellerParam(res, url, reseller)) return;
       sendJson(res, 200, { ok: true, reseller: { name: reseller.name, defaultCommissionPct: reseller.defaultCommissionPct }, ...commissionOverview(store, reseller) });
       return;
     }
+    // Klant aanbrengen = een TENANTAANVRAAG indienen (23.9), nooit zelf een
+    // tenant aanmaken. Het oude gedrag (directe tenant-insert met
+    // resellerId = eigen id) was een zelf-koppeling buiten 23.4/23.9 om: geen
+    // klantbevestiging, geen Monargo-review, geen assignment-record, geen
+    // entitlements-validatie en niet transactioneel. Provisioning blijft een
+    // platformactie (/api/admin/reseller-tenant-requests/:id/provision).
     if (url.pathname === "/api/reseller/clients" && req.method === "POST") {
       const user = actor(req);
       if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
       assertReseller(user);
       const reseller = store.get("resellers", user.resellerId);
       if (!reseller || reseller.status !== "active") return sendJson(res, 403, { ok: false, error: "Reseller-account niet actief" });
+      const cu = resellerChannelActor(user);
+      if (!resellerPortalAllowed(cu, "reseller.tenants.request", reseller)) return resellerForbidden(res);
+      if (armResellerIdempotency(req, res, url, user)) return;
       const body = await readBody(req);
-      const name = String(body.name || "").trim();
-      const adminEmail = String(body.adminEmail || "").trim().toLowerCase();
-      if (!name) return sendJson(res, 400, { ok: false, error: "Klantnaam is verplicht" });
-      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(adminEmail)) return sendJson(res, 400, { ok: false, error: "Geldig admin-e-mailadres is verplicht" });
-      if (store.getUserByEmail(adminEmail)) return sendJson(res, 409, { ok: false, error: "Er bestaat al een gebruiker met dit e-mailadres" });
-      const plan = ["starter", "business", "enterprise"].includes(body.plan) ? body.plan : "business";
-      const now = new Date().toISOString();
-      const tenant = store.insert("tenants", {
-        id: `tenant_${Date.now()}_${Math.random().toString(16).slice(2)}`,
-        name, plan, status: "trial", billingEmail: adminEmail,
-        invoiceProfile: {}, onboarding: {}, billingOps: { invoiceHistory: [] },
-        supportAccess: { allowed: false }, resellerId: reseller.id, createdAt: now
+      try {
+        // resellerId komt NOOIT uit de body: een reseller vraagt alleen voor
+        // zichzelf aan (geen cross-reseller attributie, geen bestaans-oracle).
+        const row = resellerTenantsSvc.requestTenant(store, { ...body, resellerId: reseller.id }, cu);
+        return sendJson(res, 202, {
+          ok: true, tenantRequest: row,
+          message: "Aanvraag ontvangen · Monargo beoordeelt de aanvraag en bevestigt bij de klant voor de tenant wordt aangemaakt."
+        });
+      } catch (e) { return sendResellerError(res, e); }
+    }
+
+    // ═════ Kanaaldomein h23 · reseller-portaal (eigen/assigned scope) ═════════
+    // Elke portaalroute: actor + assertReseller + eigen organisatieregel, en
+    // daarna de rechtencheck via reseller-authz (actie + scope + tenantrelatie)
+    // VOOR de service-call. Weigering is altijd een generieke 403 zonder
+    // ID-probing; de services herhalen de checks (defense in depth).
+    //
+    // TODO (volgende slices · bewust NIET in deze slice gebouwd):
+    //  - resellergebruikersbeheer (23.5): invite/rol/deactivate onder het recht
+    //    reseller.users.manage. Zolang die routes ontbreken krijgt elke
+    //    reseller-login de fallbackrol reseller_owner + LEGACY_RESELLER_GRANTS,
+    //    waardoor sales-, ops- en financebevoegdheden in EEN persoon vallen;
+    //  - klantinhoud-routes (23.12): elke route die verder gaat dan commerciele
+    //    metadata MOET door resellerTenantsSvc.assertContentAccess +
+    //    logDelegatedAction · zie de TODO bij die functies;
+    //  - het volledige 23.13-portaal (deals, aanvragen, licenties, staten,
+    //    disputen, payoutwijzigingen als paginas).
+
+    // ── Deals (23.8): registratie, opvolging en indienen ─────────────────────
+    if (url.pathname === "/api/reseller/deals" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertReseller(user);
+      const reseller = store.get("resellers", user.resellerId);
+      if (!reseller) return resellerForbidden(res);
+      const cu = resellerChannelActor(user);
+      if (!resellerPortalAllowed(cu, "reseller.deals.view", reseller)) return resellerForbidden(res);
+      if (foreignResellerParam(res, url, reseller)) return;
+      try { return sendJson(res, 200, { ok: true, deals: resellerDealsSvc.listDeals(store, cu, {}) }); }
+      catch (e) { return sendResellerError(res, e); }
+    }
+    if (url.pathname === "/api/reseller/deals" && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertReseller(user);
+      const reseller = store.get("resellers", user.resellerId);
+      if (!reseller) return resellerForbidden(res);
+      const cu = resellerChannelActor(user);
+      if (!resellerPortalAllowed(cu, "reseller.deals.create", reseller)) return resellerForbidden(res);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      try {
+        const deal = resellerDealsSvc.registerDeal(store, body, cu);
+        return sendJson(res, 201, { ok: true, deal: resellerDealsSvc.projectDeal(deal, "own") });
+      } catch (e) { return sendResellerError(res, e); }
+    }
+    const rsDealTransMatch = url.pathname.match(/^\/api\/reseller\/deals\/([^/]+)\/transition$/);
+    if (rsDealTransMatch && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertReseller(user);
+      const reseller = store.get("resellers", user.resellerId);
+      if (!reseller) return resellerForbidden(res);
+      const cu = resellerChannelActor(user);
+      if (!resellerPortalAllowed(cu, "reseller.deals.create", reseller)) return resellerForbidden(res);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      try {
+        const deal = resellerDealsSvc.transitionDeal(store, {
+          dealId: rsDealTransMatch[1], to: body.to, reason: body.reason || null,
+          expectedVersion: body.expectedVersion === undefined ? null : body.expectedVersion
+        }, cu);
+        return sendJson(res, 200, { ok: true, deal: resellerDealsSvc.projectDeal(deal, "own") });
+      } catch (e) { return sendResellerError(res, e); }
+    }
+    const rsDealMatch = url.pathname.match(/^\/api\/reseller\/deals\/([^/]+)$/);
+    if (rsDealMatch && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertReseller(user);
+      const reseller = store.get("resellers", user.resellerId);
+      if (!reseller) return resellerForbidden(res);
+      const cu = resellerChannelActor(user);
+      if (!resellerPortalAllowed(cu, "reseller.deals.view", reseller)) return resellerForbidden(res);
+      try { return sendJson(res, 200, { ok: true, deal: resellerDealsSvc.getDeal(store, cu, rsDealMatch[1]) }); }
+      catch (e) { return sendResellerError(res, e); }
+    }
+
+    // ── Tenantaanvragen (23.9): aanvragen, indienen of annuleren ─────────────
+    if (url.pathname === "/api/reseller/tenant-requests" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertReseller(user);
+      const reseller = store.get("resellers", user.resellerId);
+      if (!reseller) return resellerForbidden(res);
+      const cu = resellerChannelActor(user);
+      if (!resellerPortalAllowed(cu, ["reseller.tenants.request", "reseller.tenants.view"], reseller)) return resellerForbidden(res);
+      if (foreignResellerParam(res, url, reseller)) return;
+      return sendJson(res, 200, { ok: true, requests: resellerTenantsSvc.listTenantRequests(store, { resellerId: reseller.id }) });
+    }
+    if (url.pathname === "/api/reseller/tenant-requests" && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertReseller(user);
+      const reseller = store.get("resellers", user.resellerId);
+      if (!reseller) return resellerForbidden(res);
+      const cu = resellerChannelActor(user);
+      if (!resellerPortalAllowed(cu, "reseller.tenants.request", reseller)) return resellerForbidden(res);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      try {
+        const row = resellerTenantsSvc.requestTenant(store, { ...body, resellerId: body.resellerId || reseller.id }, cu);
+        return sendJson(res, 201, { ok: true, request: row });
+      } catch (e) { return sendResellerError(res, e); }
+    }
+    const rsTrqTransMatch = url.pathname.match(/^\/api\/reseller\/tenant-requests\/([^/]+)\/transition$/);
+    if (rsTrqTransMatch && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertReseller(user);
+      const reseller = store.get("resellers", user.resellerId);
+      if (!reseller) return resellerForbidden(res);
+      const cu = resellerChannelActor(user);
+      if (!resellerPortalAllowed(cu, "reseller.tenants.request", reseller)) return resellerForbidden(res);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      try {
+        const row = resellerTenantsSvc.transitionTenantRequest(store, {
+          requestId: rsTrqTransMatch[1], to: body.to, reason: body.reason || null,
+          expectedVersion: body.expectedVersion === undefined ? null : body.expectedVersion
+        }, cu);
+        return sendJson(res, 200, { ok: true, request: row });
+      } catch (e) { return sendResellerError(res, e); }
+    }
+
+    // ── Toegewezen tenants (23.4): uitsluitend commerciele metadata ──────────
+    if (url.pathname === "/api/reseller/assigned-tenants" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertReseller(user);
+      const reseller = store.get("resellers", user.resellerId);
+      if (!reseller) return resellerForbidden(res);
+      const cu = resellerChannelActor(user);
+      if (!resellerPortalAllowed(cu, "reseller.tenants.view", reseller)) return resellerForbidden(res);
+      if (foreignResellerParam(res, url, reseller)) return;
+      return sendJson(res, 200, { ok: true, tenants: resellerTenantsSvc.assignedTenants(store, reseller.id) });
+    }
+
+    // ── Gedelegeerde toegang (23.12): aanvragen, inzien, afstand doen ────────
+    if (url.pathname === "/api/reseller/delegated-access" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertReseller(user);
+      const reseller = store.get("resellers", user.resellerId);
+      if (!reseller) return resellerForbidden(res);
+      const cu = resellerChannelActor(user);
+      const tenantId = url.searchParams.get("tenantId");
+      if (!tenantId) return sendJson(res, 400, { ok: false, error: "tenantId is verplicht", code: "TENANT_ID_REQUIRED" });
+      if (!resellerPortalAllowed(cu, ["reseller.delegated_admin.use", "reseller.support.view", "reseller.tenants.view"], reseller, tenantId)) {
+        return resellerForbidden(res);
+      }
+      if (foreignResellerParam(res, url, reseller)) return;
+      return sendJson(res, 200, { ok: true, grants: resellerTenantsSvc.delegatedAccessFor(store, reseller.id, tenantId) });
+    }
+    if (url.pathname === "/api/reseller/delegated-access" && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertReseller(user);
+      const reseller = store.get("resellers", user.resellerId);
+      if (!reseller) return resellerForbidden(res);
+      const cu = resellerChannelActor(user);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      if (!resellerPortalAllowed(cu, "reseller.delegated_admin.use", reseller, body.tenantId || null)) return resellerForbidden(res);
+      try {
+        // 23.15: iedereen met gedelegeerde tenanttoegang heeft MFA nodig.
+        assertResellerMfa(cu, "reseller.delegated_admin.use");
+        const row = resellerTenantsSvc.requestDelegatedAccess(store, {
+          resellerId: body.resellerId || reseller.id, tenantId: body.tenantId,
+          scope: body.scope, reason: body.reason, startAt: body.startAt || null, endAt: body.endAt || null
+        }, cu);
+        return sendJson(res, 201, { ok: true, grant: row });
+      } catch (e) { return sendResellerError(res, e); }
+    }
+    const rsDlgRevokeMatch = url.pathname.match(/^\/api\/reseller\/delegated-access\/([^/]+)\/revoke$/);
+    if (rsDlgRevokeMatch && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertReseller(user);
+      const reseller = store.get("resellers", user.resellerId);
+      if (!reseller) return resellerForbidden(res);
+      const cu = resellerChannelActor(user);
+      // Afstand doen van eigen toegang mag ook onder suspensie (veilige actie).
+      if (!resellerPortalAllowed(cu, ["reseller.delegated_admin.use", "reseller.organization.view"], reseller)) return resellerForbidden(res);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      try {
+        // 23.15: ook afstand doen van gedelegeerde toegang blijft een handeling
+        // op dat toegangsrecord · sterke authenticatie vereist.
+        assertResellerMfa(cu, "reseller.delegated_admin.use");
+        const row = resellerTenantsSvc.revokeDelegatedAccess(store, { grantId: rsDlgRevokeMatch[1], reason: body.reason }, cu);
+        return sendJson(res, 200, { ok: true, grant: row });
+      } catch (e) { return sendResellerError(res, e); }
+    }
+
+    // ── Licentie-aanvragen (23.10): order/seats/plan/trial/opzegging ─────────
+    if (url.pathname === "/api/reseller/license-requests" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertReseller(user);
+      const reseller = store.get("resellers", user.resellerId);
+      if (!reseller) return resellerForbidden(res);
+      const cu = resellerChannelActor(user);
+      if (!resellerPortalAllowed(cu, ["reseller.licenses.request", "reseller.organization.view"], reseller)) return resellerForbidden(res);
+      if (foreignResellerParam(res, url, reseller)) return;
+      return sendJson(res, 200, { ok: true, requests: resellerLicensingSvc.requestsOf(store, reseller.id) });
+    }
+    if (url.pathname === "/api/reseller/license-requests" && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertReseller(user);
+      const reseller = store.get("resellers", user.resellerId);
+      if (!reseller) return resellerForbidden(res);
+      const cu = resellerChannelActor(user);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      if (!resellerPortalAllowed(cu, "reseller.licenses.request", reseller, body.tenantId || null)) return resellerForbidden(res);
+      try { return sendJson(res, 201, { ok: true, request: createResellerLicenseRequest(body, cu) }); }
+      catch (e) { return sendResellerError(res, e); }
+    }
+    const rsLicTransMatch = url.pathname.match(/^\/api\/reseller\/license-requests\/([^/]+)\/transition$/);
+    if (rsLicTransMatch && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertReseller(user);
+      const reseller = store.get("resellers", user.resellerId);
+      if (!reseller) return resellerForbidden(res);
+      const cu = resellerChannelActor(user);
+      if (!resellerPortalAllowed(cu, "reseller.licenses.request", reseller)) return resellerForbidden(res);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      try {
+        const row = resellerLicensingSvc.transitionLicenseRequest(store, { requestId: rsLicTransMatch[1], to: body.to, reason: body.reason || null }, cu);
+        return sendJson(res, 200, { ok: true, request: row });
+      } catch (e) { return sendResellerError(res, e); }
+    }
+
+    // ── Prijsuitzonderingen (23.10): aanvragen en inzien · nooit goedkeuren ──
+    if (url.pathname === "/api/reseller/price-exceptions" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertReseller(user);
+      const reseller = store.get("resellers", user.resellerId);
+      if (!reseller) return resellerForbidden(res);
+      const cu = resellerChannelActor(user);
+      if (!resellerPortalAllowed(cu, ["reseller.licenses.request", "reseller.organization.view"], reseller)) return resellerForbidden(res);
+      if (foreignResellerParam(res, url, reseller)) return;
+      return sendJson(res, 200, { ok: true, exceptions: resellerLicensingSvc.exceptionsOf(store, reseller.id) });
+    }
+    if (url.pathname === "/api/reseller/price-exceptions" && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertReseller(user);
+      const reseller = store.get("resellers", user.resellerId);
+      if (!reseller) return resellerForbidden(res);
+      const cu = resellerChannelActor(user);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      if (!resellerPortalAllowed(cu, "reseller.licenses.request", reseller, body.tenantId || null)) return resellerForbidden(res);
+      try { return sendJson(res, 201, { ok: true, exception: resellerLicensingSvc.priceException(store, body, cu) }); }
+      catch (e) { return sendResellerError(res, e); }
+    }
+
+    // ── Commissie (23.11): eigen contracten, staten, dispuut en payout ───────
+    if (url.pathname === "/api/reseller/commission-agreements" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertReseller(user);
+      const reseller = store.get("resellers", user.resellerId);
+      if (!reseller) return resellerForbidden(res);
+      const cu = resellerChannelActor(user);
+      if (!resellerPortalAllowed(cu, "reseller.commissions.view", reseller)) return resellerForbidden(res);
+      if (foreignResellerParam(res, url, reseller)) return;
+      return sendJson(res, 200, { ok: true, agreements: resellerCommissionSvc.agreementsFor(store, reseller.id) });
+    }
+    if (url.pathname === "/api/reseller/commission-statements" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertReseller(user);
+      const reseller = store.get("resellers", user.resellerId);
+      if (!reseller) return resellerForbidden(res);
+      const cu = resellerChannelActor(user);
+      if (!resellerPortalAllowed(cu, "reseller.commissions.view", reseller)) return resellerForbidden(res);
+      if (foreignResellerParam(res, url, reseller)) return;
+      return sendJson(res, 200, { ok: true, statements: resellerCommissionSvc.statementsFor(store, reseller.id) });
+    }
+    if (url.pathname === "/api/reseller/commission-disputes" && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertReseller(user);
+      const reseller = store.get("resellers", user.resellerId);
+      if (!reseller) return resellerForbidden(res);
+      const cu = resellerChannelActor(user);
+      if (!resellerPortalAllowed(cu, "reseller.commissions.dispute", reseller)) return resellerForbidden(res);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      try {
+        const row = resellerCommissionSvc.openDispute(store, {
+          statementId: body.statementId || null, eventId: body.eventId || null,
+          reason: body.reason, disputedAmount: body.disputedAmount === undefined ? null : body.disputedAmount
+        }, cu);
+        return sendJson(res, 201, { ok: true, dispute: row });
+      } catch (e) { return sendResellerError(res, e); }
+    }
+    if (url.pathname === "/api/reseller/payout-changes" && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertReseller(user);
+      const reseller = store.get("resellers", user.resellerId);
+      if (!reseller) return resellerForbidden(res);
+      const cu = resellerChannelActor(user);
+      if (!resellerPortalAllowed(cu, "reseller.payout.manage", reseller)) return resellerForbidden(res);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      try {
+        const row = resellerCommissionSvc.requestPayoutChange(store, {
+          resellerId: body.resellerId || reseller.id,
+          payout_account: body.payout_account === undefined ? null : body.payout_account,
+          payout_currency: body.payout_currency === undefined ? null : body.payout_currency,
+          reason: body.reason
+        }, cu);
+        return sendJson(res, 201, { ok: true, change: row });
+      } catch (e) { return sendResellerError(res, e); }
+    }
+
+    // ── Gedelegeerde toegang · besluit door de TENANT ADMIN (23.12) ──────────
+    // Bewust buiten /api/reseller en /api/admin: de goedkeurder is de admin
+    // van precies die tenant (vier-ogen, nooit de aanvrager zelf).
+    const dlgApproveMatch = url.pathname.match(/^\/api\/delegated-access\/([^/]+)\/approve$/);
+    if (dlgApproveMatch && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      if (user.role !== "tenant_admin") return resellerForbidden(res);
+      assertAdminMfa(user);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      try {
+        const grant = resellerTenantsSvc.approveDelegatedAccess(store, { grantId: dlgApproveMatch[1], activate: body.activate === true }, user);
+        return sendJson(res, 200, { ok: true, grant });
+      } catch (e) { return sendResellerError(res, e); }
+    }
+    const dlgTenantRevokeMatch = url.pathname.match(/^\/api\/delegated-access\/([^/]+)\/revoke$/);
+    if (dlgTenantRevokeMatch && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      if (user.role !== "tenant_admin") return resellerForbidden(res);
+      assertAdminMfa(user);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      try {
+        const grant = resellerTenantsSvc.revokeDelegatedAccess(store, { grantId: dlgTenantRevokeMatch[1], reason: body.reason }, user);
+        return sendJson(res, 200, { ok: true, grant });
+      } catch (e) { return sendResellerError(res, e); }
+    }
+
+    // ═════ Kanaaldomein h23 · Monargo-zijde (/api/admin/reseller-*) ═══════════
+    // Platform-scope "resellers" + kanaalrolcheck via reseller-authz. De
+    // fallbackrol per routefamilie (partnerbeheer vs finance) houdt de
+    // gevoelige beperkingen uit 23.5 intact.
+
+    // ── Deals (23.8) · beoordeling, attributie, conversie ────────────────────
+    if (url.pathname === "/api/admin/reseller-deals" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_manager");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.deals.view", {})) return resellerForbidden(res);
+      try { return sendJson(res, 200, { ok: true, deals: resellerDealsSvc.listDeals(store, cu, { resellerId: url.searchParams.get("resellerId") || null }) }); }
+      catch (e) { return sendResellerError(res, e); }
+    }
+    if (url.pathname === "/api/admin/reseller-deals" && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_manager");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.deals.create", {})) return resellerForbidden(res);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      try { return sendJson(res, 201, { ok: true, deal: resellerDealsSvc.registerDeal(store, body, cu) }); }
+      catch (e) { return sendResellerError(res, e); }
+    }
+    if (url.pathname === "/api/admin/reseller-deals/expire" && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_manager");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.deals.approve", {})) return resellerForbidden(res);
+      try { return sendJson(res, 200, { ok: true, ...resellerDealsSvc.expireDeals(store) }); }
+      catch (e) { return sendResellerError(res, e); }
+    }
+    const admDealTransMatch = url.pathname.match(/^\/api\/admin\/reseller-deals\/([^/]+)\/transition$/);
+    if (admDealTransMatch && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_manager");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.deals.approve", {})) return resellerForbidden(res);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      try {
+        const deal = resellerDealsSvc.transitionDeal(store, {
+          dealId: admDealTransMatch[1], to: body.to, reason: body.reason || null,
+          expectedVersion: body.expectedVersion === undefined ? null : body.expectedVersion
+        }, cu);
+        return sendJson(res, 200, { ok: true, deal });
+      } catch (e) { return sendResellerError(res, e); }
+    }
+    const admDealAttrMatch = url.pathname.match(/^\/api\/admin\/reseller-deals\/([^/]+)\/attribution$/);
+    if (admDealAttrMatch && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_manager");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.deals.approve", {})) return resellerForbidden(res);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      try {
+        const deal = resellerDealsSvc.setAttribution(store, {
+          dealId: admDealAttrMatch[1], attributionPercent: body.attributionPercent,
+          reason: body.reason || null,
+          expectedVersion: body.expectedVersion === undefined ? null : body.expectedVersion
+        }, cu);
+        return sendJson(res, 200, { ok: true, deal });
+      } catch (e) { return sendResellerError(res, e); }
+    }
+    const admDealConvertMatch = url.pathname.match(/^\/api\/admin\/reseller-deals\/([^/]+)\/convert$/);
+    if (admDealConvertMatch && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_manager");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.deals.approve", {})) return resellerForbidden(res);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      try {
+        const deal = resellerDealsSvc.convertDeal(store, {
+          dealId: admDealConvertMatch[1], customerId: body.customerId, tenantId: body.tenantId,
+          subscriptionId: body.subscriptionId || null, reason: body.reason || null,
+          expectedVersion: body.expectedVersion === undefined ? null : body.expectedVersion
+        }, cu);
+        return sendJson(res, 200, { ok: true, deal });
+      } catch (e) { return sendResellerError(res, e); }
+    }
+    const admDealMatch = url.pathname.match(/^\/api\/admin\/reseller-deals\/([^/]+)$/);
+    if (admDealMatch && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_manager");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.deals.view", {})) return resellerForbidden(res);
+      try { return sendJson(res, 200, { ok: true, deal: resellerDealsSvc.getDeal(store, cu, admDealMatch[1]) }); }
+      catch (e) { return sendResellerError(res, e); }
+    }
+
+    // ── Tenantaanvragen (23.9) · beoordeling en transactionele provisioning ──
+    if (url.pathname === "/api/admin/reseller-tenant-requests" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_manager");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.tenants.view", {})) return resellerForbidden(res);
+      return sendJson(res, 200, { ok: true, requests: resellerTenantsSvc.listTenantRequests(store, { resellerId: url.searchParams.get("resellerId") || null }) });
+    }
+    const admTrqTransMatch = url.pathname.match(/^\/api\/admin\/reseller-tenant-requests\/([^/]+)\/transition$/);
+    if (admTrqTransMatch && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_manager");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.tenants.request", {})) return resellerForbidden(res);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      try {
+        const row = resellerTenantsSvc.transitionTenantRequest(store, {
+          requestId: admTrqTransMatch[1], to: body.to, reason: body.reason || null,
+          expectedVersion: body.expectedVersion === undefined ? null : body.expectedVersion
+        }, cu);
+        return sendJson(res, 200, { ok: true, request: row });
+      } catch (e) { return sendResellerError(res, e); }
+    }
+    const admTrqProvisionMatch = url.pathname.match(/^\/api\/admin\/reseller-tenant-requests\/([^/]+)\/provision$/);
+    if (admTrqProvisionMatch && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_manager");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.tenants.request", {})) return resellerForbidden(res);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      try {
+        const result = resellerTenantsSvc.provisionTenant(store, {
+          requestId: admTrqProvisionMatch[1], tenantId: body.tenantId || null,
+          adminEmail: body.adminEmail || null, adminName: body.adminName || null,
+          commissionPct: typeof body.commissionPct === "number" ? body.commissionPct : null
+        }, cu);
+        // Zelfde beleid als provisionPendingUser: het activatietoken komt
+        // NOOIT in een respons zodra er echte mail of productie in het spel is.
+        const activationLink = (config.isProduction || isMailLive())
+          ? null
+          : `${config.appUrl}/?activate=${encodeURIComponent(result.activationToken)}`;
+        return sendJson(res, 201, { ok: true, tenant: result.tenant, link: result.link, adminUser: result.adminUser, request: result.request, activationLink });
+      } catch (e) { return sendResellerError(res, e); }
+    }
+
+    // ── Tenantkoppelingen (23.4/23.9/23.15) · assignment-records ─────────────
+    if (url.pathname === "/api/admin/reseller-tenant-links" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_manager");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.tenants.view", {})) return resellerForbidden(res);
+      const rid = url.searchParams.get("resellerId");
+      const links = (store.data.resellerTenantLinks || []).filter(l => !rid || l.resellerId === rid);
+      return sendJson(res, 200, { ok: true, links });
+    }
+    if (url.pathname === "/api/admin/reseller-tenant-links" && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_manager");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.tenants.request", {})) return resellerForbidden(res);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      try {
+        const row = resellerTenantsSvc.linkTenant(store, {
+          resellerId: body.resellerId, tenantId: body.tenantId, relationType: body.relationType,
+          startAt: body.startAt || null, endAt: body.endAt || null, reason: body.reason
+        }, cu);
+        return sendJson(res, 201, { ok: true, link: row });
+      } catch (e) { return sendResellerError(res, e); }
+    }
+    const admLinkRevokeMatch = url.pathname.match(/^\/api\/admin\/reseller-tenant-links\/([^/]+)\/revoke$/);
+    if (admLinkRevokeMatch && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_manager");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.tenants.request", {})) return resellerForbidden(res);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      try {
+        const row = resellerTenantsSvc.revokeTenantLink(store, { linkId: admLinkRevokeMatch[1], reason: body.reason }, cu);
+        return sendJson(res, 200, { ok: true, link: row });
+      } catch (e) { return sendResellerError(res, e); }
+    }
+
+    // ── Gedelegeerde toegang (23.12) · platformbeheer + sweep ────────────────
+    if (url.pathname === "/api/admin/reseller-delegated-access" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_manager");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.tenants.view", {})) return resellerForbidden(res);
+      const rid = url.searchParams.get("resellerId");
+      const tid = url.searchParams.get("tenantId");
+      const grants = (store.data.resellerAccessGrants || [])
+        .filter(g => (!rid || g.resellerId === rid) && (!tid || g.tenantId === tid));
+      return sendJson(res, 200, { ok: true, grants });
+    }
+    if (url.pathname === "/api/admin/reseller-delegated-access/expire" && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_manager");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.tenants.request", {})) return resellerForbidden(res);
+      try { return sendJson(res, 200, { ok: true, ...resellerTenantsSvc.expireDelegatedAccess(store, Date.now()) }); }
+      catch (e) { return sendResellerError(res, e); }
+    }
+    const admDlgActivateMatch = url.pathname.match(/^\/api\/admin\/reseller-delegated-access\/([^/]+)\/activate$/);
+    if (admDlgActivateMatch && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_manager");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.tenants.request", {})) return resellerForbidden(res);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      try {
+        const grant = resellerTenantsSvc.activateDelegatedAccess(store, { grantId: admDlgActivateMatch[1] }, cu);
+        return sendJson(res, 200, { ok: true, grant });
+      } catch (e) { return sendResellerError(res, e); }
+    }
+    const admDlgRevokeMatch = url.pathname.match(/^\/api\/admin\/reseller-delegated-access\/([^/]+)\/revoke$/);
+    if (admDlgRevokeMatch && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_manager");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.tenants.request", {})) return resellerForbidden(res);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      try {
+        const grant = resellerTenantsSvc.revokeDelegatedAccess(store, { grantId: admDlgRevokeMatch[1], reason: body.reason }, cu);
+        return sendJson(res, 200, { ok: true, grant });
+      } catch (e) { return sendResellerError(res, e); }
+    }
+
+    // ── Licenties en prijzen (23.10) · goedkeuring aan Monargo-zijde ─────────
+    if (url.pathname === "/api/admin/reseller-license-requests" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_manager");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.licenses.request", {})) return resellerForbidden(res);
+      const rid = url.searchParams.get("resellerId");
+      const requests = rid
+        ? resellerLicensingSvc.requestsOf(store, rid)
+        : (store.data.resellerLicenseRequests || []);
+      return sendJson(res, 200, { ok: true, requests });
+    }
+    if (url.pathname === "/api/admin/reseller-license-requests" && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_manager");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.licenses.request", {})) return resellerForbidden(res);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      try { return sendJson(res, 201, { ok: true, request: createResellerLicenseRequest(body, cu) }); }
+      catch (e) { return sendResellerError(res, e); }
+    }
+    const admLicTransMatch = url.pathname.match(/^\/api\/admin\/reseller-license-requests\/([^/]+)\/transition$/);
+    if (admLicTransMatch && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_manager");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.licenses.request", {})) return resellerForbidden(res);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      try {
+        const row = resellerLicensingSvc.transitionLicenseRequest(store, { requestId: admLicTransMatch[1], to: body.to, reason: body.reason || null }, cu);
+        return sendJson(res, 200, { ok: true, request: row });
+      } catch (e) { return sendResellerError(res, e); }
+    }
+    if (url.pathname === "/api/admin/reseller-price-exceptions" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_manager");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.licenses.request", {})) return resellerForbidden(res);
+      const rid = url.searchParams.get("resellerId");
+      const exceptions = rid
+        ? resellerLicensingSvc.exceptionsOf(store, rid)
+        : (store.data.resellerPriceExceptions || []);
+      return sendJson(res, 200, { ok: true, exceptions });
+    }
+    const admPexApproveMatch = url.pathname.match(/^\/api\/admin\/reseller-price-exceptions\/([^/]+)\/approve$/);
+    if (admPexApproveMatch && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_manager");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.licenses.request", {})) return resellerForbidden(res);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      try {
+        const row = resellerLicensingSvc.approvePriceException(store, { exceptionId: admPexApproveMatch[1], note: body.note || null }, cu);
+        return sendJson(res, 200, { ok: true, exception: row });
+      } catch (e) { return sendResellerError(res, e); }
+    }
+    const admPexRejectMatch = url.pathname.match(/^\/api\/admin\/reseller-price-exceptions\/([^/]+)\/reject$/);
+    if (admPexRejectMatch && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_manager");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.licenses.request", {})) return resellerForbidden(res);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      try {
+        const row = resellerLicensingSvc.rejectPriceException(store, { exceptionId: admPexRejectMatch[1], reason: body.reason }, cu);
+        return sendJson(res, 200, { ok: true, exception: row });
+      } catch (e) { return sendResellerError(res, e); }
+    }
+    if (url.pathname === "/api/admin/reseller-discounts" && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_manager");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.tier.manage", {})) return resellerForbidden(res);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      try { return sendJson(res, 201, { ok: true, discount: resellerLicensingSvc.setResellerDiscount(store, body, cu) }); }
+      catch (e) { return sendResellerError(res, e); }
+    }
+    const admDiscountMatch = url.pathname.match(/^\/api\/admin\/reseller-discounts\/([^/]+)$/);
+    if (admDiscountMatch && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_manager");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.tier.manage", {})) return resellerForbidden(res);
+      return sendJson(res, 200, {
+        ok: true,
+        discounts: resellerLicensingSvc.discountsOf(store, admDiscountMatch[1]),
+        active: resellerLicensingSvc.resellerDiscountFor(store, admDiscountMatch[1])
       });
-      // Geen wachtwoord door de reseller: de klant-admin ontvangt een activatiemail.
-      const { activationLink } = provisionPendingUser({
-        id: `user_${Date.now()}_${Math.random().toString(16).slice(2)}`,
-        tenantId: tenant.id, name: body.adminName || "Klant admin", email: adminEmail,
-        role: "tenant_admin", permissions: BUSINESS_ADMIN_PERMISSIONS,
-        mfaEnabled: false, mfaEnforced: false
-      });
-      store.audit({ actor: user.email, tenantId: tenant.id, action: "reseller_client_created", area: "resellers", detail: `${reseller.name} → ${name}` });
-      sendJson(res, 201, { ok: true, client: { tenantId: tenant.id, name: tenant.name, plan: tenant.plan, status: tenant.status, commissionPct: commissionPctFor(tenant, reseller) }, activationLink });
-      return;
+    }
+
+    // ── Commissiecontracten, events, staten, dispuut, payout (23.11) ─────────
+    if (url.pathname === "/api/admin/reseller-commission-agreements" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_finance");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.commissions.view", {})) return resellerForbidden(res);
+      const rid = url.searchParams.get("resellerId");
+      const agreements = rid
+        ? resellerCommissionSvc.agreementsFor(store, rid)
+        : (store.data.resellerCommissionAgreements || []);
+      return sendJson(res, 200, { ok: true, agreements });
+    }
+    if (url.pathname === "/api/admin/reseller-commission-agreements" && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_finance");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.commissions.manage", {})) return resellerForbidden(res);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      try { return sendJson(res, 201, { ok: true, agreement: resellerCommissionSvc.createAgreement(store, body, cu) }); }
+      catch (e) { return sendResellerError(res, e); }
+    }
+    const admCagTransMatch = url.pathname.match(/^\/api\/admin\/reseller-commission-agreements\/([^/]+)\/transition$/);
+    if (admCagTransMatch && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_finance");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.commissions.manage", {})) return resellerForbidden(res);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      try {
+        const row = resellerCommissionSvc.transitionAgreement(store, { agreementId: admCagTransMatch[1], to: body.to, reason: body.reason || null }, cu);
+        return sendJson(res, 200, { ok: true, agreement: row });
+      } catch (e) { return sendResellerError(res, e); }
+    }
+    const admCagAmendMatch = url.pathname.match(/^\/api\/admin\/reseller-commission-agreements\/([^/]+)\/amend$/);
+    if (admCagAmendMatch && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_finance");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.commissions.manage", {})) return resellerForbidden(res);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      try {
+        const row = resellerCommissionSvc.amendAgreement(store, { agreementId: admCagAmendMatch[1], changes: body.changes || {}, reason: body.reason }, cu);
+        return sendJson(res, 201, { ok: true, agreement: row });
+      } catch (e) { return sendResellerError(res, e); }
+    }
+    if (url.pathname === "/api/admin/reseller-commission-events/accrue" && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_finance");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.commissions.manage", {})) return resellerForbidden(res);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      try {
+        const result = resellerCommissionSvc.accrueFromSource(store, { resellerId: body.resellerId, source: body.source || {}, at: body.at || null }, cu);
+        return sendJson(res, result.created ? 201 : 200, { ok: true, ...result });
+      } catch (e) { return sendResellerError(res, e); }
+    }
+    const admCevExcludeMatch = url.pathname.match(/^\/api\/admin\/reseller-commission-events\/([^/]+)\/exclude$/);
+    if (admCevExcludeMatch && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_finance");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.commissions.manage", {})) return resellerForbidden(res);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      try { return sendJson(res, 200, { ok: true, ...resellerCommissionSvc.excludeEvent(store, { eventId: admCevExcludeMatch[1], reason: body.reason }, cu) }); }
+      catch (e) { return sendResellerError(res, e); }
+    }
+    const admCevAdjustMatch = url.pathname.match(/^\/api\/admin\/reseller-commission-events\/([^/]+)\/adjust$/);
+    if (admCevAdjustMatch && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_finance");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.commissions.manage", {})) return resellerForbidden(res);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      try {
+        const result = resellerCommissionSvc.adjustEvent(store, {
+          eventId: admCevAdjustMatch[1], amount: body.amount === undefined ? null : body.amount, reason: body.reason
+        }, cu);
+        return sendJson(res, 200, { ok: true, ...result });
+      } catch (e) { return sendResellerError(res, e); }
+    }
+    const admCevClawMatch = url.pathname.match(/^\/api\/admin\/reseller-commission-events\/([^/]+)\/clawback$/);
+    if (admCevClawMatch && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_finance");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.commissions.manage", {})) return resellerForbidden(res);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      try {
+        const result = resellerCommissionSvc.clawbackForReason(store, {
+          eventId: admCevClawMatch[1], reasonCode: body.reasonCode,
+          amount: body.amount === undefined ? null : body.amount, note: body.note || ""
+        }, cu);
+        return sendJson(res, 200, { ok: true, ...result });
+      } catch (e) { return sendResellerError(res, e); }
+    }
+    if (url.pathname === "/api/admin/reseller-commission-statements" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_finance");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.commissions.view", {})) return resellerForbidden(res);
+      const rid = url.searchParams.get("resellerId");
+      const statements = rid
+        ? resellerCommissionSvc.statementsFor(store, rid)
+        : (store.data.resellerCommissionStatements || []);
+      return sendJson(res, 200, { ok: true, statements });
+    }
+    if (url.pathname === "/api/admin/reseller-commission-statements" && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_finance");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.commissions.manage", {})) return resellerForbidden(res);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      try { return sendJson(res, 201, { ok: true, statement: resellerCommissionSvc.buildStatement(store, body, cu) }); }
+      catch (e) { return sendResellerError(res, e); }
+    }
+    const admCstRebuildMatch = url.pathname.match(/^\/api\/admin\/reseller-commission-statements\/([^/]+)\/rebuild$/);
+    if (admCstRebuildMatch && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_finance");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.commissions.manage", {})) return resellerForbidden(res);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      try { return sendJson(res, 200, { ok: true, statement: resellerCommissionSvc.rebuildStatement(store, { statementId: admCstRebuildMatch[1] }, cu) }); }
+      catch (e) { return sendResellerError(res, e); }
+    }
+    const admCstTransMatch = url.pathname.match(/^\/api\/admin\/reseller-commission-statements\/([^/]+)\/transition$/);
+    if (admCstTransMatch && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_finance");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.commissions.manage", {})) return resellerForbidden(res);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      try {
+        const row = resellerCommissionSvc.transitionStatement(store, { statementId: admCstTransMatch[1], to: body.to, reason: body.reason || null }, cu);
+        return sendJson(res, 200, { ok: true, statement: row });
+      } catch (e) { return sendResellerError(res, e); }
+    }
+    if (url.pathname === "/api/admin/reseller-commission-disputes" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_finance");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.commissions.view", {})) return resellerForbidden(res);
+      const rid = url.searchParams.get("resellerId");
+      const disputes = (store.data.resellerCommissionDisputes || []).filter(d => !rid || d.resellerId === rid);
+      return sendJson(res, 200, { ok: true, disputes });
+    }
+    const admCdsTransMatch = url.pathname.match(/^\/api\/admin\/reseller-commission-disputes\/([^/]+)\/transition$/);
+    if (admCdsTransMatch && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_finance");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.commissions.manage", {})) return resellerForbidden(res);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      try {
+        const row = resellerCommissionSvc.transitionDispute(store, { disputeId: admCdsTransMatch[1], to: body.to, resolution: body.resolution || null }, cu);
+        return sendJson(res, 200, { ok: true, dispute: row });
+      } catch (e) { return sendResellerError(res, e); }
+    }
+    if (url.pathname === "/api/admin/reseller-payout-changes" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_finance");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.payout.manage", {})) return resellerForbidden(res);
+      const rid = url.searchParams.get("resellerId");
+      const changes = (store.data.resellerPayoutChanges || []).filter(c => !rid || c.resellerId === rid);
+      return sendJson(res, 200, { ok: true, changes });
+    }
+    if (url.pathname === "/api/admin/reseller-payout-changes" && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_finance");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.payout.manage", {})) return resellerForbidden(res);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      try {
+        const row = resellerCommissionSvc.requestPayoutChange(store, {
+          resellerId: body.resellerId,
+          payout_account: body.payout_account === undefined ? null : body.payout_account,
+          payout_currency: body.payout_currency === undefined ? null : body.payout_currency,
+          reason: body.reason
+        }, cu);
+        return sendJson(res, 201, { ok: true, change: row });
+      } catch (e) { return sendResellerError(res, e); }
+    }
+    const admPchApproveMatch = url.pathname.match(/^\/api\/admin\/reseller-payout-changes\/([^/]+)\/approve$/);
+    if (admPchApproveMatch && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_finance");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.payout.approve", {})) return resellerForbidden(res);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      try { return sendJson(res, 200, { ok: true, change: resellerCommissionSvc.approvePayoutChange(store, { changeId: admPchApproveMatch[1] }, cu) }); }
+      catch (e) { return sendResellerError(res, e); }
+    }
+    const admPchRejectMatch = url.pathname.match(/^\/api\/admin\/reseller-payout-changes\/([^/]+)\/reject$/);
+    if (admPchRejectMatch && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_finance");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.payout.approve", {})
+        && !resellerAuthz.canResellerAction(cu, "reseller.payout.manage", {})) return resellerForbidden(res);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      try { return sendJson(res, 200, { ok: true, change: resellerCommissionSvc.rejectPayoutChange(store, { changeId: admPchRejectMatch[1], reason: body.reason || null }, cu) }); }
+      catch (e) { return sendResellerError(res, e); }
+    }
+    // ── Payoutgegevens inzien (23.15/DoD-2) · APARTE finance-route ───────────
+    // Algemene resellerexports (lijst, overview, lifecycle-responses) dragen
+    // NOOIT de IBAN: die is uitsluitend hier zichtbaar, achter
+    // reseller.payout.manage. Een monargo_partner_manager valt daarmee af
+    // (SENSITIVE_DENY 23.5) · alleen partner finance ziet payoutgegevens.
+    const admPayoutDetailsMatch = url.pathname.match(/^\/api\/admin\/reseller-payout-details\/([^/]+)$/);
+    if (admPayoutDetailsMatch && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_finance");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.payout.manage", {})) return resellerForbidden(res);
+      const org = store.get("resellers", admPayoutDetailsMatch[1]);
+      if (!org) return sendJson(res, 404, { ok: false, error: "Niet gevonden", code: "RESELLER_NOT_FOUND" });
+      store.audit({ actor: user.email, tenantId: null, area: "resellers", action: "payout_details_viewed", detail: org.id });
+      return sendJson(res, 200, { ok: true, payout: payoutDetails(org) });
+    }
+
+    // ── Organisatie-lifecycle, reviews en offboarding (23.13/23.14) ──────────
+    const admOrgActionMatch = url.pathname.match(/^\/api\/admin\/resellers\/([^/]+)\/(transition|activate|suspend|terminate|onboarding|activation-blockers|overview|reviews|offboarding)$/);
+    if (admOrgActionMatch) {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_manager");
+      const resellerId = admOrgActionMatch[1];
+      const orgAction = admOrgActionMatch[2];
+      const readOnly = req.method === "GET" && ["activation-blockers", "overview", "reviews"].includes(orgAction);
+      const needed = readOnly ? "reseller.organization.view" : "reseller.organization.edit";
+      if (!resellerAuthz.canResellerAction(cu, needed, {})) return resellerForbidden(res);
+      if (readOnly) {
+        try {
+          if (orgAction === "activation-blockers") {
+            const org = store.get("resellers", resellerId);
+            if (!org) return sendJson(res, 404, { ok: false, error: "Niet gevonden", code: "RESELLER_NOT_FOUND" });
+            const agreements = (store.data.resellerAgreements || []).filter(a => a && a.resellerId === resellerId);
+            return sendJson(res, 200, { ok: true, blockers: resellerLifecycleSvc.activationBlockers(org, agreements) });
+          }
+          if (orgAction === "overview") {
+            return sendJson(res, 200, { ok: true, ...resellerLifecycleSvc.historicalOverview(store, resellerId) });
+          }
+          // orgAction === "reviews"
+          const reviews = (store.data.resellerReviews || []).filter(r => r && r.resellerId === resellerId);
+          return sendJson(res, 200, { ok: true, reviews });
+        } catch (e) { return sendResellerError(res, e); }
+      }
+      if (req.method !== "POST") return sendJson(res, 405, { ok: false, error: "Method not allowed" });
+      if (armResellerIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      try {
+        if (orgAction === "transition") {
+          const org = resellerLifecycleSvc.transitionOrganization(store, { resellerId, to: body.to, reason: body.reason || null, date: body.date || null }, cu);
+          return sendJson(res, 200, { ok: true, reseller: publicReseller(org, store) });
+        }
+        if (orgAction === "activate") {
+          const org = resellerLifecycleSvc.activate(store, { resellerId }, cu);
+          return sendJson(res, 200, { ok: true, reseller: publicReseller(org, store) });
+        }
+        if (orgAction === "suspend") {
+          const org = resellerLifecycleSvc.suspend(store, { resellerId, reason: body.reason, date: body.date || null }, cu);
+          return sendJson(res, 200, { ok: true, reseller: publicReseller(org, store) });
+        }
+        if (orgAction === "terminate") {
+          const org = resellerLifecycleSvc.terminate(store, { resellerId, reason: body.reason || null, date: body.date || null, exitStatus: body.exitStatus || "closed" }, cu);
+          return sendJson(res, 200, { ok: true, reseller: publicReseller(org, store) });
+        }
+        if (orgAction === "onboarding") {
+          const org = resellerLifecycleSvc.advanceOnboarding(store, { resellerId, to: body.to }, cu);
+          return sendJson(res, 200, { ok: true, reseller: publicReseller(org, store) });
+        }
+        if (orgAction === "reviews") {
+          const row = resellerLifecycleSvc.scheduleReview(store, { resellerId, reviewDate: body.reviewDate }, cu);
+          return sendJson(res, 201, { ok: true, review: row });
+        }
+        // orgAction === "offboarding"
+        const row = resellerLifecycleSvc.startOffboarding(store, { resellerId, reason: body.reason || null }, cu);
+        return sendJson(res, 201, { ok: true, offboarding: row });
+      } catch (e) { return sendResellerError(res, e); }
+    }
+    const admReviewTransMatch = url.pathname.match(/^\/api\/admin\/reseller-reviews\/([^/]+)\/transition$/);
+    if (admReviewTransMatch && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_manager");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.organization.edit", {})) return resellerForbidden(res);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      try {
+        const row = resellerLifecycleSvc.transitionReview(store, { reviewId: admReviewTransMatch[1], to: body.to, reason: body.reason || null }, cu);
+        return sendJson(res, 200, { ok: true, review: row });
+      } catch (e) { return sendResellerError(res, e); }
+    }
+    const admObTransMatch = url.pathname.match(/^\/api\/admin\/reseller-offboardings\/([^/]+)\/transition$/);
+    if (admObTransMatch && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      assertPlatformScope(user, "resellers");
+      const cu = monargoChannelActor(user, "monargo_partner_manager");
+      if (!resellerAuthz.canResellerAction(cu, "reseller.organization.edit", {})) return resellerForbidden(res);
+      if (armResellerIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      try {
+        const row = resellerLifecycleSvc.transitionOffboarding(store, { offboardingId: admObTransMatch[1], to: body.to, reason: body.reason || null }, cu);
+        return sendJson(res, 200, { ok: true, offboarding: row });
+      } catch (e) { return sendResellerError(res, e); }
     }
 
     // ── Super-admin: gebruiker bijwerken (deactiveren / rol) ──────────────────

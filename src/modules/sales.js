@@ -43,7 +43,10 @@ function salesSummary(store, tenantId) {
       demoCalls,
       payingCustomers,
       estimatedSeats: activeRows.reduce((total, row) => total + Number(row.seats || 0), 0),
-      activePartners: partners.filter(row => row.status !== "paused").length,
+      // "paused" bestond alleen in het legacy-resellerpad en is genormaliseerd
+      // naar de 23.14-status "suspended"; een gesuspendeerde of beeindigde
+      // partner telt niet als actieve partner.
+      activePartners: partners.filter(row => !["paused", "suspended", "terminated"].includes(row.status)).length,
       partnerLeads: partnerRows.length
     },
     activation: {
