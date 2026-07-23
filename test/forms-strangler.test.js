@@ -41,7 +41,9 @@ before(async () => {
   server.stdout.on("data", d => { bootLog += d.toString(); });
   const deadline = Date.now() + 20000;
   while (Date.now() < deadline) {
-    try { const r = await fetch(`${BASE}/api/health`); if (r.ok) return; } catch (_) {}
+    // CTO3-01: wacht op READINESS (state=ready), niet op liveness. /api/health
+    // geeft nu 200 zodra het proces leeft, ook tijdens het opstarten.
+    try { const r = await fetch(`${BASE}/api/ready`); if (r.ok) return; } catch (_) {}
     if (server.exitCode !== null) throw new Error("server stopte tijdens boot:\n" + bootLog);
     await new Promise(r => setTimeout(r, 300));
   }
