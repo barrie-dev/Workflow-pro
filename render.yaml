@@ -34,6 +34,30 @@ services:
         value: postgres        # gebruik postgres in productie, niet json
       - key: REQUIRE_ADMIN_MFA
         value: "true"          # MFA verplicht in productie
+      # ── CTO3-05 · niet-geheim config-contract (deploy/production-contract.json).
+      # Elke kritieke productie-flag staat HIER expliciet · geen ongedocumenteerde
+      # dashboardinstelling. De preflight (scripts/check-production-contract.js)
+      # vergelijkt deze gewenste toestand met de runtime en faalt bij afwijking.
+      - key: DATABASE_SSL_MODE
+        value: verify-full     # valideer de TLS-certificaatketen (CTO-13)
+      - key: DATABASE_CA_CERT
+        sync: false            # CA voor verify-full (secret · dashboard is de bron)
+      - key: SINGLE_WRITER
+        value: "true"          # exact één schrijver op de database (CTO-03)
+      # Bronschakelaars per domein (strangler 5.4) · expliciet + reproduceerbaar.
+      # 'legacy' is de veilige default tot de cutover; verhoog per domein naar
+      # 'shadow' (meelezen) en daarna 'pg' (cutover) met reconcilebewijs.
+      - key: CRM_READ_SOURCE
+        value: legacy
+      - key: IDENTITY_READ_SOURCE
+        value: legacy
+      - key: FINANCE_READ_SOURCE
+        value: legacy
+      - key: COMPANY_READ_SOURCE
+        value: legacy
+      # FORMS_SOURCE=pg mag pas na een groene Forms-reconcile (legacy writes 410).
+      - key: FORMS_SOURCE
+        value: legacy
       # Secrets: vul in via Render dashboard of koppel aan Render Secret Groups
       - key: JWT_SECRET
         sync: false

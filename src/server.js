@@ -1238,6 +1238,9 @@ function serveStatic(req, res) {
 // readiness bepaalt of businessroutes worden bediend.
 const BOOT_STATES = ["booting", "migrating", "waiting_lock", "loading", "flushing", "ready", "failed"];
 let bootState = "booting";
+// CTO3-05 · migratieversie gecacht bij boot (niet-geheim) voor de veilige
+// readiness-samenvatting: aantal toegepaste migraties + de laatst toegepaste id.
+let bootMigrationVersion = null;
 function setBootState(next) {
   if (!BOOT_STATES.includes(next)) return;
   // 'ready' is een eindtoestand: alleen 'failed' mag hem nog overrulen.
@@ -1406,6 +1409,19 @@ const httpServer = http.createServer(async (req, res) => {
           // Openstaande schrijfacties: een orchestrator kan hierop wachten
           // vóór hij een replica uit rotatie haalt.
           pendingWrites: store.isDirty(),
+          // CTO3-05 · veilige config-samenvatting (NOOIT secrets): bronstatus per
+          // domein, TLS/single-writer-modus, release-kanaal en migratieversie.
+          releaseChannel: config.releaseChannel,
+          singleWriter: !!config.singleWriter,
+          databaseCaCertPresent: !!(config.database && config.database.caCert),
+          migrationVersion: bootMigrationVersion,
+          sources: {
+            crm: config.crm.readSource,
+            identity: config.identity.readSource,
+            finance: config.finance.readSource,
+            company: config.company.readSource,
+            forms: config.forms.source,
+          },
         },
         store: storeStatus,
       });
@@ -9867,8 +9883,13 @@ async function bootFlush() {
     // De migratie-runner is idempotent en draait daarom altijd bij boot.
     if (storeAdapter.name === "postgres" && storeAdapter.pool) {
       setBootState("migrating");
-      const { runMigrations } = require("./infrastructure/postgres/migration-runner");
+      const { runMigrations, migrationStatus } = require("./infrastructure/postgres/migration-runner");
       await runMigrations(storeAdapter.pool);
+      // Migratieversie cachen voor de readiness-samenvatting (CTO3-05).
+      try {
+        const st = await migrationStatus(storeAdapter.pool);
+        bootMigrationVersion = { applied: st.applied.length, total: st.total, latest: st.applied.length ? st.applied[st.applied.length - 1].id || st.applied[st.applied.length - 1] : null };
+      } catch (_) { /* niet-blokkerend · readiness toont dan null */ }
     }
     // initAsync neemt (bij single-writer) eerst de writer-lock en laadt daarna
     // de staat · vandaar waiting_lock → loading.

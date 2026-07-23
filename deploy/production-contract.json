@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "description": "Niet-geheim gewenste-toestand-contract voor de productieomgeving (CTO3-05). Legt vast welke bron, adapter, securitymode en featureflag actief hoort te zijn. Bevat NOOIT secret-waarden, alleen key-namen en niet-geheime gewenste waarden. De preflight (scripts/check-production-contract.js) vergelijkt dit met de runtime en faalt fail-closed bij afwijking.",
+  "environment": "production",
+  "desired": {
+    "RELEASE_CHANNEL": { "equals": "production", "reason": "productie draait op het production-kanaal (geen echte mail/Stripe-live buiten productie)" },
+    "STORAGE_ADAPTER": { "equals": "postgres", "reason": "productie draait op PostgreSQL, niet op de json-adapter" },
+    "OBJECT_STORAGE_ADAPTER": { "in": ["s3", "azure-blob"], "forbidden": ["local"], "reason": "local is verboden · bestanden overleven geen deploy (CTO-02)" },
+    "DATABASE_SSL_MODE": { "equals": "verify-full", "reason": "productie valideert de TLS-certificaatketen" },
+    "SINGLE_WRITER": { "equals": true, "reason": "single-writer-guard AAN · exact één schrijver op de database (CTO-03)" },
+    "CRM_READ_SOURCE": { "in": ["pg", "shadow", "legacy"], "sourceOfTruth": true },
+    "IDENTITY_READ_SOURCE": { "in": ["pg", "shadow", "legacy"], "sourceOfTruth": true },
+    "FINANCE_READ_SOURCE": { "in": ["pg", "shadow", "legacy"], "sourceOfTruth": true },
+    "COMPANY_READ_SOURCE": { "in": ["pg", "shadow", "legacy"], "sourceOfTruth": true },
+    "FORMS_SOURCE": { "in": ["legacy", "pg"], "sourceOfTruth": true, "cutoverGuard": "FORMS_SOURCE=pg mag pas na een groene Forms-reconcile (legacy writes 410)" }
+  },
+  "requiredEnvKeys": [
+    "APP_URL",
+    "DATABASE_URL",
+    "JWT_SECRET",
+    "ENCRYPTION_KEY",
+    "OBJECT_STORAGE_ENDPOINT",
+    "OBJECT_STORAGE_BUCKET",
+    "OBJECT_STORAGE_ACCESS_KEY_ID",
+    "OBJECT_STORAGE_SECRET_ACCESS_KEY"
+  ],
+  "conditionalEnvKeys": [
+    { "key": "DATABASE_CA_CERT", "when": "DATABASE_SSL_MODE=verify-full", "reason": "verify-full valideert de CA-keten · zonder meegegeven CA moet de systeem-truststore de keten dekken; het contract vereist een expliciete CA in productie" }
+  ],
+  "derivedKeys": [],
+  "secretKeyNames": [
+    "JWT_SECRET",
+    "ENCRYPTION_KEY",
+    "DATABASE_URL",
+    "DATABASE_CA_CERT",
+    "OBJECT_STORAGE_ACCESS_KEY_ID",
+    "OBJECT_STORAGE_SECRET_ACCESS_KEY",
+    "STRIPE_SECRET_KEY",
+    "STRIPE_WEBHOOK_SECRET",
+    "PEPPOL_API_KEY",
+    "RESEND_API_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY"
+  ],
+  "providerFeatures": {
+    "peppol": { "flag": "PEPPOL_PROVIDER", "mockValue": "mock", "optional": true, "note": "mock = e-facturatie uitgeschakeld (pilot-toegestaan)" },
+    "stripe": { "flag": "STRIPE_SECRET_KEY", "optional": true, "note": "ontbrekend = betalingen uitgeschakeld (pilot-toegestaan)" }
+  },
+  "exceptions": []
+}

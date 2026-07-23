@@ -66,6 +66,11 @@ jobs:
         run: npm install --omit=dev
       - name: Syntax check (src)
         run: npm run check
+      - name: Production config-contract · blueprint-dekking (CTO3-05)
+        # CI-veilige coverage-modus: het niet-geheime contract laadt EN render.yaml
+        # declareert elke kritieke flag/env-key. Geen secrets nodig. De runtime-
+        # drift-modus (--runtime) draait vóór de productie-deploy (zie runbook).
+        run: node scripts/check-production-contract.js
       - name: Migratiegate · toepassen op lege database
         run: node scripts/run-migrations.js
       - name: Migratiegate · idempotentie (tweede run wijzigt niets)
