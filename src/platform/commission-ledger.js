@@ -14,14 +14,20 @@ const EVENT_TYPES = ["accrual", "correction", "clawback"];
 // Payout-lifecycle (h7 · CTO2-10). draft → pending_approval → approved → paid.
 // Een dispute kan vanaf pending_approval/approved/paid; een clawback boekt een
 // negatief event ná paid (niet op de payout zelf, maar in het grootboek).
-const PAYOUT_STATES = ["draft", "pending_approval", "approved", "paid", "disputed", "cancelled"];
+// 23.11 · additief op het bestaande grootboek (geen herbouw): een uitbetaling
+// kan mislukken (approved → failed, met herpoging failed → pending_approval)
+// of ná betaling teruggedraaid worden (paid → reversed). failed is een open,
+// onopgeloste toestand · reversed is terminaal, net als cancelled.
+const PAYOUT_STATES = ["draft", "pending_approval", "approved", "paid", "disputed", "cancelled", "failed", "reversed"];
 const PAYOUT_TRANSITIONS = {
   draft: ["pending_approval", "cancelled"],
   pending_approval: ["approved", "disputed", "cancelled"],
-  approved: ["paid", "disputed", "cancelled"],
-  paid: ["disputed"],
+  approved: ["paid", "disputed", "cancelled", "failed"],
+  paid: ["disputed", "reversed"],
   disputed: ["approved", "paid", "cancelled"],
   cancelled: [],
+  failed: ["pending_approval"],
+  reversed: [],
 };
 
 function err(status, code, message) { const e = new Error(message); e.status = status; e.code = code; return e; }

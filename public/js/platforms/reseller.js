@@ -8,7 +8,7 @@
   const esc = value => window.wfpCore.esc(value == null ? "" : String(value));
   const tR = (key, fallback) => window.wfpI18n ? window.wfpI18n.t(key, fallback) : fallback;
   const locale = () => ({ nl: "nl-BE", fr: "fr-BE", en: "en-GB" }[window.wfpI18n?.lang] || "nl-BE");
-  const state = { view: "dashboard", clients: null, ledger: null, loading: false };
+  const state = { view: "dashboard", clients: null, ledger: null, requests: null, loading: false };
   let _rspLangHandler = null;
 
   function eur(value) {
@@ -172,13 +172,17 @@
   }
 
   async function loadData(force) {
-    if (!force && state.clients && state.ledger) return;
-    const [clients, ledger] = await Promise.all([
+    if (!force && state.clients && state.ledger && state.requests) return;
+    const [clients, ledger, requests] = await Promise.all([
       api("GET", "/api/reseller/clients"),
-      api("GET", "/api/reseller/commission").catch(() => ({ events: [], payouts: [], balance: { payable: 0, paid: 0, reserved: 0 } }))
+      api("GET", "/api/reseller/commission").catch(() => ({ events: [], payouts: [], balance: { payable: 0, paid: 0, reserved: 0 } })),
+      // Tenantaanvragen (23.9): een reseller maakt zelf geen tenant meer aan,
+      // hij dient een aanvraag in die Monargo beoordeelt.
+      api("GET", "/api/reseller/tenant-requests").catch(() => ({ requests: [] }))
     ]);
     state.clients = clients;
     state.ledger = ledger;
+    state.requests = requests.requests || [];
     const name = document.getElementById("rspName");
     if (name && clients.reseller) {
       name.textContent = tR("rsp.defaultCommission", "{name} · standaard {pct}% commissie")
@@ -292,6 +296,34 @@
             <tbody>${clientRows(rows) || `<tr><td colspan="6" class="rsp-empty">${esc(tR("rsp.noClients", "Nog geen klanten. Maak je eerste klant aan."))}</td></tr>`}</tbody>
           </table>
         </div>
+      </section>
+      ${requestsCard()}`;
+  }
+
+  // Tenantaanvragen (23.9): eigen aanvragen met hun status in de workflow
+  // draft → submitted → customer_confirmation → review → provisioning → active.
+  function requestsCard() {
+    const reqs = state.requests || [];
+    const body = reqs.length
+      ? reqs.map(r => `<tr>
+          <td class="rsp-client">${esc((r.endCustomer && r.endCustomer.legalName) || "-")}</td>
+          <td style="text-transform:capitalize">${esc((r.package && r.package.plan) || "-")}</td>
+          <td>${status(r.status)}</td>
+          <td>${esc(date(r.createdAt))}</td>
+        </tr>`).join("")
+      : `<tr><td colspan="4" class="rsp-empty">${esc(tR("rsp.noRequests", "Nog geen aanvragen ingediend."))}</td></tr>`;
+    return `
+      <section class="rsp-card">
+        <div class="rsp-card-head">
+          <div><span>${esc(tR("rsp.myRequests", "Mijn aanvragen"))}</span><small>${esc(tR("rsp.requestNote", "Je dient een aanvraag in. Monargo beoordeelt ze en bevestigt bij de klant voor de tenant wordt aangemaakt."))}</small></div>
+          <span class="rsp-count">${esc(String(reqs.length))}</span>
+        </div>
+        <div class="rsp-table-wrap">
+          <table class="rsp-table">
+            <thead><tr><th>${esc(tR("adm.thCustomer", "Klant"))}</th><th>${esc(tR("rsp.plan", "Plan"))}</th><th>${esc(tR("adm.status", "Status"))}</th><th>${esc(tR("rsp.thRequested", "Aangevraagd"))}</th></tr></thead>
+            <tbody>${body}</tbody>
+          </table>
+        </div>
       </section>`;
   }
 
@@ -333,12 +365,20 @@
         <section class="rsp-card">
           <div class="rsp-card-head"><div><span>${esc(tR("rsp.clientDetails", "Klantgegevens"))}</span><small>${esc(tR("rsp.clientDetailsText", "Tenant, plan en eerste beheerder"))}</small></div><span class="rsp-step">1</span></div>
           <form class="rsp-card-body rsp-form" id="rspClientForm">
-            <label><span>${esc(tR("rsp.companyName", "Bedrijfsnaam"))}</span><input name="name" autocomplete="organization" required placeholder="${esc(tR("rsp.clientCompanyPh", "Bedrijfsnaam klant"))}"></label>
+            <label><span>${esc(tR("rsp.companyName", "Bedrijfsnaam"))}</span><input name="legalName" autocomplete="organization" required placeholder="${esc(tR("rsp.clientCompanyPh", "Bedrijfsnaam klant"))}"></label>
+            <label><span>${esc(tR("rsp.vat", "Ondernemings-/BTW-nummer"))}</span><input name="enterpriseVat" placeholder="${esc(tR("rsp.vatPh", "BE0123456789"))}"></label>
+            <label><span>${esc(tR("rsp.contactName", "Contactpersoon"))}</span><input name="contactName" autocomplete="name" placeholder="${esc(tR("rsp.contactNamePh", "Naam contactpersoon"))}"></label>
+            <label><span>${esc(tR("rsp.contactEmail", "E-mail contactpersoon"))}</span><input name="contactEmail" type="email" autocomplete="email" required placeholder="${esc(tR("rsp.contactEmailPh", "E-mail voor klantbevestiging"))}"></label>
+            <label><span>${esc(tR("rsp.street", "Straat"))}</span><input name="straat" required placeholder="${esc(tR("rsp.streetPh", "Straatnaam"))}"></label>
+            <label><span>${esc(tR("rsp.number", "Nummer"))}</span><input name="nummer" required placeholder="${esc(tR("rsp.numberPh", "Huisnummer"))}"></label>
+            <label><span>${esc(tR("rsp.zip", "Postcode"))}</span><input name="postcode" required placeholder="${esc(tR("rsp.zipPh", "2000"))}"></label>
+            <label><span>${esc(tR("rsp.city", "Gemeente"))}</span><input name="gemeente" required placeholder="${esc(tR("rsp.cityPh", "Antwerpen"))}"></label>
+            <label><span>${esc(tR("rsp.country", "Land"))}</span><input name="land" required value="BE" placeholder="${esc(tR("rsp.countryPh", "BE"))}"></label>
+            <label><span>${esc(tR("rsp.language", "Taal"))}</span><select name="language"><option value="NL" selected>NL</option><option value="FR">FR</option><option value="EN">EN</option></select></label>
             <label><span>${esc(tR("rsp.plan", "Plan"))}</span><select name="plan"><option value="starter">Starter</option><option value="business" selected>Business</option><option value="enterprise">Enterprise</option></select></label>
-            <label><span>${esc(tR("rsp.adminEmail", "E-mail beheerder"))}</span><input name="adminEmail" type="email" autocomplete="email" required placeholder="${esc(tR("rsp.adminEmailPh", "Login-e-mail beheerder klant"))}"></label>
-            <label><span>${esc(tR("rsp.adminName", "Naam beheerder"))}</span><input name="adminName" autocomplete="name" placeholder="${esc(tR("rsp.adminNamePh", "Naam beheerder"))}"></label>
-            <div class="rsp-span2 rsp-form-note"><span aria-hidden="true">i</span><p>${esc(tR("rsp.activationNote", "De beheerder ontvangt een activatiemail en stelt zelf een wachtwoord in."))}</p></div>
-            <div class="rsp-span2 rsp-form-actions"><button class="rsp-btn rsp-btn-primary" type="submit">${esc(tR("rsp.createClientBtn", "Klant aanmaken"))}</button><span id="rspClientMessage" class="rsp-msg" role="status"></span></div>
+            <label><span>${esc(tR("rsp.billing", "Facturatie"))}</span><select name="billingOwnership"><option value="monargo_direct" selected>${esc(tR("rsp.billingDirect", "Monargo factureert de klant"))}</option><option value="via_reseller">${esc(tR("rsp.billingViaReseller", "Monargo factureert via de partner"))}</option></select></label>
+            <div class="rsp-span2 rsp-form-note"><span aria-hidden="true">i</span><p>${esc(tR("rsp.requestNote", "Je dient een aanvraag in. Monargo beoordeelt ze en bevestigt bij de klant voor de tenant wordt aangemaakt."))}</p></div>
+            <div class="rsp-span2 rsp-form-actions"><button class="rsp-btn rsp-btn-primary" type="submit">${esc(tR("rsp.requestBtn", "Aanvraag indienen"))}</button><span id="rspClientMessage" class="rsp-msg" role="status"></span></div>
           </form>
         </section>
         <aside class="rsp-onboarding-aside">
@@ -358,23 +398,44 @@
       event.preventDefault();
       const message = document.getElementById("rspClientMessage");
       const submit = form.querySelector('button[type="submit"]');
-      const payload = Object.fromEntries(new FormData(form).entries());
+      const f = Object.fromEntries(new FormData(form).entries());
+      // 23.9: de reseller dient een AANVRAAG in; koppelen en provisionen zijn
+      // platformacties met klantbevestiging. Nooit meer een directe tenant.
+      const payload = {
+        billingOwnership: f.billingOwnership,
+        endCustomer: {
+          legalName: f.legalName,
+          enterpriseVat: f.enterpriseVat || null,
+          address: { straat: f.straat, nummer: f.nummer, postcode: f.postcode, gemeente: f.gemeente, land: f.land },
+          contact: { name: f.contactName || null, email: f.contactEmail },
+          language: f.language
+        },
+        package: { plan: f.plan }
+      };
       message.textContent = "";
       submit.disabled = true;
-      submit.textContent = tR("rsp.creating", "Klant wordt aangemaakt...");
+      submit.textContent = tR("rsp.requesting", "Aanvraag wordt ingediend...");
       try {
         const result = await api("POST", "/api/reseller/clients", payload);
+        const requestId = result.tenantRequest && result.tenantRequest.id;
+        // Meteen indienen: de aanvraag start als draft en moet naar submitted
+        // voor Monargo ze in behandeling neemt.
+        if (requestId) {
+          try { await api("POST", `/api/reseller/tenant-requests/${requestId}/transition`, { to: "submitted" }); }
+          catch (_) { /* blijft draft · zichtbaar in het overzicht */ }
+        }
         state.clients = null;
         state.ledger = null;
+        state.requests = null;
         if (window.showToast) {
-          window.showToast(result.activationLink ? tR("rsp.clientCreatedActivation", "Klant aangemaakt. De activatielink is beschikbaar in de ontwikkelomgeving.") : tR("rsp.clientCreatedShort", "Klant aangemaakt."), "success");
+          window.showToast(result.message || tR("rsp.requestSubmitted", "Aanvraag ingediend. Monargo beoordeelt ze."), "success");
         }
         await loadData(true);
         switchView("clients");
       } catch (error) {
         message.textContent = error.message;
         submit.disabled = false;
-        submit.textContent = tR("rsp.createClientBtn", "Klant aanmaken");
+        submit.textContent = tR("rsp.requestBtn", "Aanvraag indienen");
       }
     });
   }

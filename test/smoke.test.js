@@ -818,8 +818,12 @@ test("self-signup: reseller-aanvraag = pending, login pas na goedkeuring", async
   assert.ok(activated.token, "na goedkeuring en activatie kan de reseller inloggen");
 });
 
-// ── Reseller-programma: aanmaken, klant aanmaken, commissie, isolatie ──
-test("reseller: god maakt reseller, reseller maakt klant + ziet commissie, niet die van anderen", async () => {
+// ── Reseller-programma: klant AANMELDEN (23.9), koppeling, isolatie ──
+// GEDRAGSWIJZIGING (cluster C): POST /api/reseller/clients maakte vroeger zelf
+// een tenant aan met resellerId = eigen id · zelf-koppeling buiten 23.4/23.9 om.
+// De route dient nu een TENANTAANVRAAG in (202) en de klantzichtbaarheid volgt
+// de koppelingsadministratie in plaats van tenant.resellerId.
+test("reseller: klant aanmelden = tenantaanvraag, koppeling stuurt zichtbaarheid, isolatie", async () => {
   const god = await login("super@workflowpro.be", "Demo2026!");
   const H = t => ({ "Content-Type": "application/json", Authorization: `Bearer ${t}` });
   const stamp = Date.now();
@@ -829,30 +833,87 @@ test("reseller: god maakt reseller, reseller maakt klant + ziet commissie, niet 
   const cr = await fetch(`${BASE}/api/admin/resellers`, { method: "POST", headers: H(god.token), body: JSON.stringify({ name: "Partner X", loginEmail, password: pass, defaultCommissionPct: 10 }) });
   assert.equal(cr.status, 201);
   const createdReseller = await cr.json();
+  const resellerId = createdReseller.reseller.id;
   // 2) reseller logt in
   const rs = await activateWithLink(createdReseller.activationLink, pass);
   assert.ok(rs.token, "reseller kan inloggen na activatie");
-  // 3) reseller maakt een klant aan
-  const adminEmail = `klant-${stamp}@klant.be`;
-  const mk = await fetch(`${BASE}/api/reseller/clients`, { method: "POST", headers: H(rs.token), body: JSON.stringify({ name: "Klant van X", plan: "business", adminEmail, adminName: "Klant Admin", adminPassword: "KlantSterk2026!@#" }) });
-  assert.equal(mk.status, 201);
-  const tenantId = (await mk.json()).client.tenantId;
-  // 4) god zet de klant actief → MRR + commissie > 0
-  await fetch(`${BASE}/api/admin/tenants/${tenantId}`, { method: "PATCH", headers: H(god.token), body: JSON.stringify({ status: "active" }) });
+  // 3) klant aanmelden = aanvraag indienen · GEEN tenant, GEEN zelf-koppeling
+  const aanvraag = {
+    endCustomer: {
+      legalName: `Klant van X ${stamp}`,
+      address: { straat: "Kerkstraat", nummer: "12", postcode: "2000", gemeente: "Antwerpen", land: "BE" },
+      contact: { name: "Klant Admin", email: `klant-${stamp}@klant.be` },
+      language: "NL",
+    },
+    package: { plan: "business" },
+    billingOwnership: "monargo_direct",
+  };
+  const mk = await fetch(`${BASE}/api/reseller/clients`, { method: "POST", headers: H(rs.token), body: JSON.stringify(aanvraag) });
+  assert.equal(mk.status, 202, "aanvraag wordt ter beoordeling aangenomen, niet meteen uitgevoerd");
+  const mkBody = await mk.json();
+  assert.ok(mkBody.tenantRequest && mkBody.tenantRequest.id, "de route levert een tenantaanvraag");
+  assert.equal(mkBody.tenantRequest.status, "draft");
+  assert.equal(mkBody.client, undefined, "een reseller maakt nooit zelf een tenant aan");
+  const trq = await (await fetch(`${BASE}/api/reseller/tenant-requests`, { headers: H(rs.token) })).json();
+  assert.ok(trq.requests.some(r => r.id === mkBody.tenantRequest.id), "de aanvraag staat in het eigen overzicht");
+  // Onvolledige aanvraag faalt met veldfouten (geen half record).
+  const kaal = await fetch(`${BASE}/api/reseller/clients`, { method: "POST", headers: H(rs.token), body: JSON.stringify({ name: "Zomaar" }) });
+  assert.equal(kaal.status, 400);
+  assert.equal((await kaal.json()).code, "TENANT_REQUEST_INVALID");
+  // 4) zichtbaarheid volgt het assignment-record, niet tenant.resellerId
+  const lk = await fetch(`${BASE}/api/admin/reseller-tenant-links`, { method: "POST", headers: H(god.token), body: JSON.stringify({ resellerId, tenantId: "t_demo", relationType: "commercial", reason: "smoke-test" }) });
+  assert.equal(lk.status, 201);
+  const linkId = (await lk.json()).link.id;
   const ov = await (await fetch(`${BASE}/api/reseller/clients`, { headers: H(rs.token) })).json();
-  const mine = ov.rows.find(r => r.tenantId === tenantId);
-  assert.ok(mine, "reseller ziet eigen klant");
-  assert.equal(mine.commissionPct, 10);
-  assert.ok(mine.mrr > 0 && mine.commission > 0, "commissie = % van MRR");
+  assert.ok(ov.rows.some(r => r.tenantId === "t_demo"), "gekoppelde klant is zichtbaar");
+  // Koppeling intrekken → de klant verdwijnt meteen (23.15)
+  const rv = await fetch(`${BASE}/api/admin/reseller-tenant-links/${linkId}/revoke`, { method: "POST", headers: H(god.token), body: JSON.stringify({ reason: "einde samenwerking" }) });
+  assert.equal(rv.status, 200);
+  const ovNa = await (await fetch(`${BASE}/api/reseller/clients`, { headers: H(rs.token) })).json();
+  assert.ok(!ovNa.rows.some(r => r.tenantId === "t_demo"), "ingetrokken koppeling = geen live klantdata meer");
   // 5) tweede reseller ziet die klant NIET
   const loginEmail2 = `reseller2-${stamp}@partners.be`;
   const cr2 = await (await fetch(`${BASE}/api/admin/resellers`, { method: "POST", headers: H(god.token), body: JSON.stringify({ name: "Partner Y", loginEmail: loginEmail2, password: pass, defaultCommissionPct: 5 }) })).json();
   const rs2 = await activateWithLink(cr2.activationLink, pass);
   const ov2 = await (await fetch(`${BASE}/api/reseller/clients`, { headers: H(rs2.token) })).json();
-  assert.ok(!ov2.rows.some(r => r.tenantId === tenantId), "reseller ziet enkel eigen klanten");
-  // 6) reseller mag geen platform-admin endpoints
+  assert.ok(!ov2.rows.some(r => r.tenantId === "t_demo"), "reseller ziet enkel eigen klanten");
+  // 6) ISO-03: een EXPLICIET vreemde ?resellerId= is een harde weigering,
+  //    nooit stil herfilteren naar de eigen scope.
+  for (const pad of ["clients", "deals", "commission-statements", "tenant-requests"]) {
+    const r = await fetch(`${BASE}/api/reseller/${pad}?resellerId=${encodeURIComponent(cr2.reseller.id)}`, { headers: H(rs.token) });
+    assert.equal(r.status, 403, `${pad} weigert een vreemde resellerId`);
+    assert.equal((await r.json()).code, "RESELLER_SCOPE_VIOLATION");
+  }
+  // Eigen id in de parameter blijft gewoon werken.
+  assert.equal((await fetch(`${BASE}/api/reseller/clients?resellerId=${encodeURIComponent(resellerId)}`, { headers: H(rs.token) })).status, 200);
+  // 7) reseller mag geen platform-admin endpoints
   assert.equal((await fetch(`${BASE}/api/admin/resellers`, { headers: H(rs.token) })).status, 403, "reseller geen admin-toegang");
   assert.equal((await fetch(`${BASE}/api/admin/stats`, { headers: H(rs.token) })).status, 403);
+});
+
+// ── DoD-2: payoutgegevens staan nooit in een algemene reseller-export ──
+test("reseller: IBAN alleen op de finance-route, nooit in lijst of overview", async () => {
+  const god = await login("super@workflowpro.be", "Demo2026!");
+  const H = t => ({ "Content-Type": "application/json", Authorization: `Bearer ${t}` });
+  const stamp = Date.now();
+  const loginEmail = `resellerpay-${stamp}@partners.be`;
+  const created = await (await fetch(`${BASE}/api/admin/resellers`, { method: "POST", headers: H(god.token), body: JSON.stringify({ name: "Partner Payout", loginEmail, defaultCommissionPct: 8 }) })).json();
+  const resellerId = created.reseller.id;
+  assert.equal(created.reseller.payout_account, undefined, "de aanmaakrespons draagt geen payoutveld");
+  const lijst = await (await fetch(`${BASE}/api/admin/resellers`, { headers: H(god.token) })).json();
+  assert.ok(!JSON.stringify(lijst).includes("payout_account"), "de admin-lijst bevat geen payout_account");
+  const overview = await (await fetch(`${BASE}/api/admin/resellers/${resellerId}/overview`, { headers: H(god.token) })).json();
+  assert.equal(overview.organization.payout_account, undefined, "het overview bevat geen payout_account");
+  // De aparte finance-route toont het veld wel (achter reseller.payout.manage).
+  const fin = await fetch(`${BASE}/api/admin/reseller-payout-details/${resellerId}`, { headers: H(god.token) });
+  assert.equal(fin.status, 200);
+  const finBody = await fin.json();
+  assert.ok(Object.prototype.hasOwnProperty.call(finBody.payout, "payout_account"), "de finance-route levert het payoutveld");
+  // Zonder recht: geen toegang.
+  const pass = "ResellerSterk2026!@#";
+  const rs = await activateWithLink(created.activationLink, pass);
+  assert.equal((await fetch(`${BASE}/api/admin/reseller-payout-details/${resellerId}`, { headers: H(rs.token) })).status, 403);
+  assert.equal((await fetch(`${BASE}/api/admin/reseller-payout-details/onbestaand`, { headers: H(god.token) })).status, 404);
 });
 
 // ── Integraties: Exact Online + Robaws ──

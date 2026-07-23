@@ -6,7 +6,9 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const root = path.resolve(__dirname, "..");
-const read = file => fs.readFileSync(path.join(root, file), "utf8");
+// Regel-eindes normaliseren: op Windows checkt git CRLF uit, waardoor regexen
+// met een letterlijke \n niet matchen terwijl ze op de Linux-CI wel slagen.
+const read = file => fs.readFileSync(path.join(root, file), "utf8").replace(/\r\n/g, "\n");
 
 const html = read("public/index.html");
 const css = read("public/css/monargo-design-system.css");
