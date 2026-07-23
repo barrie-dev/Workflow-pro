@@ -113,6 +113,51 @@ class LocalObjectStorage {
     await fsp.rm(this.metaPathFor(key), { force: true });
   }
 
+  /**
+   * CTO3-03 · alle objecten in de opslag, voor het DR-objectmanifest. Loopt de
+   * <key>.meta.json-bestanden langs (de canonieke objectset) en meldt per object
+   * of het echte databestand aanwezig is (hasObject=false = missing). Object-
+   * bestanden zonder meta worden als orphan gemeld. De managed adapters
+   * (s3/azure-blob) gebruiken hun eigen list-API met dezelfde vorm.
+   */
+  async list() {
+    const objects = [];
+    const orphans = [];
+    const seenObjectPaths = new Set();
+    const metaPaths = new Set();
+    const walk = async (dir) => {
+      let entries;
+      try { entries = await fsp.readdir(dir, { withFileTypes: true }); } catch (_) { return; }
+      for (const e of entries) {
+        const full = path.join(dir, e.name);
+        if (e.isDirectory()) { await walk(full); continue; }
+        if (e.name.endsWith(".meta.json")) {
+          metaPaths.add(full);
+          try {
+            const meta = JSON.parse(await fsp.readFile(full, "utf8"));
+            const objPath = full.slice(0, -(".meta.json".length));
+            seenObjectPaths.add(objPath);
+            objects.push({ key: meta.key, tenantId: meta.tenantId, size: meta.size, checksum: meta.checksum, hasObject: fs.existsSync(objPath) });
+          } catch (_) { /* corrupt meta · overslaan, wordt als ontbrekend zichtbaar */ }
+        }
+      }
+    };
+    await walk(this.basePath);
+    // Tweede pass: databestanden zonder meta = orphan.
+    const walk2 = async (dir) => {
+      let entries;
+      try { entries = await fsp.readdir(dir, { withFileTypes: true }); } catch (_) { return; }
+      for (const e of entries) {
+        const full = path.join(dir, e.name);
+        if (e.isDirectory()) { await walk2(full); continue; }
+        if (e.name.endsWith(".meta.json")) continue;
+        if (!seenObjectPaths.has(full)) orphans.push(path.relative(this.basePath, full).split(path.sep).join("/"));
+      }
+    };
+    await walk2(this.basePath);
+    return { objects, orphans };
+  }
+
   async metadata(key, { tenantId = null } = {}) {
     if (tenantId) assertTenantOwnsKey(tenantId, key);
     const metaPath = this.metaPathFor(key);
