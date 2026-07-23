@@ -61,40 +61,43 @@ functie optioneel; `scripts/check-production-config.js` valideert het geheel.
 6. **Leg bewijs vast**: `node scripts/generate-evidence-bundle.js` en commit
    het dossier uit `docs/evidence/`.
 
-### 3.1 Single-writer en de rolling deploy (CTO-03 · bootgate)
+### 3.1 Single-writer: stop-first/recreate is de officiele productiestrategie (CTO3-02)
 
 Dit platform verdraagt bewust maar **een** schrijver: de instantie die de
 PostgreSQL advisory lock op `platform_state` houdt. Die guard bestaat omdat
 overlappende schrijvers eerder stil dataverlies veroorzaakten bij een deploy.
 
-Een zero-downtime (rolling) deploy start de nieuwe instantie NAAST de oude en
-stopt de oude pas als de nieuwe gezond is. Dat kan botsen met de single writer.
-De **bootgate** lost dit op zodat een gewone rolling deploy gewoon werkt:
+**Officiele deploystrategie: stop-first / recreate.** Stop de oude instantie
+VOOR de nieuwe traffic-ready wordt. Dit is GEEN zero-downtime: reken op een korte
+onbeschikbaarheid (ordegrootte een minuut) tijdens de wissel. Zolang
+`platform_state` één schrijver vereist en de runtime geen aparte liveness- en
+traffic-readinessprobes met leader-handover afdwingt, wordt zero-downtime NIET
+geclaimd.
 
-- De nieuwe instantie gaat METEEN luisteren en is direct **healthy** op
-  `GET /api/health` (met `status: "booting"`). Zo ziet het platform haar als
-  gezond en stopt het de oude instantie.
-- Zolang de nieuwe instantie de writer-lock nog niet heeft, weigert ze ALLE
-  overige verkeer met `503 BOOTING` · er wordt nooit gelezen of geschreven op
-  een half geladen staat. `GET /api/ready` is dan ook 503.
-- Zodra de oude instantie stopt, geeft PostgreSQL de lock vrij, neemt de nieuwe
-  instantie hem over, laadt de staat, en gaat `GET /api/ready` naar 200.
+**Liveness vs readiness (twee verschillende signalen):**
+- `GET /api/health` en `GET /api/live` = **liveness**: het proces leeft. Blijft
+  200 tijdens het opstarten (met `status`: booting/migrating/waiting_lock/
+  loading/flushing/ready/failed). Een 200 hier is NOOIT een readiness-claim.
+- `GET /api/ready` = **readiness**: 200 pas nadat DB, migraties, writer-lock,
+  state-load en de verplichte bootflush geslaagd zijn (`status: ready`). Een
+  half-opgestarte of `failed` instantie is nooit ready. Alleen readiness bepaalt
+  of businessverkeer wordt toegelaten.
 
-**Probe-instelling (belangrijk):** stuur **verkeer op readiness** (`/api/ready`)
-en herstart op liveness (`/api/health`). Zo krijgt een wachtende-op-de-lock
-instantie geen verkeer, maar wordt ze ook niet als dood herstart. Render met een
-enkele instantie en `healthCheckPath: /api/health` werkt zonder verdere
-configuratie.
+**Render:** `healthCheckPath: /api/ready` (in `render.yaml`) · Render routeert
+pas verkeer wanneer readiness 200 geeft. Voer de deploy stop-first uit:
+**Suspend** de service, wacht tot ze echt gestopt is, en **Resume** (of schaal
+naar 0 instanties en daarna terug naar 1). Zo is de writer-lock vrij wanneer de
+nieuwe instantie start. Health/ready/live dragen `commitSha` en `deploymentId`,
+zodat je kunt bevestigen welke deploy live staat (zie CTO3-06 evidence).
 
-`SINGLE_WRITER_WAIT_MS` staat op 5 minuten: ruim voldoende voor de overlap van
-een rolling deploy. Faalt de start alsnog met "Single-writer-lock niet
-verkregen", dan draait er nog een oude instantie die niet gestopt wordt (of een
-hard-gecrashte instantie waarvan de databaseverbinding nog hangt). Stop die
-expliciet · op Render: **Suspend** en daarna **Resume**, of schaal naar 0 en
-terug naar 1.
+**Rollback:** deploy de vorige release-tag/SHA opnieuw, opnieuw stop-first. De
+oude instantie mag pas herstarten wanneer de nieuwe gestopt is (nooit twee
+schrijvers). Een schema-rollback is een nieuwe forward-migratie, nooit handwerk.
 
-**Niet doen:** `SINGLE_WRITER=false` zetten om een deploy erdoor te krijgen
-heft precies de bescherming op die het eerdere dataverlies moest voorkomen.
+**Niet doen:** `SINGLE_WRITER=false` zetten om een deploy erdoor te krijgen heft
+precies de bescherming op die het eerdere dataverlies moest voorkomen. En een
+HTTP 200 op liveness is geen bewijs van readiness · claim "zero downtime" niet
+zonder trafficprobe- en leader-handovertest (aparte latere ADR).
 
 ## 4. Rollback
 

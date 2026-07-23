@@ -1255,13 +1255,17 @@ const httpServer = http.createServer(async (req, res) => {
     if (url.pathname === "/api/health" || url.pathname === "/api/live") {
       return sendJson(res, 200, {
         ok: true, app: "Monargo One Fullstack", status: bootState,
-        appEnv: config.appEnv, version: config.appVersion, commitSha: config.commitSha,
+        appEnv: config.appEnv, version: config.appVersion,
+        commitSha: config.commitSha, deploymentId: config.deploymentId,
       });
     }
     // Readiness weerspiegelt de state-machine: 503 tot state=ready.
     if (url.pathname === "/api/ready") {
       res.setHeader("retry-after", "5");
-      return sendJson(res, 503, { ok: false, code: "NOT_READY", status: bootState });
+      return sendJson(res, 503, {
+        ok: false, code: "NOT_READY", status: bootState,
+        commitSha: config.commitSha, deploymentId: config.deploymentId,
+      });
     }
     // Alle overige (business)routes: geweigerd tot de staat geladen EN geflusht is.
     res.setHeader("retry-after", "5");
@@ -1313,11 +1317,25 @@ const httpServer = http.createServer(async (req, res) => {
       return;
     }
 
+    // CTO3-02 · LIVENESS. /api/health en /api/live melden dat het PROCES leeft.
+    // Dit is NOOIT een readiness-claim: een 200 hier betekent niet dat business-
+    // verkeer veilig kan · daarvoor is /api/ready. (Tijdens het opstarten wordt
+    // liveness al door de bootgate bediend; dit is het pad zodra state=ready.)
+    if (url.pathname === "/api/live") {
+      return sendJson(res, 200, {
+        ok: true, app: "Monargo One Fullstack", status: bootState,
+        appEnv: config.appEnv, version: config.appVersion,
+        commitSha: config.commitSha, deploymentId: config.deploymentId,
+        uptime: Math.floor(process.uptime()),
+      });
+    }
     if (url.pathname === "/api/health") {
       const storeStatus = store.storageStatus ? store.storageStatus() : { ok: true };
       sendJson(res, 200, {
         ok: true,
         app: "Monargo One Fullstack",
+        status: bootState,
+        deploymentId: config.deploymentId,
         appEnv: config.appEnv,
         version: config.appVersion,
         releaseChannel: config.releaseChannel,
@@ -1364,15 +1382,27 @@ const httpServer = http.createServer(async (req, res) => {
     // Readiness probe (E1): faalt bij storage-uitval ZONDER het proces te doden.
     // Liveness (/api/health) blijft 200 zolang het proces draait; zo herstart de
     // orchestrator niet onnodig bij een tijdelijke DB-hapering (K8s/Render/Azure).
+    // CTO3-02 · READINESS. Dit pad wordt alleen bereikt wanneer state=ready
+    // (de bootgate heeft migraties, writer-lock, state-load en de verplichte
+    // bootflush al met succes doorlopen · anders was het proces hard gestopt).
+    // Een runtime-storagefout maakt de instantie alsnog NIET-ready (503) zodat
+    // een orchestrator ze uit rotatie haalt. Readiness bepaalt of businessverkeer
+    // wordt toegelaten; deze respons is machineleesbaar en SHA-gekoppeld.
     if (url.pathname === "/api/ready") {
       const storeStatus = store.storageStatus ? store.storageStatus() : { ok: true };
-      const ready = storeStatus?.ok !== false;
+      const ready = isBootReady() && storeStatus?.ok !== false;
       sendJson(res, ready ? 200 : 503, {
         ok: ready,
+        status: bootState,
+        commitSha: config.commitSha,
+        deploymentId: config.deploymentId,
         checks: {
+          state: isBootReady(),           // staat geladen + bootflush geslaagd
           storage: storeStatus?.ok !== false,
           storageAdapter: config.storageAdapter,
+          objectStorageAdapter: objectStorage.name,
           txAdapter: (pgTxManager || txManager).adapter,
+          databaseSslMode: config.database.sslMode,
           // Openstaande schrijfacties: een orchestrator kan hierop wachten
           // vóór hij een replica uit rotatie haalt.
           pendingWrites: store.isDirty(),

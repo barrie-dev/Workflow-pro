@@ -16,7 +16,13 @@ services:
     # container en de RUNBOOK). De advisory lock in de runner maakt dit ook
     # veilig wanneer meerdere instanties tegelijk deployen.
     startCommand: node scripts/run-migrations.js && node src/server.js
-    healthCheckPath: /api/health
+    # CTO3-02 · traffic wordt bepaald door READINESS, niet door liveness. /api/ready
+    # is pas 200 nadat DB, migraties, writer-lock, state-load en de verplichte
+    # bootflush geslaagd zijn. Een half-opgestarte of failed instantie wordt zo
+    # nooit als traffic-ready behandeld. LET OP: dit vereist de stop-first/
+    # recreate-deploystrategie (zie docs/DEPLOY-RUNBOOK.md §3.1) · met de single
+    # writer is dit de officiele productiestrategie. Dit is GEEN zero-downtime.
+    healthCheckPath: /api/ready
     envVars:
       - key: NODE_ENV
         value: production

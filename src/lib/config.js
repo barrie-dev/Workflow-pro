@@ -41,6 +41,10 @@ const config = {
   // override komt als laatste (anders schaduwt een verouderde waarde de deploy).
   // "local-dev" lokaal.
   commitSha: (raw => /^[0-9a-f]{7,40}$/i.test(raw) ? raw.slice(0, 7) : raw)(process.env.APP_COMMIT_SHA || process.env.RENDER_GIT_COMMIT || process.env.COMMIT_SHA || "local-dev"),
+  // CTO3-02 · deployment-identiteit: elke readiness-/livenessclaim is gekoppeld
+  // aan één draaiende deploy. Het platform levert de waarde per deploy
+  // (Render: RENDER_INSTANCE_ID); anders een procesgebonden id. Geen secret.
+  deploymentId: process.env.DEPLOYMENT_ID || process.env.RENDER_INSTANCE_ID || process.env.RENDER_DEPLOY_ID || `local_${Date.now().toString(36)}`,
   jwtSecret: process.env.JWT_SECRET || "dev_only_replace_this_secret",
   encryptionKey: process.env.ENCRYPTION_KEY || "dev_only_replace_this_encryption_key_32",
   databaseUrl: process.env.DATABASE_URL || "",
