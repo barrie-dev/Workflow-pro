@@ -31,13 +31,16 @@ const PORT = process.env.E2E_PORT || "4299";
 const SCENARIOS = [
   { n: 1, title: "Offerte → project → planning → werkbon → factuur → marge", smokes: ["chain-smoke.js"], fullChain: true },
   { n: 2, title: "Meerwerk met gedeeltelijke acceptatie + aparte factuurbron", smokes: ["construction-smoke.js", "claims-smoke.js"], fullChain: true },
-  { n: 3, title: "Offline werkbon met materiaal + handtekening + dubbel queue-item", smokes: ["workorder-smoke.js", "mobile-offline-smoke.js"], fullChain: false },
+  // CTO3-04: elk van scenario 3/6/7/8/9 is nu ÉÉN doorlopende keten (positieve
+  // output + negatieve autorisatie + idempotentie + audit + teruglezing), niet
+  // langer een verzameling losse route-smokes.
+  { n: 3, title: "Offline werkbon met materiaal + handtekening + dubbel queue-item", smokes: ["offline-workorder-chain-smoke.js"], fullChain: true },
   { n: 4, title: "Servicecontract → onderhoudsbeurt → assethistoriek → facturatie", smokes: ["contracts-smoke.js", "assets-smoke.js"], fullChain: true },
   { n: 5, title: "Inkooporder deelontvangst + projectverplichting zonder dubbele kost", smokes: ["proc-smoke.js"], fullChain: true },
-  { n: 6, title: "Factuurnummering + UBL-reconciliatie + Peppol-fout/retry", smokes: ["credit-smoke.js", "finance-smoke.js", "reconciliation-smoke.js"], fullChain: false },
-  { n: 7, title: "Tenant A probeert elk pad naar data van tenant B", smokes: ["policy-smoke.js"], fullChain: false },
-  { n: 8, title: "Rol zonder kostprijsrecht: UI, API, export, zoeken, Mona", smokes: ["roles-smoke.js", "policy-smoke.js", "grid-smoke.js", "signals-smoke.js"], fullChain: false },
-  { n: 9, title: "Legacy-migratie klant/project/werkbon met external ID + bestanden", smokes: ["robaws-smoke.js"], fullChain: false },
+  { n: 6, title: "Factuurnummering + UBL-reconciliatie + Peppol-fout/retry + één billable event", smokes: ["peppol-billing-chain-smoke.js"], fullChain: true },
+  { n: 7, title: "Cross-tenant aanvalsmatrix: lezen/wijzigen/exporteren/attachments/transitions", smokes: ["cross-tenant-chain-smoke.js"], fullChain: true },
+  { n: 8, title: "Veldrechtketen: verborgen kostprijs in UI, API, export, zoeken, rapport, Mona", smokes: ["field-rights-chain-smoke.js"], fullChain: true },
+  { n: 9, title: "Legacy-import → external IDs → attachments → operationeel record", smokes: ["legacy-import-chain-smoke.js"], fullChain: true },
 ];
 
 function commitSha() {
@@ -95,6 +98,52 @@ async function runSmoke(smoke) {
   }
 }
 
+// ── CTO3-04 · restart-persistentie ("scenario's overleven een containerrestart
+// waar persistentie relevant is"). Echt bewijs: schrijf records, stop de server
+// NET (SIGTERM · de shutdownflush landt), start OPNIEUW tegen HETZELFDE
+// databestand en lees de records terug. Geen store.data-truc · alles via HTTP.
+async function api(method, pathname, body, token) {
+  const r = await fetch(`http://localhost:${PORT}${pathname}`, { method, headers: { "Content-Type": "application/json", ...(token ? { Authorization: "Bearer " + token } : {}) }, body: body ? JSON.stringify(body) : undefined });
+  return r.json().catch(() => ({}));
+}
+function gracefulStop(server) {
+  return new Promise(resolve => {
+    if (!server || server.exitCode !== null) return resolve();
+    server.once("exit", () => resolve());
+    try { server.kill("SIGTERM"); } catch (_) {}
+    setTimeout(() => { try { server.kill("SIGKILL"); } catch (_) {} resolve(); }, 8000).unref();
+  });
+}
+async function proveRestartPersistence() {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "mona-e2e-restart-"));
+  const dataFile = path.join(dir, "data.json");
+  const env = { ...process.env, PORT, NODE_ENV: "development", STORAGE_ADAPTER: "json", WORKFLOWPRO_DATA_FILE: dataFile, WORKFLOWPRO_INITIAL_ADMIN_PASSWORD: "Demo2026!", REQUIRE_ADMIN_MFA: "false" };
+  delete env.DATABASE_URL;
+  const boot = () => spawn(process.execPath, [path.join(ROOT, "src", "server.js")], { env, stdio: "ignore" });
+  const out = { proven: false };
+  let server = boot();
+  try {
+    await waitForHealth();
+    const tok = (await api("POST", "/api/auth/login", { email: "admin@demobouw.be", password: "Demo2026!" })).token;
+    const tid = (await api("GET", "/api/me", null, tok)).user.tenantId;
+    const cust = (await api("POST", `/api/tenants/${tid}/customers`, { name: "Restart Bewijs BV", email: "restart@x.be" }, tok)).customer;
+    const wo = (await api("POST", `/api/tenants/${tid}/workorders`, { title: "Restart WO", date: "2026-09-20" }, tok)).workorder;
+    out.tid = tid; out.custId = cust && cust.id; out.woNumber = wo && wo.number;
+  } finally { await gracefulStop(server); }
+  await new Promise(r => setTimeout(r, 500));
+  server = boot();
+  try {
+    await waitForHealth();
+    const tok = (await api("POST", "/api/auth/login", { email: "admin@demobouw.be", password: "Demo2026!" })).token;
+    const custs = (await api("GET", `/api/tenants/${out.tid}/customers`, null, tok)).customers || [];
+    const wos = (await api("GET", `/api/tenants/${out.tid}/workorders`, null, tok)).workorders || [];
+    out.customerSurvived = custs.some(c => c.id === out.custId);
+    out.workorderSurvived = wos.some(w => w.number === out.woNumber);
+    out.proven = out.customerSurvived && out.workorderSurvived;
+  } finally { await gracefulStop(server); fs.rmSync(dir, { recursive: true, force: true }); }
+  return out;
+}
+
 async function main() {
   // Unieke smokes over alle scenario's (elke smoke één keer draaien).
   const unique = [...new Set(SCENARIOS.flatMap(s => s.smokes))];
@@ -118,11 +167,19 @@ async function main() {
   const allFull = scenarios.every(s => s.fullChain);
   const failures = [];
   for (const s of scenarios) if (!s.green) failures.push({ scenario: s.n, title: s.title, redSmokes: s.smokes.filter(sm => !smokeResult[sm]) });
+
+  // CTO3-04 · restart-persistentie: één echt server-restartbewijs (records
+  // overleven een stop+herstart tegen hetzelfde databestand).
+  let restart = { proven: false };
+  try { restart = await proveRestartPersistence(); }
+  catch (e) { restart = { proven: false, error: e.message }; }
+  console.log(`  ${restart.proven ? "✔" : "✖"} restart-persistentie (records overleven stop+herstart)`);
+  if (!restart.proven) failures.push({ scenario: "restart", title: "restart-persistentie", detail: restart.error || `customer=${restart.customerSurvived} workorder=${restart.workorderSurvived}` });
   // Ketenstatus is metadata, geen smoke-regressie; markeer het maar laat het de
   // job niet 'falen' als de smokes zelf groen zijn.
   const partial = scenarios.filter(s => !s.fullChain).map(s => s.n);
 
-  const status = allGreen && allFull ? "pass" : "fail";
+  const status = allGreen && allFull && restart.proven ? "pass" : "fail";
   const ev = makeEvidence({
     evidenceType: "e2e-manifest",
     status,
@@ -133,18 +190,20 @@ async function main() {
     counts: { scenarios: scenarios.length, green: scenarios.filter(s => s.green).length, fullChain: scenarios.filter(s => s.fullChain).length, smokes: unique.length },
     failures,
     result: allGreen
-      ? (allFull ? "9 verplichte scenario's groen ÉN als keten bewezen" : `alle scenario-smokes groen; nog ${partial.length} scenario('s) per schakel i.p.v. één keten (${partial.join(",")})`)
+      ? (allFull ? (restart.proven ? "9 verplichte scenario's groen ÉN als keten bewezen, restart-persistentie bewezen" : "9 scenario's als keten groen, maar restart-persistentie niet bewezen") : `alle scenario-smokes groen; nog ${partial.length} scenario('s) per schakel i.p.v. één keten (${partial.join(",")})`)
       : "één of meer verplichte scenario's rood",
   });
   ev.scenarios = scenarios; // volledige mapping meeschrijven voor transparantie
+  ev.restartPersistence = restart;
   ev.generatedAt = new Date().toISOString();
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
   fs.writeFileSync(OUT, JSON.stringify(ev, null, 2) + "\n");
 
-  console.log(`\ne2e-manifest → ${path.relative(ROOT, OUT)} · status=${status} · groen=${scenarios.filter(s => s.green).length}/9 · keten=${scenarios.filter(s => s.fullChain).length}/9 · commit=${ev.commitSha}`);
+  console.log(`\ne2e-manifest → ${path.relative(ROOT, OUT)} · status=${status} · groen=${scenarios.filter(s => s.green).length}/9 · keten=${scenarios.filter(s => s.fullChain).length}/9 · restart=${restart.proven ? "ok" : "fout"} · commit=${ev.commitSha}`);
   if (!allGreen) { console.error("::error::niet alle verplichte E2E-scenario's zijn groen"); process.exit(1); }
-  if (!allFull) console.log(`Alle scenario-smokes groen. Nog per schakel (niet als één keten): scenario ${partial.join(", ")}.`);
-  else console.log("Alle negen verplichte scenario's groen én als keten bewezen.");
+  if (!allFull) { console.error(`::error::niet alle scenario's zijn als één keten bewezen (per schakel: ${partial.join(", ")})`); process.exit(1); }
+  if (!restart.proven) { console.error("::error::restart-persistentie niet bewezen (records overleefden de herstart niet)"); process.exit(1); }
+  console.log("Alle negen verplichte scenario's groen én als keten bewezen · restart-persistentie bewezen.");
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });
