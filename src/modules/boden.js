@@ -18,9 +18,10 @@
  * Zonder echte OpenAI-key draait Mona in mock-modus (gratis, voor QA).
  */
 
+const crypto = require("crypto");
 const { can } = require("../lib/auth");
 const { isModuleEnabled, resolveTenantModules } = require("./entitlements");
-const { hasRealKey, createChat } = require("../lib/openai");
+const { hasRealKey, createChat, DEFAULT_MODEL } = require("../lib/openai");
 const { loadPlatformConfig } = require("./platform-config");
 const { availableWidgets, renderWidgets } = require("./dashboards");
 const { terminologyFor } = require("./sectors");
@@ -354,6 +355,18 @@ async function bodenChat(store, tenant, user, history) {
   const tools = toolDefs();
   const convo = [{ role: "system", content: systemPrompt(store, tenant, user) }, ...msgs];
 
+  // Provider-units voor de Mona AI-metering (INT-07). Eén logische assistent-beurt
+  // kan meerdere provider-calls bevatten (tool-loop); we tellen de tokens op en
+  // meten met één stabiele requestId (idempotent in de route). _metering wordt in
+  // de route afgesplitst en NOOIT aan de tenant getoond (geen credits/kost/units).
+  const model = cfg.model || DEFAULT_MODEL;
+  const requestId = "mona_" + crypto.randomBytes(9).toString("hex");
+  let inputTokens = 0, outputTokens = 0;
+  const finish = (reply) => ({
+    reply, proposals, mock: false,
+    _metering: { model, requestId, providerUnits: { inputTokens, outputTokens } },
+  });
+
   for (let i = 0; i < 6; i++) {
     let resp;
     try {
@@ -363,12 +376,18 @@ async function bodenChat(store, tenant, user, history) {
       if (e.status === 429) { const err = new Error("De AI-dienst is even overbelast. Probeer het zo dadelijk opnieuw."); err.status = 502; throw err; }
       throw e;
     }
+    // Echte providerunits uit de API-respons (OpenAI-usage). Ontbreken ze, dan
+    // blijven de tellers op 0 · de metering telt dan als één-request-eenheid.
+    if (resp && resp.usage) {
+      inputTokens += Number(resp.usage.prompt_tokens) || 0;
+      outputTokens += Number(resp.usage.completion_tokens) || 0;
+    }
     const m = resp.choices && resp.choices[0] && resp.choices[0].message;
-    if (!m) return { reply: "…", proposals, mock: false };
+    if (!m) return finish("…");
     convo.push(m); // assistant-turn (kan tool_calls bevatten)
     const calls = m.tool_calls || [];
     if (!calls.length) {
-      return { reply: (m.content || "").trim() || "…", proposals, mock: false };
+      return finish((m.content || "").trim() || "…");
     }
     for (const call of calls) {
       let args = {};
@@ -379,7 +398,7 @@ async function bodenChat(store, tenant, user, history) {
       convo.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(result) });
     }
   }
-  return { reply: "Sorry, dat lukt me even niet. Probeer je vraag anders te formuleren.", proposals, mock: false };
+  return finish("Sorry, dat lukt me even niet. Probeer je vraag anders te formuleren.");
 }
 
 // ── Mock-modus (geen echte key) · gratis, voor QA. Toont dat rechten-scoping werkt ──

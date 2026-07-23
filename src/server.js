@@ -446,6 +446,27 @@ function armResellerIdempotency(req, res, url, user) {
   return false;
 }
 
+// Idempotency-arm voor top-level Super Admin/platform-routes (Integraties, Usage
+// & Billing). Zonder Idempotency-Key gebeurt er niets; met sleutel speelt een
+// eerder 2xx-resultaat terug i.p.v. een dubbele financiele mutatie. Platformbreed
+// gescoopt (tenantId: null · deze routes muteren platformdata, geen tenantdata).
+function armPlatformIdempotency(req, res, url, user) {
+  if (!["POST", "PATCH", "PUT", "DELETE"].includes(req.method)) return false;
+  const idemKey = idempotency.idempotencyKeyFrom(req);
+  if (!idemKey) return false;
+  const cacheKey = idempotency.cacheKeyFor({
+    tenantId: null, actorId: user.id, method: req.method, path: url.pathname, key: idemKey
+  });
+  const replay = idempotency.findReplay(store, cacheKey);
+  if (replay) {
+    res.wfpV1 = null;
+    sendJson(res, replay.status, JSON.parse(replay.body), { "Idempotency-Replayed": "true" });
+    return true;
+  }
+  res.wfpIdem = { store, cacheKey };
+  return false;
+}
+
 // Aanmaak van een licentieaanvraag (23.10): routelaag-switch op kind; alle
 // validatie, catalogus- en prijslogica zit in de servicelaag.
 function createResellerLicenseRequest(body, channelUser) {
@@ -502,6 +523,14 @@ const { pushConfigured, publicKey: pushPublicKey, saveSubscription: savePushSubs
 const { verifyStripeSignature } = require("./modules/stripe-webhook");
 const { seedDemoData, clearDemoData } = require("./modules/demo-seed");
 const { buildUbl, validatePeppol, sendPeppolInvoice, peppolTransportReadiness } = require("./modules/peppol-invoice");
+// ── Integraties, Usage & Billing (INT-01..10) · P0-kern ─────────────────────
+// Gedeeld connectorframework + usage-ledger + Peppol/AI-metering + payrollengine.
+// Elke route loopt eerst door de pure rechtenlaag intAuthz (integrations-authz.js).
+const connectorSvc = require("./modules/connector-service");
+const peppolUsage = require("./modules/peppol-usage");
+const monaAi = require("./modules/mona-ai-metering");
+const payrollEngine = require("./modules/payroll-engine");
+const intAuthz = require("./platform/integrations-authz");
 const quoteSigning = require("./modules/quote-signing");
 const { normalizeDimonaRecord, dimonaRegister } = require("./modules/dimona");
 const { buildPayrollExport, buildPayrollDigest, toCsv: payrollToCsv, payrollReadiness, providerList: payrollProviderList, KNOWN_PROVIDERS: payrollProviders } = require("./platform/social-secretariat");
@@ -4209,6 +4238,322 @@ const httpServer = http.createServer(async (req, res) => {
       return;
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // Integraties, Usage & Billing · Super Admin (platform) API (INT-01..09)
+    // Elke route loopt vóór de service-call door intAuthz (integrations-authz.js):
+    // super_admin + de juiste platformscope. Reseller/tenant krijgen deze rechten
+    // NOOIT (D01/D10 · Mona AI-monitoring is uitsluitend hier zichtbaar).
+    // Financiele mutaties ondersteunen Idempotency-Key (armPlatformIdempotency).
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // ── Super Admin IA (sectie 3.1 + B24): navigatie-registratie die de views
+    //    voedt · Platformintegraties, Usage & Billing en Integratiebeheer ─────
+    if (url.pathname === "/api/admin/usage/ia" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      if (!intAuthz.isSuperAdmin(user)) throw intAuthz.forbiddenError("PLATFORM_SCOPE_REQUIRED");
+      sendJson(res, 200, {
+        ok: true,
+        ia: {
+          platformIntegrations: {
+            label: "Platformintegraties",
+            items: [
+              { key: "connectors", label: "Connectorcatalogus", endpoint: "/api/admin/integrations/connectors" },
+              { key: "events", label: "Foutlogboek & audit", endpoint: "/api/admin/integrations/events" },
+            ],
+          },
+          usageBilling: {
+            label: "Usage & Billing",
+            items: [
+              { key: "overview", label: "Overzicht", endpoint: "/api/admin/usage/overview" },
+              { key: "peppol", label: "Peppol-verbruik", endpoint: "/api/admin/usage/peppol" },
+              { key: "mona", label: "Mona AI-verbruik", endpoint: "/api/admin/usage/mona" },
+              { key: "pricing", label: "Tarieven & providerkosten", endpoint: "/api/admin/usage/pricing" },
+              { key: "limits", label: "Tenantlimieten", endpoint: "/api/admin/ai/tenants" },
+              { key: "periods", label: "Facturatieperiodes", endpoint: "/api/admin/usage/periods" },
+              { key: "alerts", label: "Waarschuwingen", endpoint: "/api/admin/ai/alerts" },
+            ],
+          },
+          integrationManagement: {
+            label: "Integratiebeheer",
+            items: [
+              { key: "tenant-integrations", label: "Tenantkoppelingen", endpoint: "/api/admin/tenant-integrations" },
+              { key: "provider-config", label: "Providerconfiguratie", endpoint: "/api/admin/integrations" },
+            ],
+          },
+        },
+      });
+      return;
+    }
+
+    // ── INT-01 · Connectorcatalogus (manifests) ─────────────────────────────
+    if (url.pathname === "/api/admin/integrations/connectors" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      intAuthz.assertCanPlatform(user, "platform.peppol.provider.manage");
+      sendJson(res, 200, {
+        ok: true,
+        connectors: connectorSvc.listConnectors(store, {
+          category: url.searchParams.get("category") || null,
+          entitlement: url.searchParams.get("entitlement") || null,
+        }),
+      });
+      return;
+    }
+    if (url.pathname === "/api/admin/integrations/connectors" && req.method === "PUT") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      intAuthz.assertCanPlatform(user, "platform.peppol.provider.manage");
+      if (armPlatformIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      sendJson(res, 200, { ok: true, connector: connectorSvc.registerConnector(store, body, user) });
+      return;
+    }
+    // ── INT-01/A16 · Globale connectorhealth, foutlogboek en audit ──────────
+    if (url.pathname === "/api/admin/integrations/events" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      intAuthz.assertCanPlatform(user, "platform.peppol.provider.manage");
+      sendJson(res, 200, {
+        ok: true,
+        events: connectorSvc.listEvents(store, url.searchParams.get("tenantId") || null, {
+          connector: url.searchParams.get("connector") || null,
+          action: url.searchParams.get("action") || null,
+          result: url.searchParams.get("result") || null,
+          limit: Number(url.searchParams.get("limit")) || 100,
+        }),
+      });
+      return;
+    }
+
+    // ── INT-02/03 · Usage & Billing-overzicht (KPI-kaarten · B25) ───────────
+    if (url.pathname === "/api/admin/usage/overview" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      intAuthz.assertCanPlatform(user, "platform.peppol.usage.view");
+      const period = url.searchParams.get("period") || new Date().toISOString().slice(0, 7);
+      const filters = {
+        period,
+        tenantId: url.searchParams.get("tenantId") || null,
+        companyId: url.searchParams.get("companyId") || null,
+        provider: url.searchParams.get("provider") || null,
+      };
+      const peppol = peppolUsage.peppolUsageOverview(store, filters);
+      const kpis = {
+        peppolVolume: peppol.volume, peppolRevenue: peppol.revenue,
+        providerCost: peppol.providerCost, margin: peppol.margin,
+      };
+      // AI-providerkost en Mona-verbruik zijn AI-INZAGE (MONA-AI-04/05): enkel voor
+      // een houder van platform.ai.usage.view. Een op peppol.usage.view gescopte
+      // inzage krijgt de AI-blokken NIET · de scheiding Peppol vs AI zit hier in de
+      // route zelf, niet enkel in de gedeelde 'billing'-scope. Faalt zacht bij lege
+      // periode.
+      if (intAuthz.canPlatform(user, "platform.ai.usage.view")) {
+        try {
+          const rows = monaAi.adminTenantUsage(store, { period });
+          kpis.monaUsage = round2(rows.reduce((s, r) => s + (Number(r.balance.consumed) || 0), 0));
+          kpis.aiCost = round2((store.data.aiProviderUsage || [])
+            .filter(p => p && p.period === period)
+            .reduce((s, p) => s + (Number(p.providerCost) || 0), 0));
+          kpis.tenantsAbove80 = monaAi.tenantsAtOrAbove(store, period, monaAi.WARN_THRESHOLD_PCT).length;
+          kpis.tenantsAbove95 = monaAi.tenantsAtOrAbove(store, period, monaAi.DEFAULT_ALERT_THRESHOLD_PCT).length;
+        } catch (_) { /* geen AI-data voor deze periode */ }
+      }
+      sendJson(res, 200, { ok: true, period, kpis, peppol });
+      return;
+    }
+    // ── INT-04/06 · Peppol-verbruik (doorklik naar individuele events · B25) ─
+    if (url.pathname === "/api/admin/usage/peppol" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      intAuthz.assertCanPlatform(user, "platform.peppol.usage.view");
+      const filters = {
+        period: url.searchParams.get("period") || null,
+        tenantId: url.searchParams.get("tenantId") || null,
+        companyId: url.searchParams.get("companyId") || null,
+        provider: url.searchParams.get("provider") || null,
+        usageType: url.searchParams.get("usageType") || null,
+      };
+      sendJson(res, 200, { ok: true, ...peppolUsage.peppolUsageOverview(store, filters) });
+      return;
+    }
+    // ── INT-06 · Tarieven (klantprijs) en providerkosten instellen ──────────
+    if (url.pathname === "/api/admin/usage/pricing" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      intAuthz.assertCanPlatform(user, "platform.peppol.pricing.manage");
+      sendJson(res, 200, { ok: true, priceRules: peppolUsage.listPriceRules(store), costRules: peppolUsage.listCostRules(store) });
+      return;
+    }
+    if (url.pathname === "/api/admin/usage/pricing" && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      intAuthz.assertCanPlatform(user, "platform.peppol.pricing.manage");
+      if (armPlatformIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      // Vier-ogen op tarieven (sectie 7): een prijswijziging wordt VOORGESTELD (maker)
+      // en is nog niet actief · een tweede Super Admin keurt goed via .../approve.
+      sendJson(res, 200, { ok: true, priceRule: peppolUsage.proposePriceRule(store, body, user) });
+      return;
+    }
+    // Vier-ogencontrole: een voorgestelde prijswijziging goedkeuren (checker != maker).
+    const usagePriceApproveMatch = url.pathname.match(/^\/api\/admin\/usage\/pricing\/([^/]+)\/approve$/);
+    if (usagePriceApproveMatch && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      intAuthz.assertCanPlatform(user, "platform.peppol.pricing.manage");
+      if (armPlatformIdempotency(req, res, url, user)) return;
+      const [, ruleId] = usagePriceApproveMatch;
+      const rule = store.get("usagePriceRules", ruleId);
+      if (!rule || rule.kind !== "price") return sendJson(res, 404, { ok: false, error: "PRICE_RULE_NOT_FOUND" });
+      // Maker-checker: de goedkeurder mag niet de indiener van de prijswijziging zijn.
+      intAuthz.assertFourEyes("platform.peppol.pricing.manage", user.id, rule.proposedById);
+      sendJson(res, 200, { ok: true, priceRule: peppolUsage.approvePriceRule(store, { ruleId }, user) });
+      return;
+    }
+    if (url.pathname === "/api/admin/usage/cost" && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      intAuthz.assertCanPlatform(user, "platform.peppol.pricing.manage");
+      if (armPlatformIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      sendJson(res, 200, { ok: true, costRule: peppolUsage.setCostRule(store, body, user) });
+      return;
+    }
+    // ── INT-06 · Facturatieperiodes (state machine · B22/B26) ───────────────
+    if (url.pathname === "/api/admin/usage/periods" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      intAuthz.assertCanPlatform(user, "platform.peppol.usage.view");
+      sendJson(res, 200, { ok: true, periods: peppolUsage.listPeriods(store, { tenantId: url.searchParams.get("tenantId") || null }) });
+      return;
+    }
+    if (url.pathname === "/api/admin/usage/periods" && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      intAuthz.assertCanPlatform(user, "platform.peppol.pricing.manage");
+      if (armPlatformIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      sendJson(res, 200, { ok: true, period: peppolUsage.openPeriod(store, { tenantId: body.tenantId, period: body.period }, user) });
+      return;
+    }
+    const usagePeriodActionMatch = url.pathname.match(/^\/api\/admin\/usage\/periods\/([^/]+)\/(calculate|transition|approve)$/);
+    if (usagePeriodActionMatch && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      intAuthz.assertCanPlatform(user, "platform.peppol.pricing.manage");
+      if (armPlatformIdempotency(req, res, url, user)) return;
+      const [, periodId, act] = usagePeriodActionMatch;
+      const body = await readBody(req);
+      let result;
+      if (act === "calculate") result = peppolUsage.calculatePeriod(store, { periodId }, user);
+      else if (act === "approve") result = { period: peppolUsage.approvePeriod(store, { periodId }, user) };
+      else result = { period: peppolUsage.transitionPeriod(store, { periodId, to: body.to }, user) };
+      sendJson(res, 200, { ok: true, ...result });
+      return;
+    }
+
+    // ── INT-07/08/09 · Mona AI-verbruik (UITSLUITEND Super Admin · D01/D10) ──
+    if (url.pathname === "/api/admin/usage/mona" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      intAuthz.assertCanPlatform(user, "platform.ai.usage.view");
+      const period = url.searchParams.get("period") || new Date().toISOString().slice(0, 7);
+      const tenantId = url.searchParams.get("tenant") || url.searchParams.get("tenantId") || null;
+      const payload = { ok: true, period, tenants: monaAi.adminTenantUsage(store, { period }) };
+      try { payload.platformBudget = monaAi.platformBudgetStatus(store, { period }); } catch (_) {}
+      if (tenantId) payload.balance = monaAi.creditBalance(store, tenantId, period);
+      sendJson(res, 200, payload);
+      return;
+    }
+    if (url.pathname === "/api/admin/ai/tenants" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      intAuthz.assertCanPlatform(user, "platform.ai.usage.view");
+      const period = url.searchParams.get("period") || new Date().toISOString().slice(0, 7);
+      sendJson(res, 200, { ok: true, period, tenants: monaAi.adminTenantUsage(store, { period }) });
+      return;
+    }
+    if (url.pathname === "/api/admin/ai/limits" && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      intAuthz.assertCanPlatform(user, "platform.ai.tenant_limit.manage");
+      const body = await readBody(req);
+      const { tenantId, ...patch } = body;
+      sendJson(res, 200, { ok: true, limits: monaAi.setTenantLimits(store, tenantId, patch, user) });
+      return;
+    }
+    if (url.pathname === "/api/admin/ai/credits" && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      intAuthz.assertCanPlatform(user, "platform.ai.credits.manage");
+      if (armPlatformIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      sendJson(res, 200, { ok: true, allocation: monaAi.grantAllocation(store, body, user) });
+      return;
+    }
+    if (url.pathname === "/api/admin/ai/adjustments" && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      intAuthz.assertCanPlatform(user, "platform.ai.credits.manage");
+      if (armPlatformIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      sendJson(res, 200, { ok: true, adjustment: monaAi.addAdjustment(store, body, user) });
+      return;
+    }
+    if (url.pathname === "/api/admin/ai/budget" && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      intAuthz.assertCanPlatform(user, "platform.ai.global_limit.manage");
+      const body = await readBody(req);
+      sendJson(res, 200, { ok: true, budget: monaAi.setPlatformBudget(store, body, user) });
+      return;
+    }
+    if (url.pathname === "/api/admin/ai/budget" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      intAuthz.assertCanPlatform(user, "platform.ai.usage.view");
+      const period = url.searchParams.get("period") || new Date().toISOString().slice(0, 7);
+      sendJson(res, 200, { ok: true, ...monaAi.platformBudgetStatus(store, { period }) });
+      return;
+    }
+    // ── INT-09 · 95%-waarschuwingen: bereken, persisteer, verstuur, bevestig ─
+    if (url.pathname === "/api/admin/ai/alerts" && req.method === "GET") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      intAuthz.assertCanPlatform(user, "platform.ai.alerts.manage");
+      const period = url.searchParams.get("period") || new Date().toISOString().slice(0, 7);
+      const alerts = (store.data.usageAlerts || []).filter(a => a && (!period || a.period === period));
+      sendJson(res, 200, { ok: true, period, alerts });
+      return;
+    }
+    if (url.pathname === "/api/admin/ai/alerts/run" && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      intAuthz.assertCanPlatform(user, "platform.ai.alerts.manage");
+      if (armPlatformIdempotency(req, res, url, user)) return;
+      const body = await readBody(req);
+      const period = body.period || new Date().toISOString().slice(0, 7);
+      const result = monaAi.raiseAlerts(store, { period, baseUrl: config.appUrl || "" }, user);
+      // Verstuur de e-mailtaken via de bestaande mailer (best-effort · in-app blijft
+      // altijd staan). Uitputtingswaarschuwingen mogen de request niet blokkeren.
+      for (const mail of result.emails || []) {
+        for (const to of mail.recipients || []) {
+          Promise.resolve(sendMail({ to, subject: mail.subject, text: JSON.stringify({ period: mail.period, percentage: mail.percentage, used: mail.used, limit: mail.limit }), html: `<p>${mail.subject}</p>` })).catch(() => {});
+        }
+      }
+      sendJson(res, 200, { ok: true, created: result.created.length, reminders: result.reminders.length, emails: (result.emails || []).length });
+      return;
+    }
+    const aiAlertAckMatch = url.pathname.match(/^\/api\/admin\/ai\/alerts\/([^/]+)\/ack$/);
+    if (aiAlertAckMatch && req.method === "POST") {
+      const user = actor(req);
+      if (!user) return sendJson(res, 401, { ok: false, error: "Unauthorized" });
+      intAuthz.assertCanPlatform(user, "platform.ai.alerts.manage");
+      sendJson(res, 200, { ok: true, alert: monaAi.acknowledgeAlert(store, aiAlertAckMatch[1], user) });
+      return;
+    }
+
     const tenantMatch = url.pathname.match(/^\/api\/tenants\/([^/]+)\/(.+)$/);
     if (tenantMatch) {
       const user = actor(req);
@@ -4251,10 +4596,38 @@ const httpServer = http.createServer(async (req, res) => {
       //    de tools binnen Mona bewaken zelf de data-rechten) ──
       if (action === "boden" && req.method === "POST") {
         assertInteractiveUser(user);
+        // ── Mona AI hard-block-poort (INT-08 · spec 9.1) ──────────────────────
+        // Vóór ELKE AI-actie: mag deze tenant Mona nog gebruiken? Een hard limit
+        // of aiDisabled blokkeert UITSLUITEND Mona, nooit de rest van de app. De
+        // tenant krijgt enkel de functionele boodschap · NOOIT een cijfer, saldo,
+        // krediet of limiet (result.message; reason blijft Super Admin-logging).
+        const aiModel = ((loadPlatformConfig(store).openai) || {}).model || null;
+        const gate = monaAi.checkAllowed(store, { tenantId, feature: "boden", model: aiModel, userId: user.id });
+        if (!gate.allowed) {
+          const code = ["ai_disabled", "feature_not_allowed", "model_not_allowed"].includes(gate.reason)
+            ? "AI_UNAVAILABLE" : "AI_LIMIT_REACHED";
+          return sendJson(res, 403, { ok: false, code, error: gate.message });
+        }
         const body = await readBody(req);
         try {
           const result = await bodenChat(store, tenant, user, body.messages || []);
-          sendJson(res, 200, { ok: true, ...result });
+          // ── Mona AI-metering (INT-07) NA een geslaagde providercall ─────────
+          // Boek het echte verbruik (credits/95%-alerts weerspiegelen zo live
+          // gebruik). Idempotent op requestId. Mock-modus verbruikt geen
+          // provider-units en levert geen _metering · dan meten we niet. Metering
+          // mag het AI-antwoord nooit breken.
+          const metering = result._metering;
+          if (metering) {
+            try {
+              monaAi.meterRequest(store, {
+                tenantId, feature: "boden", model: metering.model,
+                providerUnits: metering.providerUnits, requestId: metering.requestId, userId: user.id,
+              }, user);
+            } catch (_) { /* metering nooit fataal voor de assistent */ }
+          }
+          // _metering blijft server-intern · nooit naar de tenant (geen units/kost).
+          const { _metering, ...clientResult } = result;
+          sendJson(res, 200, { ok: true, ...clientResult });
         } catch (e) {
           sendJson(res, e.status || 500, { ok: false, error: e.message });
         }
@@ -4283,6 +4656,203 @@ const httpServer = http.createServer(async (req, res) => {
         store.audit({ actor: user.email, tenantId, action: "robaws_import", area: "integrations", detail: `created ${result.report.totals.created} · skipped ${result.report.totals.skipped} · errors ${result.report.totals.errors}` });
         emitDomainEvent(store, { tenantId, eventType: "import.completed", aggregateType: "import", aggregateId: `imp_${Date.now()}`, actor: user.email, correlationId: res.wfpRequestId, data: { source: "robaws", ...result.report.totals } });
         sendJson(res, 201, { ok: true, ...result });
+        return;
+      }
+
+      // ══════════════════════════════════════════════════════════════════════
+      // Integraties & Datahub · tenant API (INT-01/05/10). Elke route loopt vóór
+      // de service door intAuthz.assertCanTenant (capability + tenantscoping).
+      // Mona AI-usage/credits/kosten/limieten zijn hier NOOIT bereikbaar
+      // (D01/D10): geen enkele tenant-route geeft AI-verbruik terug ·
+      // assertMonaAiTenantHidden is de laatste verdedigingslijn. De Peppol-views
+      // strippen providerkost en marge (C11).
+      // ══════════════════════════════════════════════════════════════════════
+
+      // ── Tenant IA "Integraties & Datahub" (sectie 3.1): overzicht dat de view
+      //    voedt · connectorstatus + Peppol-activaties + payrollperiodes ──────
+      if (action === "integrations/hub" && req.method === "GET") {
+        intAuthz.assertCanTenant(user, "integrations.view", { tenantId });
+        intAuthz.assertMonaAiTenantHidden(user);
+        sendJson(res, 200, {
+          ok: true,
+          connections: connectorSvc.listConnections(store, tenant, {}),
+          peppol: peppolUsage.tenantPeppolStatus(store, tenantId),
+          payrollPeriods: store.list("payrollPeriods", tenantId).map(payrollEngine.periodView),
+        });
+        return;
+      }
+
+      // ── INT-01 · Connectorframework (tenant · eigen verbindingen) ──────────
+      if (action === "integrations/catalog" && req.method === "GET") {
+        intAuthz.assertCanTenant(user, "integrations.view", { tenantId });
+        sendJson(res, 200, { ok: true, connectors: connectorSvc.listConnectors(store, {}) });
+        return;
+      }
+      if (action === "integrations/connections" && req.method === "GET") {
+        intAuthz.assertCanTenant(user, "integrations.view", { tenantId });
+        sendJson(res, 200, {
+          ok: true,
+          connections: connectorSvc.listConnections(store, tenant, {
+            companyId: url.searchParams.get("companyId") || null,
+            status: url.searchParams.get("status") || null,
+          }),
+        });
+        return;
+      }
+      if (action === "integrations/connections" && req.method === "POST") {
+        intAuthz.assertCanTenant(user, "integrations.connect", { tenantId });
+        const body = await readBody(req);
+        sendJson(res, 201, { ok: true, connection: connectorSvc.createConnection(store, tenant, body, user) });
+        return;
+      }
+
+      // ── INT-05 · Peppol per juridische onderneming (owner-mode) ────────────
+      if (action === "peppol/status" && req.method === "GET") {
+        intAuthz.assertCanTenant(user, "peppol.settings.manage", { tenantId });
+        sendJson(res, 200, { ok: true, activations: peppolUsage.tenantPeppolStatus(store, tenantId, url.searchParams.get("companyId") || null) });
+        return;
+      }
+      if (action === "peppol/activate" && req.method === "POST") {
+        intAuthz.assertCanTenant(user, "peppol.settings.manage", { tenantId });
+        const body = await readBody(req);
+        // Route-tenantId wint (geen cross-tenant activatie via body).
+        sendJson(res, 200, { ok: true, activation: peppolUsage.activatePeppol(store, { ...body, tenantId }, user) });
+        return;
+      }
+      // Eigen aangerekend verbruik (C11): eigen volume + prijs · NOOIT providerkost/marge.
+      if (action === "peppol/usage" && req.method === "GET") {
+        intAuthz.assertCanTenant(user, "peppol.settings.manage", { tenantId });
+        intAuthz.assertMonaAiTenantHidden(user);
+        const filters = {
+          companyId: url.searchParams.get("companyId") || null,
+          period: url.searchParams.get("period") || null,
+          usageType: url.searchParams.get("usageType") || null,
+        };
+        sendJson(res, 200, {
+          ok: true,
+          charged: peppolUsage.tenantChargedVolume(store, tenantId, filters),
+          events: peppolUsage.listTenantPeppolUsage(store, tenantId, filters),
+        });
+        return;
+      }
+
+      // ── INT-10 · Payroll Exchange Engine (tenant cockpit) ──────────────────
+      if (action === "payroll/providers" && req.method === "GET") {
+        intAuthz.assertCanTenant(user, "payroll.view", { tenantId });
+        sendJson(res, 200, { ok: true, providers: payrollEngine.GO_LIVE_PROVIDERS.map(p => payrollEngine.providerCard(p)) });
+        return;
+      }
+      if (action === "payroll/periods" && req.method === "GET") {
+        intAuthz.assertCanTenant(user, "payroll.view", { tenantId });
+        const companyId = url.searchParams.get("companyId") || null;
+        sendJson(res, 200, {
+          ok: true,
+          periods: store.list("payrollPeriods", tenantId).filter(p => !companyId || p.companyId === companyId).map(payrollEngine.periodView),
+        });
+        return;
+      }
+      if (action === "payroll/periods" && req.method === "POST") {
+        intAuthz.assertCanTenant(user, "payroll.prepare", { tenantId });
+        const body = await readBody(req);
+        sendJson(res, 201, { ok: true, period: payrollEngine.openPeriod(store, tenant, body, user) });
+        return;
+      }
+      // Detail van één periode (regels + exportversies + resultaten) · cockpit-view.
+      const payrollPeriodDetail = action.match(/^payroll\/periods\/([^/]+)$/);
+      if (payrollPeriodDetail && req.method === "GET") {
+        intAuthz.assertCanTenant(user, "payroll.view", { tenantId });
+        const periodId = payrollPeriodDetail[1];
+        const period = store.list("payrollPeriods", tenantId).find(p => p.id === periodId);
+        if (!period) return sendJson(res, 404, { ok: false, error: "Payrollperiode niet gevonden" });
+        sendJson(res, 200, {
+          ok: true,
+          period: payrollEngine.periodView(period),
+          entries: store.list("payrollEntries", tenantId).filter(e => e.periodId === periodId),
+          exports: store.list("payrollExports", tenantId).filter(x => x.periodId === periodId),
+          importResults: store.list("payrollImportResults", tenantId).filter(r => r.periodId === periodId),
+        });
+        return;
+      }
+      // Aanleverregel toevoegen (performance/absence/variable/mutation) · alleen in
+      // een wijzigbare status (engine bewaakt dat). Recht: payroll.prepare.
+      const payrollEntryMatch = action.match(/^payroll\/periods\/([^/]+)\/entries$/);
+      if (payrollEntryMatch && req.method === "POST") {
+        intAuthz.assertCanTenant(user, "payroll.prepare", { tenantId });
+        const body = await readBody(req);
+        sendJson(res, 201, { ok: true, entry: payrollEngine.addEntry(store, tenant, payrollEntryMatch[1], body, user) });
+        return;
+      }
+      // Employee-mapping (Monargo-medewerker → provider employee ID · versie/geldigheid).
+      if (action === "payroll/employee-mappings" && req.method === "GET") {
+        intAuthz.assertCanTenant(user, "payroll.view", { tenantId });
+        sendJson(res, 200, { ok: true, mappings: store.list("payrollEmployeeMappings", tenantId) });
+        return;
+      }
+      if (action === "payroll/employee-mappings" && req.method === "POST") {
+        intAuthz.assertCanTenant(user, "payroll.employee_mapping", { tenantId });
+        const body = await readBody(req);
+        sendJson(res, 201, { ok: true, mapping: payrollEngine.setEmployeeMapping(store, tenant, body, user) });
+        return;
+      }
+      // Codemapping (prestatie-/afwezigheids-/variabele code → providercode).
+      if (action === "payroll/code-mappings" && req.method === "GET") {
+        intAuthz.assertCanTenant(user, "payroll.view", { tenantId });
+        sendJson(res, 200, { ok: true, mappings: store.list("payrollCodeMappings", tenantId) });
+        return;
+      }
+      if (action === "payroll/code-mappings" && req.method === "POST") {
+        intAuthz.assertCanTenant(user, "payroll.code_mapping", { tenantId });
+        const body = await readBody(req);
+        sendJson(res, 201, { ok: true, mapping: payrollEngine.setCodeMapping(store, tenant, body, user) });
+        return;
+      }
+      // Periode-goedkeuring (review → approved). Recht: payroll.period.approve ·
+      // de vier-ogen-SoD (indiener ≠ goedkeurder) wordt door de engine afgedwongen.
+      const payrollApproveMatch = action.match(/^payroll\/periods\/([^/]+)\/approve$/);
+      if (payrollApproveMatch && req.method === "POST") {
+        intAuthz.assertCanTenant(user, "payroll.period.approve", { tenantId });
+        sendJson(res, 200, { ok: true, period: payrollEngine.approvePeriod(store, tenant, { periodId: payrollApproveMatch[1] }, user) });
+        return;
+      }
+      // Generieke periode-transitie · elke doelstatus achter het bijhorende recht.
+      const payrollTransitionMatch = action.match(/^payroll\/periods\/([^/]+)\/transition$/);
+      if (payrollTransitionMatch && req.method === "POST") {
+        const body = await readBody(req);
+        const to = String(body.to || "");
+        const PAYROLL_TRANSITION_PERM = {
+          voorbereiding: "payroll.prepare", review: "payroll.period.review",
+          approved: "payroll.period.approve", ready: "payroll.export",
+          delivered: "payroll.submit", processed: "payroll.submit",
+          correction: "payroll.correct", closed: "payroll.submit",
+        };
+        const perm = PAYROLL_TRANSITION_PERM[to];
+        if (!perm) return sendJson(res, 400, { ok: false, error: `Onbekende doelstatus '${to}'`, code: "PAYROLL_TARGET_INVALID" });
+        intAuthz.assertCanTenant(user, perm, { tenantId });
+        sendJson(res, 200, { ok: true, period: payrollEngine.transitionPeriod(store, tenant, { periodId: payrollTransitionMatch[1], to }, user) });
+        return;
+      }
+      // Exportversie bouwen (canoniek pakket + checksum, previousVersion-keten).
+      const payrollExportMatch = action.match(/^payroll\/periods\/([^/]+)\/export$/);
+      if (payrollExportMatch && req.method === "POST") {
+        intAuthz.assertCanTenant(user, "payroll.export", { tenantId });
+        const body = await readBody(req).catch(() => ({}));
+        sendJson(res, 201, { ok: true, export: payrollEngine.buildAndStoreExport(store, tenant, payrollExportMatch[1], { employer: body.employer || null }, user) });
+        return;
+      }
+      // Provideraanlevering registreren (import-resultaat · processed/rejected/...).
+      const payrollImportMatch = action.match(/^payroll\/periods\/([^/]+)\/import-result$/);
+      if (payrollImportMatch && req.method === "POST") {
+        intAuthz.assertCanTenant(user, "payroll.submit", { tenantId });
+        const body = await readBody(req);
+        sendJson(res, 201, { ok: true, result: payrollEngine.recordImportResult(store, tenant, payrollImportMatch[1], body, user) });
+        return;
+      }
+      // Correctietraject openen op een aangeleverde/verwerkte/afgesloten periode.
+      const payrollCorrectMatch = action.match(/^payroll\/periods\/([^/]+)\/correct$/);
+      if (payrollCorrectMatch && req.method === "POST") {
+        intAuthz.assertCanTenant(user, "payroll.correct", { tenantId });
+        const body = await readBody(req);
+        sendJson(res, 200, { ok: true, correction: payrollEngine.correctPeriod(store, tenant, payrollCorrectMatch[1], body, user) });
         return;
       }
 

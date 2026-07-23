@@ -438,6 +438,16 @@ function sendPeppol(store, tenant, invoiceId, actor, payload = {}) {
     area: "billing",
     detail: response.ok ? invoiceId : `${invoiceId}:${response.errorCode}`
   });
+  // Usage-metering (INT-04): enkel bij technische acceptatie door de provider.
+  // Idempotent per document + operatie · owner-mode bewaakt in recordInvoiceUsage.
+  // Metering mag het verzendresultaat NOOIT breken (best-effort).
+  if (response.ok) {
+    try {
+      require("./peppol-usage").recordInvoiceUsage(store, tenant, invoice, {
+        provider: response.provider, providerReference: response.providerReference, billableAt: event.at,
+      }, actor);
+    } catch (_) { /* zacht falen · de factuur is verzonden, enkel de meting ontbreekt */ }
+  }
   return { tenant: next, event };
 }
 

@@ -1824,3 +1824,44 @@ test("templates: superadmin CRUD + live preview + render factuur + 403-gating", 
   const jan = await login("jan@demobouw.be", "Demo2026!");
   assert.equal((await fetch(`${BASE}/api/tenants/t_demo/templates`, { headers: { Authorization: `Bearer ${jan.token}` } })).status, 403);
 });
+
+// ── Usage & Billing-overzicht: AI-inzage gescheiden van Peppol-inzage ────────
+test("usage-overview: Peppol-KPI's altijd; AI-blokken enkel met AI-inzage; tenant 403", async () => {
+  const god = await login("super@workflowpro.be", "Demo2026!");
+  const H = t => ({ Authorization: `Bearer ${t}` });
+  const r = await fetch(`${BASE}/api/admin/usage/overview`, { headers: H(god.token) });
+  assert.equal(r.status, 200);
+  const d = await r.json();
+  assert.equal(d.ok, true);
+  // Peppol-KPI's staan er altijd.
+  assert.ok("peppolVolume" in d.kpis && "peppolRevenue" in d.kpis && "providerCost" in d.kpis, "Peppol-KPI's aanwezig");
+  // god draagt platform.ai.usage.view -> de AI-blokken worden toegevoegd.
+  assert.ok("monaUsage" in d.kpis && "aiCost" in d.kpis, "AI-inzage ziet de AI-KPI's");
+  // Een tenantgebruiker mag het platform-overzicht niet.
+  const jan = await login("jan@demobouw.be", "Demo2026!");
+  assert.equal((await fetch(`${BASE}/api/admin/usage/overview`, { headers: H(jan.token) })).status, 403);
+});
+
+// ── Vier-ogen op tarieven: prijswijziging is maker-checker (sectie 7) ────────
+test("usage-pricing: prijswijziging pending -> maker mag niet zelf goedkeuren -> tweede admin keurt goed", async () => {
+  const god = await login("super@workflowpro.be", "Demo2026!");
+  const H = t => ({ Authorization: `Bearer ${t}`, "Content-Type": "application/json" });
+  // Maker (god) stelt een prijswijziging VOOR -> pending, nog niet actief.
+  const proposed = await fetch(`${BASE}/api/admin/usage/pricing`, { method: "POST", headers: H(god.token), body: JSON.stringify({ level: "platform_default", usageType: "peppol.outbound_invoice", price: 0.42 }) });
+  assert.equal(proposed.status, 200);
+  const pr = (await proposed.json()).priceRule;
+  assert.equal(pr.status, "pending_approval");
+  assert.equal(pr.active, false);
+  // De maker mag zijn EIGEN prijswijziging niet goedkeuren (vier-ogen).
+  const self = await fetch(`${BASE}/api/admin/usage/pricing/${pr.id}/approve`, { method: "POST", headers: H(god.token), body: "{}" });
+  assert.equal(self.status, 403, "zelf-goedkeuring wordt geweigerd");
+  // Een tweede Super Admin met billing-scope keurt wel goed.
+  const email = `pricing-checker-${Date.now()}@workflowpro.be`;
+  const pass = "CheckerSterk2026!@#";
+  const c = await fetch(`${BASE}/api/admin/staff`, { method: "POST", headers: H(god.token), body: JSON.stringify({ name: "Pricing Checker", email, password: pass, platformScopes: ["billing"] }) });
+  assert.equal(c.status, 201);
+  const checker = await activateWithLink((await c.json()).activationLink, pass);
+  const ok = await fetch(`${BASE}/api/admin/usage/pricing/${pr.id}/approve`, { method: "POST", headers: H(checker.token), body: "{}" });
+  assert.equal(ok.status, 200, "tweede admin keurt goed");
+  assert.equal((await ok.json()).priceRule.active, true, "de prijswijziging is na goedkeuring actief");
+});
