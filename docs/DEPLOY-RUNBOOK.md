@@ -61,6 +61,39 @@ functie optioneel; `scripts/check-production-config.js` valideert het geheel.
 6. **Leg bewijs vast**: `node scripts/generate-evidence-bundle.js` en commit
    het dossier uit `docs/evidence/`.
 
+### 3.1 Stop de oude instantie EERST (single-writer, CTO-03)
+
+Dit platform verdraagt bewust maar **een** schrijver: de instantie die de
+PostgreSQL advisory lock op `platform_state` houdt. Die guard bestaat omdat
+overlappende schrijvers eerder stil dataverlies veroorzaakten bij een deploy.
+
+Gevolg voor de deploystrategie: een **zero-downtime deploy werkt hier niet**.
+Platformen als Render starten de nieuwe instantie naast de oude en stoppen de
+oude pas als de nieuwe gezond is. De nieuwe wacht dan op een lock die de oude
+pas loslaat bij het stoppen, en dat loopt vast. De deploy faalt na
+`SINGLE_WRITER_WAIT_MS` (standaard 60 s) met:
+
+```
+[start] kon de opslag niet initialiseren: Single-writer-lock niet verkregen:
+        een andere instantie schrijft nog naar platform_state.
+```
+
+**Werkwijze:** zorg dat de oude instantie gestopt is voor de nieuwe start.
+
+- Render: **Suspend** de service, wacht tot ze echt gestopt is, en **Resume**.
+  Gelijkwaardig: schaal naar 0 instanties en daarna terug naar 1.
+- Kubernetes: `strategy.type: Recreate` (niet `RollingUpdate`).
+- Docker Compose / handmatig: `docker stop` de oude container voor je de
+  nieuwe start.
+
+Reken op ongeveer een minuut onbereikbaarheid. Dat is de prijs van de
+single-writer-garantie.
+
+**Niet doen:** `SINGLE_WRITER_WAIT_MS` verhogen lost niets op, want de oude
+instantie geeft de lock pas vrij als ze stopt. En `SINGLE_WRITER=false` zetten
+om de deploy erdoor te krijgen heft precies de bescherming op die het eerdere
+dataverlies moest voorkomen.
+
 ## 4. Rollback
 
 - **Applicatie**: het vorige image-tag (of de vorige commit) opnieuw uitrollen;
