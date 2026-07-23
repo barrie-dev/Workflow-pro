@@ -98,35 +98,36 @@ if (!LIVE || !/^postgres/.test(LIVE)) {
 
     // ── Instantie A: de draaiende productie-instantie ────────────────────────
     const a = boot(portA);
+    // CTO3-01: readiness (/api/ready 200) is het signaal dat de instantie de
+    // staat geladen heeft en de schrijver is · niet liveness.
     const aReady = await until(async () => {
-      const h = await get(portA, "/api/health");
-      return h.status === 200 && h.body.status !== "booting" ? h : null;
+      const r = await get(portA, "/api/ready");
+      return r.status === 200 ? r : null;
     }, 90000);
-    assert.ok(aReady, `instantie A werd niet volledig gezond:\n${a.slog}`);
-    assert.equal(aReady.body.storeReady, true, "A heeft de staat geladen en is de schrijver");
+    assert.ok(aReady, `instantie A werd niet ready:\n${a.slog}`);
+    assert.equal(aReady.body.ok, true, "A is ready · staat geladen en enige schrijver");
 
     // ── Instantie B start ERNAAST, zoals een zero-downtime deploy doet ───────
     const b = boot(portB);
 
-    // 1. B luistert METEEN en is healthy · anders stopt het platform de oude
-    //    instantie nooit en ontstaat de deadlock opnieuw.
-    const bBooting = await until(async () => {
+    // 1. B luistert METEEN (liveness), maar is nog NIET ready · anders stopt het
+    //    platform de oude instantie nooit en ontstaat de deadlock opnieuw.
+    const bLive = await until(async () => {
       const h = await get(portB, "/api/health");
       return h.status === 200 ? h : null;
     }, 30000);
-    assert.ok(bBooting, `instantie B werd niet gezond terwijl A de lock hield:\n${b.slog}`);
-    assert.equal(bBooting.body.status, "booting", "B meldt eerlijk dat ze nog opstart");
+    assert.ok(bLive, `instantie B werd niet levend terwijl A de lock hield:\n${b.slog}`);
+    assert.notEqual(bLive.body.status, "ready", "B is nog niet ready terwijl A de lock houdt");
 
-    // 2. B mag intussen NIETS anders bedienen: geen lezen/schrijven op een half
-    //    geladen staat.
+    // 2. B mag intussen NIETS bedienen en is niet ready: geen lezen/schrijven op
+    //    een half geladen staat.
     const geweigerd = await get(portB, "/api/ready");
-    assert.equal(geweigerd.status, 503, "B weigert ander verkeer tijdens het opstarten");
-    assert.equal(geweigerd.body.code, "BOOTING");
+    assert.equal(geweigerd.status, 503, "B is niet ready tijdens het opstarten");
+    assert.equal(geweigerd.body.code, "NOT_READY");
 
     // 3. A draait ongestoord door: de deploy verstoort de lopende dienst niet.
-    const aNog = await get(portA, "/api/health");
-    assert.equal(aNog.status, 200);
-    assert.notEqual(aNog.body.status, "booting", "A blijft de actieve schrijver");
+    const aNog = await get(portA, "/api/ready");
+    assert.equal(aNog.status, 200, "A blijft de actieve, ready schrijver");
 
     // ── Het platform stopt de oude instantie · haar sessie eindigt en de
     //    advisory lock komt vrij. We reproduceren dat server-side (zie kop). ──
@@ -144,18 +145,14 @@ if (!LIVE || !/^postgres/.test(LIVE)) {
     for (const row of held.rows) await admin.query("select pg_terminate_backend($1)", [row.pid]);
     await admin.end();
 
-    // 4. B neemt de lock over en wordt vanzelf volledig operationeel · precies
-    //    wat eerder onmogelijk was.
+    // 4. B neemt de lock over en wordt vanzelf ready · precies wat eerder
+    //    onmogelijk was.
     const bReady = await until(async () => {
-      const h = await get(portB, "/api/health");
-      return h.status === 200 && h.body.status !== "booting" ? h : null;
+      const r = await get(portB, "/api/ready");
+      return r.status === 200 ? r : null;
     }, 30000);
-    assert.ok(bReady, `instantie B nam de writer-lock niet over nadat A vrijkwam:\n${b.slog}`);
-    assert.equal(bReady.body.storeReady, true, "B heeft de staat geladen");
+    assert.ok(bReady, `instantie B werd niet ready nadat A vrijkwam:\n${b.slog}`);
+    assert.equal(bReady.body.ok, true, "B is ready · staat geladen");
     assert.match(b.slog, /single-writer-lock verkregen/i, "B logt expliciet dat ze de schrijver is");
-
-    // 5. En B bedient nu echt verkeer.
-    const bReadyEp = await get(portB, "/api/ready");
-    assert.equal(bReadyEp.status, 200, `B moet na de overname readiness melden (kreeg ${bReadyEp.status})`);
   });
 }
