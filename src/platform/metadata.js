@@ -36,6 +36,21 @@ const COLLECTION_CLASSIFICATION = {
   secrets: "security_sensitive",
   resellers: "confidential",
   supportGrants: "confidential",
+  // Integraties, Usage & Billing (INT-01..10). Credentials zijn secretreferenties;
+  // usage/credits/kosten/limieten zijn financiele gegevens (provider_unit_cost en
+  // marge blijven bovendien Super Admin-only in de servicelaag).
+  integrationCredentials: "security_sensitive",
+  usageEvents: "financial",
+  usageAdjustments: "financial",
+  usagePriceRules: "financial",
+  usageCostRules: "financial",
+  usageBillingPeriods: "financial",
+  usageBillingLines: "financial",
+  tenantUsageLimits: "financial",
+  tenantCreditAllocations: "financial",
+  platformUsageBudgets: "financial",
+  aiProviderUsage: "financial",
+  aiFeatureCreditRates: "financial",
 };
 
 function isClassification(v) { return CLASSIFICATIONS.includes(v); }

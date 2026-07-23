@@ -297,17 +297,32 @@ async function sendPeppolInvoice(store, tenant, invoice) {
       transport = "mock";
     }
 
+    const acceptedAt = new Date().toISOString();
     store.update("invoices", invoice.id, {
       peppolStatus: status,
       peppolReference: reference,
       peppolProvider: transport,
-      peppolSentAt: new Date().toISOString(),
+      peppolSentAt: acceptedAt,
       peppolAttempts: attempt,
       peppolError: null,
       ublXml: ubl,
-      updatedAt: new Date().toISOString(),
+      updatedAt: acceptedAt,
     });
     store.audit({ actor: "peppol", tenantId: tenant.id, action: "peppol_sent", area: "facturen", detail: `${invoice.number} → ${transport} (${status}) · poging ${attempt}` });
+    // Usage-metering (INT-04): het Access Point heeft het document technisch
+    // aanvaard · boek exact 1 billable event op dit acceptatiemoment. Idempotent
+    // per document + operatie, dus een retry (poging n+1) boekt geen tweede event.
+    // Owner-mode wordt in recordInvoiceUsage bewaakt (verzendt het boekhoudpakket,
+    // dan meet Monargo niet). Metering mag de verzending NOOIT breken.
+    try {
+      require("./peppol-usage").recordInvoiceUsage(store, tenant, invoice, {
+        provider: transport, providerReference: reference, billableAt: acceptedAt,
+        sandbox: !!(cfg.peppol && cfg.peppol.sandbox),
+      }, { email: "peppol" });
+    } catch (meterErr) {
+      // Zacht falen · de factuur is verzonden; enkel de meting ontbreekt.
+      try { store.audit({ actor: "peppol", tenantId: tenant.id, action: "peppol_usage_meter_failed", area: "facturen", detail: `${invoice.number} · ${meterErr.message}` }); } catch (_) {}
+    }
     return { ok: true, provider: transport, reference, status, attempts: attempt };
   } catch (e) {
     recordFailure(e);

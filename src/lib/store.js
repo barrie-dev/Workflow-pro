@@ -144,7 +144,47 @@ const REQUIRED_COLLECTIONS = [
   "bundles",
   "postedWorkers",
   "templates",
-  "migrationHistory"
+  "migrationHistory",
+  // ── Integraties, Usage & Billing (INT-01..10) · P0-kern ─────────────────────
+  // Connectorframework (INT-01 · connector-service.js). integrationConnectors
+  // draagt platformrijen (tenantId: null); de rest is tenant/company-gescoopt.
+  "integrationConnectors",
+  "integrationConnections",
+  "integrationCredentials",
+  "integrationMappings",
+  "integrationSyncJobs",
+  "integrationSyncItems",
+  "integrationEvents",
+  // Usage-event-ledger + pricing + billing-periodes (INT-02/03/06 · usage-ledger.js,
+  // peppol-usage.js). usageEvents is de GEDEELDE immutable ledger (Peppol EN AI).
+  // Prijs-/kostregels + limieten + budgetten dragen tenantId:null + subjectTenantId
+  // zodat store.list(col, tenantId) ze nooit aan een tenant lekt.
+  "usageEvents",
+  "usageAdjustments",
+  "usagePriceRules",
+  "usageCostRules",
+  "usageBillingPeriods",
+  "usageBillingLines",
+  "peppolActivations",
+  // Mona AI metering, credits, limieten en waarschuwingen (INT-07/08/09 ·
+  // mona-ai-metering.js). Uitsluitend Super Admin-zichtbaar.
+  "tenantUsageLimits",
+  "tenantCreditAllocations",
+  "platformUsageBudgets",
+  "usageAlertRules",
+  "usageAlerts",
+  "aiFeatureCreditRates",
+  "aiProviderUsage",
+  // Payroll Exchange Engine (INT-10 · payroll-engine.js). Canoniek loonmodel per
+  // onderneming, immutable exportversies met checksum, vier-ogencontrole.
+  "payrollConnections",
+  "payrollEmployeeMappings",
+  "payrollCodeMappings",
+  "payrollPeriods",
+  "payrollEntries",
+  "payrollExports",
+  "payrollImportResults",
+  "payrollCorrections"
 ];
 
 const initialAdminPassword = process.env.WORKFLOWPRO_INITIAL_ADMIN_PASSWORD
