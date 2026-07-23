@@ -72,7 +72,11 @@ const config = {
       if (m === "require" || m === "verify-full") return m;
       return APP_ENV === "production" ? "verify-full" : "require";
     })(),
-    caCert: process.env.DATABASE_CA_CERT || ""
+    // PEM van de root-CA van de databaseprovider. Veel dashboards en shells
+    // platten een meerregelige waarde tot letterlijke \n-reeksen; die zetten we
+    // terug om, anders krijgt Node een onleesbaar certificaat en faalt de boot
+    // met dezelfde onduidelijke ketenfout als een ontbrekende CA.
+    caCert: String(process.env.DATABASE_CA_CERT || "").replace(/\\n/g, "\n").trim()
   },
   // CTO-03 · single-writer-guard: in productie/staging default AAN. Eén
   // instantie houdt de PostgreSQL advisory lock; een nieuwe deploy wacht
