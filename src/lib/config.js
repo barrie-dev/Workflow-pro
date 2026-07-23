@@ -87,7 +87,12 @@ const config = {
     if (v === "false") return false;
     return APP_ENV === "production" || APP_ENV === "staging";
   })(),
-  singleWriterWaitMs: Number(process.env.SINGLE_WRITER_WAIT_MS) || 60000,
+  // Wachttijd op de writer-lock. De server luistert al tijdens dit wachten (zie
+  // de bootgate in server.js), dus de healthcheck is groen en het platform durft
+  // de oude instantie te stoppen · daarna valt de lock vrij. Snel falen is
+  // daarom niet langer gewenst: 5 minuten geeft een trage rolling deploy ruim
+  // de tijd, en blijft een plafond voor het geval er echt iets vasthangt.
+  singleWriterWaitMs: Number(process.env.SINGLE_WRITER_WAIT_MS) || 300000,
   // CRM-bronschakelaar (handover 5.4 stap 5-7): legacy | shadow | pg.
   // shadow = legacy leidend + pg leest mee (afwijkingen naar telemetrie);
   // pg = cutover, met dual-write zodat rollback een flag-flip blijft.

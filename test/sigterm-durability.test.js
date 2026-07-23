@@ -68,14 +68,18 @@ if (!LIVE || !/^postgres/.test(LIVE)) {
       await admin.end();
     } catch (_) {}
   });
+  // Wacht op READINESS, niet op liveness. Sinds de bootgate (CTO-03) geeft
+  // /api/health meteen 200 met status "booting" zodat het platform de instantie
+  // gezond ziet en de oude durft te stoppen · maar de server bedient pas echt
+  // verkeer als /api/ready 200 geeft (staat geladen, writer-lock verkregen).
   async function waitHealthy(handle, ms = 30000) {
     const deadline = Date.now() + ms;
     while (Date.now() < deadline) {
-      try { const r = await fetch(`${BASE}/api/health`); if (r.ok) return; } catch (_) {}
+      try { const r = await fetch(`${BASE}/api/ready`); if (r.ok) return; } catch (_) {}
       if (handle.proc.exitCode !== null) throw new Error("server stopte tijdens boot:\n" + handle.log());
       await new Promise(r => setTimeout(r, 300));
     }
-    throw new Error("server niet gezond binnen de tijd:\n" + handle.log());
+    throw new Error("server niet klaar binnen de tijd:\n" + handle.log());
   }
   async function login() {
     const r = await fetch(`${BASE}/api/auth/login`, {

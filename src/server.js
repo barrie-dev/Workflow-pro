@@ -1192,8 +1192,37 @@ function serveStatic(req, res) {
   });
 }
 
+// CTO-03 · bootgate. Het proces gaat METEEN luisteren, nog voor de store is
+// geladen. Reden: dit platform verdraagt maar EEN schrijver, en een platform
+// dat zero-downtime deployt (Render, Kubernetes RollingUpdate) stopt de oude
+// instantie pas zodra de nieuwe gezond is. Wachtten we met luisteren tot we de
+// writer-lock hadden, dan werd de nieuwe instantie nooit gezond, stopte de oude
+// nooit en kwam de lock nooit vrij · een deadlock die elke deploy liet falen.
+// Door eerst te luisteren wordt de healthcheck groen, stopt het platform de
+// oude instantie, valt de lock vrij en neemt deze instantie hem over.
+// Zolang dat niet rond is beantwoorden we ALLEEN /api/health: niemand mag op
+// een half geladen staat lezen of schrijven.
+// De gate geldt ALLEEN wanneer de store asynchroon laadt (pg-modus met de
+// writer-lock-wachttijd). In JSON-modus (dev/test) is de staat al synchroon
+// geladen · dan is er niets om op te wachten en start de server meteen open.
+let wfpBooting = storeNeedsAsyncLoad;
+
 const httpServer = http.createServer(async (req, res) => {
   const url = new URL(req.url, config.appUrl);
+  if (wfpBooting) {
+    if (url.pathname === "/api/health") {
+      // Bewust zonder store-toegang: die is er nog niet.
+      return sendJson(res, 200, {
+        ok: true, app: "Monargo One Fullstack", status: "booting",
+        appEnv: config.appEnv, version: config.appVersion, commitSha: config.commitSha,
+      });
+    }
+    res.setHeader("retry-after", "5");
+    return sendJson(res, 503, {
+      ok: false, code: "BOOTING",
+      error: "De server start op en wacht op de schrijfrechten. Probeer het zo opnieuw.",
+    });
+  }
   let errorTenantId = url.pathname.match(/^\/api\/tenants\/([^/]+)\//)?.[1] || null;
   // Correlatie-id (backend-handoff): elk antwoord draagt een requestId zodat een
   // testerscreenshot naar de juiste serverlog leidt. Geen gevoelige data.
@@ -9192,6 +9221,12 @@ const httpServer = http.createServer(async (req, res) => {
 
 // Eerst de data laden (netwerk-adapter), dan pas luisteren. Zo valt er nooit
 // een verzoek op een half-geïnitialiseerde store.
+// Luister VOORDAT de store geladen is · zie de bootgate hierboven. Zonder dit
+// zag het platform "No open ports detected" en werd de instantie nooit gezond.
+httpServer.listen(config.port, () => {
+  console.log(`Monargo One Fullstack luistert op poort ${config.port} · bezig met opstarten…`);
+});
+
 (async () => {
   if (storeNeedsAsyncLoad) {
     // Schema vóór data (CTO-review 4.3-vondst): de transactionele flush schrijft
@@ -9205,7 +9240,18 @@ const httpServer = http.createServer(async (req, res) => {
     await store.initAsync();
     console.log(`  Database  : verbonden (${config.storageAdapter})`);
   }
+  // Opstarttaken opzetten (incl. de eerste achtergrond-backupronde) TERWIJL de
+  // bootgate nog dicht is.
   startServer();
+  // Laat die eerste achtergrondronde lopen en de boot-mutaties (seed + backup)
+  // volledig wegschrijven VOORDAT we verkeer aannemen. Zonder dit kan de eerste
+  // boot-flush racen met de flush van de allereerste request-write · onder een
+  // harde kill vlak daarna gaat die write dan verloren. Settelen = deterministisch.
+  await new Promise(res => setImmediate(res));
+  if (store.isDirty && store.isDirty()) { try { await store.flush(); } catch (_) {} }
+  // Pas nu is de staat geladen, geflusht en zijn we de enige schrijver: de
+  // bootgate gaat open en het volledige verkeer wordt bediend.
+  wfpBooting = false;
 })().catch(err => {
   console.error(`[start] kon de opslag niet initialiseren: ${err.message}`);
   // Een TLS-ketenfout is bijna altijd een ONTBREKENDE root-CA, niet een defecte
@@ -9218,12 +9264,13 @@ const httpServer = http.createServer(async (req, res) => {
   // nieuwe gezond is · dat loopt vast. De uitweg is een stop-eerst-deploy.
   if (/single-writer/i.test(err.message || "")) {
     console.error(
-      "[start] deploy-hint: dit platform verdraagt maar EEN schrijver. Een deploy die de nieuwe " +
-      "instantie naast de oude start, loopt hier altijd vast. Stop de oude instantie eerst " +
-      "(op Render: Suspend en daarna Resume, of schaal naar 0 instanties en terug naar 1) en " +
-      "deploy dan opnieuw. SINGLE_WRITER_WAIT_MS verhogen helpt NIET, want de oude instantie " +
-      "geeft de lock pas vrij als ze stopt. Zet SINGLE_WRITER niet uit: die guard bestaat juist " +
-      "omdat overlappende schrijvers eerder stil dataverlies op platform_state veroorzaakten."
+      `[start] deploy-hint: dit platform verdraagt maar EEN schrijver en deze instantie kreeg de ` +
+      `lock niet binnen ${Math.round(config.singleWriterWaitMs / 1000)} s. Normaal lost dit zichzelf op: ` +
+      "de server luistert al tijdens het wachten, dus de healthcheck wordt groen, het platform stopt " +
+      "de oude instantie en de lock valt vrij. Blijft het hangen, dan draait er nog een oude instantie " +
+      "die niet gestopt wordt: stop die expliciet (op Render: Suspend en daarna Resume, of schaal naar " +
+      "0 instanties en terug naar 1). Zet SINGLE_WRITER niet uit: die guard bestaat juist omdat " +
+      "overlappende schrijvers eerder stil dataverlies op platform_state veroorzaakten."
     );
   }
   if (/self[- ]signed|certificate|CERT_|unable to (get|verify)/i.test(err.message || "")) {
@@ -9239,7 +9286,12 @@ const httpServer = http.createServer(async (req, res) => {
 });
 
 function startServer() {
-  httpServer.listen(config.port, () => {
+  // Luisteren gebeurt al bij het opstarten (zie de bootgate); hier draaien we
+  // alleen nog de opstarttaken die een geladen store nodig hebben. Synchroon
+  // (niet via setImmediate): zo draaien ze in exact dezelfde ordening t.o.v.
+  // store-ready als voorheen · een extra tick liet de eerste achtergrond-flush
+  // racen met een vroege request-write onder een harde kill.
+  (() => {
   console.log(`Monargo One Fullstack draait op http://localhost:${config.port}`);
   console.log(`  Omgeving  : ${config.isProduction ? "production" : "development"}`);
   console.log(`  Opslag    : ${config.storageAdapter}`);
@@ -9449,7 +9501,7 @@ function startServer() {
   };
   setTimeout(runWebhookDelivery, 30 * 1000).unref();
   setInterval(runWebhookDelivery, 60 * 1000).unref();
-  });
+  })();
 }
 
 // ── Graceful shutdown ─────────────────────────────────────────
