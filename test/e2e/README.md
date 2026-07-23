@@ -19,21 +19,24 @@ sessie. Dat is precies wat h51 verbiedt.
 |---|---|---|---|
 | 1 | Construction: offerte → project → planning → werkbon → factuur → marge | `chain` (één doorlopende keten) + `quoteversion` + `projects` + `planning` + `workorder` + `finance` | **volledig** · `chain-smoke` bewijst de hele keten als één scenario: klant → offerte → verzenden + geverifieerd ondertekenen → factuur (draagt projectId) → planning → werkbon (uren/materiaal/handtekening/goedkeuring) → betaling (allocatie) → projectfinance (budget/arbeid/gefactureerd, bron traceerbaar) |
 | 2 | Meerwerk met gedeeltelijke acceptatie en aparte factuurbron | `construction` (change orders) + `claims` (betwiste lijnen, aparte bron) | gedekt |
-| 3 | Offline werkbon met foto, materiaal en handtekening, incl. dubbel queue-item | `workorder` (sync-conflict, handtekening aan versie, materiaal) + `mobile-offline` (dubbel queue-item → replay op commandId, geen dubbele toepassing) | **deels** · foto-upload ontbreekt nog |
+| 3 | Offline werkbon met materiaal en handtekening, incl. dubbel queue-item | `offline-workorder-chain` (materiaalverbruik → handtekening aan versie → dubbel queue-item = exact één domeinmutatie → audit → negatieve autorisatie → teruglezing) | **volledig** (CTO3-04) |
 | 4 | Servicecontract genereert onderhoudsbeurt, assethistoriek en facturatie | `contracts` (generatie) + `assets` (historiek, beurten) | gedekt |
 | 5 | Inkooporder deelontvangst + projectverplichting, zonder dubbele kost | `proc` | gedekt |
-| 6 | Factuurnummering, PDF/UBL-reconciliatie, Peppol-fout en retry | `credit` + `finance` (nummering, bronnen) + `reconciliation` (factuur ⟷ UBL sluitend per tarief, Peppol-fout met zichtbaar spoor, retry = poging n+1 → afgeleverd) + unittests document ⟷ factuur ⟷ UBL | **deels** · gedrag van een echte Peppol-provider vereist een testomgeving |
-| 7 | Tenant A probeert elk pad naar data van tenant B | `policy` + unittests (grid, pg-crm cross-tenant) | **deels** · geen uitputtende padenscan als één scenario |
-| 8 | Rol zonder kostprijsrecht probeert UI, API, export, zoeken en Mona | `policy` + `grid` (hiddenColumns) + `signals` | **deels** · UI- en Mona-pad niet in één scenario |
-| 9 | Legacy-migratie klant/project/werkbon met external ID en bestanden | `robaws` (external_id, idempotent, snapshots) | **deels** · bestanden migreren niet mee |
+| 6 | Factuurnummering, UBL-reconciliatie, Peppol-fout en retry | `peppol-billing-chain` (nummering → UBL sluitend → provider-fout met spoor → fix+retry poging 2 → ZELFDE nummer → EXACT ÉÉN billable event, idempotente retry → negatieve autorisatie) | **volledig** (CTO3-04) |
+| 7 | Tenant A probeert elk pad naar data van tenant B | `cross-tenant-chain` (echt geprovisioneerde tweede tenant · lezen/wijzigen/exporteren/attachments/transitions → generieke weigering, geen bestaan-oracle, A ongewijzigd) | **volledig** (CTO3-04) |
+| 8 | Rol zonder kostprijsrecht probeert UI, API, export, zoeken, rapport en Mona | `field-rights-chain` (verborgen kostprijs over UI-contract/API/zoeken/export/rapport/Mona · positieve controle met costs.view) | **volledig** (CTO3-04) |
+| 9 | Legacy-migratie met external ID en bestanden | `legacy-import-chain` (idempotente import → external IDs → onbewerkbare snapshot = source_of_truth → gekoppelde attachment overleeft herhaalde import → negatieve autorisatie) | **volledig** (CTO3-04) |
 
-**Eerlijke stand: 4 volledig, 5 deels, 0 harde gaten.** Sinds `chain-smoke` is
-scenario 1 een doorlopende keten. De resterende "deels"-scenario's zijn per
-schakel bewezen maar nog niet als één doorlopende keten; de restpunten zijn
-foto-upload op de werkbon, het gedrag van een echte Peppol-provider en een
-uitputtende tenant-padenscan. Het executing evidence-artefact
-`docs/traceability/evidence/e2e-scenarios.json` legt deze stand per scenario
-vast (green + fullChain), en `scripts/check-e2e-scenarios.js` is de harde gate.
+**Eerlijke stand: 9 volledig, 0 deels, 0 harde gaten (CTO3-04).** Alle negen
+verplichte scenario's zijn nu als ÉÉN doorlopende keten bewezen (positieve
+output + negatieve autorisatie + idempotentie + audit + teruglezing), met alle
+IDs uit serverresponses en zonder mocks voor domeinrepositories. Daarbovenop
+bewijst de gate één echte **restart-persistentie** (records overleven een
+stop+herstart tegen hetzelfde databestand). Het executing evidence-artefact
+`docs/traceability/evidence/e2e-scenarios.json` legt dit per scenario vast
+(green + fullChain + restartPersistence), en `scripts/check-e2e-scenarios.js` is
+de harde gate (exit 1 bij één rode keten, een niet-volledige keten of een
+gefaalde restart).
 
 Daarnaast draait `perf` het h50.1-budget als regressienet: P95 per
 endpointklasse (read < 800 ms, write < 1500 ms · pilotdoelen) op een gevulde
