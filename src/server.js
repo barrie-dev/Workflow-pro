@@ -2942,9 +2942,17 @@ const httpServer = http.createServer(async (req, res) => {
         try {
           // Eenmalige datareparatie van legacy-rijen met status "paused".
           resellerLifecycleSvc.normalizeLegacyStatus(store, reseller.id, user);
-          updated = wanted === "suspended"
-            ? resellerLifecycleSvc.suspend(store, { resellerId: reseller.id, reason: body.reason || "legacy pauze" }, user)
-            : resellerLifecycleSvc.legacyReactivate(store, { resellerId: reseller.id, reason: body.reason || null }, user);
+          if (wanted === "suspended") {
+            updated = resellerLifecycleSvc.suspend(store, { resellerId: reseller.id, reason: body.reason || "legacy pauze" }, user);
+          } else if (["pending", "applicant", "screening", "contracting"].includes(String(reseller.status || "").toLowerCase())) {
+            // CTO3-08 · een GOEDGEKEURDE self-signup-aanvraag wordt NIET meer
+            // rechtstreeks actief: ze gaat naar onboarding. Activatie loopt
+            // daarna via activate() met contract-, legal-, MFA-, payout- en
+            // rolgates. Zo kan het legacy-pad geen active record produceren.
+            updated = resellerLifecycleSvc.approveApplication(store, { resellerId: reseller.id, reason: body.reason || null }, user);
+          } else {
+            updated = resellerLifecycleSvc.legacyReactivate(store, { resellerId: reseller.id, reason: body.reason || null }, user);
+          }
         } catch (e) { return sendResellerError(res, e); }
       }
       let activationLink = null;

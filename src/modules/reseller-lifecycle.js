@@ -36,6 +36,8 @@
 
 const crypto = require("crypto");
 const D = require("../platform/reseller-domain");
+// Vier-ogencontrole (CTO3-08): dezelfde beslislaag als de rest van het kanaal.
+const A = require("../platform/reseller-authz");
 // EEN bron van waarheid voor tenantkoppelingen (DoD-3): relationType,
 // goedkeurder, verplichte reden, platformvlaggen en de single-commercial-
 // owner-guard staan in reseller-tenants.js · deze module dupliceert dat niet
@@ -99,7 +101,7 @@ function confidentialAccessPossible(org) {
  * Combineert het volledige 23.2-veldmodel (voor de prospectieve status
  * active) met de contract- en legal gates uit 23.4.
  */
-function activationBlockers(org, agreements = [], at = new Date()) {
+function activationBlockers(org, agreements = [], at = new Date(), ctx = {}) {
   const blockers = D.validateResellerOrganization({ ...org, status: "active", onboarding_status: "active" });
   if (isBlank(org.agreement_version)) blockers.agreement_version = "actief contract vereist: agreement_version ontbreekt (23.4)";
   if (isBlank(org.accepted_at)) blockers.accepted_at = "actief contract vereist: accepted_at ontbreekt (23.4)";
@@ -114,7 +116,40 @@ function activationBlockers(org, agreements = [], at = new Date()) {
   if (confidentialAccessPossible(org) && isBlank(org.nda_accepted_at)) {
     blockers.nda_accepted_at = "nda_accepted_at is verplicht voor toegang tot vertrouwelijke informatie (23.2)";
   }
+  // ── CTO3-08 · afdwingbare onboarding-gates (niet enkel gemeten) ────────────
+  // MFA is verplicht vóór een partner actief wordt: een actieve partner kan
+  // deals, tenantaanvragen en (met grant) klantdata raken.
+  if (org.mfa_enforced !== true) {
+    blockers.mfa_enforced = "MFA is verplicht voor een actieve partner (23.15)";
+  }
+  // Payoutconfiguratie moet compleet zijn vóór activatie · anders ontstaat een
+  // actieve partner die commissie opbouwt zonder uitbetaalbaar rekeningnummer.
+  // De sleutel heet bewust NIET naar het gevoelige veld: blockers worden op de
+  // organisatie bewaard en komen zo in admin-lijsten terecht · daar hoort de
+  // naam van een finance-restricted veld (IBAN) niet thuis.
+  const payoutOntbreekt = [];
+  if (isBlank(org.payout_account)) payoutOntbreekt.push("rekeningnummer");
+  if (isBlank(org.payout_currency)) payoutOntbreekt.push("valuta");
+  if (payoutOntbreekt.length) {
+    blockers.payout_configuration = `payoutconfiguratie onvolledig (${payoutOntbreekt.join(" + ")}) · verplicht voor een actieve partner (23.11)`;
+  }
+  // Rollen: er moet minstens één partnergebruiker toegewezen zijn, anders is er
+  // niemand die het portaal kan bedienen en is "active" een lege claim.
+  if (Number(ctx.resellerUserCount || 0) < 1) {
+    blockers.roles = "minstens één partnergebruiker met rol is verplicht voor activatie (23.6)";
+  }
   return blockers;
+}
+
+/**
+ * CTO3-08 · een partner die niet actief is mag GEEN nieuwe acties starten
+ * (deals, tenantaanvragen, licenties, gedelegeerde toegang). Historische
+ * financiële rapportage blijft wel leesbaar · die loopt via de view-rechten.
+ */
+function assertPartnerActive(org, what = "deze actie") {
+  const status = clean(org && org.status);
+  if (status === "active") return true;
+  throw err(403, "PARTNER_NOT_ACTIVE", `${what} vereist een actieve partner (huidige status: ${status || "onbekend"})`);
 }
 
 /**
@@ -127,7 +162,12 @@ function activate(store, { resellerId, at = new Date() }, actor) {
   if (org.status === "active") return org; // reeds actief · no-op
   D.resellerOrganization.assertTransition(org.status, "active");
   D.onboardingStatus.assertTransition(org.onboarding_status, "active");
-  const blockers = activationBlockers(org, rowsOf(store, "resellerAgreements", resellerId), at);
+  // CTO3-08 · vier-ogen: wie de aanvraag indiende mag niet zelf activeren.
+  // Ontbrekende identiteit aan één van beide kanten faalt DICHT.
+  A.assertNotSelfApproval((actor && (actor.id || actor.email)) || null, org.submitted_by || org.created_by || null);
+  const blockers = activationBlockers(org, rowsOf(store, "resellerAgreements", resellerId), at, {
+    resellerUserCount: (store.data.users || []).filter(u => u && u.resellerId === resellerId).length,
+  });
   if (Object.keys(blockers).length > 0) {
     const e = err(409, "RESELLER_ACTIVATION_BLOCKED", "portaalactivatie geweigerd · voorwaarden uit 23.4 niet vervuld");
     e.fieldErrors = blockers;
@@ -490,6 +530,18 @@ function endTenantLink(store, { linkId, reason = null }, actor) {
 function legacyReactivate(store, { resellerId, reason = null }, actor) {
   const org = orgOf(store, resellerId);
   if (org.status === "active") return org; // no-op
+  // CTO3-08 · FAIL-CLOSED: het legacy-pad mag GEEN active record meer produceren
+  // buiten de gates om. Dezelfde contract-, legal-, MFA-, payout- en rolgates
+  // gelden hier; een grandfathered partner met geldige remediation-deadline is
+  // de enige gedocumenteerde uitzondering.
+  const blockers = activationBlockers(org, rowsOf(store, "resellerAgreements", resellerId), new Date(), {
+    resellerUserCount: (store.data.users || []).filter(u => u && u.resellerId === resellerId).length,
+  });
+  if (Object.keys(blockers).length > 0 && !grandfatherValid(org)) {
+    const e = err(409, "RESELLER_ACTIVATION_BLOCKED", "legacy-heractivatie geweigerd · activatiegates niet vervuld (CTO3-08)");
+    e.fieldErrors = blockers;
+    throw e;
+  }
   const before = { status: org.status };
   const next = store.update("resellers", resellerId, { status: "active", reactivated_at: nowIso() });
   logLifecycle(store, {
@@ -498,6 +550,69 @@ function legacyReactivate(store, { resellerId, reason = null }, actor) {
   }, actor);
   store.audit({ actor: who(actor), tenantId: null, area: "resellers", action: "permission_reseller_activated", detail: `${resellerId} legacy-heractivatie vanuit ${before.status}` });
   return next;
+}
+
+/**
+ * CTO3-08 punt 3 · goedkeuring van een SELF-SIGNUP-aanvraag levert GEEN actieve
+ * partner meer op, maar zet de aanvraag door naar ONBOARDING. De aanvrager kan
+ * daarna zijn wachtwoord instellen en de onboarding doorlopen; pas activate()
+ * (met contract-, legal-, MFA-, payout- en rolgates) maakt de partner actief.
+ * Dit vervangt de oude "legacy active organization create".
+ */
+function approveApplication(store, { resellerId, reason = null }, actor) {
+  const org = orgOf(store, resellerId);
+  if (org.status === "active") return org;                       // al actief · no-op
+  if (org.status === "onboarding") return org;                   // al in onboarding · idempotent
+  const before = { status: org.status, onboarding_status: org.onboarding_status || null };
+  const next = store.update("resellers", resellerId, {
+    status: "onboarding",
+    onboarding_status: org.onboarding_status && org.onboarding_status !== "applied" ? org.onboarding_status : "applied",
+    approved_at: nowIso(), approved_by: who(actor),
+  });
+  logLifecycle(store, {
+    resellerId, kind: "organization", action: "application_approved",
+    reason: reason || "self-signup goedgekeurd · onboarding gestart (CTO3-08)",
+    before, after: { status: "onboarding" },
+  }, actor);
+  store.audit({ actor: who(actor), tenantId: null, area: "resellers", action: "reseller_application_approved", detail: `${resellerId} naar onboarding vanuit ${before.status}` });
+  return next;
+}
+
+/** Geldige, niet-verlopen grandfather-uitzondering (CTO3-08 punt 6)? */
+function grandfatherValid(org, at = new Date()) {
+  if (!org || org.grandfathered !== true) return false;
+  if (isBlank(org.remediation_deadline)) return false;   // uitzondering zonder deadline telt niet
+  return toMs(org.remediation_deadline) > toMs(at);
+}
+
+/**
+ * CTO3-08 punt 6 · veilige migratie van BESTAANDE actieve partners. Partners die
+ * de nieuwe gates niet halen blijven werken, maar krijgen expliciet
+ * grandfathered=true met een eigenaar en een verplichte remediation-deadline.
+ * Idempotent: een reeds gemarkeerde partner wordt niet opnieuw gestempeld.
+ */
+function grandfatherExistingPartners(store, { deadline, owner = null, at = new Date() } = {}, actor) {
+  if (isBlank(deadline)) throw err(400, "REMEDIATION_DEADLINE_REQUIRED", "een remediation-deadline is verplicht (CTO3-08)");
+  const report = { marked: [], alreadyCompliant: [], alreadyMarked: [] };
+  for (const org of (store.data.resellers || [])) {
+    if (!org || org.status !== "active") continue;
+    if (org.grandfathered === true) { report.alreadyMarked.push(org.id); continue; }
+    const blockers = activationBlockers(org, rowsOf(store, "resellerAgreements", org.id), at, {
+      resellerUserCount: (store.data.users || []).filter(u => u && u.resellerId === org.id).length,
+    });
+    if (Object.keys(blockers).length === 0) { report.alreadyCompliant.push(org.id); continue; }
+    store.update("resellers", org.id, {
+      grandfathered: true, remediation_deadline: deadline,
+      remediation_owner: owner || who(actor), remediation_blockers: Object.keys(blockers),
+    });
+    logLifecycle(store, {
+      resellerId: org.id, kind: "organization", action: "grandfathered",
+      reason: `bestaande actieve partner voldoet nog niet aan de CTO3-08-gates · deadline ${deadline}`,
+      before: { grandfathered: false }, after: { grandfathered: true, remediation_deadline: deadline },
+    }, actor);
+    report.marked.push({ resellerId: org.id, blockers: Object.keys(blockers) });
+  }
+  return report;
 }
 
 /**
@@ -548,6 +663,8 @@ module.exports = {
   linkTenant, endTenantLink, activeTenantLinks,
   // legacy admin-pad (h23-migratie)
   legacyReactivate, normalizeLegacyStatus,
+  // CTO3-08 · afdwingbare partneractivatie
+  assertPartnerActive, grandfatherValid, grandfatherExistingPartners, approveApplication,
   // accreditaties
   expiredAccreditations,
   // gedeeld: append-only before/after-log (23.15)

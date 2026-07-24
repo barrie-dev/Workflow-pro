@@ -816,6 +816,10 @@ test("self-signup: reseller-aanvraag = pending, login pas na goedkeuring", async
   const pending = list.resellers.find(r => r.contactEmail === email);
   assert.ok(pending && pending.status === "pending", "aanvraag staat als pending");
   const approved = await (await fetch(`${BASE}/api/admin/resellers/${pending.id}`, { method: "PATCH", headers: { "Content-Type": "application/json", ...H }, body: JSON.stringify({ status: "active" }) })).json();
+  // CTO3-08: goedkeuring maakt de partner NIET meteen actief · ze start de
+  // onboarding. Pas activate() (met MFA-, payout-, contract- en rolgates) zet
+  // de organisatie op active. De aanvrager kan wel al zijn wachtwoord instellen.
+  assert.equal(approved.reseller.status, "onboarding", "goedgekeurde aanvraag gaat naar onboarding, niet direct active");
   const activated = await activateWithLink(approved.activationLink, pass);
   assert.ok(activated.token, "na goedkeuring en activatie kan de reseller inloggen");
 });
