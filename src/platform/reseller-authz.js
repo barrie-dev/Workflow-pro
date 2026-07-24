@@ -288,6 +288,120 @@ function assertDelegation(grant, requiredScope, ctx = {}) {
   return true;
 }
 
+// ── CTO3-07 · centrale gedelegeerde-tenanttoegang ────────────────────────────
+// Eén middleware-beslissing voor ELKE tenantinhoudroute: read/write/export/
+// support/impersonation zijn AFZONDERLIJKE scopes (read impliceert nooit write).
+// Een actieve klant-assignment is NOOIT voldoende · er is altijd een actieve
+// delegation grant met de exacte scope nodig. Verlopen/revoked grant faalt dicht.
+
+const DELEGATION_SCOPES = ["read", "write", "export", "support", "impersonation"];
+
+/** Leid de vereiste delegatiescope af uit HTTP-methode + route-actie. */
+function scopeForRequest(method, action = "") {
+  const a = String(action || "").toLowerCase();
+  if (/(^|\/)export($|\/|\?)/.test(a) || a.endsWith("/export")) return "export";
+  if (/(^|\/)(impersonat|act-as)/.test(a)) return "impersonation";
+  if (/(^|\/)support(\/|$)/.test(a)) return "support";
+  const m = String(method || "GET").toUpperCase();
+  return (m === "GET" || m === "HEAD") ? "read" : "write";
+}
+
+// Gevoelige dataklassen (23.5 + CTO3-07 punt 4): standaard VERBORGEN, ook onder
+// een algemene read-grant. Enkel een expliciet toegekende dataklasse ontsluit ze.
+const DATA_CLASSES = ["payroll", "bank", "national_number", "medical", "security", "margin"];
+const SENSITIVE_FIELD_PATTERNS = {
+  payroll: /payroll|salary|wage|loon|nettoloon|brutoloon|gross(pay|salary)|net(pay|salary)/i,
+  bank: /iban|(^|_)bic($|_)|bankaccount|accountnumber|rekeningnummer|swift/i,
+  national_number: /rijksregister|nationalnumber|national_number|\bssn\b|\bbsn\b|\binsz\b|\bniss\b/i,
+  medical: /medical|medisch|health(data)?|gezondheid|diagnos|disability|arbeidsongeval.*medisch/i,
+  security: /password|passwordhash|(^|_)secret($|_)|(^|_)token($|_)|mfasecret|mfa_secret|apikey|api_key|privatekey|private_key/i,
+  margin: /(^|_)margin($|_)|(^|_)marge($|_)|costprice|cost_price|costrate|cost_rate|kostprijs|inkoopprijs|purchaseprice|providerunitcost|provider_unit_cost/i,
+};
+const REDACTED = "[REDACTED]";
+
+function classOfKey(key) {
+  for (const cls of DATA_CLASSES) if (SENSITIVE_FIELD_PATTERNS[cls].test(String(key))) return cls;
+  return null;
+}
+
+/**
+ * Redigeer gevoelige velden die NIET in allowedClasses zitten (recursief, arrays
+ * en geneste objecten). Muteert niet: geeft een gekopieerde, veilige weergave.
+ * Standaard (lege allowedClasses) blijft ALLE gevoelige data verborgen.
+ */
+function redactSensitiveFields(value, allowedClasses = [], seen = new WeakSet()) {
+  const allow = new Set(allowedClasses || []);
+  const walk = (v) => {
+    if (Array.isArray(v)) return v.map(walk);
+    if (v && typeof v === "object") {
+      if (seen.has(v)) return v;
+      seen.add(v);
+      const out = {};
+      for (const [k, val] of Object.entries(v)) {
+        const cls = classOfKey(k);
+        if (cls && !allow.has(cls)) { out[k] = REDACTED; continue; }
+        out[k] = walk(val);
+      }
+      return out;
+    }
+    return v;
+  };
+  return walk(value);
+}
+
+/**
+ * DE centrale middleware-beslissing (CTO3-07 punt 2/3/4). Combineert:
+ *  - scope-afleiding (read/write/export/support/impersonation) uit method+action;
+ *  - de delegation grant-beslissing (delegationDecision · tenant-strikt,
+ *    exact-scope, fail-closed op verlopen/revoked);
+ *  - welke gevoelige dataklassen deze grant expliciet ontsluit (default geen).
+ * Een actieve assignment zonder grant → geweigerd. Alles is auditbaar via de
+ * teruggegeven auditcontext.
+ *
+ * @param {object} o { grant, tenantId, method, action, now, requiredScope? }
+ * @returns {{ ok, requiredScope, status?, code?, allowedDataClasses, audit }}
+ */
+function requireDelegatedTenantAccess(o = {}) {
+  const requiredScope = o.requiredScope || scopeForRequest(o.method, o.action);
+  const decision = delegationDecision(o.grant, requiredScope, { tenantId: o.tenantId, now: o.now });
+  const allowedDataClasses = (o.grant && Array.isArray(o.grant.dataClasses))
+    ? o.grant.dataClasses.filter(c => DATA_CLASSES.includes(c))
+    : [];
+  const audit = {
+    resellerId: (o.grant && o.grant.resellerId) || null,
+    grantId: (o.grant && o.grant.id) || null,
+    tenantId: o.tenantId || null,
+    scope: requiredScope,
+    action: o.action || null,
+    method: o.method || null,
+    decision: decision.ok ? "allow" : "deny",
+    code: decision.ok ? null : decision.code,
+  };
+  if (!decision.ok) return { ok: false, requiredScope, status: decision.status, code: decision.code, allowedDataClasses: [], audit };
+  return { ok: true, requiredScope, allowedDataClasses, audit };
+}
+
+// Route-inventaris (CTO3-07 punt 1): welke gevoelige dataklassen kan een
+// tenantinhoudroute retourneren. 100% afgevinkt = elke inhoudsfamilie heeft een
+// entry; de default (onbekende route) is de striktste (alles verborgen).
+const TENANT_CONTENT_DATA_CLASSES = {
+  customers: [], projects: [], planning: [], workorders: [],
+  facturen: ["margin"], invoices: ["margin"], payments: ["bank"],
+  offertes: ["margin"], quotes: ["margin"],
+  employees: ["payroll", "national_number", "bank", "margin"],
+  me: [], expenses: [], leaves: ["medical"], incidents: ["medical"],
+  payroll: ["payroll", "bank", "national_number"],
+  "social-secretariat": ["payroll", "bank", "national_number"],
+  docfiles: [], forms: [], "api-keys": ["security"], integrations: ["security"],
+  finance: ["margin"], dashboard: ["margin"], insights: ["margin"],
+};
+
+/** Dataklassen die een route kan lekken (voor de default-redactie bij delegatie). */
+function dataClassesForAction(action = "") {
+  const head = String(action || "").split(/[/?]/)[0];
+  return TENANT_CONTENT_DATA_CLASSES[head] || [];
+}
+
 // ── Anti-probing fouten (23.15/23.17 · ISO-07) ───────────────────────────────
 // Vaste boodschappen zodat de body voor een vreemd id en een onbestaand id
 // byte-identiek is: bestaan van andermans objecten lekt nooit.
@@ -311,4 +425,9 @@ module.exports = {
   requiresFourEyes, assertNotSelfApproval, suspensionBlocks, requiresMfa,
   delegationDecision, assertDelegation,
   forbiddenError, scopeViolationError, notFoundError,
+  // CTO3-07 · centrale gedelegeerde tenanttoegang + veldrechten
+  DELEGATION_SCOPES, DATA_CLASSES, SENSITIVE_FIELD_PATTERNS, REDACTED,
+  TENANT_CONTENT_DATA_CLASSES,
+  scopeForRequest, redactSensitiveFields, requireDelegatedTenantAccess,
+  dataClassesForAction, classOfKey,
 };

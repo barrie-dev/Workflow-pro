@@ -10069,6 +10069,19 @@ function startServer() {
   setImmediate(reviewSupportAccess);
   setInterval(reviewSupportAccess, 24 * 60 * 60 * 1000).unref();
 
+  // CTO3-07 · sweeper voor gedelegeerde tenanttoegang: kantelt verlopen grants
+  // naar 'expired'. De weigering zelf is al fail-closed op het weigermoment
+  // (delegationDecision toetst endDate), maar de sweeper houdt de administratie
+  // eerlijk zodat een verlopen grant nergens nog als 'active' oogt.
+  const sweepDelegatedAccess = () => {
+    try {
+      const r = resellerTenantsSvc.expireDelegatedAccess(store, Date.now());
+      if (r && r.expired > 0) console.log(`  Delegatie: ${r.expired} verlopen grant(s) afgesloten`);
+    } catch (_) { /* sweeper mag nooit de server breken */ }
+  };
+  setImmediate(sweepDelegatedAccess);
+  setInterval(sweepDelegatedAccess, 24 * 60 * 60 * 1000).unref();
+
   // Automatische betaalherinneringen: opt-in per tenant, om de 6 uur een ronde.
   // Het beleid in payment-reminders (interval + max) maakt de job idempotent;
   // in dev/test verstuurt de mailer sowieso niets echts (guardrails).
