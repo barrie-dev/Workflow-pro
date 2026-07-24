@@ -589,7 +589,20 @@ const store = new Store(storeAdapter, { defer: storeNeedsAsyncLoad });
 // meer groeit. routeCtx draagt de gedeelde runtime zodat routers geen globale
 // singletons importeren (geen circulaire afhankelijkheden).
 const httpRouter = require("./http/routes");
-const routeCtx = { store, sendJson, publicStatus, config };
+// Muteerbare bootstate en later-geinitialiseerde modules komen via GETTERS
+// binnen: ctx wordt hier gebouwd, dus een waarde meegeven zou een momentopname
+// bevriezen. De getters worden pas bij een request aangeroepen, ruim nadat
+// objectStorage/identitySource/txManager geinitialiseerd zijn.
+const routeCtx = {
+  store, sendJson, publicStatus, config,
+  isBootReady: () => isBootReady(),
+  getBootState: () => bootState,
+  getBootMigrationVersion: () => bootMigrationVersion,
+  getObjectStorage: () => objectStorage,
+  getTxAdapter: () => (pgTxManager || txManager).adapter,
+  getSourceModes: () => ({ identity: identitySource.mode, finance: financeSource.mode, company: companySource.mode }),
+  getModuleCount: () => modules.length,
+};
 const httpRoutes = httpRouter.registerRoutes(routeCtx);
 
 const customerRepo = makeCustomerRepository(store);
@@ -1334,40 +1347,11 @@ const httpServer = http.createServer(async (req, res) => {
     // Dit is NOOIT een readiness-claim: een 200 hier betekent niet dat business-
     // verkeer veilig kan · daarvoor is /api/ready. (Tijdens het opstarten wordt
     // liveness al door de bootgate bediend; dit is het pad zodra state=ready.)
-    if (url.pathname === "/api/live") {
-      return sendJson(res, 200, {
-        ok: true, app: "Monargo One Fullstack", status: bootState,
-        appEnv: config.appEnv, version: config.appVersion,
-        commitSha: config.commitSha, deploymentId: config.deploymentId,
-        uptime: Math.floor(process.uptime()),
-      });
-    }
-    if (url.pathname === "/api/health") {
-      const storeStatus = store.storageStatus ? store.storageStatus() : { ok: true };
-      sendJson(res, 200, {
-        ok: true,
-        app: "Monargo One Fullstack",
-        status: bootState,
-        deploymentId: config.deploymentId,
-        appEnv: config.appEnv,
-        version: config.appVersion,
-        releaseChannel: config.releaseChannel,
-        commitSha: config.commitSha,
-        storageAdapter: config.storageAdapter,
-        // Unit-of-work-adapter (E1 · ADR-003): op PostgreSQL de echte
-        // database-transactie (P0-01), anders de lokale store-variant.
-        txAdapter: (pgTxManager || txManager).adapter,
-        objectStorageAdapter: objectStorage.name,
-        identitySource: identitySource.mode,   // P0-01-migratiestand
-        financeSource: financeSource.mode,
-        companySource: companySource.mode,
-        storeReady: storeStatus?.ok !== false,
-        modules: modules.length,
-        uptime: Math.floor(process.uptime()),
-        time: new Date().toISOString()
-      });
-      return;
-    }
+    // ── CTO3-10 · bounded routers eerst ────────────────────────────────────
+    // Startup/health (/api/live, /api/health, /api/ready) en /api/status zijn
+    // geextraheerd naar src/http/routes. Handelt geen router af, dan loopt het
+    // request ongewijzigd door naar de bestaande afhandeling hieronder.
+    if (await httpRouter.dispatch(httpRoutes, req, res, url, routeCtx)) return;
 
     // ── Moderne /v1-API (spec 5.4 + h41): canonieke Engelse namespace als
     //    vertaallaag over de bestaande tenant-routes. Strangler: /api blijft
@@ -1392,57 +1376,7 @@ const httpServer = http.createServer(async (req, res) => {
       // auth-, entitlement- en rechtenpoorten · pariteit is de garantie.
     }
 
-    // Readiness probe (E1): faalt bij storage-uitval ZONDER het proces te doden.
-    // Liveness (/api/health) blijft 200 zolang het proces draait; zo herstart de
-    // orchestrator niet onnodig bij een tijdelijke DB-hapering (K8s/Render/Azure).
-    // CTO3-02 · READINESS. Dit pad wordt alleen bereikt wanneer state=ready
-    // (de bootgate heeft migraties, writer-lock, state-load en de verplichte
-    // bootflush al met succes doorlopen · anders was het proces hard gestopt).
-    // Een runtime-storagefout maakt de instantie alsnog NIET-ready (503) zodat
-    // een orchestrator ze uit rotatie haalt. Readiness bepaalt of businessverkeer
-    // wordt toegelaten; deze respons is machineleesbaar en SHA-gekoppeld.
-    if (url.pathname === "/api/ready") {
-      const storeStatus = store.storageStatus ? store.storageStatus() : { ok: true };
-      const ready = isBootReady() && storeStatus?.ok !== false;
-      sendJson(res, ready ? 200 : 503, {
-        ok: ready,
-        status: bootState,
-        commitSha: config.commitSha,
-        deploymentId: config.deploymentId,
-        checks: {
-          state: isBootReady(),           // staat geladen + bootflush geslaagd
-          storage: storeStatus?.ok !== false,
-          storageAdapter: config.storageAdapter,
-          objectStorageAdapter: objectStorage.name,
-          txAdapter: (pgTxManager || txManager).adapter,
-          databaseSslMode: config.database.sslMode,
-          // Openstaande schrijfacties: een orchestrator kan hierop wachten
-          // vóór hij een replica uit rotatie haalt.
-          pendingWrites: store.isDirty(),
-          // CTO3-05 · veilige config-samenvatting (NOOIT secrets): bronstatus per
-          // domein, TLS/single-writer-modus, release-kanaal en migratieversie.
-          releaseChannel: config.releaseChannel,
-          singleWriter: !!config.singleWriter,
-          databaseCaCertPresent: !!(config.database && config.database.caCert),
-          migrationVersion: bootMigrationVersion,
-          sources: {
-            crm: config.crm.readSource,
-            identity: config.identity.readSource,
-            finance: config.finance.readSource,
-            company: config.company.readSource,
-            forms: config.forms.source,
-          },
-        },
-        store: storeStatus,
-      });
-      return;
-    }
 
-    // ── CTO3-10 · bounded routers eerst ────────────────────────────────────
-    // Geregistreerde routers (src/http/routes) krijgen voorrang. Handelt er geen
-    // router af, dan loopt het request ongewijzigd door naar de bestaande
-    // afhandeling hieronder · zo verandert de extractie geen enkel gedrag.
-    if (await httpRouter.dispatch(httpRoutes, req, res, url, routeCtx)) return;
 
     if (url.pathname === "/api/openapi.json" && req.method === "GET") {
       sendJson(res, 200, openApiSpec());
