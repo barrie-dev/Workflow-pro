@@ -76,3 +76,40 @@ test("frontend 6· het einddoel blijft staan tot het budget het raakt", () => {
   assert.equal(FINAL_TARGET_LINES, 2500);
   assert.ok(MAX_ADMIN_LINES >= FINAL_TARGET_LINES, "blijf extraheren tot het budget het einddoel raakt");
 });
+
+// ── De IA-laag (public/js/app/) ──────────────────────────────────────────────
+// Dit is de doelarchitectuur uit de IA-handover. Ze mag NOOIT terugleunen op de
+// monoliet, anders is de strangler-migratie een cirkel in plaats van een pad.
+function appFiles() {
+  const base = path.join(PUBLIC, "js", "app");
+  if (!fs.existsSync(base)) return [];
+  const uit = [];
+  for (const map of fs.readdirSync(base)) {
+    const d = path.join(base, map);
+    if (!fs.statSync(d).isDirectory()) continue;
+    for (const f of fs.readdirSync(d).filter(x => x.endsWith(".js"))) uit.push(path.join(d, f));
+  }
+  return uit;
+}
+
+test("frontend 7· de IA-laag leunt niet terug op de monoliet", () => {
+  const fouten = [];
+  for (const p of appFiles()) {
+    const src = fs.readFileSync(p, "utf8");
+    const naam = path.relative(PUBLIC, p).replace(/\\/g, "/");
+    if (/window\.wfpAdmin|\bA\.views\b/.test(src)) fouten.push(`${naam} leest de admin-monoliet`);
+    if (/\bdocument\.|\blocalStorage\b|\bfetch\(/.test(src)) fouten.push(`${naam} raakt de DOM of het netwerk · de IA-kern hoort puur te zijn`);
+    if (!/module\.exports/.test(src)) fouten.push(`${naam} is niet in Node te laden · dan kan het contract niet getest worden`);
+  }
+  assert.deepEqual(fouten, [], fouten.join(" · "));
+});
+
+test("frontend 8· elk IA-bestand heeft een contracttest", () => {
+  const testSrc = fs.readdirSync(path.join(ROOT, "test"))
+    .filter(f => f.startsWith("ia-") && f.endsWith(".test.js"))
+    .map(f => fs.readFileSync(path.join(ROOT, "test", f), "utf8")).join("\n");
+  const ongedekt = appFiles()
+    .map(p => path.relative(PUBLIC, p).replace(/\\/g, "/"))
+    .filter(rel => !testSrc.includes(rel.replace(/^js\//, "").replace(/\.js$/, "")));
+  assert.deepEqual(ongedekt, [], `deze IA-bestanden hebben geen contracttest: ${ongedekt.join(", ")}`);
+});
