@@ -10,7 +10,7 @@ const root = path.resolve(__dirname, "..");
 // met een letterlijke \n niet matchen terwijl ze op de Linux-CI wel slagen.
 const read = file => fs.readFileSync(path.join(root, file), "utf8").replace(/\r\n/g, "\n");
 
-const admin = read("public/js/platforms/admin.js");
+const admin = fs.readFileSync(path.join(root, "public/js/platforms/admin.js"), "utf8");
 const css = read("public/css/monargo-design-system.css");
 const i18n = read("public/js/i18n.js");
 
@@ -21,10 +21,14 @@ test("Operaties is een echte adminmodule met de goedgekeurde submodules", () => 
 });
 
 test("het operatieoverzicht gebruikt uitsluitend bestaande backenddomeinen", () => {
-  const overview = admin.slice(
-    admin.indexOf("async function renderOperationsOverview"),
-    admin.indexOf("// ── Dashboard", admin.indexOf("async function renderOperationsOverview"))
-  );
+  // De eindmarkering was "// ── Dashboard"; dat blok is naar een eigen module
+  // verhuisd. Zonder deze correctie loopt de slice tot het einde van het
+  // bestand en toetst hij dus heel admin.js in plaats van dit ene scherm ·
+  // een test die te veel leest, faalt op andermans code.
+  const start = admin.indexOf("async function renderOperationsOverview");
+  const eind = admin.indexOf("// ── Clocking", start);
+  assert.ok(start > -1 && eind > start, "de operatieoverzicht-sectie is niet af te bakenen");
+  const overview = admin.slice(start, eind);
   for (const route of [
     '"/planning"',
     '"/workorders"',

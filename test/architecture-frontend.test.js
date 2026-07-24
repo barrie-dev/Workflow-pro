@@ -22,7 +22,7 @@ const PUBLIC = path.join(ROOT, "public");
 const ADMIN = path.join(PUBLIC, "js", "platforms", "admin.js");
 
 // ── Het budget (ratchet · alleen omlaag) ─────────────────────────────────────
-const MAX_ADMIN_LINES = 9153;   // gemeten vóór de eerste extractie
+const MAX_ADMIN_LINES = 6197;   // elf schermen uitgesplitst (was 9153)
 const FINAL_TARGET_LINES = 2500; // zelfde einddoel als server.js
 
 function lines(p) { return fs.readFileSync(p, "utf8").split("\n").length; }

@@ -511,11 +511,34 @@
   <script src="/js/platforms/admin-product-workspaces.js"></script>
   <script src="/js/platforms/admin-automation-workspace.js"></script>
   <script src="/js/platforms/admin-config-fields-workspace.js"></script>
+  <!-- Uitgesplitste schermen. Deze MOETEN na admin.js staan: die maakt
+       window.wfpAdmin aan, en een module die er eerder bij is haakt stil af
+       via `if (!A) return` · dan blijft het scherm leeg zonder foutmelding. -->
+  <script src="/js/platforms/admin-dashboard.js"></script>
+  <script src="/js/platforms/admin-actiecentrum.js"></script>
+  <script src="/js/platforms/admin-klantvragen.js"></script>
+  <script src="/js/platforms/admin-planning.js"></script>
+  <script src="/js/platforms/admin-werkbonnen.js"></script>
+  <script src="/js/platforms/admin-verlof.js"></script>
+  <script src="/js/platforms/admin-medewerkers.js"></script>
+  <script src="/js/platforms/admin-berichten.js"></script>
+  <script src="/js/platforms/admin-werkongevallen.js"></script>
+  <script src="/js/platforms/admin-onkosten.js"></script>
+  <script src="/js/platforms/admin-afspraken.js"></script>
   <!-- Strangler-koppeling: laat de IA-router de bestaande views aansturen. -->
   <script src="/js/platforms/admin-ia-bootstrap.js"></script>
   <script src="/js/platforms/manager.js"></script>
   <script src="/js/platforms/employee.js"></script>
   <script src="/js/platforms/reseller.js"></script>
+  <!-- Resellerportaal (CTO3-09): paginamodules + het register dat reseller.js
+       leest. De volgorde onderling maakt niet uit · registratie is idempotent. -->
+  <script src="/js/platforms/reseller-pages.js"></script>
+  <script src="/js/platforms/reseller-pipeline.js"></script>
+  <script src="/js/platforms/reseller-klanten.js"></script>
+  <script src="/js/platforms/reseller-licenties.js"></script>
+  <script src="/js/platforms/reseller-verdiensten.js"></script>
+  <script src="/js/platforms/reseller-toegang.js"></script>
+  <script src="/js/platforms/reseller-uitbetaling.js"></script>
   <script src="/js/ui/responsive-shell.js"></script>
   <!-- Sessieherstel: een F5 of een gedeelde link hoort je niet uit te loggen.
        Staat als laatste, want het heeft de platform-router nodig. -->
