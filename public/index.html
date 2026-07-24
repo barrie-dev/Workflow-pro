@@ -469,6 +469,36 @@
   <script src="/js/boden-widget.js"></script>
   <!-- Trial-to-paid conversietrechter (proefbanner) -->
   <script src="/js/trial-banner.js"></script>
+  <!-- Information Architecture · navigatieregistry, routemodel en shell.
+       Pure modules zonder DOM-afhankelijkheid; alleen routing/router.js
+       raakt history en linkklikken aan. Ze moeten vóór de rolshells staan,
+       want admin-ia-bootstrap.js koppelt ze aan de bestaande views. -->
+  <script src="/js/app/navigation/registry.js"></script>
+  <script src="/js/app/navigation/resolver.js"></script>
+  <script src="/js/app/navigation/route-map.js"></script>
+  <script src="/js/app/navigation/context-adapter.js"></script>
+  <script src="/js/app/routing/guards.js"></script>
+  <script src="/js/app/routing/router.js"></script>
+  <script src="/js/app/routing/migration-telemetry.js"></script>
+  <script src="/js/app/shell/sidebar.js"></script>
+  <script src="/js/app/shell/app-shell.js"></script>
+  <script src="/js/app/shell/command-palette.js"></script>
+  <script src="/js/app/shell/global-create.js"></script>
+  <script src="/js/app/shell/work-inbox.js"></script>
+  <script src="/js/app/shared/record-tabs.js"></script>
+  <script src="/js/app/shared/status-actions.js"></script>
+  <script src="/js/app/portals/portal-matrix.js"></script>
+  <script src="/js/app/portals/customer/definition.js"></script>
+  <script src="/js/app/workspaces/customer/definition.js"></script>
+  <script src="/js/app/workspaces/sales/definition.js"></script>
+  <script src="/js/app/workspaces/project/definition.js"></script>
+  <script src="/js/app/workspaces/planning/definition.js"></script>
+  <script src="/js/app/workspaces/work-order/definition.js"></script>
+  <script src="/js/app/workspaces/team/definition.js"></script>
+  <script src="/js/app/workspaces/finance/definition.js"></script>
+  <script src="/js/app/workspaces/resources/definition.js"></script>
+  <script src="/js/app/workspaces/insights/definition.js"></script>
+  <script src="/js/app/workspaces/automation/definition.js"></script>
   <!-- Platform router + role shells -->
   <script src="/js/platform-router.js"></script>
   <script src="/js/platforms/superadmin.js"></script>
@@ -481,9 +511,14 @@
   <script src="/js/platforms/admin-product-workspaces.js"></script>
   <script src="/js/platforms/admin-automation-workspace.js"></script>
   <script src="/js/platforms/admin-config-fields-workspace.js"></script>
+  <!-- Strangler-koppeling: laat de IA-router de bestaande views aansturen. -->
+  <script src="/js/platforms/admin-ia-bootstrap.js"></script>
   <script src="/js/platforms/manager.js"></script>
   <script src="/js/platforms/employee.js"></script>
   <script src="/js/platforms/reseller.js"></script>
   <script src="/js/ui/responsive-shell.js"></script>
+  <!-- Sessieherstel: een F5 of een gedeelde link hoort je niet uit te loggen.
+       Staat als laatste, want het heeft de platform-router nodig. -->
+  <script src="/js/session-restore.js"></script>
 </body>
 </html>

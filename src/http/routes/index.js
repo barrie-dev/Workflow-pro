@@ -66,4 +66,4 @@ async function dispatch(routes, req, res, url, ctx) {
   return false;
 }
 
-module.exports = { registerRoutes, dispatch, ROUTER_MODULES };
+module.exports = { registerRoutes, dispatch, ROUTER_MODULES, spaFile: require("../spa").spaFile };

@@ -93,16 +93,48 @@ function appFiles(dir) {
   return uit;
 }
 
+// De router is per definitie de plek waar de pure laag de browser raakt:
+// history, popstate en linkklikken bestaan nergens anders. Dat is één
+// benoemde uitzondering, geen versoepeling · regel 7b bewaakt dat het er
+// één blijft.
+const DOM_EXCEPTION = "js/app/routing/router.js";
+
 test("frontend 7· de IA-laag leunt niet terug op de monoliet", () => {
   const fouten = [];
   for (const p of appFiles()) {
     const src = fs.readFileSync(p, "utf8");
     const naam = path.relative(PUBLIC, p).replace(/\\/g, "/");
     if (/window\.wfpAdmin|\bA\.views\b/.test(src)) fouten.push(`${naam} leest de admin-monoliet`);
-    if (/\bdocument\.|\blocalStorage\b|\bfetch\(/.test(src)) fouten.push(`${naam} raakt de DOM of het netwerk · de IA-kern hoort puur te zijn`);
+    if (naam !== DOM_EXCEPTION && /\bdocument\.|\blocalStorage\b|\bfetch\(/.test(src)) {
+      fouten.push(`${naam} raakt de DOM of het netwerk · de IA-kern hoort puur te zijn`);
+    }
     if (!/module\.exports/.test(src)) fouten.push(`${naam} is niet in Node te laden · dan kan het contract niet getest worden`);
   }
   assert.deepEqual(fouten, [], fouten.join(" · "));
+});
+
+test("frontend 7b· er is precies ÉÉN bestand dat de browser aanraakt", () => {
+  const raken = appFiles()
+    .map(p => path.relative(PUBLIC, p).replace(/\\/g, "/"))
+    .filter(naam => /\bdocument\.|\bhistory\.|\blocation\.|\bwindow\.addEventListener/.test(
+      fs.readFileSync(path.join(PUBLIC, naam), "utf8")));
+  assert.deepEqual(raken, [DOM_EXCEPTION],
+    `alleen de router mag de browser aanraken · deze bestanden doen het ook: ${raken.join(", ")}`);
+});
+
+/** Broncode zonder commentaar · anders faalt een test op een uitleg. */
+function code(p) {
+  return fs.readFileSync(p, "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/(^|[^:])\/\/.*$/gm, "$1");
+}
+
+test("frontend 7c· de router mag zelf ook niet in de monoliet grijpen", () => {
+  const src = code(path.join(PUBLIC, DOM_EXCEPTION));
+  assert.equal(/window\.wfpAdmin/.test(src), false,
+    "de router kent de monoliet niet · de bootstrap geeft hem een onRender-functie");
+  assert.equal(/switchView\s*\(/.test(src), false,
+    "de router roept switchView niet zelf aan · dat doet de bootstrap");
 });
 
 test("frontend 8· elk IA-bestand heeft een contracttest", () => {
