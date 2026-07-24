@@ -582,6 +582,16 @@ if (storeAdapter.name === "postgres" && typeof storeAdapter.queueOutboxAppend ==
 const insightsCache = new Map();
 const storeNeedsAsyncLoad = typeof storeAdapter.loadAsync === "function";
 const store = new Store(storeAdapter, { defer: storeNeedsAsyncLoad });
+
+// ── CTO3-10 · bounded routers ────────────────────────────────────────────────
+// server.js wordt een bootstrap- en REGISTRATIElaag. Nieuwe routes horen in een
+// router onder src/http/routes; de architecture-test bewaakt dat server.js niet
+// meer groeit. routeCtx draagt de gedeelde runtime zodat routers geen globale
+// singletons importeren (geen circulaire afhankelijkheden).
+const httpRouter = require("./http/routes");
+const routeCtx = { store, sendJson, publicStatus, config };
+const httpRoutes = httpRouter.registerRoutes(routeCtx);
+
 const customerRepo = makeCustomerRepository(store);
 const projectRepo = makeProjectRepository(store);
 const worksiteRepo = makeWorksiteRepository(store);
@@ -1428,10 +1438,11 @@ const httpServer = http.createServer(async (req, res) => {
       return;
     }
 
-    if (url.pathname === "/api/status" && req.method === "GET") {
-      sendJson(res, 200, publicStatus(store));
-      return;
-    }
+    // ── CTO3-10 · bounded routers eerst ────────────────────────────────────
+    // Geregistreerde routers (src/http/routes) krijgen voorrang. Handelt er geen
+    // router af, dan loopt het request ongewijzigd door naar de bestaande
+    // afhandeling hieronder · zo verandert de extractie geen enkel gedrag.
+    if (await httpRouter.dispatch(httpRoutes, req, res, url, routeCtx)) return;
 
     if (url.pathname === "/api/openapi.json" && req.method === "GET") {
       sendJson(res, 200, openApiSpec());
