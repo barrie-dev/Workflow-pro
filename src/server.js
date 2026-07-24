@@ -277,7 +277,7 @@ const inventory = require("./platform/inventory");
 const { buildMonaSignals } = require("./platform/mona-signals");
 const { buildPreparedWork, prepareProject, buildDailyDigest } = require("./platform/mona-prepare");
 const robawsImport = require("./platform/robaws-import");
-const { buildWorkInbox } = require("./platform/work-inbox");
+const { buildWorkInboxFor } = require("./platform/work-inbox");
 const { makeConfigRepository } = require("./platform/config-platform");
 const { makeAutomationRepository, makeDispatcher, executeFlow } = require("./platform/automation");
 const { registerEventListener } = require("./platform/events");
@@ -4917,7 +4917,7 @@ const httpServer = http.createServer(async (req, res) => {
       // ── Work Inbox (E09/GRID): geconsolideerde werklijst · rechten-gescoped ──
       if (action === "work-inbox" && req.method === "GET") {
         assertInteractiveUser(user);
-        sendJson(res, 200, { ok: true, ...buildWorkInbox(store, tenant, user) });
+        sendJson(res, 200, { ok: true, ...buildWorkInboxFor(store, tenant, user, url) });
         return;
       }
 

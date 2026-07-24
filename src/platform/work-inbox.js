@@ -17,6 +17,7 @@ const { isModuleEnabled } = require("../modules/entitlements");
 const { buildMonaSignals } = require("./mona-signals");
 
 const PRIORITY_RANK = { critical: 3, high: 2, normal: 1, low: 0 };
+const MAX_ITEMS = 80;
 
 function item(o) {
   return {
@@ -100,12 +101,124 @@ function buildWorkInbox(store, tenant, user, now = new Date()) {
   }
 
   items.sort((a, b) => (PRIORITY_RANK[b.priority] || 0) - (PRIORITY_RANK[a.priority] || 0));
-  const counts = { total: items.length, byType: {}, byPriority: {} };
-  for (const i of items) {
+  // De telling beschrijft wat er WORDT TERUGGEGEVEN. Eerst afkappen, dan tellen ·
+  // andersom zegt de badge 120 terwijl het scherm er 80 toont (IA-04: "counts
+  // reconcile"). Hoeveel er wegviel staat er expliciet bij.
+  const shown = items.slice(0, MAX_ITEMS);
+  const counts = { total: shown.length, byType: {}, byPriority: {}, truncated: items.length - shown.length };
+  for (const i of shown) {
     counts.byType[i.type] = (counts.byType[i.type] || 0) + 1;
     counts.byPriority[i.priority] = (counts.byPriority[i.priority] || 0) + 1;
   }
-  return { generatedAt: now.toISOString(), items: items.slice(0, 80), counts };
+  return { generatedAt: now.toISOString(), items: shown, counts };
 }
 
-module.exports = { buildWorkInbox };
+// ── IA-04 · genormaliseerd model met gescheiden stromen ──────────────────────
+// De handover (D-05) scheidt Work Inbox, Notifications en Messages in drie
+// capabilities. Een melding is geen werk: je kunt ze niet "afsluiten", alleen
+// wegklikken. Ze samen in één lijst tonen maakt de badge betekenisloos, want
+// dan telt "3 openstaand" twee meldingen en één goedkeuring.
+//
+// Deze bouwer levert het canonieke model uit §9 ("Normalise source type,
+// source ID, action type, priority, due date, assignee and resolution state").
+// v1 hierboven blijft ongewijzigd draaien tot de UI gemigreerd is (D-11).
+
+const WORK_KIND_BY_TYPE = {
+  leave_approval: "approval",
+  expense_approval: "approval",
+  po_approval: "approval",
+  inquiry: "task",
+  overdue_workorder: "exception",
+};
+
+const ROUTE_BY_TYPE = {
+  leave_approval: { routeId: "team.leave", route: id => `/app/team/leave/${id}` },
+  expense_approval: { routeId: "finance.expenses", route: id => `/app/finance/expenses/${id}` },
+  po_approval: { routeId: "resources.purchasing", route: id => `/app/resources/purchasing/${id}` },
+  inquiry: { routeId: "customers.requests", route: id => `/app/customers/requests/${id}` },
+  overdue_workorder: { routeId: "work-orders", route: id => `/app/work-orders/${id}/overview` },
+};
+
+const SOURCE_BY_TYPE = {
+  leave_approval: "leave",
+  expense_approval: "expense",
+  po_approval: "purchase_order",
+  inquiry: "customer_request",
+  overdue_workorder: "work_order",
+};
+
+/** Leid het canonieke item af uit een v1-item. Null = hoort niet in de Work Inbox. */
+function toCanonical(v1, now) {
+  const kind = v1.type.startsWith("signal_") ? "exception" : WORK_KIND_BY_TYPE[v1.type];
+  if (!kind) return null;
+  const sourceType = v1.type.startsWith("signal_") ? v1.type.slice(7) : SOURCE_BY_TYPE[v1.type];
+  const sourceId = String(v1.refId || "");
+  if (!sourceType || !sourceId) return null;
+  const r = ROUTE_BY_TYPE[v1.type];
+  return {
+    id: `${sourceType}:${sourceId}:${v1.actions[0] || kind}`,
+    kind, sourceType, sourceId,
+    actionType: v1.actions[0] || null,
+    routeId: r ? r.routeId : null,
+    route: r ? r.route(sourceId) : null,
+    priority: v1.priority,
+    titleKey: null, title: v1.title, context: v1.context,
+    dueAt: v1.dueAt, slaAt: v1.dueAt,
+    assigneeId: null, state: "open", resolution: null,
+    createdAt: now.toISOString(),
+  };
+}
+
+/**
+ * Work Inbox v2 · drie gescheiden stromen, tellingen die kloppen, geen dubbels.
+ *
+ * @returns {{ generatedAt, work:{items,counts}, notifications:{items,count}, messages:{items,count} }}
+ */
+function buildWorkInboxV2(store, tenant, user, now = new Date()) {
+  const v1 = buildWorkInbox(store, tenant, user, now);
+
+  const meldingen = v1.items.filter(i => i.type === "notification");
+  const kandidaten = v1.items.filter(i => i.type !== "notification");
+
+  // Ontdubbelen op BRON: een Mona-signal en een achterstallige-scan die naar
+  // hetzelfde record wijzen zijn één stuk werk, geen twee.
+  const perBron = new Map();
+  for (const i of kandidaten) {
+    const c = toCanonical(i, now);
+    if (!c) continue;
+    const bestaand = perBron.get(c.id);
+    if (!bestaand || (PRIORITY_RANK[c.priority] || 0) > (PRIORITY_RANK[bestaand.priority] || 0)) perBron.set(c.id, c);
+  }
+  const werk = [...perBron.values()].sort((a, b) =>
+    (PRIORITY_RANK[b.priority] || 0) - (PRIORITY_RANK[a.priority] || 0) || a.id.localeCompare(b.id));
+
+  const counts = { total: werk.length, byKind: {}, byPriority: {}, unassigned: 0, truncated: 0 };
+  for (const i of werk) {
+    counts.byKind[i.kind] = (counts.byKind[i.kind] || 0) + 1;
+    counts.byPriority[i.priority] = (counts.byPriority[i.priority] || 0) + 1;
+    if (!i.assigneeId) counts.unassigned += 1;
+  }
+
+  return {
+    generatedAt: now.toISOString(),
+    work: { items: werk, counts },
+    // Meldingen blijven beschikbaar, maar als EIGEN stroom naast de werklijst.
+    notifications: { items: meldingen, count: meldingen.length },
+    messages: { items: [], count: 0 },
+  };
+}
+
+/**
+ * Kies de versie op basis van de URL. Deze keuze hoort HIER en niet in
+ * server.js: de route blijft één regel en de strangler-schakelaar zit bij de
+ * code die hij schakelt.
+ *
+ *   ?v=2 · genormaliseerd model met gescheiden stromen (IA-04)
+ *   anders · het bestaande antwoord, tot de UI gemigreerd is (D-11)
+ */
+function buildWorkInboxFor(store, tenant, user, url, now = new Date()) {
+  const v2 = url && url.searchParams && url.searchParams.get("v") === "2";
+  return v2 ? buildWorkInboxV2(store, tenant, user, now) : buildWorkInbox(store, tenant, user, now);
+}
+
+module.exports = { buildWorkInbox, buildWorkInboxV2, buildWorkInboxFor, toCanonical, WORK_KIND_BY_TYPE };
