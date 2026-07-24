@@ -1192,7 +1192,7 @@ function gzipFor(filePath, data) {
 
 function serveStatic(req, res) {
   const url = new URL(req.url, config.appUrl);
-  const file = url.pathname === "/" ? "index.html" : url.pathname.replace(/^\/+/, "");
+  const file = httpRouter.spaFile(url.pathname); // /app/... valt terug op index.html (IA · refresh safety)
   const filePath = path.join(config.root, "public", file);
   if (!filePath.startsWith(path.join(config.root, "public"))) {
     res.writeHead(403);

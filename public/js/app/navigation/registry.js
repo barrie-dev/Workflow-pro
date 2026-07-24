@@ -202,5 +202,14 @@
     return errors;
   }
 
-  return { ENTRIES, PORTALS, MOBILE_PRIORITIES, REQUIRED_FIELDS, validate };
+  /**
+   * Alle modules die in de registry voorkomen. Nodig voor een gebruiker met
+   * "alles vrijgegeven": de resolver werkt met een concrete lijst, niet met
+   * een jokerteken · zo blijft één codepad over in plaats van twee.
+   */
+  const ALL_ENTITLEMENTS = [...new Set(
+    ENTRIES.flatMap(e => [e.entitlement, ...(e.children || []).map(c => c.entitlement)]).filter(Boolean)
+  )].sort();
+
+  return { ENTRIES, PORTALS, MOBILE_PRIORITIES, REQUIRED_FIELDS, ALL_ENTITLEMENTS, validate };
 });
