@@ -826,6 +826,23 @@ function delegatedAccessFor(store, resellerId, tenantId) {
     .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
 }
 
+/**
+ * Platformoverzicht van de koppelingen, optioneel gefilterd op reseller.
+ *
+ * Bestond eerder als een rechtstreekse store.data-lees in server.js. Bij het
+ * extraheren naar een router kwam dat boven water: een router hoort niet in de
+ * opslag te grijpen, want dan zit de vorm van de data op twee plekken.
+ */
+function listTenantLinks(store, { resellerId = null } = {}) {
+  return (store.data[LINKS] || []).filter(l => !resellerId || l.resellerId === resellerId);
+}
+
+/** Idem voor de delegatierecords · platformbreed, met optionele filters. */
+function listDelegatedAccess(store, { resellerId = null, tenantId = null } = {}) {
+  return (store.data[GRANTS] || [])
+    .filter(g => (!resellerId || g.resellerId === resellerId) && (!tenantId || g.tenantId === tenantId));
+}
+
 /** Is er NU een actieve delegatie die deze scope dekt? Verlopen of ingetrokken telt niet. */
 function hasDelegatedAccess(store, { resellerId, tenantId, scope = null, now = null }) {
   return delegatedAccessFor(store, resellerId, tenantId)
@@ -942,6 +959,7 @@ module.exports = {
   provisionTenant,
   // tenantkoppeling (23.4/23.9)
   linkTenant, revokeTenantLink, activeLinkFor, assignedTenants, commercialTenantMetadata,
+  listTenantLinks, listDelegatedAccess,
   // gedelegeerde toegang (23.12)
   requestDelegatedAccess, approveDelegatedAccess, activateDelegatedAccess,
   revokeDelegatedAccess, expireDelegatedAccess, delegatedAccessFor,

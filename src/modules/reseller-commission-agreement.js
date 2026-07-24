@@ -91,6 +91,28 @@ function agreementsFor(store, resellerId) {
 function statementsFor(store, resellerId) {
   return (store.data.resellerCommissionStatements || []).filter(s => s.resellerId === resellerId);
 }
+/**
+ * Platformoverzichten: zonder resellerId het Monargo-brede beeld, met
+ * resellerId hetzelfde als de *For-helpers hierboven.
+ *
+ * Deze vier bestonden als rechtstreekse store.data-lezingen in server.js. Bij
+ * het extraheren naar een router kwam dat boven water: een router hoort de vorm
+ * van de opslag niet te kennen · anders staat die kennis op twee plekken en
+ * loopt er ooit één achter.
+ */
+function listAgreements(store, { resellerId = null } = {}) {
+  return resellerId ? agreementsFor(store, resellerId) : (store.data.resellerCommissionAgreements || []);
+}
+function listStatements(store, { resellerId = null } = {}) {
+  return resellerId ? statementsFor(store, resellerId) : (store.data.resellerCommissionStatements || []);
+}
+function listDisputes(store, { resellerId = null } = {}) {
+  return (store.data.resellerCommissionDisputes || []).filter(d => !resellerId || d.resellerId === resellerId);
+}
+function listPayoutChanges(store, { resellerId = null } = {}) {
+  return (store.data.resellerPayoutChanges || []).filter(c => !resellerId || c.resellerId === resellerId);
+}
+
 function eventsFor(store, resellerId) {
   return (store.data.commissionEvents || []).filter(e => e.resellerId === resellerId);
 }
@@ -730,6 +752,7 @@ module.exports = {
   AGREEMENT_CHANGE_FIELDS, EXPORT_DENYLIST,
   // agreements (immutable versies)
   createAgreement, transitionAgreement, amendAgreement, activeAgreementFor, agreementsFor,
+  listAgreements, listStatements, listDisputes, listPayoutChanges,
   // events (verdienmoment + rule version + adjustment/clawback)
   accrueFromSource, excludeEvent, adjustEvent, clawbackForReason,
   // staten (reproduceerbaar)
