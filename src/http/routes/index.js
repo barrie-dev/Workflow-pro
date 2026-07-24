@@ -8,7 +8,9 @@
 //
 // Contract per routermodule:
 //   module.exports = (ctx) => [{ method, path, handler }]
-//     method  "GET" | "POST" | ... (of een array voor meerdere)
+//     method  "GET" | "POST" | ... (of een array voor meerdere, of "*" voor elke
+//             methode · dat laatste bestaat om bestaande, methode-agnostische
+//             routes byte-identiek te kunnen extraheren)
 //     path    exacte string ("/api/status") of RegExp met capture-groepen
 //     handler async (req, res, { url, params, ctx }) => void
 //
@@ -19,6 +21,7 @@
 // globale singletons importeren en er geen circulaire afhankelijkheden ontstaan.
 
 const ROUTER_MODULES = [
+  require("./health"),
   require("./status"),
 ];
 
@@ -53,7 +56,9 @@ async function dispatch(routes, req, res, url, ctx) {
       if (!m) continue;
       params = m.slice(1);
     }
-    if (!r.methods.includes(String(req.method).toUpperCase())) continue;
+    // "*" = methode-agnostisch · bestaat om routes die vóór de extractie op elke
+    // methode antwoordden byte-identiek te houden.
+    if (!r.methods.includes("*") && !r.methods.includes(String(req.method).toUpperCase())) continue;
     await r.handler(req, res, { url, params, ctx });
     return true;
   }
