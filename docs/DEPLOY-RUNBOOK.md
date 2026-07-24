@@ -99,6 +99,45 @@ precies de bescherming op die het eerdere dataverlies moest voorkomen. En een
 HTTP 200 op liveness is geen bewijs van readiness · claim "zero downtime" niet
 zonder trafficprobe- en leader-handovertest (aparte latere ADR).
 
+### 3.2 Niet-geheim config-contract + preflight (CTO3-05)
+
+`deploy/production-contract.json` legt de gewenste productietoestand vast: welke
+bron, adapter, securitymode en featureflag actief hoort te zijn. Het bevat NOOIT
+secret-waarden · alleen key-namen en niet-geheime gewenste waarden. Elke kritieke
+flag staat óók expliciet in `render.yaml`, dus niets blijft een ongedocumenteerde
+dashboardinstelling.
+
+De preflight `scripts/check-production-contract.js` heeft twee modi:
+
+- **coverage** (`node scripts/check-production-contract.js`) · draait op elke PR
+  in CI. Valideert dat het contract laadt en dat `render.yaml` elke verplichte
+  flag/env-key declareert. Geen secrets nodig.
+- **runtime** (`node scripts/check-production-contract.js --runtime`) · draai dit
+  **vóór elke productie-deploy** (in de productieomgeving, met de echte env). Het
+  vergelijkt de effectieve runtime met het contract en faalt fail-closed bij:
+  drift (een flag wijkt af), een verboden bron (`OBJECT_STORAGE_ADAPTER=local`),
+  een ontbrekende verplichte env-key, een ontbrekende `DATABASE_CA_CERT` bij
+  `verify-full`, of `FORMS_SOURCE=pg` zonder groene Forms-reconcile.
+
+De runtime toont deze niet-geheime samenvatting op `/api/ready` (`checks`):
+`sources` per domein, `singleWriter`, `databaseSslMode`, `databaseCaCertPresent`,
+`releaseChannel`, `migrationVersion` en `commitSha` · nooit secrets.
+
+**Cutover-sequence per domein** (idempotent, fail-closed). Flip een bronflag
+nooit zonder reconcilebewijs:
+
+1. **inventory** · stel vast wat er te migreren valt.
+2. **shadow/mirror** · zet `<DOMEIN>_READ_SOURCE=shadow`: legacy blijft leidend,
+   pg leest mee; afwijkingen lopen naar telemetrie.
+3. **reconcile** · bewijs dat legacy en pg sluitend zijn
+   (`node scripts/check-cutover.js`); een afwijking blokkeert de cutover.
+4. **cutover** · zet `<DOMEIN>_READ_SOURCE=pg`. Voor Forms geldt de extra
+   poortwachter: `node scripts/forms-cutover.js reconcile` moet groen zijn (exit
+   0) én de legacy-schrijfweg geeft daarna 410 vóór `FORMS_SOURCE=pg`.
+5. **rollbackcheck** · een rollback is een flag-flip terug naar `shadow`/`legacy`;
+   de data blijft (dual-write), en de preflight rapporteert de bron per domein.
+6. **evidence** · bewaar de preflight- en reconcile-output commit-gebonden.
+
 ## 4. Rollback
 
 - **Applicatie**: het vorige image-tag (of de vorige commit) opnieuw uitrollen;
