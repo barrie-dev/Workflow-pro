@@ -4,9 +4,11 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const admin = fs.readFileSync(path.join(__dirname, "..", "public", "js", "platforms", "admin.js"), "utf8");
+// Berichten woont sinds de uitsplitsing in een eigen bestand; de assertie
+// hieronder gaat over het SCHERM, niet over de vindplaats.
+const admin = fs.readFileSync(path.join(__dirname, "..", "public", "js", "platforms", "admin-berichten.js"), "utf8");
 const css = fs.readFileSync(path.join(__dirname, "..", "public", "css", "admin.css"), "utf8");
-const section = admin.slice(admin.indexOf("// ── Messages"), admin.indexOf("// ── Reports"));
+const section = admin;
 
 test("berichten zijn een gesprekworkspace en geen samengedrukte tabelpopup", () => {
   assert.match(section, /class="message-workspace"/);

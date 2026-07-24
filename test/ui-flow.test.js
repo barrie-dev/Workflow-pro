@@ -1,13 +1,14 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const { adminSource } = require("./helpers/admin-source");
 const path = require("node:path");
 
 const root = path.resolve(__dirname, "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 
 test("admin: klanttraject is zichtbaar en navigeerbaar", () => {
-  const source = read("public/js/platforms/admin.js");
+  const source = adminSource();
   for (const step of ["customers", "offertes", "planning", "workorders", "facturen"]) {
     assert.match(source, new RegExp(`view:\\"${step}\\"`));
   }
@@ -19,7 +20,7 @@ test("admin: klanttraject is zichtbaar en navigeerbaar", () => {
 });
 
 test("admin: onboarding is een korte flow met logische vervolgstappen", () => {
-  const source = read("public/js/platforms/admin.js");
+  const source = adminSource();
   for (const step of ["1", "2", "3"]) assert.match(source, new RegExp(`data-ob-step=\\"${step}\\"`));
   assert.match(source, /validateObStep/);
   assert.match(source, /admObLaunchCustomer/);
@@ -30,7 +31,7 @@ test("admin: onboarding is een korte flow met logische vervolgstappen", () => {
 });
 
 test("admin: snelle acties openen de bedoelde aanmaakflow", () => {
-  const source = read("public/js/platforms/admin.js");
+  const source = adminSource();
   assert.match(source, /data-quick-click="admAddShift"/);
   assert.match(source, /data-quick-click="admNewWO"/);
   assert.match(source, /data-quick-drawer="customer"/);
@@ -39,7 +40,7 @@ test("admin: snelle acties openen de bedoelde aanmaakflow", () => {
 });
 
 test("admin: actiecentrum bundelt dagelijkse uitzonderingen in een logische flow", () => {
-  const source = read("public/js/platforms/admin.js");
+  const source = adminSource();
   const css = read("public/css/admin.css");
   assert.match(source, /data-view="actions"/);
   assert.match(source, /id="admActionBadge"/);
@@ -54,20 +55,23 @@ test("admin: actiecentrum bundelt dagelijkse uitzonderingen in een logische flow
   assert.match(source, /actions\.next/);
   assert.match(source, /data-action-view/);
   assert.match(source, /data-action-read/);
-  assert.match(source, /actions: renderActionCenter/);
+  // Het actiecentrum registreert zichzelf sinds de uitsplitsing vanuit zijn
+  // eigen module; de oude vorm blijft aanvaard zolang er schermen zijn die nog
+  // in admin.js wonen.
+  assert.match(source, /A\.views\.actions\s*=|actions:\s*renderActionCenter/);
   assert.match(css, /\.adm-action-center/);
   assert.match(css, /\.adm-action-stats/);
   assert.match(css, /@media \(max-width:520px\)[\s\S]*\.adm-action-row/);
 });
 
 test("admin: de getoonde globale zoeksneltoets werkt echt", () => {
-  const source = read("public/js/platforms/admin.js");
+  const source = adminSource();
   assert.match(source, /\(e\.metaKey \|\| e\.ctrlKey\) && e\.key\.toLowerCase\(\) === "k"/);
   assert.match(source, /e\.preventDefault\(\);\s*input\.focus\(\);\s*input\.select\(\)/);
 });
 
 test("admin: documentregels en submits zijn mobiel en dubbelklikveilig", () => {
-  const source = read("public/js/platforms/admin.js");
+  const source = adminSource();
   const css = read("public/css/admin.css");
   assert.match(source, /q-line-row adm-document-line/);
   assert.match(source, /inv-line-row adm-document-line/);
@@ -78,7 +82,7 @@ test("admin: documentregels en submits zijn mobiel en dubbelklikveilig", () => {
 });
 
 test("admin: planning ondersteunt week, dag en capaciteit zonder vaste klantvoortgangslijn", () => {
-  const source = read("public/js/platforms/admin.js");
+  const source = adminSource();
   const css = read("public/css/admin.css");
   for (const mode of ["week", "day", "capacity"]) {
     assert.match(source, new RegExp(`data-planning-mode=\\"${mode}\\"`));
@@ -117,7 +121,7 @@ test("rolomgevingen gebruiken dezelfde goedgekeurde compacte workspace", () => {
 
 
 test("admin: golden flow bewaart domeinkoppelingen tussen klant, werkbon, planning en factuur", () => {
-  const source = read("public/js/platforms/admin.js");
+  const source = adminSource();
   assert.match(source, /customerId: customer\.id,[\s\S]{0,180}prefillCustomerName: customer\.name/);
   assert.match(source, /const savedWorkorder = saved\.workorder \|\| saved\.row \|\| workorder \|\| null/);
   assert.match(source, /workorderId: savedWorkorder\?\.id \|\| ""/);

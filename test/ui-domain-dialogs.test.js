@@ -3,12 +3,13 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const { adminSource } = require("./helpers/admin-source");
 const path = require("node:path");
 
 const root = path.join(__dirname, "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 const source = read("public/js/platforms/admin-domains.js");
-const admin = read("public/js/platforms/admin.js");
+const admin = adminSource();
 const manager = read("public/js/platforms/manager.js");
 const employee = read("public/js/platforms/employee.js");
 const superadmin = read("public/js/platforms/superadmin.js");

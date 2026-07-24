@@ -56,7 +56,27 @@
     return data;
   }
 
+  /**
+   * De uitgesplitste paginamodules (CTO3-09). Ze registreren zichzelf; deze
+   * shell toont alleen wat er ECHT geregistreerd is · een module die niet
+   * geladen is, levert geen dood menu-item op.
+   */
+  function extraPages() {
+    const reg = window.wfpResellerPageRegistry;
+    return reg ? reg.pages() : [];
+  }
+
+  function extraNavItems() {
+    const items = extraPages();
+    if (!items.length) return "";
+    return `<span class="rsp-nav-label">${esc(tR("rsp.partnerAdmin", "Partnerbeheer"))}</span>`
+      + items.map(p => `<button type="button" class="rsp-nav-item" data-rsp-view="${esc(p.id)}">`
+        + `<span aria-hidden="true">·</span>${esc(p.label)}</button>`).join("");
+  }
+
   function viewMeta(view) {
+    const extra = extraPages().find(p => p.id === view);
+    if (extra) return extra.meta;
     return {
       dashboard: {
         eyebrow: tR("rsp.partnerWorkspace", "Partnerwerkruimte"),
@@ -102,6 +122,7 @@
             <button type="button" class="rsp-nav-item" data-rsp-view="commission"><span aria-hidden="true">€</span>${esc(tR("rsp.commission", "Commissies"))}</button>
             <span class="rsp-nav-label">${esc(tR("rsp.grow", "Groei"))}</span>
             <button type="button" class="rsp-nav-item" data-rsp-view="onboarding"><span aria-hidden="true">＋</span>${esc(tR("rsp.createClient", "Nieuwe klant"))}</button>
+            ${extraNavItems()}
           </nav>
           <div class="rsp-sidebar-foot">
             <span>${esc(tR("rsp.privacyTitle", "Privacy beschermd"))}</span>
@@ -447,6 +468,16 @@
     main.setAttribute("aria-busy", "true");
     main.innerHTML = `<div class="rsp-loading"><span class="adm-spinner"></span>${esc(tR("adm.loading", "Laden..."))}</div>`;
     try {
+      // Een uitgesplitste pagina tekent zichzelf en heeft de portaalstate niet
+      // nodig · loadData() blijft dus achterwege. Zo hoeft een aparte pagina
+      // niet te wachten op klanten, grootboek en aanvragen die ze niet gebruikt.
+      const extra = extraPages().find(p => p.id === state.view);
+      if (extra) {
+        main.innerHTML = "";
+        await extra.render(main);
+        main.focus({ preventScroll: true });
+        return;
+      }
       await loadData(false);
       const renderers = {
         dashboard: renderDashboard,

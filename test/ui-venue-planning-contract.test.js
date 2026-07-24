@@ -4,7 +4,10 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const admin = fs.readFileSync(path.join(__dirname, "..", "public", "js", "platforms", "admin.js"), "utf8");
+// Planning en shiftbeheer zijn over admin.js en admin-planning.js verdeeld;
+// deze test gaat over het CONTRACT, niet over de vindplaats.
+const { adminSource } = require("./helpers/admin-source");
+const admin = adminSource();
 const css = fs.readFileSync(path.join(__dirname, "..", "public", "css", "admin.css"), "utf8");
 
 test("planning resolveert venueId naar een leesbare locatie", () => {
