@@ -602,6 +602,9 @@ const routeCtx = {
   getTxAdapter: () => (pgTxManager || txManager).adapter,
   getSourceModes: () => ({ identity: identitySource.mode, finance: financeSource.mode, company: companySource.mode }),
   getModuleCount: () => modules.length,
+  openApiSpec: () => openApiSpec(),
+  releaseInfo: () => releaseInfo(),
+  loadPlatformConfig: (st) => loadPlatformConfig(st),
 };
 const httpRoutes = httpRouter.registerRoutes(routeCtx);
 
@@ -1378,22 +1381,6 @@ const httpServer = http.createServer(async (req, res) => {
 
 
 
-    if (url.pathname === "/api/openapi.json" && req.method === "GET") {
-      sendJson(res, 200, openApiSpec());
-      return;
-    }
-
-    if (url.pathname === "/api/releases" && req.method === "GET") {
-      sendJson(res, 200, { ok: true, release: releaseInfo() });
-      return;
-    }
-
-    // Publieke platform-aankondiging / onderhoudsbanner · getoond aan alle shells.
-    if (url.pathname === "/api/announcement" && req.method === "GET") {
-      const a = loadPlatformConfig(store).announcement || {};
-      sendJson(res, 200, { ok: true, announcement: a.active ? { active: true, level: a.level || "info", message: a.message || "" } : { active: false } });
-      return;
-    }
 
     if (url.pathname === "/api/webhooks/stripe" && req.method === "POST") {
       const rawBody = await readRawBody(req);

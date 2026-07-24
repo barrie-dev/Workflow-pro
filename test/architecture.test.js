@@ -106,8 +106,8 @@ test("architectuur: generieke APP_COMMIT_SHA heeft voorrang op RENDER_GIT_COMMIT
 // laat groeien, krijgt hier een rode test. Het budget verhogen is nooit de
 // oplossing · dan hoort de route in een router onder src/http/routes.
 const SERVER_FILE = path.join(ROOT, "src", "server.js");
-const MAX_SERVER_LINES = 10174;   // increment 2: startup/health geextraheerd
-const MAX_INLINE_ROUTES = 566;    // route-definities rechtstreeks in server.js
+const MAX_SERVER_LINES = 10161;   // increment 3: publieke meta-routes geextraheerd
+const MAX_INLINE_ROUTES = 563;    // route-definities rechtstreeks in server.js
 const FINAL_TARGET_LINES = 2500;  // einddoel uit CTO3-10
 
 function countInlineRoutes(src) {

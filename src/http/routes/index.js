@@ -22,6 +22,7 @@
 
 const ROUTER_MODULES = [
   require("./health"),
+  require("./public-meta"),
   require("./status"),
 ];
 
