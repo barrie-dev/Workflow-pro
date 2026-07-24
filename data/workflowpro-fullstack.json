@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 15,
+  "schemaVersion": 10,
   "tenants": [
     {
       "invoiceProfile": {},
@@ -54,7 +54,7 @@
     {
       "mfaEnabled": false,
       "mfaEnforced": false,
-      "lastLoginAt": "2026-07-24T09:25:22.451Z",
+      "lastLoginAt": "2026-07-16T20:16:46.430Z",
       "failedLoginCount": 0,
       "lockedUntil": null,
       "id": "u_admin",
@@ -83,14 +83,7 @@
         "leaves",
         "incidents",
         "projects",
-        "construction",
-        "service_assets",
-        "contracts",
-        "procurement",
-        "inventory",
-        "catalog",
-        "price_rules",
-        "progress_claims"
+        "construction"
       ],
       "active": true,
       "updatedAt": "2026-06-09T18:12:54.127Z",
@@ -201,46 +194,7 @@
     }
   ],
   "venues": [],
-  "customers": [
-    {
-      "id": "cust_85WEQ9YK10MDZP8S9WQCJYPGV3",
-      "tenantId": "t_demo",
-      "type": "company",
-      "name": "Acme Bouw NV",
-      "vatNumber": "",
-      "language": "nl",
-      "paymentTermsDays": 30,
-      "creditStatus": "ok",
-      "creditLimit": null,
-      "contacts": [
-        {
-          "id": "ct_75WEQ9YK102EQHN5ABQ72N8GX8",
-          "name": "",
-          "role": "",
-          "email": "info@acme.be",
-          "phone": "",
-          "isPrimary": true
-        }
-      ],
-      "addresses": [],
-      "notes": "",
-      "email": "info@acme.be",
-      "phone": "",
-      "contactName": "",
-      "address": "",
-      "zip": "",
-      "city": "",
-      "customFields": {},
-      "schemaVersion": 2,
-      "version": 1,
-      "createdAt": "2026-07-24T09:31:46.215Z",
-      "createdBy": "admin@demobouw.be",
-      "updatedAt": "2026-07-24T09:31:46.215Z",
-      "updatedBy": "admin@demobouw.be",
-      "data_classification": "confidential",
-      "source": "ui"
-    }
-  ],
+  "customers": [],
   "shifts": [],
   "workorders": [],
   "clocks": [],
@@ -293,28 +247,7 @@
       "createdAt": "2026-05-29T22:45:44.088Z"
     }
   ],
-  "notifications": [
-    {
-      "id": "notification_1784885173245_47a07f7c7e10e8",
-      "tenantId": "t_demo",
-      "type": "mona",
-      "channel": "in_app",
-      "audience": "admins",
-      "userId": null,
-      "title": "1 ding(en) voorbereid",
-      "body": "Mona heeft 1 ding(en) voor je klaargezet: 1 vervallen factuur · herinnering klaar. Open \"Voorbereid voor jou\" om ze te bevestigen.",
-      "status": "queued",
-      "priority": "normal",
-      "scheduledFor": "2026-07-24T09:26:13.245Z",
-      "sourceRef": "mona:digest:2026-07-24",
-      "createdBy": "mona",
-      "createdAt": "2026-07-24T09:26:13.245Z",
-      "readAt": null,
-      "data_classification": "internal",
-      "source": "ui",
-      "version": 1
-    }
-  ],
+  "notifications": [],
   "integrations": [],
   "invoices": [
     {
@@ -1389,39 +1322,6 @@
       "tenantId": "t_demo",
       "action": "login",
       "area": "auth"
-    },
-    {
-      "id": "audit_MC53Q9YK107322QBQMVGW7SMAS",
-      "at": "2026-07-24T09:25:22.452Z",
-      "tenantId": "t_demo",
-      "actor": "admin@demobouw.be",
-      "action": "login",
-      "area": "auth",
-      "detail": "",
-      "correlationId": null,
-      "security": true
-    },
-    {
-      "id": "audit_YZP4Q9YK10DDBVP7DHY7RWQZAM",
-      "at": "2026-07-24T09:26:13.246Z",
-      "tenantId": "t_demo",
-      "actor": "mona",
-      "action": "notification_created",
-      "area": "notifications",
-      "detail": "1 ding(en) voorbereid",
-      "correlationId": null,
-      "security": false
-    },
-    {
-      "id": "audit_85WEQ9YK10A2SBNNY11QTRHVVH",
-      "at": "2026-07-24T09:31:46.216Z",
-      "tenantId": "t_demo",
-      "actor": "admin@demobouw.be",
-      "action": "customer_created",
-      "area": "customers",
-      "detail": "Acme Bouw NV",
-      "correlationId": null,
-      "security": false
     }
   ],
   "errorEvents": [
@@ -1575,31 +1475,6 @@
       "version": 10,
       "name": "tenant-admin-construction-permission",
       "appliedAt": "2026-07-17T14:41:35.325Z"
-    },
-    {
-      "version": 11,
-      "name": "tenant-admin-service-assets-permission",
-      "appliedAt": "2026-07-24T09:24:43.205Z"
-    },
-    {
-      "version": 12,
-      "name": "tenant-admin-contracts-permission",
-      "appliedAt": "2026-07-24T09:24:43.207Z"
-    },
-    {
-      "version": 13,
-      "name": "tenant-admin-procurement-inventory-permission",
-      "appliedAt": "2026-07-24T09:24:43.207Z"
-    },
-    {
-      "version": 14,
-      "name": "tenant-admin-catalog-permission",
-      "appliedAt": "2026-07-24T09:24:43.207Z"
-    },
-    {
-      "version": 15,
-      "name": "tenant-admin-progress-claims-permission",
-      "appliedAt": "2026-07-24T09:24:43.207Z"
     }
   ],
   "quotes": [
@@ -1761,10 +1636,7 @@
         "reports",
         "appointments",
         "incidents",
-        "inbox",
-        "projects",
-        "contracts",
-        "catalog"
+        "inbox"
       ],
       "submodules": {
         "planning": [
@@ -1808,20 +1680,13 @@
         ],
         "appointments": [
           "reminders"
-        ],
-        "catalog": [
-          "price-lists",
-          "composition"
         ]
       },
-      "updatedAt": "2026-07-24T09:24:45.801Z",
+      "updatedAt": "2026-07-15T21:10:42.885Z",
       "backfilled": [
         "appointments",
         "incidents",
-        "inbox",
-        "projects",
-        "contracts",
-        "catalog"
+        "inbox"
       ]
     },
     {
@@ -1855,15 +1720,7 @@
         "ai_actions",
         "appointments",
         "incidents",
-        "inbox",
-        "projects",
-        "construction",
-        "service_assets",
-        "contracts",
-        "procurement",
-        "inventory",
-        "catalog",
-        "progress_claims"
+        "inbox"
       ],
       "submodules": {
         "planning": [
@@ -1907,29 +1764,13 @@
         ],
         "appointments": [
           "reminders"
-        ],
-        "catalog": [
-          "price-lists",
-          "composition"
-        ],
-        "progress_claims": [
-          "price-revision",
-          "retention"
         ]
       },
-      "updatedAt": "2026-07-24T09:24:45.801Z",
+      "updatedAt": "2026-07-15T21:10:42.886Z",
       "backfilled": [
         "appointments",
         "incidents",
-        "inbox",
-        "projects",
-        "construction",
-        "service_assets",
-        "contracts",
-        "procurement",
-        "inventory",
-        "catalog",
-        "progress_claims"
+        "inbox"
       ]
     }
   ],
@@ -1953,100 +1794,8 @@
     }
   ],
   "numberSequences": [],
-  "outbox": [
-    {
-      "id": "evt_85WEQ9YK10050KE79NK76TG1VV",
-      "eventType": "customer.created",
-      "tenantId": "t_demo",
-      "companyId": null,
-      "aggregateType": "customer",
-      "aggregateId": "cust_85WEQ9YK10MDZP8S9WQCJYPGV3",
-      "occurredAt": "2026-07-24T09:31:46.216Z",
-      "correlationId": "req_mryqquudgrdpr7",
-      "causationId": null,
-      "version": 1,
-      "data": {},
-      "actor": "admin@demobouw.be",
-      "delivery": {
-        "status": "pending",
-        "attempts": 0,
-        "nextAttemptAt": null,
-        "lastError": null
-      }
-    }
-  ],
+  "outbox": [],
   "projects": [],
   "worksites": [],
-  "changeOrders": [],
-  "assets": [],
-  "maintenancePlans": [],
-  "contracts": [],
-  "suppliers": [],
-  "purchaseOrders": [],
-  "stockMovements": [],
-  "stockReservations": [],
-  "articles": [],
-  "priceRules": [],
-  "webhookEndpoints": [],
-  "progressClaims": [],
-  "employees": [],
-  "gridViews": [],
-  "exportJobs": [],
-  "payments": [],
-  "webhookDeliveries": [],
-  "mailLog": [],
-  "formTemplates": [],
-  "formInstances": [],
-  "tasks": [],
-  "communications": [],
-  "customFields": [],
-  "automationFlows": [],
-  "automationRuns": [],
-  "commissionEvents": [],
-  "commissionPayouts": [],
-  "resellerDeals": [],
-  "resellerDealConflicts": [],
-  "resellerTenantRequests": [],
-  "resellerTenantLinks": [],
-  "resellerAccessGrants": [],
-  "resellerLicenseRequests": [],
-  "resellerPriceExceptions": [],
-  "resellerPriceAgreements": [],
-  "resellerCommissionAgreements": [],
-  "resellerCommissionStatements": [],
-  "resellerCommissionDisputes": [],
-  "resellerPayoutChanges": [],
-  "resellerAgreements": [],
-  "resellerLifecycleEvents": [],
-  "resellerReviews": [],
-  "resellerOffboardings": [],
-  "integrationConnectors": [],
-  "integrationConnections": [],
-  "integrationCredentials": [],
-  "integrationMappings": [],
-  "integrationSyncJobs": [],
-  "integrationSyncItems": [],
-  "integrationEvents": [],
-  "usageEvents": [],
-  "usageAdjustments": [],
-  "usagePriceRules": [],
-  "usageCostRules": [],
-  "usageBillingPeriods": [],
-  "usageBillingLines": [],
-  "peppolActivations": [],
-  "tenantUsageLimits": [],
-  "tenantCreditAllocations": [],
-  "platformUsageBudgets": [],
-  "usageAlertRules": [],
-  "usageAlerts": [],
-  "aiFeatureCreditRates": [],
-  "aiProviderUsage": [],
-  "payrollConnections": [],
-  "payrollEmployeeMappings": [],
-  "payrollCodeMappings": [],
-  "payrollPeriods": [],
-  "payrollEntries": [],
-  "payrollExports": [],
-  "payrollImportResults": [],
-  "payrollCorrections": []
+  "changeOrders": []
 }
