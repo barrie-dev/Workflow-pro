@@ -51,12 +51,18 @@ function baseOrg(overrides = {}) {
     account_manager_id: "u_am",
     agreement_version: "2026-01", accepted_at: "2026-01-10T10:00:00.000Z",
     delegated_support_allowed: false, delegated_tenant_admin_allowed: false,
+    // CTO3-08 · afdwingbare gates: MFA, payoutconfiguratie en een indiener die
+    // NIET de goedkeurder is (vier-ogen). Een activatieklare partner draagt deze.
+    mfa_enforced: true,
+    payout_account: "BE68539007547034", payout_currency: "EUR",
+    submitted_by: "aanvrager@acme.be",
     ...overrides,
   };
 }
 
+// Een activatieklare store draagt óók minstens één partnergebruiker (rolgate).
 function storeWithOrg(overrides = {}, seed = {}) {
-  const store = fakeStore(seed);
+  const store = fakeStore({ users: [{ id: "ru1", resellerId: "r1", email: "owner@acme.be", resellerRole: "reseller_owner" }], ...seed });
   store.insert("resellers", baseOrg(overrides));
   return store;
 }
@@ -467,4 +473,95 @@ test("expiredAccreditations · verlopen en dateloze certificaten (fail dicht), g
 test("expiredAccreditations · lege of ontbrekende lijst geeft lege uitkomst", () => {
   const store = storeWithOrg();
   assert.deepEqual(svc.expiredAccreditations(store, "r1"), []);
+});
+
+// ── CTO3-08 · partneractivatie fail-closed ───────────────────────────────────
+
+test("CTO3-08 1· ontbrekende DPA blokkeert activatie (409 met veldfout)", () => {
+  // Zodra klantdata verwerkt kan worden is dpa_accepted_at verplicht.
+  const store = storeWithOrg({ delegated_support_allowed: true, dpa_accepted_at: "" });
+  assert.throws(() => svc.activate(store, { resellerId: "r1" }, admin), e =>
+    e.status === 409 && e.code === "RESELLER_ACTIVATION_BLOCKED" && !!e.fieldErrors.dpa_accepted_at);
+});
+
+test("CTO3-08 2· zonder MFA wordt activatie geweigerd", () => {
+  const store = storeWithOrg({ mfa_enforced: false });
+  assert.throws(() => svc.activate(store, { resellerId: "r1" }, admin), e =>
+    e.status === 409 && !!e.fieldErrors.mfa_enforced);
+});
+
+test("CTO3-08 2b· onvolledige payoutconfiguratie of geen partnergebruiker blokkeert", () => {
+  const zonderIban = storeWithOrg({ payout_account: "" });
+  assert.throws(() => svc.activate(zonderIban, { resellerId: "r1" }, admin), e => !!e.fieldErrors.payout_configuration);
+  const zonderValuta = storeWithOrg({ payout_currency: "" });
+  assert.throws(() => svc.activate(zonderValuta, { resellerId: "r1" }, admin), e => !!e.fieldErrors.payout_configuration);
+  const zonderGebruiker = fakeStore({ users: [] });
+  zonderGebruiker.insert("resellers", baseOrg());
+  assert.throws(() => svc.activate(zonderGebruiker, { resellerId: "r1" }, admin), e => !!e.fieldErrors.roles);
+});
+
+test("CTO3-08 3· zelfgoedkeuring is verboden (vier-ogen, 403)", () => {
+  // De indiener probeert zelf te activeren.
+  const store = storeWithOrg({ submitted_by: "aanvrager@acme.be" });
+  assert.throws(() => svc.activate(store, { resellerId: "r1" }, { email: "aanvrager@acme.be" }), e =>
+    e.status === 403 && e.code === "SELF_APPROVAL_FORBIDDEN");
+  // Een ANDERE goedkeurder mag wel.
+  assert.equal(svc.activate(store, { resellerId: "r1" }, admin).status, "active");
+});
+
+test("CTO3-08 3b· ontbrekende indiener-identiteit faalt dicht (geen anonieme activatie)", () => {
+  const store = storeWithOrg({ submitted_by: "", created_by: "" });
+  assert.throws(() => svc.activate(store, { resellerId: "r1" }, admin), e => e.status === 403);
+});
+
+test("CTO3-08 4· het legacy-pad kan GEEN active record meer produceren buiten de gates om", () => {
+  // Een gesuspendeerde partner zonder MFA: de oude knop zette dit gewoon op active.
+  const store = storeWithOrg({ status: "suspended", mfa_enforced: false });
+  assert.throws(() => svc.legacyReactivate(store, { resellerId: "r1", reason: "betaald" }, admin), e =>
+    e.status === 409 && e.code === "RESELLER_ACTIVATION_BLOCKED" && !!e.fieldErrors.mfa_enforced);
+  assert.equal(store.get("resellers", "r1").status, "suspended", "status ONGEWIJZIGD na geweigerde legacy-heractivatie");
+});
+
+test("CTO3-08 4b· een geldige grandfather-uitzondering laat het legacy-pad wel door", () => {
+  const morgen = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString();
+  const store = storeWithOrg({ status: "suspended", mfa_enforced: false, grandfathered: true, remediation_deadline: morgen });
+  assert.equal(svc.legacyReactivate(store, { resellerId: "r1" }, admin).status, "active");
+  // Een VERLOPEN uitzondering telt niet meer.
+  const gisteren = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+  const verlopen = storeWithOrg({ status: "suspended", mfa_enforced: false, grandfathered: true, remediation_deadline: gisteren });
+  assert.throws(() => svc.legacyReactivate(verlopen, { resellerId: "r1" }, admin), e => e.status === 409);
+});
+
+test("CTO3-08 5· niet-actieve partner verliest nieuwe acties, historische rapportage blijft", () => {
+  const A = require("../src/platform/reseller-authz");
+  const suspended = { id: "r1", status: "suspended" };
+  assert.throws(() => svc.assertPartnerActive(suspended, "een nieuwe deal"), e =>
+    e.status === 403 && e.code === "PARTNER_NOT_ACTIVE");
+  assert.equal(svc.assertPartnerActive({ status: "active" }), true);
+  // Historische financiële rapportage blijft leesbaar onder suspensie (23.4).
+  const finance = { resellerId: "r1", resellerRole: "reseller_finance" };
+  assert.equal(A.canResellerAction(finance, "reseller.commissions.view", { resellerId: "r1", resellerStatus: "suspended" }), true);
+  // Maar een nieuwe beheeractie niet.
+  assert.equal(A.canResellerAction(finance, "reseller.payout.manage", { resellerId: "r1", resellerStatus: "suspended" }), false);
+});
+
+test("CTO3-08 6· grandfather-migratie markeert bestaande actieve partners met deadline en eigenaar", () => {
+  const store = fakeStore({ users: [] });
+  store.insert("resellers", baseOrg({ id: "r_ok", status: "active", mfa_enforced: true }));
+  store.insert("resellers", baseOrg({ id: "r_gap", status: "active", mfa_enforced: false }));
+  store.data.users.push({ id: "u_ok", resellerId: "r_ok" }, { id: "u_gap", resellerId: "r_gap" });
+  const deadline = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString();
+  const rapport = svc.grandfatherExistingPartners(store, { deadline, owner: "cto@monargo.one" }, admin);
+  assert.deepEqual(rapport.alreadyCompliant, ["r_ok"], "conforme partner wordt niet gestempeld");
+  assert.equal(rapport.marked.length, 1);
+  assert.equal(rapport.marked[0].resellerId, "r_gap");
+  assert.ok(rapport.marked[0].blockers.includes("mfa_enforced"));
+  const gap = store.get("resellers", "r_gap");
+  assert.equal(gap.grandfathered, true);
+  assert.equal(gap.remediation_deadline, deadline);
+  assert.equal(gap.remediation_owner, "cto@monargo.one");
+  // Idempotent: tweede ronde stempelt niet opnieuw.
+  assert.deepEqual(svc.grandfatherExistingPartners(store, { deadline }, admin).alreadyMarked, ["r_gap"]);
+  // Zonder deadline is de migratie verboden.
+  assert.throws(() => svc.grandfatherExistingPartners(store, {}, admin), e => e.code === "REMEDIATION_DEADLINE_REQUIRED");
 });
