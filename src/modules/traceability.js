@@ -173,6 +173,24 @@ function evaluateEpic(repoRoot, epicId) {
 }
 
 // Bouw de volledige traceability-matrix op een concrete commit.
+// CTO3-11 · versie van de generator. Verhoog dit bij elke wijziging in de vorm
+// of betekenis van het rapport, zodat een ouder artefact herkenbaar blijft.
+const GENERATOR_VERSION = 1;
+
+/**
+ * CTO3-11 · is dit rapport CURRENT voor de gevraagde commit? Eén bron van
+ * waarheid per release-SHA: een rapport van een andere commit, zonder SHA, of
+ * van een andere generatorversie is STALE en mag nooit als actueel gelden.
+ */
+function isMatrixCurrent(matrix, commitSha) {
+  if (!matrix || typeof matrix !== 'object') return false;
+  if (matrix.generatorVersion !== GENERATOR_VERSION) return false;
+  const a = String(matrix.commitSha || ''), b = String(commitSha || '');
+  if (!a || !b || a === 'unknown' || b === 'unknown') return false;
+  const n = Math.min(a.length, b.length, 40);
+  return n >= 7 && a.slice(0, n) === b.slice(0, n);
+}
+
 function buildTraceability(opts = {}) {
   const repoRoot = opts.repoRoot || process.cwd();
   const commitSha = opts.commitSha || "unknown";
@@ -303,6 +321,9 @@ function buildTraceability(opts = {}) {
   return {
     generatedAt: opts.now || null, // stempel na afloop; script vult in
     commitSha,
+    // CTO3-11 · elk rapport draagt de generatorversie, zodat een oud artefact
+    // herkenbaar is en niet stil als "current" kan doorgaan.
+    generatorVersion: GENERATOR_VERSION,
     gateIssue: GATE_ISSUE,
     summary: {
       releases: releaseRows.length,
@@ -381,4 +402,4 @@ function buildDodChecks(repoRoot, spec, epics, commitSha) {
 
 function safeRead(repoRoot, rel) { try { return fs.readFileSync(path.join(repoRoot, rel), "utf8"); } catch (_) { return ""; } }
 
-module.exports = { buildTraceability, evaluateEpic, EVIDENCE, GATE_ISSUE };
+module.exports = { buildTraceability, evaluateEpic, EVIDENCE, GATE_ISSUE, GENERATOR_VERSION, isMatrixCurrent };

@@ -29,7 +29,7 @@ function toMarkdown(m) {
   const L = [];
   L.push("# Monargo One · Roadmap-traceability");
   L.push("");
-  L.push(`Bron van waarheid (DEV-01). Gegenereerd op commit \`${m.commitSha}\` · ${m.generatedAt}.`);
+  L.push(`Bron van waarheid (DEV-01) · GEGENEREERD ARTEFACT, niet handmatig bewerken. Commit \`${m.commitSha}\` · ${m.generatedAt} · generator v${m.generatorVersion}.`);
   L.push(`CTO-gate: ${m.gateIssue}`);
   L.push("");
   L.push("> De status is afgeleid uit evidence die in de repo bestaat (impl + test + migratie). Een verwijderde test maakt de betrokken epic rood. Wat niet gekoppeld is, telt als niet-bewezen.");
