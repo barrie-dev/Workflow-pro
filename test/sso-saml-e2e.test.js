@@ -63,7 +63,12 @@ before(async () => {
   let boot = ""; server.stderr.on("data", d => boot += d); server.stdout.on("data", d => boot += d);
   const deadline = Date.now() + 20000;
   while (Date.now() < deadline) {
-    try { if ((await fetch(`${BASE}/api/health`)).ok) return; } catch (_) {}
+    // CTO3-01 maakte /api/health een LIVENESS-check: die geeft 200 zodra het
+    // proces leeft, dus ook midden in de seed. Wie daarop wacht, logt in vóór
+    // de demo-gebruikers bestaan en krijgt een 401 · onder volle testbelasting
+    // duurt de seed net lang genoeg om dat af en toe te raken. Wacht daarom op
+    // READINESS, net als smoke.test.js.
+    try { if ((await fetch(`${BASE}/api/ready`)).ok) return; } catch (_) {}
     if (server.exitCode !== null) throw new Error("server stopte:\n" + boot);
     await new Promise(r => setTimeout(r, 300));
   }
@@ -87,6 +92,9 @@ after(async () => {
 test("sso e2e: ondertekende assertie → JIT-provisioning, sessie en idempotente herlogin", async () => {
   const god = await (await fetch(`${BASE}/api/auth/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: "super@workflowpro.be", password: "Demo2026!" }) })).json();
   const admin = await (await fetch(`${BASE}/api/auth/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: "admin@demobouw.be", password: "Demo2026!" }) })).json();
+  // Faalt de login, dan zegt elke volgende assertie alleen "401 == 200" en zoek
+  // je in de verkeerde hoek. Noem het probleem waar het ontstaat.
+  assert.ok(god.token && admin.token, `inloggen mislukt: ${JSON.stringify({ god, admin })}`);
 
   // Add-on aanzetten + configureren
   assert.equal((await fetch(`${BASE}/api/tenants/t_demo/sso/config`, { headers: H(admin.token) })).status, 403, "zonder add-on → 403");
