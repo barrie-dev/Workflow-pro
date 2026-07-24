@@ -14,6 +14,11 @@ const MOD = path.join(__dirname, "..", "src", "http", "routes", "reseller-portal
 const SERVER = path.join(__dirname, "..", "src", "server.js");
 const routes = require("../src/http/routes/reseller-portal")();
 
+// Regeleindes normaliseren: git zet ze op Windows naar CRLF zodra hij het
+// bestand aanraakt, en dan matcht een patroon met een newline opeens niets
+// meer. Een test die daardoor omvalt zegt niets over de code.
+const readMod = () => fs.readFileSync(MOD, "utf8").replace(/\r\n/g, "\n");
+
 test("RP 1· alle 23 portaalroutes zijn mee verhuisd", () => {
   assert.equal(routes.length, 23);
   const paden = routes.map(r => (typeof r.path === "string" ? r.path : r.path.source));
@@ -34,7 +39,7 @@ test("RP 2· server.js draagt geen /api/reseller-portaalroutes meer", () => {
 });
 
 test("RP 3· ELKE route doet nog steeds authenticatie", () => {
-  const src = fs.readFileSync(MOD, "utf8");
+  const src = readMod();
   const bodies = src.split("    async handler(req, res, { url, params, ctx }) {").slice(1);
   assert.equal(bodies.length, 23);
   for (const b of bodies) {
@@ -45,7 +50,7 @@ test("RP 3· ELKE route doet nog steeds authenticatie", () => {
 });
 
 test("RP 4· ELKE route dwingt de resellerrol af", () => {
-  const src = fs.readFileSync(MOD, "utf8");
+  const src = readMod();
   const bodies = src.split("    async handler(req, res, { url, params, ctx }) {").slice(1);
   for (const b of bodies) {
     assert.ok(b.includes("assertReseller(user);"), "een route accepteert nu een niet-reseller");
@@ -53,7 +58,7 @@ test("RP 4· ELKE route dwingt de resellerrol af", () => {
 });
 
 test("RP 5· ELKE route controleert de EIGEN organisatie", () => {
-  const src = fs.readFileSync(MOD, "utf8");
+  const src = readMod();
   const bodies = src.split("    async handler(req, res, { url, params, ctx }) {").slice(1);
   for (const b of bodies) {
     assert.ok(/store\.get\("resellers", user\.resellerId\)/.test(b),
@@ -65,7 +70,7 @@ test("RP 6· de rechtencheck komt VOOR de service-aanroep", () => {
   // Volgorde is hier geen stijlkwestie. Een service-aanroep vóór de
   // rechtencheck kan al een bestaans-oracle zijn (bestaat dit id?) ook al
   // wordt het antwoord daarna geweigerd.
-  const src = fs.readFileSync(MOD, "utf8");
+  const src = readMod();
   const bodies = src.split("    async handler(req, res, { url, params, ctx }) {").slice(1);
   let metCheck = 0;
   for (const b of bodies) {
@@ -79,7 +84,7 @@ test("RP 6· de rechtencheck komt VOOR de service-aanroep", () => {
 });
 
 test("RP 7· elke MUTATIE is idempotent afgeschermd", () => {
-  const src = fs.readFileSync(MOD, "utf8");
+  const src = readMod();
   const blokken = src.split("  {").slice(1);
   for (const b of blokken) {
     if (!/method: \["POST"\]/.test(b)) continue;
@@ -89,7 +94,7 @@ test("RP 7· elke MUTATIE is idempotent afgeschermd", () => {
 });
 
 test("RP 8· weigeren blijft een generieke 403 zonder ID-probing", () => {
-  const src = fs.readFileSync(MOD, "utf8");
+  const src = readMod();
   assert.ok(src.includes("resellerForbidden(res)"), "de generieke weigering is verdwenen");
   // Geen enkele weigering mag het gevraagde id of de reden teruggeven.
   const lekken = [...src.matchAll(/sendJson\(res, 403, \{[^}]*\}/g)]
@@ -99,7 +104,7 @@ test("RP 8· weigeren blijft een generieke 403 zonder ID-probing", () => {
 });
 
 test("RP 9· de foutafhandeling loopt via de gedeelde vertaler", () => {
-  const src = fs.readFileSync(MOD, "utf8");
+  const src = readMod();
   const catches = [...src.matchAll(/catch \(e\) \{([^}]*)\}/g)].map(m => m[1]);
   assert.ok(catches.length >= 10);
   for (const c of catches) {
@@ -110,7 +115,7 @@ test("RP 9· de foutafhandeling loopt via de gedeelde vertaler", () => {
 
 test("RP 10· de routermodule bevat GEEN businesslogica", () => {
   // Laagindeling: router vertaalt HTTP naar een service-aanroep, meer niet.
-  const src = fs.readFileSync(MOD, "utf8");
+  const src = readMod();
   assert.equal(/store\.(insert|update|remove)\(/.test(src), false,
     "een router hoort niet rechtstreeks te schrijven · dat gaat via een service");
 });

@@ -12,7 +12,10 @@ const path = require("node:path");
 const MOD = path.join(__dirname, "..", "src", "http", "routes", "admin-reseller.js");
 const SERVER = path.join(__dirname, "..", "src", "server.js");
 const routes = require("../src/http/routes/admin-reseller")();
-const src = fs.readFileSync(MOD, "utf8");
+// Regeleindes normaliseren: git zet ze op Windows naar CRLF zodra hij het
+// bestand aanraakt, en dan matcht een patroon met \n opeens niets meer. Een
+// test die daardoor omvalt zegt niets over de code.
+const src = fs.readFileSync(MOD, "utf8").replace(/\r\n/g, "\n");
 const bodies = src.split("    async handler(req, res, { url, params, ctx }) {").slice(1);
 
 test("AR 1· alle 47 routes zijn mee verhuisd", () => {
@@ -87,10 +90,23 @@ test("AR 6· de IBAN-route staat achter payout.manage én is apart", () => {
 
 test("AR 7· payout GOEDKEUREN vraagt een ander recht dan payout WIJZIGEN", () => {
   // Vier-ogen: wie een IBAN-wijziging aanvraagt keurt hem niet goed.
-  const approve = src.slice(src.indexOf("reseller-payout-changes\\/([^/]+)\\/approve"));
-  assert.ok(approve.includes('canResellerAction(cu, "reseller.payout.approve", {})'));
-  const manage = src.slice(src.indexOf('path: "/api/admin/reseller-payout-changes",\n    method: ["POST"]'));
-  assert.ok(manage.includes('canResellerAction(cu, "reseller.payout.manage", {})'));
+  // Zoek per routeblok in plaats van met tekst-offsets · indexOf(-1) zou
+  // stilletjes de hele rest van het bestand meenemen en altijd slagen.
+  const blok = pad => {
+    const b = src.split("\n  {").slice(1).find(x => (x.match(/path: ([^\n]+)/) || [])[1] === pad
+      || ((x.match(/path: "([^"]+)"/) || [])[1] === pad));
+    assert.ok(b, `routeblok ${pad} niet gevonden`);
+    return b;
+  };
+  const goedkeuren = src.split("\n  {").slice(1)
+    .find(b => /reseller-payout-changes\\\/\(\[\^\/\]\+\)\\\/approve/.test(b));
+  assert.ok(goedkeuren, "de goedkeurroute is niet gevonden");
+  assert.ok(goedkeuren.includes('canResellerAction(cu, "reseller.payout.approve", {})'));
+
+  const wijzigen = blok("/api/admin/reseller-payout-changes");
+  assert.ok(wijzigen.includes('canResellerAction(cu, "reseller.payout.manage", {})'));
+  assert.equal(wijzigen.includes('"reseller.payout.approve"'), false,
+    "wie wijzigt mag niet met hetzelfde recht ook goedkeuren");
 });
 
 test("AR 8· elke MUTATIE is idempotent afgeschermd", () => {
