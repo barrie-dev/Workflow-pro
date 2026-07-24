@@ -63,8 +63,20 @@ function isResellerSide(actor) {
 function requestsOf(store, resellerId) {
   return (store.data[REQUESTS] || []).filter(r => r.resellerId === resellerId);
 }
+/**
+ * Platformoverzicht van alle licentieaanvragen. Zonder resellerId is dit het
+ * Monargo-brede beeld; met resellerId hetzelfde als requestsOf. Bestond eerder
+ * als een rechtstreekse store.data-lees in de route · daar hoort het niet.
+ */
+function listRequests(store, { resellerId = null } = {}) {
+  return resellerId ? requestsOf(store, resellerId) : (store.data[REQUESTS] || []);
+}
 function exceptionsOf(store, resellerId) {
   return (store.data[EXCEPTIONS] || []).filter(r => r.resellerId === resellerId);
+}
+/** Platformoverzicht van de prijsuitzonderingen · zonder filter: alles. */
+function listExceptions(store, { resellerId = null } = {}) {
+  return resellerId ? exceptionsOf(store, resellerId) : (store.data[EXCEPTIONS] || []);
 }
 function discountsOf(store, resellerId) {
   return (store.data[AGREEMENTS] || []).filter(r => r.resellerId === resellerId);
@@ -515,7 +527,7 @@ module.exports = {
   // versieerbare resellerkortingen (alleen Monargo)
   setResellerDiscount, resellerDiscountFor,
   // leeshelpers voor portaal en admin
-  requestsOf, exceptionsOf, discountsOf,
+  requestsOf, listRequests, exceptionsOf, listExceptions, discountsOf,
   // guards (herbruikbaar in routes)
   isResellerSide, assertNoPriceInput, centralPricingFor,
 };

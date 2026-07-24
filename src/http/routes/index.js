@@ -25,6 +25,7 @@ const ROUTER_MODULES = [
   require("./public-meta"),
   require("./status"),
   require("./reseller-portal"),
+  require("./admin-reseller"),
 ];
 
 /** Bouw de volledige routetabel één keer bij het opstarten. */
