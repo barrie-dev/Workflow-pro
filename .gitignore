@@ -26,3 +26,5 @@ Thumbs.db
 docs/traceability/evidence/*.json
 docs/traceability/evidence/*.md
 !docs/traceability/evidence/.gitkeep
+docs/traceability/matrix.json
+docs/traceability/matrix.md
