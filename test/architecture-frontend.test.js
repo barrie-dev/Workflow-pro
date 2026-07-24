@@ -80,14 +80,15 @@ test("frontend 6· het einddoel blijft staan tot het budget het raakt", () => {
 // ── De IA-laag (public/js/app/) ──────────────────────────────────────────────
 // Dit is de doelarchitectuur uit de IA-handover. Ze mag NOOIT terugleunen op de
 // monoliet, anders is de strangler-migratie een cirkel in plaats van een pad.
-function appFiles() {
-  const base = path.join(PUBLIC, "js", "app");
+function appFiles(dir) {
+  const base = dir || path.join(PUBLIC, "js", "app");
   if (!fs.existsSync(base)) return [];
   const uit = [];
-  for (const map of fs.readdirSync(base)) {
-    const d = path.join(base, map);
-    if (!fs.statSync(d).isDirectory()) continue;
-    for (const f of fs.readdirSync(d).filter(x => x.endsWith(".js"))) uit.push(path.join(d, f));
+  for (const naam of fs.readdirSync(base)) {
+    const p = path.join(base, naam);
+    // Recursief: werkruimtes zitten twee niveaus diep (workspaces/customer/).
+    if (fs.statSync(p).isDirectory()) uit.push(...appFiles(p));
+    else if (naam.endsWith(".js")) uit.push(p);
   }
   return uit;
 }
