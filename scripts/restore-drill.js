@@ -68,6 +68,28 @@ async function main() {
     if (!report.objectStorage.ok) failed = true;
   } catch (e) { report.objectStorage = { ok: false, error: e.message }; failed = true; }
 
+  // CTO3-06 · schrijf een machineleesbaar evidence-artefact zodat de P0 pilotgate
+  // CTO3-03 (DR) automatisch kan aggregeren. Commit-gebonden, fail = fail.
+  try {
+    const fs = require("fs");
+    const { makeEvidence } = require(path.join(ROOT, "src/modules/evidence"));
+    const { execSync } = require("child_process");
+    let sha = process.env.APP_COMMIT_SHA || process.env.GITHUB_SHA || "";
+    try { if (!sha) sha = execSync("git rev-parse --short HEAD", { cwd: ROOT }).toString().trim(); } catch (_) {}
+    const ev = makeEvidence({
+      evidenceType: "restore-drill", status: failed ? "fail" : "pass",
+      commitSha: sha, environment: config.isProduction ? "production" : "ci",
+      counts: { tables: (report.fullRestore && report.fullRestore.tableCount) || 0, objects: (report.objectManifest && report.objectManifest.objectCount) || 0 },
+      result: failed ? "herstel niet volledig bewezen" : "database + objecten aantoonbaar herstelbaar",
+      failures: failed ? [{ check: "restore", detail: report.fullRestore && report.fullRestore.error || "zie report" }] : [],
+    });
+    ev.generatedAt = new Date().toISOString();
+    ev.report = { rpoSeconds: report.stateRestore && report.stateRestore.rpoSeconds, rtoSeconds: report.fullRestore && report.fullRestore.rtoSeconds, functional: report.fullRestore && report.fullRestore.functional };
+    const out = path.join(ROOT, "docs", "traceability", "evidence", "restore-drill.json");
+    fs.mkdirSync(path.dirname(out), { recursive: true });
+    fs.writeFileSync(out, JSON.stringify(ev, null, 2) + "\n");
+  } catch (_) { /* evidence-schrijven mag de drill nooit breken */ }
+
   if (jsonMode) {
     console.log(JSON.stringify(report, null, 2));
   } else {

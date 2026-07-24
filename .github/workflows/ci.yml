@@ -125,6 +125,16 @@ jobs:
         # Bewijst isolatie op vier lagen: DB/RLS + repository + policy-engine +
         # HTTP. Eén laag rood → exit 1. Schrijft security-matrix.json.
         run: node scripts/check-security-matrix.js
+      - name: Restore-drill evidence (CTO3-03 · DR-bewijs voor de pilotgate)
+        # Volledige DB-restore + objectmanifest tegen de echte pg; schrijft
+        # restore-drill.json (commit-gebonden). Een gefaalde restore → exit 1.
+        run: node scripts/restore-drill.js
+      - name: Deployment evidence + P0 pilotgate (CTO3-06)
+        # Zelfstandige canary (create → ECHTE restart → read) + objectopslag
+        # put/get + gate op de exacte HEAD-SHA. --require-pilot aggregeert
+        # CTO3-01..06 uit de zojuist gegenereerde evidence (e2e-manifest +
+        # restore-drill + contract) en faalt hard bij een rode pilotgate.
+        run: node scripts/generate-deploy-evidence.js --self-check --require-pilot
       - name: Roadmap-gate (DEV-01/07) · harde regressiegate op de commit
         # HARD (geen || true, CTO PR #41): valideert alle zojuist gegenereerde
         # evidence INHOUDELIJK op de HUIDIGE commit-SHA en faalt op elke
@@ -141,6 +151,7 @@ jobs:
             docs/traceability/matrix.json
             docs/traceability/matrix.md
             docs/traceability/evidence/*.json
+            docs/traceability/evidence/deploy-evidence.md
           if-no-files-found: warn
 
   # ── E2E-scenario's (CTO DEV-02): verplicht ná unit/integratie, vóór de

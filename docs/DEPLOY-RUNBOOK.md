@@ -289,3 +289,49 @@ node scripts/forms-cutover.js reconcile   # exit 1 zolang niet alles gemigreerd 
 Pas **nadat reconcile groen is**, zet `FORMS_SOURCE=pg` in Render. Dat bevriest
 het legacy schrijfpad (410) en maakt de canonieke engine de enige waarheid;
 lezen van historiek blijft werken.
+
+## CTO3-06 · Deployment evidence + P0 pilotgate
+
+Voor elke kandidaat-release bestaat één automatisch gegenereerde, **SHA-specifieke**
+evidencebundle (`docs/traceability/evidence/deploy-evidence.json` + `.md`) waaruit
+de CTO de volledige releasebeslissing kan nemen. Geen handmatige "production
+verified"-tekst · alles is machineleesbaar met timestamp.
+
+De bundle bevat: commit-SHA, deployment-ID, buildtijd, migratieversie, liveness,
+readiness, DB TLS-modus, CA-presentie, writer-lock, objectstorageadapter,
+source_of_truth per domein, forms-bron, backupstatus en het **canary**-resultaat.
+
+**De P0 pilotgate wordt automatisch berekend uit CTO3-01 t/m CTO3-06** en is
+fail-closed: ontbrekend of stale sub-bewijs (e2e-manifest, restore-drill) houdt de
+gate rood.
+
+### In CI (elke PR)
+
+De `test`-job draait, ná het e2e-manifest en de restore-drill:
+
+```bash
+node scripts/generate-deploy-evidence.js --self-check --require-pilot
+```
+
+`--self-check` start een verse server, voert een **veilige canary** uit
+(create → **echte** stop+herstart → read) in een **gereserveerde** canarytenant,
+bewijst objectopslag met put/get (geïsoleerd van klantbestanden) en gate't op de
+exacte HEAD-SHA. De server + het databestand zijn efemeer · dat is meteen het
+cleanupbewijs. `--require-pilot` faalt hard bij een rode pilotgate.
+
+### Vóór een staging-/productie-release
+
+Draai de bundle tegen de LIVE omgeving met de productie-contractverwachtingen:
+
+```bash
+CANARY_TENANT_ID=<gereserveerde tenant> CANARY_TOKEN=<canary-token> \
+  node scripts/generate-deploy-evidence.js \
+  --target https://<staging-of-prod-host> --candidate-sha <git-sha> --require-pilot
+```
+
+De gate eindigt **rood** wanneer de gerapporteerde commit-SHA niet exact de
+kandidaat is, readiness 503 geeft, de adapter/TLS/CA afwijkt, de canarymutatie de
+restart niet overleeft, of een sub-gate (CTO3-01..05) niet groen is. Gebruik NOOIT
+een echte klanttenant voor de canary. Archiveer de bundle bij de release-tag,
+buiten de efemere runtime, en laat de CTO het sign-off-veld in het Markdownrapport
+aftekenen.
